@@ -97,7 +97,7 @@ energPanel up_panel;
 ///////// down panel /////////
 GuiList gui_lstvw;
 
-bzd bzda;
+TBottomBar bzda;
 
 ////////////////////////////////////////
 ////////////////////////////////////////
@@ -166,11 +166,11 @@ void create_squad_man(NC_STACK_ypaworld *yw)
 
     if ( squadron_manager.Init(yw, args) )
     {
-        squadron_manager.field_2CC = fnt28[65].w;
-        squadron_manager.field_2D0 = fnt28[64].w + fnt28[97].w + yw->_fontBorderW;
-        squadron_manager.field_2D8 = v8;
-        squadron_manager.field_2DC = v6;
-        squadron_manager.field_2D4 = fnt28[64].w + squadron_manager.field_2CC + squadron_manager.field_2D0;
+        squadron_manager.iconWidth = fnt28[65].w;
+        squadron_manager.cmdrIconX = fnt28[64].w + fnt28[97].w + yw->_fontBorderW;
+        squadron_manager.unitCountX = v8;
+        squadron_manager.aggrIconsX = v6;
+        squadron_manager.kidIconsX = fnt28[64].w + squadron_manager.iconWidth + squadron_manager.cmdrIconX;
     }
 }
 
@@ -182,41 +182,41 @@ void UpdateBottomBarModes(NC_STACK_ypaworld *yw)
     {
         if ( yw->_userUnit == yw->_userRobo || yw->_playerInHSGun )
         {
-            bzda.field_1CC = 0x29;
+            bzda.enabledModes = 0x29;
 
-            if ( bzda.field_8E0 )
+            if ( bzda.vhclCount )
             {
-                bzda.field_1CC = 0x2B;
+                bzda.enabledModes = 0x2B;
 
                 if ( yw->_activeCmdrRemapIndex != -1 )
-                    bzda.field_1CC = 0x2F;
+                    bzda.enabledModes = 0x2F;
             }
 
-            if ( bzda.field_8E4 )
-                bzda.field_1CC |= 0x10;
+            if ( bzda.buildCount )
+                bzda.enabledModes |= 0x10;
 
-            bzda.field_1D4 = 1;
+            bzda.barEnabled = 1;
         }
         else
         {
-            bzda.field_1D4 = 1;
-            bzda.field_1CC = 41;
+            bzda.barEnabled = 1;
+            bzda.enabledModes = 41;
         }
 
         if ( yw->_userRobo->_status == BACT_STATUS_DEAD )
-            bzda.field_1CC = 0;
+            bzda.enabledModes = 0;
     }
     else
     {
-        bzda.field_1D4 = 0;
-        bzda.field_1CC = 0;
+        bzda.barEnabled = 0;
+        bzda.enabledModes = 0;
     }
 
-    bzda.field_1D0 &= bzda.field_1CC;
-    bzda.field_1D8 &= bzda.field_1D4;
+    bzda.activeMode &= bzda.enabledModes;
+    bzda.inputAttached &= bzda.barEnabled;
 
-    if ( !bzda.field_1D0 )
-        bzda.field_1D0 = bzda.field_1CC & 1;
+    if ( !bzda.activeMode )
+        bzda.activeMode = bzda.enabledModes & 1;
 }
 
 void CreateEnergyPanel(NC_STACK_ypaworld *yw)
@@ -225,28 +225,28 @@ void CreateEnergyPanel(NC_STACK_ypaworld *yw)
 
     TileMap *f30 = yw->_guiTiles[30];
 
-    up_panel.field_1CC = f30->h;
-    up_panel.field_1DC = f30->map[65].w;
+    up_panel.panelHeight = f30->h;
+    up_panel.iconWidth = f30->map[65].w;
     up_panel.flags = 0;
-    up_panel.field_1D0 = up_panel.field_1DC + f30->map[84].w;
+    up_panel.gaugeWidth = up_panel.iconWidth + f30->map[84].w;
     up_panel.buttons.resize(4);
 
 
-    int v8 = yw->_screenSize.x - 4 * (up_panel.field_1DC + f30->map[84].w);
+    int v8 = yw->_screenSize.x - 4 * (up_panel.iconWidth + f30->map[84].w);
 
-    up_panel.field_1D8 = v8 / 4;
-    up_panel.field_1D4 = v8 / 8;
-    up_panel.field_1E0 = 2;
-    up_panel.field_1E4 = up_panel.field_1D0 - up_panel.field_1DC - 4;
+    up_panel.gaugeSpacing = v8 / 4;
+    up_panel.gaugeStartX = v8 / 8;
+    up_panel.barGap = 2;
+    up_panel.barMaxLen = up_panel.gaugeWidth - up_panel.iconWidth - 4;
 
     up_panel.x = 0;
     up_panel.y = 0;
     up_panel.w = yw->_screenSize.x;
-    up_panel.h = up_panel.field_1CC;
+    up_panel.h = up_panel.panelHeight;
 
     for (int i = 0; i < 4; i++)
-        up_panel.buttons[i] = ButtonBox(up_panel.field_1D4 + (up_panel.field_1D0 + up_panel.field_1D8) * i,    0,
-                                        up_panel.field_1D0,   up_panel.field_1CC);
+        up_panel.buttons[i] = ButtonBox(up_panel.gaugeStartX + (up_panel.gaugeWidth + up_panel.gaugeSpacing) * i,    0,
+                                        up_panel.gaugeWidth,   up_panel.panelHeight);
 
     up_panel.cmdCommands.reserve(512);
 
@@ -256,17 +256,17 @@ void CreateEnergyPanel(NC_STACK_ypaworld *yw)
 
 Common::Point RoboMapWorldToScreen(vec2d in)
 {
-    if ( robo_map.field_1E8 & 0x100 )
+    if ( robo_map.stateFlags & 0x100 )
     {
-        float a1a = in.x - robo_map.field_1D8;
-        float a2a = in.y - robo_map.field_1DC;
+        float a1a = in.x - robo_map.viewCenterX;
+        float a2a = in.y - robo_map.viewCenterZ;
 
-        in.x = robo_map.field_1D8 + robo_map.field_264 * a1a + radarRotM01 * a2a;
-        in.y = robo_map.field_1DC + radarRotM10 * a1a + radarRotM11 * a2a;
+        in.x = robo_map.viewCenterX + robo_map.radarRotM00 * a1a + radarRotM01 * a2a;
+        in.y = robo_map.viewCenterZ + radarRotM10 * a1a + radarRotM11 * a2a;
     }
 
-    return Common::Point( robo_map.field_200 + dround(in.x / robo_map.field_1E0) - robo_map.field_1F0
-                        , robo_map.field_204 + dround(-in.y / robo_map.field_1E4) - robo_map.field_1F4 );
+    return Common::Point( robo_map.viewScreenX + dround(in.x / robo_map.unitsPerPixelX) - robo_map.scrollPixelX
+                        , robo_map.viewScreenY + dround(-in.y / robo_map.unitsPerPixelY) - robo_map.scrollPixelY );
 }
 
 void RoboMapDrawWorldLine(float a3, float a4, float a5, float a6, SDL_Color a7)
@@ -280,12 +280,12 @@ void RoboMapDrawIcon(CmdStream *cur, float a1, float a2, char a3, int a4, int a5
 {
     Common::Point tmp = RoboMapWorldToScreen( {a1, a2} );
 
-    int v7 = tmp.x - a4 / 2 - robo_map.field_200;
-    int v8 = tmp.y - a5 / 2 - robo_map.field_204;
+    int v7 = tmp.x - a4 / 2 - robo_map.viewScreenX;
+    int v8 = tmp.y - a5 / 2 - robo_map.viewScreenY;
     int v9 = v7 + a4;
     int v10 = v8 + a5;
 
-    if ( v7 < robo_map.field_1F8 && v8 < robo_map.field_1FC && v9 > 0 && v10 > 0 )
+    if ( v7 < robo_map.viewWidth && v8 < robo_map.viewHeight && v9 > 0 && v10 > 0 )
     {
         int v11;
 
@@ -313,20 +313,20 @@ void RoboMapDrawIcon(CmdStream *cur, float a1, float a2, char a3, int a4, int a5
 
         int v34;
 
-        if ( v9 <= robo_map.field_1F8 )
+        if ( v9 <= robo_map.viewWidth )
             v34 = 0;
         else
-            v34 = robo_map.field_1F8 - v7;
+            v34 = robo_map.viewWidth - v7;
 
         int v35;
 
-        if ( v10 <= robo_map.field_1FC )
+        if ( v10 <= robo_map.viewHeight )
             v35 = 0;
         else
-            v35 = robo_map.field_1FC - v8;
+            v35 = robo_map.viewHeight - v8;
 
-        FontUA::set_center_xpos(cur, robo_map.field_200 + v7);
-        FontUA::set_center_ypos(cur, robo_map.field_204 + v8);
+        FontUA::set_center_xpos(cur, robo_map.viewScreenX + v7);
+        FontUA::set_center_ypos(cur, robo_map.viewScreenY + v8);
 
         if ( v33 )
         {
@@ -510,7 +510,7 @@ void  RoboMapDrawRoboAIDebug(NC_STACK_ypaworld *yw)
 
 void RoboMapDrawLines(NC_STACK_ypaworld *yw)
 {
-    if ( robo_map.field_1E8 & 0x100 )
+    if ( robo_map.stateFlags & 0x100 )
     {
         if ( yw->_userRobo != yw->_userUnit && yw->_userUnit->_parent )
         {
@@ -541,7 +541,7 @@ void RoboMapDrawLines(NC_STACK_ypaworld *yw)
     }
     else
     {
-        if ( robo_map.field_1EC & 4 )
+        if ( robo_map.layerFlags & 4 )
         {
             for (NC_STACK_ypabact* const comm: yw->_cmdrsRemap)
             {
@@ -572,7 +572,7 @@ void RoboMapDrawLines(NC_STACK_ypaworld *yw)
             RoboMapDrawWorldLine(0.0, yw->_userUnit->_position.z, yw->_mapLength.x, yw->_userUnit->_position.z, yw->GetColor(13));
         }
 
-        if ( robo_map.field_1E8 & 0x200 )
+        if ( robo_map.stateFlags & 0x200 )
         {
             int wh = yw->_screenSize.x / 2;
             int hh = yw->_screenSize.y / 2;
@@ -607,12 +607,12 @@ void RoboMapDrawIconStrip(CmdStream *cur, float a1, float a2, char a3, int a4, i
 {
     Common::Point tmp = RoboMapWorldToScreen( {a1, a2} );
 
-    int v8 = tmp.x - a4 / 2 - robo_map.field_200;
-    int v9 = tmp.y - a4 / 2 - robo_map.field_204;
+    int v8 = tmp.x - a4 / 2 - robo_map.viewScreenX;
+    int v9 = tmp.y - a4 / 2 - robo_map.viewScreenY;
     int v10 = v8 + a4;
     int v11 = v9 + a5;
 
-    if ( v8 < robo_map.field_1F8 && v9 < robo_map.field_1FC && v10 > 0 && v11 > 0 )
+    if ( v8 < robo_map.viewWidth && v9 < robo_map.viewHeight && v10 > 0 && v11 > 0 )
     {
         int v31;
         if ( v8 >= 0 )
@@ -637,19 +637,19 @@ void RoboMapDrawIconStrip(CmdStream *cur, float a1, float a2, char a3, int a4, i
         }
 
         int v30;
-        if ( v10 <= robo_map.field_1F8 )
+        if ( v10 <= robo_map.viewWidth )
             v30 = 0;
         else
-            v30 = robo_map.field_1F8 - v8;
+            v30 = robo_map.viewWidth - v8;
 
         int v32;
-        if ( v11 <= robo_map.field_1FC )
+        if ( v11 <= robo_map.viewHeight )
             v32 = a5;
         else
-            v32 = robo_map.field_1FC - v9;
+            v32 = robo_map.viewHeight - v9;
 
-        FontUA::set_center_xpos(cur, robo_map.field_200 + v8);
-        FontUA::set_center_ypos(cur, robo_map.field_204 + v9);
+        FontUA::set_center_xpos(cur, robo_map.viewScreenX + v8);
+        FontUA::set_center_ypos(cur, robo_map.viewScreenY + v9);
 
 
         if ( v12 )
@@ -676,7 +676,7 @@ void RoboMapDrawSpecialSectors(NC_STACK_ypaworld *yw, CmdStream *cur)
 {
     int a4, v4;
 
-    switch ( robo_map.field_1EE )
+    switch ( robo_map.zoomLevel )
     {
     case 0:
         v4 = 16;
@@ -709,7 +709,7 @@ void RoboMapDrawSpecialSectors(NC_STACK_ypaworld *yw, CmdStream *cur)
 
     if ( a4 >= 8 )
     {
-        if ( robo_map.field_1EC & 1 )
+        if ( robo_map.layerFlags & 1 )
         {
             FontUA::select_tileset(cur, v4);
 
@@ -899,7 +899,7 @@ void RoboMapDrawUnit(NC_STACK_ypaworld *yw, CmdStream *cur, int height, int widt
                 break;
 
             case BACT_TYPES_ROBO:
-                switch ( robo_map.field_1EE )
+                switch ( robo_map.zoomLevel )
                 {
                 case 0:
                 case 1:
@@ -949,7 +949,7 @@ void RoboMapDrawUnit(NC_STACK_ypaworld *yw, CmdStream *cur, int height, int widt
 
         RoboMapDrawIcon(cur, bact->_position.x, bact->_position.z, v8, height, width);
 
-        if ( bact->_bact_type != BACT_TYPES_MISSLE && robo_map.field_1EE > 2 )
+        if ( bact->_bact_type != BACT_TYPES_MISSLE && robo_map.zoomLevel > 2 )
         {
             SDL_Color clr = yw->GetColor(bact->_owner);
 
@@ -1053,7 +1053,7 @@ void RoboMapDrawUnit(NC_STACK_ypaworld *yw, CmdStream *cur, int height, int widt
 
         if ( bact->_bact_type != BACT_TYPES_MISSLE && bact->_bact_type != BACT_TYPES_ROBO && bact->_owner == yw->_userRobo->_owner )
         {
-            if ( robo_map.field_1EC & 4 && robo_map.field_1EE > 2 )
+            if ( robo_map.layerFlags & 4 && robo_map.zoomLevel > 2 )
             {
                 float v32 = (float)bact->_energy / (float)bact->_energy_max;
                 int v19;
@@ -1135,14 +1135,14 @@ void RoboMapDrawSectorLabel(NC_STACK_ypaworld *yw, const std::string &labl, int 
 
     Common::Point tmp = RoboMapWorldToScreen( World::SectorIDToPos2( {a4, a5} ) );
 
-    int v9 = tmp.x - robo_map.field_200;
-    int v10 = tmp.y - robo_map.field_204;
+    int v9 = tmp.x - robo_map.viewScreenX;
+    int v10 = tmp.y - robo_map.viewScreenY;
 
-    if ( tmp.x - robo_map.field_200 > 0 && v10 > 0 && tmp.x - robo_map.field_200 + v8 < robo_map.field_1F8 && tmp.y - robo_map.field_204 + yw->_guiTiles[tileset_id]->h < robo_map.field_1FC )
+    if ( tmp.x - robo_map.viewScreenX > 0 && v10 > 0 && tmp.x - robo_map.viewScreenX + v8 < robo_map.viewWidth && tmp.y - robo_map.viewScreenY + yw->_guiTiles[tileset_id]->h < robo_map.viewHeight )
     {
         FontUA::select_tileset(cur, tileset_id);
-        FontUA::set_center_xpos(cur, robo_map.field_200 + v9);
-        FontUA::set_center_ypos(cur, robo_map.field_204 + v10);
+        FontUA::set_center_xpos(cur, robo_map.viewScreenX + v9);
+        FontUA::set_center_ypos(cur, robo_map.viewScreenY + v10);
 
         for ( uint8_t c : labl )
             FontUA::store_s8(cur, c);
@@ -1159,7 +1159,7 @@ void RoboMapDrawMarkers(NC_STACK_ypaworld *yw, CmdStream *cur)
     int v7;
     int v99;
 
-    switch ( robo_map.field_1EE )
+    switch ( robo_map.zoomLevel )
     {
     case 0:
         v111 = 4;
@@ -1216,7 +1216,7 @@ void RoboMapDrawMarkers(NC_STACK_ypaworld *yw, CmdStream *cur)
     switch ( yw->_doAction )
     {
     case World::DOACTION_2:
-        if ( !(robo_map.field_1E8 & 0x200) )
+        if ( !(robo_map.stateFlags & 0x200) )
         {
             if ( yw->_guiActFlags & 0x20 )
             {
@@ -1255,7 +1255,7 @@ void RoboMapDrawMarkers(NC_STACK_ypaworld *yw, CmdStream *cur)
         break;
 
     case World::DOACTION_8:
-        if ( !(robo_map.field_1E8 & 0x200) )
+        if ( !(robo_map.stateFlags & 0x200) )
         {
             if ( yw->_bactOnMouse )
             {
@@ -1291,7 +1291,7 @@ void RoboMapDrawMarkers(NC_STACK_ypaworld *yw, CmdStream *cur)
         break;
     }
 
-    if ( bzda.field_1D0 & 0x20 )
+    if ( bzda.activeMode & 0x20 )
     {
         FontUA::select_tileset(cur, 1);
 
@@ -1402,35 +1402,35 @@ void RoboMapDrawMarkers(NC_STACK_ypaworld *yw, CmdStream *cur)
 void RoboMapDrawToolbar(NC_STACK_ypaworld *yw, CmdStream *cur)
 {
     FontUA::select_tileset(cur, 10);
-    FontUA::set_center_xpos(cur, robo_map.x + robo_map.field_234 + robo_map.field_244 - (yw->_screenSize.x / 2));
-    FontUA::set_center_ypos(cur, robo_map.y + robo_map.h - (robo_map.field_230 + robo_map.field_240) - (yw->_screenSize.y / 2));
+    FontUA::set_center_xpos(cur, robo_map.x + robo_map.toolBarOffsetX + robo_map.borderLeft - (yw->_screenSize.x / 2));
+    FontUA::set_center_ypos(cur, robo_map.y + robo_map.h - (robo_map.toolBtnHeight + robo_map.borderBottom) - (yw->_screenSize.y / 2));
 
-    if ( robo_map.field_1EC & 1 )
+    if ( robo_map.layerFlags & 1 )
         FontUA::store_u8(cur, 97);
     else
         FontUA::store_u8(cur, 65);
 
-    if ( robo_map.field_1EC & 2 )
+    if ( robo_map.layerFlags & 2 )
         FontUA::store_u8(cur, 98);
     else
         FontUA::store_u8(cur, 66);
 
-    if ( robo_map.field_1EC & 4 )
+    if ( robo_map.layerFlags & 4 )
         FontUA::store_u8(cur, 100);
     else
         FontUA::store_u8(cur, 68);
 
-    if ( robo_map.field_1ED == 1 )
+    if ( robo_map.lockViewer == 1 )
         FontUA::store_u8(cur, 102);
     else
         FontUA::store_u8(cur, 70);
 
-    if ( robo_map.field_1E8 & 0x40 )
+    if ( robo_map.stateFlags & 0x40 )
         FontUA::store_u8(cur, 106);
     else
         FontUA::store_u8(cur, 74);
 
-    if ( robo_map.field_1E8 & 0x80 )
+    if ( robo_map.stateFlags & 0x80 )
         FontUA::store_u8(cur, 107);
     else
         FontUA::store_u8(cur, 75);
@@ -1440,11 +1440,11 @@ void RoboMapDrawOverlay(NC_STACK_ypaworld *yw)
 {
     int v41 = 0;
 
-    int v39 = robo_map.field_1EE + 2;
+    int v39 = robo_map.zoomLevel + 2;
 
     int a6 = 0;
     int setid = 59;
-    switch ( robo_map.field_1EE )
+    switch ( robo_map.zoomLevel )
     {
     case 0:
     case 1:
@@ -1468,27 +1468,27 @@ void RoboMapDrawOverlay(NC_STACK_ypaworld *yw)
     int height = yw->_guiTiles[setid]->map[128].w;
     int width = yw->_guiTiles[setid]->h;
 
-    robo_map.field_1F8 = robo_map.w - robo_map.field_24C;
-    robo_map.field_1FC = robo_map.h - robo_map.field_250;
+    robo_map.viewWidth = robo_map.w - robo_map.borderTotalW;
+    robo_map.viewHeight = robo_map.h - robo_map.borderTotalH;
 
-    robo_map.field_200 = robo_map.x + robo_map.field_244 - (yw->_screenSize.x / 2);
-    robo_map.field_204 = robo_map.y + robo_map.field_23C - (yw->_screenSize.y / 2);
+    robo_map.viewScreenX = robo_map.x + robo_map.borderLeft - (yw->_screenSize.x / 2);
+    robo_map.viewScreenY = robo_map.y + robo_map.borderTop - (yw->_screenSize.y / 2);
 
     Common::Rect rect;
-    rect.left = robo_map.field_200;
-    rect.right = robo_map.w - robo_map.field_24C + robo_map.field_200 - 1;
-    rect.top = robo_map.y + robo_map.field_23C - (yw->_screenSize.y / 2);
-    rect.bottom = robo_map.h - robo_map.field_250 + rect.top - 1;
+    rect.left = robo_map.viewScreenX;
+    rect.right = robo_map.w - robo_map.borderTotalW + robo_map.viewScreenX - 1;
+    rect.top = robo_map.y + robo_map.borderTop - (yw->_screenSize.y / 2);
+    rect.bottom = robo_map.h - robo_map.borderTotalH + rect.top - 1;
 
-    robo_map.field_1F0 = robo_map.field_1D8 / robo_map.field_1E0 - (robo_map.w - robo_map.field_24C) / 2;
-    robo_map.field_1F4 = -(robo_map.field_1DC / robo_map.field_1E4 + (robo_map.h - robo_map.field_250) / 2);
+    robo_map.scrollPixelX = robo_map.viewCenterX / robo_map.unitsPerPixelX - (robo_map.w - robo_map.borderTotalW) / 2;
+    robo_map.scrollPixelY = -(robo_map.viewCenterZ / robo_map.unitsPerPixelY + (robo_map.h - robo_map.borderTotalH) / 2);
 
     GFX::Engine.SetClipCentered(rect);
 
-    int v33 = robo_map.field_1F0 >> v39;
-    int v38 = robo_map.field_1F4 >> v39;
-    int v43 = (robo_map.field_1F8 + robo_map.field_1F0) >> v39;
-    int vii = (robo_map.field_1FC + robo_map.field_1F4) >> v39;
+    int v33 = robo_map.scrollPixelX >> v39;
+    int v38 = robo_map.scrollPixelY >> v39;
+    int v43 = (robo_map.viewWidth + robo_map.scrollPixelX) >> v39;
+    int vii = (robo_map.viewHeight + robo_map.scrollPixelY) >> v39;
 
     if ( v33 < 1 )
         v33 = 1;
@@ -1557,7 +1557,7 @@ void RoboMapDrawOverlay(NC_STACK_ypaworld *yw)
         }
     }
 
-    if ( robo_map.field_1E8 & 0x200 )
+    if ( robo_map.stateFlags & 0x200 )
     {
         for (int l = v38; l <= vii; l++ )
         {
@@ -1601,26 +1601,26 @@ void RoboMapDrawOverlay(NC_STACK_ypaworld *yw)
 
 void RoboMapCalcScrollThumbs(NC_STACK_ypaworld *yw)
 {
-    float v1 = (robo_map.h - robo_map.field_250) * robo_map.field_1E4;
-    float v3 = (robo_map.w - robo_map.field_24C) * robo_map.field_1E0;
+    float v1 = (robo_map.h - robo_map.borderTotalH) * robo_map.unitsPerPixelY;
+    float v3 = (robo_map.w - robo_map.borderTotalW) * robo_map.unitsPerPixelX;
 
     float v6 = (yw->_mapSize.x * World::CVSectorLength);
-    int v20 = robo_map.w - robo_map.field_248;
+    int v20 = robo_map.w - robo_map.borderRight;
 
-    int v17 = ((robo_map.field_1D8 - v3 * 0.5) * v20) / v6;
+    int v17 = ((robo_map.viewCenterX - v3 * 0.5) * v20) / v6;
     int v19 = v20 * v3 / v6;
 
 
 
-    if ( v19 >= robo_map.field_228 )
+    if ( v19 >= robo_map.minThumbSize )
     {
         if ( v19 > v20 )
             v19 = v20;
     }
     else
     {
-        v17 -= (robo_map.field_228 - v19) >> 1;
-        v19 = robo_map.field_228;
+        v17 -= (robo_map.minThumbSize - v19) >> 1;
+        v19 = robo_map.minThumbSize;
     }
 
     if ( v17 < 0 )
@@ -1629,31 +1629,31 @@ void RoboMapCalcScrollThumbs(NC_STACK_ypaworld *yw)
     if ( v17 + v19 > v20 )
         v17 = v20 - v19;
 
-    robo_map.field_1CC = v20;
-    robo_map.field_1CE = v17;
-    robo_map.field_1D0 = v19;
+    robo_map.hScrollLength = v20;
+    robo_map.hThumbPos = v17;
+    robo_map.hThumbSize = v19;
 
 
 
 
-    float v15 = -(robo_map.field_1DC + v1 * 0.5);
+    float v15 = -(robo_map.viewCenterZ + v1 * 0.5);
     float v14 = (yw->_mapSize.y * World::CVSectorLength);
 
-    v20 = robo_map.h - robo_map.field_250;
+    v20 = robo_map.h - robo_map.borderTotalH;
     v19 = (v20 * v1 / v14);
 
     int v18 = ((v20 * v15) / v14);
 
 
-    if ( v19 >= robo_map.field_228 )
+    if ( v19 >= robo_map.minThumbSize )
     {
         if ( v19 > v20 )
             v19 = v20;
     }
     else
     {
-        v18 -= (robo_map.field_228 - v19) >> 1;
-        v19 = robo_map.field_228;
+        v18 -= (robo_map.minThumbSize - v19) >> 1;
+        v19 = robo_map.minThumbSize;
     }
 
     if ( v18 < 0 )
@@ -1662,9 +1662,9 @@ void RoboMapCalcScrollThumbs(NC_STACK_ypaworld *yw)
     if ( v19 + v18 > v20 )
         v18 = v20 - v19;
 
-    robo_map.field_1D2 = v20;
-    robo_map.field_1D4 = v18;
-    robo_map.field_1D6 = v19;
+    robo_map.vScrollLength = v20;
+    robo_map.vThumbPos = v18;
+    robo_map.vThumbSize = v19;
 }
 
 void RoboMapLayoutFrame(NC_STACK_ypaworld *yw)
@@ -1681,24 +1681,24 @@ void RoboMapLayoutFrame(NC_STACK_ypaworld *yw)
                                     yw->_fontDefCloseW,    yw->_fontH);
 
     robo_map.buttons[1] = ButtonBox(0, 0,
-                                    robo_map.buttons[2].x - robo_map.field_238, yw->_fontH);
+                                    robo_map.buttons[2].x - robo_map.sizeBtnWidth, yw->_fontH);
 
-    robo_map.buttons[9] = ButtonBox(robo_map.buttons[2].x - robo_map.field_238, 0,
-                                    robo_map.field_238,       yw->_fontH);
+    robo_map.buttons[9] = ButtonBox(robo_map.buttons[2].x - robo_map.sizeBtnWidth, 0,
+                                    robo_map.sizeBtnWidth,       yw->_fontH);
 
-    int v5 = robo_map.field_234 + robo_map.field_244;
+    int v5 = robo_map.toolBarOffsetX + robo_map.borderLeft;
 
     for (int i = 3; i < 9; i++)
     {
-        robo_map.buttons[i] = ButtonBox(v5,  v23 - robo_map.field_240 - robo_map.field_230,
-                                        robo_map.field_22C,  robo_map.field_230);
+        robo_map.buttons[i] = ButtonBox(v5,  v23 - robo_map.borderBottom - robo_map.toolBtnHeight,
+                                        robo_map.toolBtnWidth,  robo_map.toolBtnHeight);
 
-        v5 += robo_map.field_22C;
+        v5 += robo_map.toolBtnWidth;
     }
 
     int v7;
 
-    if ( robo_map.field_1E8 & 0x20 )
+    if ( robo_map.stateFlags & 0x20 )
         v7 = 's'; //default fon
     else
         v7 = 'q'; //default fon (
@@ -1715,7 +1715,7 @@ void RoboMapLayoutFrame(NC_STACK_ypaworld *yw)
     FontUA::next_line(&robo_map.cmdCommands);
     FontUA::reset_tileset(&robo_map.cmdCommands, 12);
 
-    int v13 = v23 - robo_map.field_250 - 1;
+    int v13 = v23 - robo_map.borderTotalH - 1;
     while (v13 > yw->_fontVScrollH)
     {
         FontUA::store_u8(&robo_map.cmdCommands, 65);
@@ -1744,19 +1744,19 @@ void RoboMapLayoutFrame(NC_STACK_ypaworld *yw)
 void RoboMapLayoutHScroll(NC_STACK_ypaworld *yw)
 {
     int v1 = robo_map.x - (yw->_screenSize.x / 2);
-    int v3 = robo_map.y + robo_map.h - robo_map.field_240 - (yw->_screenSize.y / 2);
+    int v3 = robo_map.y + robo_map.h - robo_map.borderBottom - (yw->_screenSize.y / 2);
 
-    robo_map.buttons[13] = ButtonBox(0, robo_map.h - robo_map.field_240,
-                                     robo_map.field_1CE, robo_map.field_240);
+    robo_map.buttons[13] = ButtonBox(0, robo_map.h - robo_map.borderBottom,
+                                     robo_map.hThumbPos, robo_map.borderBottom);
 
-    robo_map.buttons[14] = ButtonBox(robo_map.field_1CE, robo_map.h - robo_map.field_240,
-                                     robo_map.field_1D0, robo_map.field_240);
+    robo_map.buttons[14] = ButtonBox(robo_map.hThumbPos, robo_map.h - robo_map.borderBottom,
+                                     robo_map.hThumbSize, robo_map.borderBottom);
 
-    robo_map.buttons[16] = ButtonBox(robo_map.w - robo_map.field_248,  robo_map.h - robo_map.field_240,
-                                     robo_map.field_248,  robo_map.field_240);
+    robo_map.buttons[16] = ButtonBox(robo_map.w - robo_map.borderRight,  robo_map.h - robo_map.borderBottom,
+                                     robo_map.borderRight,  robo_map.borderBottom);
 
-    robo_map.buttons[15] = ButtonBox(robo_map.field_1D0 + robo_map.field_1CE,   robo_map.h - robo_map.field_240,
-                                     robo_map.field_1CC - robo_map.field_1CE - robo_map.field_1D0,   robo_map.field_240);
+    robo_map.buttons[15] = ButtonBox(robo_map.hThumbSize + robo_map.hThumbPos,   robo_map.h - robo_map.borderBottom,
+                                     robo_map.hScrollLength - robo_map.hThumbPos - robo_map.hThumbSize,   robo_map.borderBottom);
 
     robo_map.t1_cmdbuf_2.clear();
 
@@ -1764,7 +1764,7 @@ void RoboMapLayoutHScroll(NC_STACK_ypaworld *yw)
     FontUA::set_center_xpos(&robo_map.t1_cmdbuf_2, v1);
     FontUA::set_center_ypos(&robo_map.t1_cmdbuf_2, v3);
 
-    int v4 = robo_map.field_1CE;
+    int v4 = robo_map.hThumbPos;
 
     if ( v4 > 0 )
     {
@@ -1778,18 +1778,18 @@ void RoboMapLayoutHScroll(NC_STACK_ypaworld *yw)
 
     FontUA::store_u8(&robo_map.t1_cmdbuf_2, 68);
 
-    FontUA::op17(&robo_map.t1_cmdbuf_2, robo_map.field_1D0 + v4 - 1);
+    FontUA::op17(&robo_map.t1_cmdbuf_2, robo_map.hThumbSize + v4 - 1);
 
     FontUA::store_u8(&robo_map.t1_cmdbuf_2, 69);
     FontUA::store_u8(&robo_map.t1_cmdbuf_2, 70);
 
 
-    int v11 = v4 + robo_map.field_1D0;
-    if ( v11 < robo_map.field_1CC )
+    int v11 = v4 + robo_map.hThumbSize;
+    if ( v11 < robo_map.hScrollLength )
     {
-        if ( v11 < robo_map.field_1CC - 1 )
+        if ( v11 < robo_map.hScrollLength - 1 )
         {
-            FontUA::op17(&robo_map.t1_cmdbuf_2, robo_map.field_1CC - 1);
+            FontUA::op17(&robo_map.t1_cmdbuf_2, robo_map.hScrollLength - 1);
 
             FontUA::store_u8(&robo_map.t1_cmdbuf_2, 66);
         }
@@ -1803,17 +1803,17 @@ void RoboMapLayoutHScroll(NC_STACK_ypaworld *yw)
 
 void RoboMapLayoutVScroll(NC_STACK_ypaworld *yw)
 {
-    int v2 = robo_map.x + robo_map.w - robo_map.field_248 - (yw->_screenSize.x / 2);
-    int v3 = robo_map.y + robo_map.field_23C - (yw->_screenSize.y / 2);
+    int v2 = robo_map.x + robo_map.w - robo_map.borderRight - (yw->_screenSize.x / 2);
+    int v3 = robo_map.y + robo_map.borderTop - (yw->_screenSize.y / 2);
 
-    robo_map.buttons[10] = ButtonBox(robo_map.w - robo_map.field_248,    robo_map.field_23C,
-                                     robo_map.field_248,   robo_map.field_1D4);
+    robo_map.buttons[10] = ButtonBox(robo_map.w - robo_map.borderRight,    robo_map.borderTop,
+                                     robo_map.borderRight,   robo_map.vThumbPos);
 
-    robo_map.buttons[11] = ButtonBox(robo_map.w - robo_map.field_248,    robo_map.field_1D4 + robo_map.field_23C,
-                                     robo_map.field_248,   robo_map.field_1D6);
+    robo_map.buttons[11] = ButtonBox(robo_map.w - robo_map.borderRight,    robo_map.vThumbPos + robo_map.borderTop,
+                                     robo_map.borderRight,   robo_map.vThumbSize);
 
-    robo_map.buttons[12] = ButtonBox(robo_map.w - robo_map.field_248,    robo_map.field_1D6 + robo_map.field_1D4 + robo_map.field_23C,
-                                     robo_map.field_248,   robo_map.field_1D2 - robo_map.field_1D4 - robo_map.field_1D6);
+    robo_map.buttons[12] = ButtonBox(robo_map.w - robo_map.borderRight,    robo_map.vThumbSize + robo_map.vThumbPos + robo_map.borderTop,
+                                     robo_map.borderRight,   robo_map.vScrollLength - robo_map.vThumbPos - robo_map.vThumbSize);
 
     robo_map.t1_cmdbuf_1.clear();
 
@@ -1821,7 +1821,7 @@ void RoboMapLayoutVScroll(NC_STACK_ypaworld *yw)
     FontUA::set_center_ypos(&robo_map.t1_cmdbuf_1, v3);
 
 
-    if ( robo_map.field_1D4 > 0 )
+    if ( robo_map.vThumbPos > 0 )
     {
         FontUA::reset_tileset(&robo_map.t1_cmdbuf_1, 13);
 
@@ -1830,7 +1830,7 @@ void RoboMapLayoutVScroll(NC_STACK_ypaworld *yw)
 
         FontUA::reset_tileset(&robo_map.t1_cmdbuf_1, 12);
 
-        int v9 = robo_map.field_1D4 - 1;
+        int v9 = robo_map.vThumbPos - 1;
 
         while (v9 >= yw->_fontVScrollH )
         {
@@ -1848,7 +1848,7 @@ void RoboMapLayoutVScroll(NC_STACK_ypaworld *yw)
         }
     }
 
-    if ( robo_map.field_1D6 > 0 )
+    if ( robo_map.vThumbSize > 0 )
     {
         FontUA::reset_tileset(&robo_map.t1_cmdbuf_1, 13);
         FontUA::store_u8(&robo_map.t1_cmdbuf_1, 69);
@@ -1858,7 +1858,7 @@ void RoboMapLayoutVScroll(NC_STACK_ypaworld *yw)
         FontUA::reset_tileset(&robo_map.t1_cmdbuf_1, 12);
 
 
-        int v14 = robo_map.field_1D6 - 1;
+        int v14 = robo_map.vThumbSize - 1;
 
         while ( v14 > yw->_fontVScrollH )
         {
@@ -1881,7 +1881,7 @@ void RoboMapLayoutVScroll(NC_STACK_ypaworld *yw)
         FontUA::next_line(&robo_map.t1_cmdbuf_1);
     }
 
-    int v21 = robo_map.field_1D2 - robo_map.field_1D4 - robo_map.field_1D6;
+    int v21 = robo_map.vScrollLength - robo_map.vThumbPos - robo_map.vThumbSize;
 
     if ( v21 > 0 )
     {
@@ -2044,7 +2044,7 @@ int RoboMapFogTile(NC_STACK_ypaworld *yw, int x, int y)
 {
     if ( yw->IsSector( {x, y} ) )
     {
-        if ( (robo_map.field_1EC & 3) && (robo_map.MapViewMask & yw->_cells(x, y).view_mask) )
+        if ( (robo_map.layerFlags & 3) && (robo_map.MapViewMask & yw->_cells(x, y).view_mask) )
             return 0;
         else
             return 9;
@@ -2178,21 +2178,21 @@ int RoboMapLegoTile(NC_STACK_ypaworld *yw, int x, int y)
 
 void RoboMapLayoutTerrainLayers(NC_STACK_ypaworld *yw, CmdStream *cmdbuf, int xpos, int ypos, int w, int h)
 {
-    float v7 = robo_map.field_1D8 / robo_map.field_1E0;
-    float v8 = -robo_map.field_1DC / robo_map.field_1E4;
+    float v7 = robo_map.viewCenterX / robo_map.unitsPerPixelX;
+    float v8 = -robo_map.viewCenterZ / robo_map.unitsPerPixelY;
     int v9 = v7 - (w / 2);
     int v23 = w + v9;
     int v10 = v8 - (h / 2);
     int v22 = h + v10;
 
-    RoboMapLayoutTileLayer(yw, 4 << robo_map.field_1EE, cmdbuf, v9, v10, v23, v22, robo_map.field_1EE + 50, RoboMapFogTile, xpos, ypos);
+    RoboMapLayoutTileLayer(yw, 4 << robo_map.zoomLevel, cmdbuf, v9, v10, v23, v22, robo_map.zoomLevel + 50, RoboMapFogTile, xpos, ypos);
 
-    if ( robo_map.field_1EC & 2 )
-        RoboMapLayoutTileLayer(yw, 4 << robo_map.field_1EE, cmdbuf, v9, v10, v23, v22, robo_map.field_1EE + 50, RoboMapOwnerTile, xpos, ypos);
+    if ( robo_map.layerFlags & 2 )
+        RoboMapLayoutTileLayer(yw, 4 << robo_map.zoomLevel, cmdbuf, v9, v10, v23, v22, robo_map.zoomLevel + 50, RoboMapOwnerTile, xpos, ypos);
 
-    if ( robo_map.field_1EC & 1 )
+    if ( robo_map.layerFlags & 1 )
     {
-        switch ( robo_map.field_1EE )
+        switch ( robo_map.zoomLevel )
         {
         case 0:
             RoboMapLayoutTileLayer(yw, 4, cmdbuf, v9, v10, v23, v22, 43, RoboMapSectorTypeTile, xpos, ypos);
@@ -2219,7 +2219,7 @@ void RoboMapLayoutTerrainLayers(NC_STACK_ypaworld *yw, CmdStream *cmdbuf, int xp
 
 void RoboMapLayoutTerrain(NC_STACK_ypaworld *yw, CmdStream *cmdbuf, int x, int y)
 {
-    RoboMapLayoutTerrainLayers(yw, cmdbuf, x, y, robo_map.w - robo_map.field_24C, robo_map.h - robo_map.field_250);
+    RoboMapLayoutTerrainLayers(yw, cmdbuf, x, y, robo_map.w - robo_map.borderTotalW, robo_map.h - robo_map.borderTotalH);
     FontUA::set_end(cmdbuf);
 }
 
@@ -2228,56 +2228,56 @@ void RoboMapClampView(NC_STACK_ypaworld *yw, int a2, int a3)
     float v15 = yw->_mapSize.x * World::CVSectorLength;
     float v12 = yw->_mapSize.y * World::CVSectorLength;
 
-    float v4 = a2 * robo_map.field_1E0;
+    float v4 = a2 * robo_map.unitsPerPixelX;
     float v13 = v4 * 0.5;
 
     if ( v4 <= v15 )
     {
-        if ( robo_map.field_1D8 - v13 >= 0.0 )
+        if ( robo_map.viewCenterX - v13 >= 0.0 )
         {
-            if ( robo_map.field_1D8 + v13 > v15 )
-                robo_map.field_1D8 = v15 - v13;
+            if ( robo_map.viewCenterX + v13 > v15 )
+                robo_map.viewCenterX = v15 - v13;
         }
         else
         {
-            robo_map.field_1D8 = v13;
+            robo_map.viewCenterX = v13;
         }
     }
     else
     {
-        robo_map.field_1D8 = v15 * 0.5;
+        robo_map.viewCenterX = v15 * 0.5;
     }
 
-    float v8 = a3 * robo_map.field_1E4;
+    float v8 = a3 * robo_map.unitsPerPixelY;
     float v14 = v8 * 0.5;
 
     if ( v8 > v12 )
     {
-        robo_map.field_1DC = -v12 * 0.5;
+        robo_map.viewCenterZ = -v12 * 0.5;
     }
     else
     {
-        if ( robo_map.field_1DC + v14 > 0.0 )
+        if ( robo_map.viewCenterZ + v14 > 0.0 )
         {
-            robo_map.field_1DC = -v8 * 0.5;
+            robo_map.viewCenterZ = -v8 * 0.5;
         }
         else
         {
-            if ( robo_map.field_1DC - v14 < -v12 )
-                robo_map.field_1DC = -v12 + v14;
+            if ( robo_map.viewCenterZ - v14 < -v12 )
+                robo_map.viewCenterZ = -v12 + v14;
         }
     }
 }
 
 void MapRoboUpdateMapInt(NC_STACK_ypaworld *yw)
 {
-    robo_map.buttons[17] = ButtonBox(robo_map.field_244,
-                                     robo_map.field_23C,
-                                     robo_map.w - robo_map.field_24C,
-                                     robo_map.h - robo_map.field_250);
+    robo_map.buttons[17] = ButtonBox(robo_map.borderLeft,
+                                     robo_map.borderTop,
+                                     robo_map.w - robo_map.borderTotalW,
+                                     robo_map.h - robo_map.borderTotalH);
 
-    int v15 = robo_map.x + robo_map.field_244 - (yw->_screenSize.x / 2);
-    int v14 = robo_map.y + robo_map.field_23C - (yw->_screenSize.y / 2);
+    int v15 = robo_map.x + robo_map.borderLeft - (yw->_screenSize.x / 2);
+    int v14 = robo_map.y + robo_map.borderTop - (yw->_screenSize.y / 2);
 
     robo_map.t1_cmdbuf_3.clear();
     RoboMapLayoutTerrain(yw, &robo_map.t1_cmdbuf_3, v15, v14);
@@ -2291,27 +2291,27 @@ void  CreateRoboMap(NC_STACK_ypaworld *yw)
     robo_map.overlayCmds.reserve(32768);
 
     robo_map.flags = (GuiBase::FLAG_WITH_HELP | GuiBase::FLAG_CLOSED | GuiBase::FLAG_WITH_CLOSE | GuiBase::FLAG_WITH_DRAGBAR);
-    robo_map.field_228 = 8;
-    robo_map.field_22C = yw->_guiTiles[10]->map[65].w;
-    robo_map.field_230 = yw->_guiTiles[10]->h;
-    robo_map.field_234 = 4;
-    robo_map.field_238 = yw->_guiTiles[0]->map[113].w;
-    robo_map.field_23C = yw->_fontH;
-    robo_map.field_240 = yw->_fontHScrollH;
-    robo_map.field_244 = yw->_guiTiles[12]->map[65].w;
-    robo_map.field_248 = yw->_fontVBScrollW;
-    robo_map.field_24C = robo_map.field_248 + robo_map.field_244;
-    robo_map.field_250 = robo_map.field_240 + robo_map.field_23C;
-    robo_map.field_210 = robo_map.field_248 + 7 * robo_map.field_22C + robo_map.field_244 + 8;
-    robo_map.field_212 = robo_map.field_240 + robo_map.field_23C + 96;
-    robo_map.field_214 = 32000;
-    robo_map.field_216 = 32000;
+    robo_map.minThumbSize = 8;
+    robo_map.toolBtnWidth = yw->_guiTiles[10]->map[65].w;
+    robo_map.toolBtnHeight = yw->_guiTiles[10]->h;
+    robo_map.toolBarOffsetX = 4;
+    robo_map.sizeBtnWidth = yw->_guiTiles[0]->map[113].w;
+    robo_map.borderTop = yw->_fontH;
+    robo_map.borderBottom = yw->_fontHScrollH;
+    robo_map.borderLeft = yw->_guiTiles[12]->map[65].w;
+    robo_map.borderRight = yw->_fontVBScrollW;
+    robo_map.borderTotalW = robo_map.borderRight + robo_map.borderLeft;
+    robo_map.borderTotalH = robo_map.borderBottom + robo_map.borderTop;
+    robo_map.minWidth = robo_map.borderRight + 7 * robo_map.toolBtnWidth + robo_map.borderLeft + 8;
+    robo_map.minHeight = robo_map.borderBottom + robo_map.borderTop + 96;
+    robo_map.maxWidth = 32000;
+    robo_map.maxHeight = 32000;
     robo_map.x = 0;
     robo_map.y = yw->_upScreenBorder;
     robo_map.w = 2 * yw->_screenSize.x / 3;
     robo_map.h = 2 * yw->_screenSize.y / 3;
-    robo_map.field_1EE = 4;
-    robo_map.field_1EC = 7;
+    robo_map.zoomLevel = 4;
+    robo_map.layerFlags = 7;
     robo_map.buttons.resize(18);
 
     robo_map.cmdCommands.reserve(512);
@@ -2321,63 +2321,63 @@ void  CreateRoboMap(NC_STACK_ypaworld *yw)
 
     if ( yw->_userRobo )
     {
-        robo_map.field_1D8 = yw->_userRobo->_position.x;
-        robo_map.field_1DC = yw->_userRobo->_position.z;
+        robo_map.viewCenterX = yw->_userRobo->_position.x;
+        robo_map.viewCenterZ = yw->_userRobo->_position.z;
     }
     else
     {
-        robo_map.field_1DC = -39000.0;
-        robo_map.field_1D8 = 39000.0;
+        robo_map.viewCenterZ = -39000.0;
+        robo_map.viewCenterX = 39000.0;
     }
 
-    switch ( robo_map.field_1EE )
+    switch ( robo_map.zoomLevel )
     {
     case 0:
-        robo_map.field_1E4 = 300.0;
-        robo_map.field_1E0 = 300.0;
+        robo_map.unitsPerPixelY = 300.0;
+        robo_map.unitsPerPixelX = 300.0;
         break;
 
     case 1:
-        robo_map.field_1E4 = 150.0;
-        robo_map.field_1E0 = 150.0;
+        robo_map.unitsPerPixelY = 150.0;
+        robo_map.unitsPerPixelX = 150.0;
         break;
 
     case 2:
-        robo_map.field_1E4 = 75.0;
-        robo_map.field_1E0 = 75.0;
+        robo_map.unitsPerPixelY = 75.0;
+        robo_map.unitsPerPixelX = 75.0;
         break;
 
     case 3:
-        robo_map.field_1E4 = 37.5;
-        robo_map.field_1E0 = 37.5;
+        robo_map.unitsPerPixelY = 37.5;
+        robo_map.unitsPerPixelX = 37.5;
         break;
 
     case 4:
-        robo_map.field_1E4 = 18.75;
-        robo_map.field_1E0 = 18.75;
+        robo_map.unitsPerPixelY = 18.75;
+        robo_map.unitsPerPixelX = 18.75;
         break;
     }
 
-    robo_map.field_1ED = 0;
-    robo_map.field_1E8 = 0;
+    robo_map.lockViewer = 0;
+    robo_map.stateFlags = 0;
     robo_map.MapViewMask = cellArea::ViewMask(1);
 
-    robo_map.field_254 = 0.45;
-    robo_map.field_258 = 0;
-    robo_map.field_25C = 0.95;
-    robo_map.field_260 = 0.6;
+    robo_map.radarLeft = 0.45;
+    robo_map.radarTop = 0;
+    robo_map.radarRight = 0.95;
+    robo_map.radarBottom = 0.6;
 
-    robo_map.field_208 = yw->_screenSize.x - robo_map.field_210;
-    robo_map.field_20A = yw->_screenSize.y - yw->_downScreenBorder - robo_map.field_212;
-    robo_map.field_20C = robo_map.field_210;
-    robo_map.field_20E = robo_map.field_212;
+    robo_map.altX = yw->_screenSize.x - robo_map.minWidth;
+    robo_map.altY = yw->_screenSize.y - yw->_downScreenBorder - robo_map.minHeight;
+    robo_map.altW = robo_map.minWidth;
+    robo_map.altH = robo_map.minHeight;
 
     RoboMapCalcScrollThumbs(yw);
     RoboMapLayoutFrame(yw);
     RoboMapLayoutHScroll(yw);
     RoboMapLayoutVScroll(yw);
     MapRoboUpdateMapInt(yw);
-    RoboMapClampView(yw, robo_map.field_1CC - robo_map.field_244, robo_map.field_1D2);
+    RoboMapClampView(yw, robo_map.hScrollLength - robo_map.borderLeft, robo_map.vScrollLength);
 }
 
 
@@ -2405,41 +2405,41 @@ void ValidateWinStatus(NC_STACK_ypaworld *yw, TMFWinStatus *status)
 void RoboMapZoom(NC_STACK_ypaworld *yw, int a2)
 {
     if ( a2 == 1 )
-        robo_map.field_1EE++;
+        robo_map.zoomLevel++;
     else if ( a2 == 2 )
-        robo_map.field_1EE--;
+        robo_map.zoomLevel--;
 
 
-    if ( robo_map.field_1EE > 4 )
-        robo_map.field_1EE = 4;
-    else if ( robo_map.field_1EE < 1 )
-        robo_map.field_1EE = 1;
+    if ( robo_map.zoomLevel > 4 )
+        robo_map.zoomLevel = 4;
+    else if ( robo_map.zoomLevel < 1 )
+        robo_map.zoomLevel = 1;
 
-    switch ( robo_map.field_1EE )
+    switch ( robo_map.zoomLevel )
     {
     case 0:
-        robo_map.field_1E4 = 300.0;
-        robo_map.field_1E0 = 300.0;
+        robo_map.unitsPerPixelY = 300.0;
+        robo_map.unitsPerPixelX = 300.0;
         break;
 
     case 1:
-        robo_map.field_1E4 = 150.0;
-        robo_map.field_1E0 = 150.0;
+        robo_map.unitsPerPixelY = 150.0;
+        robo_map.unitsPerPixelX = 150.0;
         break;
 
     case 2:
-        robo_map.field_1E4 = 75.0;
-        robo_map.field_1E0 = 75.0;
+        robo_map.unitsPerPixelY = 75.0;
+        robo_map.unitsPerPixelX = 75.0;
         break;
 
     case 3:
-        robo_map.field_1E4 = 37.5;
-        robo_map.field_1E0 = 37.5;
+        robo_map.unitsPerPixelY = 37.5;
+        robo_map.unitsPerPixelX = 37.5;
         break;
 
     case 4:
-        robo_map.field_1E4 = 18.75;
-        robo_map.field_1E0 = 18.75;
+        robo_map.unitsPerPixelY = 18.75;
+        robo_map.unitsPerPixelX = 18.75;
         break;
     }
 }
@@ -2448,7 +2448,7 @@ void RoboMapZoom(NC_STACK_ypaworld *yw, int a2)
 void SetBottomBarLayout(NC_STACK_ypaworld *yw)
 {
     int v3 = yw->_screenSize.x - 11 * yw->_iconOrderW;
-    bzda.field_8FC = v3 / 4;
+    bzda.groupGap = v3 / 4;
 
     int v5;
     if ( yw->_screenSize.x >= 512 )
@@ -2456,11 +2456,11 @@ void SetBottomBarLayout(NC_STACK_ypaworld *yw)
     else
         v5 = 9 * yw->_guiTiles[0]->map[87].w;
 
-    bzda.field_900 = 2 * v5;
-    bzda.field_904 = bzda.field_8FC / 2;
-    bzda.field_908 = yw->_iconOrderW + bzda.field_8FC + bzda.field_8FC / 2;
-    bzda.field_90C = 2 * yw->_iconOrderW + bzda.field_908 + bzda.field_8FC;
-    bzda.field_910 = 5 * yw->_iconOrderW + bzda.field_90C + bzda.field_8FC;
+    bzda.buyListWidth = 2 * v5;
+    bzda.createGroupX = bzda.groupGap / 2;
+    bzda.windowGroupX = yw->_iconOrderW + bzda.groupGap + bzda.groupGap / 2;
+    bzda.unitGroupX = 2 * yw->_iconOrderW + bzda.windowGroupX + bzda.groupGap;
+    bzda.toolGroupX = 5 * yw->_iconOrderW + bzda.unitGroupX + bzda.groupGap;
 
     bzda.x = 0;
     bzda.y = yw->_screenSize.y - yw->_iconOrderH;
@@ -2470,12 +2470,12 @@ void SetBottomBarLayout(NC_STACK_ypaworld *yw)
 
 int CreateBottomBar(NC_STACK_ypaworld *yw)
 {
-    bzda = bzd();
+    bzda = TBottomBar();
 
     SetBottomBarLayout(yw);
 
     bzda.field_914 = 1;
-    bzda.field_918 = 0;
+    bzda.buttonsY = 0;
     bzda.flags = 0;
     bzda.buttons.resize(11);
 
@@ -2483,20 +2483,20 @@ int CreateBottomBar(NC_STACK_ypaworld *yw)
         bzda.buttons[i] = ButtonBox();
 
     bzda.cmdCommands.reserve(1088); 
-    bzda.field_1D8 = 0;
+    bzda.inputAttached = 0;
 
     UpdateBottomBarModes(yw);
 
-    bzda.field_8EC = 0;
-    bzda.field_8F0 = 0;
-    bzda.field_8F4 = 0;
-    bzda.field_8F8 = 0;
+    bzda.selVhclIdx = 0;
+    bzda.selGunIdx = 0;
+    bzda.selBuildIdx = 0;
+    bzda.selBuyListIdx = 0;
 
-    if ( bzda.field_1D4 & 1 )
+    if ( bzda.barEnabled & 1 )
     {
-        if ( !(bzda.field_1D8 & 1) )
+        if ( !(bzda.inputAttached & 1) )
         {
-            bzda.field_1D8 |= 1;
+            bzda.inputAttached |= 1;
             Input::Engine.AddClickBoxFront(&bzda);
         }
     }
@@ -2510,7 +2510,7 @@ int CreateBottomBar(NC_STACK_ypaworld *yw)
     args.maxShownEntries = 16;
     args.withIcon = false;
     args.entryHeight = yw->_fontH;
-    args.entryWidth = bzda.field_900;
+    args.entryWidth = bzda.buyListWidth;
     args.enabled = true;
     args.vborder = yw->_fontBorderH;
     args.instantInput = true;
@@ -2562,13 +2562,13 @@ int CreateBottomBar(NC_STACK_ypaworld *yw)
         robo_map.y = yw->_roboMapStatus.Rect.y;
         robo_map.w = yw->_roboMapStatus.Rect.w;
         robo_map.h = yw->_roboMapStatus.Rect.h;
-        robo_map.field_1EC = yw->_roboMapStatus.Data[0];
-        robo_map.field_1ED = yw->_roboMapStatus.Data[1];
-        robo_map.field_1EE = yw->_roboMapStatus.Data[2];
-        robo_map.field_208 = yw->_roboMapStatus.Data[3];
-        robo_map.field_20A = yw->_roboMapStatus.Data[4];
-        robo_map.field_20C = yw->_roboMapStatus.Data[5];
-        robo_map.field_20E = yw->_roboMapStatus.Data[6];
+        robo_map.layerFlags = yw->_roboMapStatus.Data[0];
+        robo_map.lockViewer = yw->_roboMapStatus.Data[1];
+        robo_map.zoomLevel = yw->_roboMapStatus.Data[2];
+        robo_map.altX = yw->_roboMapStatus.Data[3];
+        robo_map.altY = yw->_roboMapStatus.Data[4];
+        robo_map.altW = yw->_roboMapStatus.Data[5];
+        robo_map.altH = yw->_roboMapStatus.Data[6];
 
         RoboMapZoom(yw, 0);
     }
@@ -2641,12 +2641,12 @@ void create_info_log(NC_STACK_ypaworld *yw)
             strcpy(info_log.msgs[0].txt, tmp.c_str());
         }
 
-        info_log.msgs[0].field_4 = yw->_timeStamp + 1;
-        info_log.field_255C = 0;
-        info_log.field_2560 = yw->_timeStamp;
-        info_log.field_2564 = 0;
-        info_log.field_250 = 127;
-        info_log.field_248 = 6 * yw->_guiTiles[0]->map[48].w + 2 * yw->_guiTiles[0]->map[58].w + 12;
+        info_log.msgs[0].timestamp = yw->_timeStamp + 1;
+        info_log.last_sender_gid = 0;
+        info_log.last_msg_time = yw->_timeStamp;
+        info_log.last_msg_id = 0;
+        info_log.last_msg_prio = 127;
+        info_log.time_col_width = 6 * yw->_guiTiles[0]->map[48].w + 2 * yw->_guiTiles[0]->map[58].w + 12;
     }
 }
 
@@ -2827,9 +2827,9 @@ void FreeBottomBar(NC_STACK_ypaworld *yw)
 {
     yw->GuiWinClose( &gui_lstvw );
 
-    if ( bzda.field_1D8 & 1 )
+    if ( bzda.inputAttached & 1 )
     {
-        bzda.field_1D8 &= 0xFFFFFFFE;
+        bzda.inputAttached &= 0xFFFFFFFE;
         Input::Engine.RemClickBox(&bzda);
     }
 
@@ -3002,7 +3002,7 @@ void buy_list_update_sub(NC_STACK_ypaworld *yw, int a2, GuiList *lstvw, CmdStrea
 
     v24[0].txt = a5;
     v24[0].fontID = 28;
-    v24[0].width = squadron_manager.field_2CC;
+    v24[0].width = squadron_manager.iconWidth;
     v24[0].prefixChar = 0;
     v24[0].postfixChar = 0;
     v24[0].spaceChar = 64;
@@ -3013,7 +3013,7 @@ void buy_list_update_sub(NC_STACK_ypaworld *yw, int a2, GuiList *lstvw, CmdStrea
     v24[1].prefixChar = v15;
     v24[1].txt = a6;
     v24[1].flags = 37;
-    v24[1].width = v33 - squadron_manager.field_2CC - 5 * v19;
+    v24[1].width = v33 - squadron_manager.iconWidth - 5 * v19;
     v24[1].postfixChar = 0;
 
     v24[2].txt = fmt::sprintf("%d", a7);
@@ -3030,11 +3030,11 @@ void buy_list_update_sub(NC_STACK_ypaworld *yw, int a2, GuiList *lstvw, CmdStrea
 
     FontUA::select_tileset(cur, v14);
 
-    FontUA::op10(cur, squadron_manager.field_2CC);
+    FontUA::op10(cur, squadron_manager.iconWidth);
 
     FontUA::store_u8(cur, v16);
 
-    FontUA::add_xpos(cur, -squadron_manager.field_2CC);
+    FontUA::add_xpos(cur, -squadron_manager.iconWidth);
 
     FormateColumnItem(yw, cur, 3, v24);
 
@@ -3068,11 +3068,11 @@ void BottomBarLayoutBuyList(NC_STACK_ypaworld *yw)
     Input::Engine.RemClickBox(&gui_lstvw);
     Input::Engine.AddClickBoxFront(&gui_lstvw);
 
-    gui_lstvw.numEntries = bzda.field_8E8;
-    gui_lstvw.selectedEntry = bzda.field_8F8;
+    gui_lstvw.numEntries = bzda.buyListCount;
+    gui_lstvw.selectedEntry = bzda.selBuyListIdx;
 
-    if ( gui_lstvw.maxShownEntries >= bzda.field_8E8 )
-        gui_lstvw.shownEntries = bzda.field_8E8;
+    if ( gui_lstvw.maxShownEntries >= bzda.buyListCount )
+        gui_lstvw.shownEntries = bzda.buyListCount;
     else
         gui_lstvw.shownEntries = gui_lstvw.maxShownEntries;
 
@@ -3081,8 +3081,8 @@ void BottomBarLayoutBuyList(NC_STACK_ypaworld *yw)
 
     gui_lstvw.SetRect(yw, -2, -2);
 
-    gui_lstvw.x = bzda.field_904 + bzda.x;
-    gui_lstvw.y = bzda.field_918 + bzda.y - gui_lstvw.h;
+    gui_lstvw.x = bzda.createGroupX + bzda.x;
+    gui_lstvw.y = bzda.buttonsY + bzda.y - gui_lstvw.h;
 
     gui_lstvw.ItemsPreLayout(yw, &gui_lstvw.itemBlock, 0, "uvw");
 
@@ -3091,9 +3091,9 @@ void BottomBarLayoutBuyList(NC_STACK_ypaworld *yw)
         int v21 = 0;
         int v3 = i + gui_lstvw.firstShownEntries;
 
-        if ( bzda.field_4DC[ v3 ].i == 1 )
+        if ( bzda.buyList[ v3 ].kind == 1 )
         {
-            int v5 = bzda.field_4DC[ v3 ].d;
+            int v5 = bzda.buyList[ v3 ].protoId;
 
             const World::TVhclProto &proto = yw->_vhclProtos[v5];
 
@@ -3106,9 +3106,9 @@ void BottomBarLayoutBuyList(NC_STACK_ypaworld *yw)
 
             buy_list_update_sub(yw, v21, &gui_lstvw, &gui_lstvw.itemBlock, proto.type_icon, v8, v17);
         }
-        else if ( bzda.field_4DC[ v3 ].i == 2 )
+        else if ( bzda.buyList[ v3 ].kind == 2 )
         {
-            int v9 = bzda.field_4DC[ v3 ].d;
+            int v9 = bzda.buyList[ v3 ].protoId;
             const World::TBuildingProto &v10 = yw->_buildProtos[v9];
 
             int v18 = dround(yw->GetUnitLimitCostFactor() * v10.Energy / 100.0);
@@ -3145,9 +3145,9 @@ void gui_update_create_btn(NC_STACK_ypaworld *yw, CmdStream *cur)
     }
     else
     {
-        bzda.buttons[0] = ButtonBox(bzda.field_904, bzda.field_918, yw->_iconOrderW, yw->_iconOrderH);
+        bzda.buttons[0] = ButtonBox(bzda.createGroupX, bzda.buttonsY, yw->_iconOrderW, yw->_iconOrderH);
 
-        if ( !(bzda.field_1CC & 0x16) )
+        if ( !(bzda.enabledModes & 0x16) )
         {
             bzda.buttons[0] = ButtonBox(); //create_btn
 
@@ -3156,7 +3156,7 @@ void gui_update_create_btn(NC_STACK_ypaworld *yw, CmdStream *cur)
         }
         else
         {
-            if ( bzda.field_1D0 & 0x16 )
+            if ( bzda.activeMode & 0x16 )
             {
                 if ( gui_lstvw.IsOpen() )
                     BottomBarLayoutBuyList(yw);
@@ -3168,7 +3168,7 @@ void gui_update_create_btn(NC_STACK_ypaworld *yw, CmdStream *cur)
                 FontUA::select_tileset(cur, 21);
             }
 
-            int v9 = bzda.field_1D0 & 0x16;
+            int v9 = bzda.activeMode & 0x16;
 
             if (v9 == 0x10)
                 FontUA::store_u8(cur, 70);
@@ -3200,11 +3200,11 @@ void gui_update_map_squad_btn(NC_STACK_ypaworld *yw, CmdStream *cur)
     }
     else
     {
-        int v8 = bzda.field_908;
+        int v8 = bzda.windowGroupX;
 
         for (int i = 2; i < 4; i++)
         {
-            bzda.buttons[i] = ButtonBox(v8, bzda.field_918, yw->_iconOrderW, yw->_iconOrderH);
+            bzda.buttons[i] = ButtonBox(v8, bzda.buttonsY, yw->_iconOrderW, yw->_iconOrderH);
 
             v8 += yw->_iconOrderW;
         }
@@ -3234,7 +3234,7 @@ void gui_update_player_panel(NC_STACK_ypaworld *yw, CmdStream *cur)
         if ( !yw->_cmdrsRemap.empty() )
             v35 = 0x80;
 
-        if ( bzda.field_8DC )
+        if ( bzda.gunCount )
             v35 |= 0x40;
     }
     else if ( yw->_userUnit->_status == BACT_STATUS_DEAD )
@@ -3245,7 +3245,7 @@ void gui_update_player_panel(NC_STACK_ypaworld *yw, CmdStream *cur)
     {
         v35 = 0x90;
 
-        if ( bzda.field_8DC > 1 )
+        if ( bzda.gunCount > 1 )
             v35 = 0xD0;
     }
     else if ( yw->_userUnit->IsParentMyRobo() )
@@ -3279,11 +3279,11 @@ void gui_update_player_panel(NC_STACK_ypaworld *yw, CmdStream *cur)
     if ( yw->_userRobo->_status == BACT_STATUS_DEAD )
         v35 = 0;
 
-    if ( bzda.field_1CC & 8 )
+    if ( bzda.enabledModes & 8 )
     {
-        bzda.buttons[1] = ButtonBox(bzda.field_90C, bzda.field_918, yw->_iconOrderW, yw->_iconOrderH); //into_vhcl_btn
+        bzda.buttons[1] = ButtonBox(bzda.unitGroupX, bzda.buttonsY, yw->_iconOrderW, yw->_iconOrderH); //into_vhcl_btn
 
-        if ( bzda.field_1D0 & 8 )
+        if ( bzda.activeMode & 8 )
             FontUA::select_tileset(cur, 22);
         else
             FontUA::select_tileset(cur, 21);
@@ -3301,9 +3301,9 @@ void gui_update_player_panel(NC_STACK_ypaworld *yw, CmdStream *cur)
 
     if ( v35 & 0x10 )
     {
-        bzda.buttons[4] = ButtonBox(yw->_iconOrderW + bzda.field_90C, bzda.field_918, yw->_iconOrderW, yw->_iconOrderH); //to_host_btn
+        bzda.buttons[4] = ButtonBox(yw->_iconOrderW + bzda.unitGroupX, bzda.buttonsY, yw->_iconOrderW, yw->_iconOrderH); //to_host_btn
 
-        if ( bzda.field_91C & 0x10 )
+        if ( bzda.pressedBtns & 0x10 )
             FontUA::select_tileset(cur, 22);
         else
             FontUA::select_tileset(cur, 21);
@@ -3320,9 +3320,9 @@ void gui_update_player_panel(NC_STACK_ypaworld *yw, CmdStream *cur)
 
     if ( v35 & 0x20 )
     {
-        bzda.buttons[5] = ButtonBox(bzda.field_90C + 2 * yw->_iconOrderW, bzda.field_918, yw->_iconOrderW, yw->_iconOrderH); //to_leader_btn
+        bzda.buttons[5] = ButtonBox(bzda.unitGroupX + 2 * yw->_iconOrderW, bzda.buttonsY, yw->_iconOrderW, yw->_iconOrderH); //to_leader_btn
 
-        if ( bzda.field_91C & 0x20 )
+        if ( bzda.pressedBtns & 0x20 )
             FontUA::select_tileset(cur, 22);
         else
             FontUA::select_tileset(cur, 21);
@@ -3339,11 +3339,11 @@ void gui_update_player_panel(NC_STACK_ypaworld *yw, CmdStream *cur)
 
     if ( v35 & 0x40 )
     {
-        if ( !bzda.field_8DC || (yw->_userRobo != yw->_userUnit && !yw->_playerInHSGun) )
+        if ( !bzda.gunCount || (yw->_userRobo != yw->_userUnit && !yw->_playerInHSGun) )
         {
-            bzda.buttons[6] = ButtonBox(bzda.field_90C + 3 * yw->_iconOrderW, bzda.field_918, yw->_iconOrderW, yw->_iconOrderH); //turrets_btn
+            bzda.buttons[6] = ButtonBox(bzda.unitGroupX + 3 * yw->_iconOrderW, bzda.buttonsY, yw->_iconOrderW, yw->_iconOrderH); //turrets_btn
 
-            if ( bzda.field_91C & 0x40 )
+            if ( bzda.pressedBtns & 0x40 )
                 FontUA::select_tileset(cur, 22);
             else
                 FontUA::select_tileset(cur, 21);
@@ -3352,9 +3352,9 @@ void gui_update_player_panel(NC_STACK_ypaworld *yw, CmdStream *cur)
         }
         else
         {
-            bzda.buttons[6] = ButtonBox(bzda.field_90C + 3 * yw->_iconOrderW, bzda.field_918, yw->_iconOrderW, yw->_iconOrderH); //turrets_btn
+            bzda.buttons[6] = ButtonBox(bzda.unitGroupX + 3 * yw->_iconOrderW, bzda.buttonsY, yw->_iconOrderW, yw->_iconOrderH); //turrets_btn
 
-            if ( bzda.field_91C & 0x40 )
+            if ( bzda.pressedBtns & 0x40 )
                 FontUA::select_tileset(cur, 22);
             else
                 FontUA::select_tileset(cur, 21);
@@ -3372,9 +3372,9 @@ void gui_update_player_panel(NC_STACK_ypaworld *yw, CmdStream *cur)
 
     if ( v35 & 0x80 )
     {
-        bzda.buttons[7] = ButtonBox(4 * yw->_iconOrderW + bzda.field_90C, bzda.field_918, yw->_iconOrderW, yw->_iconOrderH); //next_squad_btn
+        bzda.buttons[7] = ButtonBox(4 * yw->_iconOrderW + bzda.unitGroupX, bzda.buttonsY, yw->_iconOrderW, yw->_iconOrderH); //next_squad_btn
 
-        if ( bzda.field_91C & 0x80 )
+        if ( bzda.pressedBtns & 0x80 )
             FontUA::select_tileset(cur, 22);
         else
             FontUA::select_tileset(cur, 21);
@@ -3401,9 +3401,9 @@ void gui_update_tools(NC_STACK_ypaworld *yw, CmdStream *cur)
     }
     else
     {
-        bzda.buttons[8] = ButtonBox(bzda.field_910, bzda.field_918, yw->_iconOrderW, yw->_iconOrderH); // analyzer_btn
+        bzda.buttons[8] = ButtonBox(bzda.toolGroupX, bzda.buttonsY, yw->_iconOrderW, yw->_iconOrderH); // analyzer_btn
 
-        if ( bzda.field_91C & 0x100 )
+        if ( bzda.pressedBtns & 0x100 )
             FontUA::select_tileset(cur, 22);
         else
             FontUA::select_tileset(cur, 21);
@@ -3411,18 +3411,18 @@ void gui_update_tools(NC_STACK_ypaworld *yw, CmdStream *cur)
         FontUA::store_u8(cur, 63);
     }
 
-    bzda.buttons[9] = ButtonBox(yw->_iconOrderW + bzda.field_910, bzda.field_918, yw->_iconOrderH, yw->_iconOrderW); // help_btn
+    bzda.buttons[9] = ButtonBox(yw->_iconOrderW + bzda.toolGroupX, bzda.buttonsY, yw->_iconOrderH, yw->_iconOrderW); // help_btn
 
-    if ( bzda.field_91C & 0x200 )
+    if ( bzda.pressedBtns & 0x200 )
         FontUA::select_tileset(cur, 22);
     else
         FontUA::select_tileset(cur, 21);
 
     FontUA::store_u8(cur, 76);
 
-    bzda.buttons[10] = ButtonBox(bzda.field_910 + 2 * yw->_iconOrderW,  bzda.field_918,  yw->_iconOrderW,  yw->_iconOrderH); // menu_btn
+    bzda.buttons[10] = ButtonBox(bzda.toolGroupX + 2 * yw->_iconOrderW,  bzda.buttonsY,  yw->_iconOrderW,  yw->_iconOrderH); // menu_btn
 
-    if ( bzda.field_91C & 0x400 )
+    if ( bzda.pressedBtns & 0x400 )
         FontUA::select_tileset(cur, 22);
     else
         FontUA::select_tileset(cur, 21);
@@ -3474,11 +3474,11 @@ void BottomBarDrawRatingRow(NC_STACK_ypaworld *yw, CmdStream *cur, int a4, int a
 
 void BottomBarDrawVehicleRatings(NC_STACK_ypaworld *yw, CmdStream *cur)
 {
-    if ( bzda.field_1D0 & 6 )
+    if ( bzda.activeMode & 6 )
     {
-        if ( bzda.field_8EC != -1 && !yw->_playerInHSGun )
+        if ( bzda.selVhclIdx != -1 && !yw->_playerInHSGun )
         {
-            World::TVhclProto *v4 = &yw->_vhclProtos[ bzda.field_2DC[ bzda.field_8EC ] ];
+            World::TVhclProto *v4 = &yw->_vhclProtos[ bzda.vhclProtoIds[ bzda.selVhclIdx ] ];
             int a6 = v4->job_fighttank / 2;
             int v26 = v4->job_fightflyer / 2;
             int v25 = v4->job_fighthelicopter / 2;
@@ -3543,14 +3543,14 @@ void BottomBarUpdateLayout(NC_STACK_ypaworld *yw)
 
     bzda.cmdCommands.clear();
 
-    if ( bzda.field_1D4 & 1 )
+    if ( bzda.barEnabled & 1 )
     {
         int v20 = bzda.x - (yw->_screenSize.x / 2);
         int v21 = bzda.y - (yw->_screenSize.y / 2);
 
-        if ( !(bzda.field_1D8 & 1) )
+        if ( !(bzda.inputAttached & 1) )
         {
-            bzda.field_1D8 |= 1;
+            bzda.inputAttached |= 1;
             Input::Engine.AddClickBoxFront(&bzda);
         }
 
@@ -3562,23 +3562,23 @@ void BottomBarUpdateLayout(NC_STACK_ypaworld *yw)
         FontUA::set_center_ypos(&bzda.cmdCommands, v21);
 
 
-        if ( bzda.field_904 > 0 )
-            FontUA::add_xpos(&bzda.cmdCommands, bzda.field_904);
+        if ( bzda.createGroupX > 0 )
+            FontUA::add_xpos(&bzda.cmdCommands, bzda.createGroupX);
 
         gui_update_create_btn(yw, &bzda.cmdCommands);
 
-        if ( bzda.field_8FC > 0 )
-            FontUA::add_xpos(&bzda.cmdCommands, bzda.field_8FC);
+        if ( bzda.groupGap > 0 )
+            FontUA::add_xpos(&bzda.cmdCommands, bzda.groupGap);
 
         gui_update_map_squad_btn(yw, &bzda.cmdCommands);
 
-        if ( bzda.field_8FC > 0 )
-            FontUA::add_xpos(&bzda.cmdCommands, bzda.field_8FC);
+        if ( bzda.groupGap > 0 )
+            FontUA::add_xpos(&bzda.cmdCommands, bzda.groupGap);
 
         gui_update_player_panel(yw, &bzda.cmdCommands);
 
-        if ( bzda.field_8FC > 0 )
-            FontUA::add_xpos(&bzda.cmdCommands, bzda.field_8FC);
+        if ( bzda.groupGap > 0 )
+            FontUA::add_xpos(&bzda.cmdCommands, bzda.groupGap);
 
         gui_update_tools(yw, &bzda.cmdCommands);
 
@@ -3641,8 +3641,8 @@ int BottomBarHandleHotkeys(NC_STACK_ypaworld *yw, TInputState *inpt)
     switch ( inpt->HotKeyID )
     {
     case 0:
-        if ( bzda.field_1CC & 1 )
-            bzda.field_1D0 = 1;
+        if ( bzda.enabledModes & 1 )
+            bzda.activeMode = 1;
         break;
 
     case 1:
@@ -3658,15 +3658,15 @@ int BottomBarHandleHotkeys(NC_STACK_ypaworld *yw, TInputState *inpt)
         break;
 
     case 2:
-        if ( bzda.field_1CC & 2 )
+        if ( bzda.enabledModes & 2 )
         {
-            if ( bzda.field_1D0 & 0x16 )
+            if ( bzda.activeMode & 0x16 )
             {
-                bzda.field_1D0 = bzda.field_1CC & 1;
+                bzda.activeMode = bzda.enabledModes & 1;
             }
             else
             {
-                if ( !(bzda.field_1D0 & 2) || gui_lstvw.IsClosed() )
+                if ( !(bzda.activeMode & 2) || gui_lstvw.IsClosed() )
                 {
                     yw->GuiWinOpen( &gui_lstvw );
                     gui_lstvw.listFlags |= (GuiList::GLIST_FLAG_IN_SELECT | GuiList::GLIST_FLAG_NO_SCROLL);
@@ -3676,10 +3676,10 @@ int BottomBarHandleHotkeys(NC_STACK_ypaworld *yw, TInputState *inpt)
                     yw->GuiWinClose( &gui_lstvw );
                 }
 
-                if ( bzda.field_8E0 <= bzda.field_8F8 )
-                    bzda.field_1D0 = 16;
+                if ( bzda.vhclCount <= bzda.selBuyListIdx )
+                    bzda.activeMode = 16;
                 else
-                    bzda.field_1D0 = 2;
+                    bzda.activeMode = 2;
 
                 return 0;
             }
@@ -3687,15 +3687,15 @@ int BottomBarHandleHotkeys(NC_STACK_ypaworld *yw, TInputState *inpt)
         break;
 
     case 3:
-        if ( bzda.field_1CC & 4 )
+        if ( bzda.enabledModes & 4 )
         {
-            if ( bzda.field_1D0 & 0x16 )
+            if ( bzda.activeMode & 0x16 )
             {
-                bzda.field_1D0 = bzda.field_1CC & 1;
+                bzda.activeMode = bzda.enabledModes & 1;
             }
             else
             {
-                if ( !(bzda.field_1D0 & 4) || gui_lstvw.IsClosed() )
+                if ( !(bzda.activeMode & 4) || gui_lstvw.IsClosed() )
                 {
                     yw->GuiWinOpen( &gui_lstvw );
                     gui_lstvw.listFlags |= (GuiList::GLIST_FLAG_IN_SELECT | GuiList::GLIST_FLAG_NO_SCROLL);
@@ -3705,14 +3705,14 @@ int BottomBarHandleHotkeys(NC_STACK_ypaworld *yw, TInputState *inpt)
                     yw->GuiWinClose( &gui_lstvw );
                 }
 
-                bzda.field_1D0 = 4;
+                bzda.activeMode = 4;
                 return 0;
             }
         }
         break;
 
     case 4:
-        if ( bzda.field_1CC & 8 )
+        if ( bzda.enabledModes & 8 )
         {
             winpt->selected_btn = &bzda;
             winpt->selected_btnID = 1;
@@ -3721,12 +3721,12 @@ int BottomBarHandleHotkeys(NC_STACK_ypaworld *yw, TInputState *inpt)
         break;
 
     case 7:
-        if ( bzda.field_1CC & 0x20 )
+        if ( bzda.enabledModes & 0x20 )
         {
-            if ( bzda.field_1D0 & 0x20 )
-                bzda.field_1D0 = bzda.field_1CC & 1;
+            if ( bzda.activeMode & 0x20 )
+                bzda.activeMode = bzda.enabledModes & 1;
             else
-                bzda.field_1D0 = 32;
+                bzda.activeMode = 32;
         }
         break;
 
@@ -3785,7 +3785,7 @@ int BottomBarHandleHotkeys(NC_STACK_ypaworld *yw, TInputState *inpt)
         break;
 
     case 24:
-        if ( yw->_userRobo->_status == BACT_STATUS_DEAD || bzda.field_1D0 & 1 )
+        if ( yw->_userRobo->_status == BACT_STATUS_DEAD || bzda.activeMode & 1 )
         {
             if ( yw->_userRobo == yw->_userUnit || yw->_userRobo->_status == BACT_STATUS_DEAD )
             {
@@ -3806,7 +3806,7 @@ int BottomBarHandleHotkeys(NC_STACK_ypaworld *yw, TInputState *inpt)
         }
         else
         {
-            bzda.field_1D0 = 1;
+            bzda.activeMode = 1;
         }
         break;
 
@@ -3831,50 +3831,50 @@ int BottomBarHandleHotkeys(NC_STACK_ypaworld *yw, TInputState *inpt)
         break;
 
     case 28:
-        if ( bzda.field_1D0 == 2 || bzda.field_1D0 == 4 || bzda.field_1D0 == 16 )
+        if ( bzda.activeMode == 2 || bzda.activeMode == 4 || bzda.activeMode == 16 )
         {
-            bzda.field_8F8++;
-            if ( bzda.field_8F8 >= bzda.field_8E8 )
-                bzda.field_8F8 = 0;
+            bzda.selBuyListIdx++;
+            if ( bzda.selBuyListIdx >= bzda.buyListCount )
+                bzda.selBuyListIdx = 0;
 
-            if ( bzda.field_8F8 >= bzda.field_8E0 )
+            if ( bzda.selBuyListIdx >= bzda.vhclCount )
             {
-                bzda.field_8F4 = bzda.field_8F8 - bzda.field_8E0;
-                bzda.field_1D0 = 16;
-                bzda.field_8EC = -1;
+                bzda.selBuildIdx = bzda.selBuyListIdx - bzda.vhclCount;
+                bzda.activeMode = 16;
+                bzda.selVhclIdx = -1;
             }
             else
             {
-                bzda.field_8EC = bzda.field_8F8;
-                bzda.field_8F4 = -1;
+                bzda.selVhclIdx = bzda.selBuyListIdx;
+                bzda.selBuildIdx = -1;
 
-                if ( !(bzda.field_1D0 & 4) )
-                    bzda.field_1D0 = 2;
+                if ( !(bzda.activeMode & 4) )
+                    bzda.activeMode = 2;
             }
         }
         return 0;
 
     case 29:
-        if ( bzda.field_1D0 == 2 || bzda.field_1D0 == 4 || bzda.field_1D0 == 16 )
+        if ( bzda.activeMode == 2 || bzda.activeMode == 4 || bzda.activeMode == 16 )
         {
-            bzda.field_8F8--;
+            bzda.selBuyListIdx--;
 
-            if ( bzda.field_8F8 < 0 )
-                bzda.field_8F8 = bzda.field_8E8 - 1;
+            if ( bzda.selBuyListIdx < 0 )
+                bzda.selBuyListIdx = bzda.buyListCount - 1;
 
-            if ( bzda.field_8F8 >= bzda.field_8E0 )
+            if ( bzda.selBuyListIdx >= bzda.vhclCount )
             {
-                bzda.field_8F4 = bzda.field_8F8 - bzda.field_8E0;
-                bzda.field_8EC = -1;
-                bzda.field_1D0 = 16;
+                bzda.selBuildIdx = bzda.selBuyListIdx - bzda.vhclCount;
+                bzda.selVhclIdx = -1;
+                bzda.activeMode = 16;
             }
             else
             {
-                bzda.field_8EC = bzda.field_8F8;
-                bzda.field_8F4 = -1;
+                bzda.selVhclIdx = bzda.selBuyListIdx;
+                bzda.selBuildIdx = -1;
 
-                if ( !(bzda.field_1D0 & 4) )
-                    bzda.field_1D0 = 2;
+                if ( !(bzda.activeMode & 4) )
+                    bzda.activeMode = 2;
             }
         }
         return 0;
@@ -4001,13 +4001,13 @@ void StoreWinStatus(NC_STACK_ypaworld *yw)
             yw->_roboMapStatus.Rect.w = robo_map.w;
             yw->_roboMapStatus.Rect.h = robo_map.h;
 
-            yw->_roboMapStatus.Data[0] = robo_map.field_1EC;
-            yw->_roboMapStatus.Data[1] = robo_map.field_1ED;
-            yw->_roboMapStatus.Data[2] = robo_map.field_1EE;
-            yw->_roboMapStatus.Data[3] = robo_map.field_208;
-            yw->_roboMapStatus.Data[4] = robo_map.field_20A;
-            yw->_roboMapStatus.Data[5] = robo_map.field_20C;
-            yw->_roboMapStatus.Data[6] = robo_map.field_20E;
+            yw->_roboMapStatus.Data[0] = robo_map.layerFlags;
+            yw->_roboMapStatus.Data[1] = robo_map.lockViewer;
+            yw->_roboMapStatus.Data[2] = robo_map.zoomLevel;
+            yw->_roboMapStatus.Data[3] = robo_map.altX;
+            yw->_roboMapStatus.Data[4] = robo_map.altY;
+            yw->_roboMapStatus.Data[5] = robo_map.altW;
+            yw->_roboMapStatus.Data[6] = robo_map.altH;
 
             yw->_roboFinderStatus.Valid = true;
             yw->_roboFinderStatus.IsOpen = squadron_manager.IsOpen();
@@ -4025,13 +4025,13 @@ void StoreWinStatus(NC_STACK_ypaworld *yw)
             yw->_vhclMapStatus.Rect.w = robo_map.w;
             yw->_vhclMapStatus.Rect.h = robo_map.h;
 
-            yw->_vhclMapStatus.Data[0] = robo_map.field_1EC;
-            yw->_vhclMapStatus.Data[1] = robo_map.field_1ED;
-            yw->_vhclMapStatus.Data[2] = robo_map.field_1EE;
-            yw->_vhclMapStatus.Data[3] = robo_map.field_208;
-            yw->_vhclMapStatus.Data[4] = robo_map.field_20A;
-            yw->_vhclMapStatus.Data[5] = robo_map.field_20C;
-            yw->_vhclMapStatus.Data[6] = robo_map.field_20E;
+            yw->_vhclMapStatus.Data[0] = robo_map.layerFlags;
+            yw->_vhclMapStatus.Data[1] = robo_map.lockViewer;
+            yw->_vhclMapStatus.Data[2] = robo_map.zoomLevel;
+            yw->_vhclMapStatus.Data[3] = robo_map.altX;
+            yw->_vhclMapStatus.Data[4] = robo_map.altY;
+            yw->_vhclMapStatus.Data[5] = robo_map.altW;
+            yw->_vhclMapStatus.Data[6] = robo_map.altH;
 
             yw->_vhclFinderStatus.Valid = true;
             yw->_vhclFinderStatus.IsOpen = squadron_manager.IsOpen();
@@ -4045,15 +4045,15 @@ void StoreWinStatus(NC_STACK_ypaworld *yw)
 
 NC_STACK_ypabact * GetNextHostStationGun(NC_STACK_ypaworld *yw)
 {
-    if ( bzda.field_8F0 != -1 )
+    if ( bzda.selGunIdx != -1 )
     {
         if ( yw->_playerInHSGun )
         {
-            bzda.field_8F0++;
+            bzda.selGunIdx++;
 
-            if ( bzda.field_8F0 >= bzda.field_8DC )
+            if ( bzda.selGunIdx >= bzda.gunCount )
             {
-                bzda.field_8F0 = 0;
+                bzda.selGunIdx = 0;
                 yw->_playerInHSGun = false;
                 return yw->_userRobo;
             }
@@ -4062,17 +4062,17 @@ NC_STACK_ypabact * GetNextHostStationGun(NC_STACK_ypaworld *yw)
 
             yw->_playerInHSGun = true;
 
-            return robo->GetGuns().at(  bzda.field_1DC[ bzda.field_8F0 ]  ).gun_obj;
+            return robo->GetGuns().at(  bzda.gunIndices[ bzda.selGunIdx ]  ).gun_obj;
         }
         else
         {
-            bzda.field_8F0 = 0;
+            bzda.selGunIdx = 0;
 
             NC_STACK_yparobo *robo = dynamic_cast<NC_STACK_yparobo *>(yw->_userRobo);
 
             yw->_playerInHSGun = true;
 
-            return robo->GetGuns().at( bzda.field_1DC[ bzda.field_8F0 ] ).gun_obj;
+            return robo->GetGuns().at( bzda.gunIndices[ bzda.selGunIdx ] ).gun_obj;
         }
     }
     return NULL;
@@ -4145,41 +4145,41 @@ void NC_STACK_ypaworld::SituationAnalyzer()
 
 void UpdateBuyList()
 {
-    bzda.field_8E8 = 0;
+    bzda.buyListCount = 0;
 
-    for (int i = 0; i < bzda.field_8E0; i++)
+    for (int i = 0; i < bzda.vhclCount; i++)
     {
-        bzda.field_4DC[i].i = 1;
-        bzda.field_4DC[i].d = bzda.field_2DC[i];
+        bzda.buyList[i].kind = 1;
+        bzda.buyList[i].protoId = bzda.vhclProtoIds[i];
     }
 
-    bzda.field_8E8 += bzda.field_8E0;
+    bzda.buyListCount += bzda.vhclCount;
 
-    if ( !(bzda.field_1D0 & 4) )
+    if ( !(bzda.activeMode & 4) )
     {
-        for (int i = 0; i < bzda.field_8E4; i++)
+        for (int i = 0; i < bzda.buildCount; i++)
         {
-            bzda.field_4DC[i + bzda.field_8E0].i = 2;
-            bzda.field_4DC[i + bzda.field_8E0].d = bzda.field_3DC[i];
+            bzda.buyList[i + bzda.vhclCount].kind = 2;
+            bzda.buyList[i + bzda.vhclCount].protoId = bzda.buildProtoIds[i];
         }
 
-        bzda.field_8E8 += bzda.field_8E4;
+        bzda.buyListCount += bzda.buildCount;
     }
 
-    if ( bzda.field_8E8 )
+    if ( bzda.buyListCount )
     {
-        if ( bzda.field_8E8 == 1 )
+        if ( bzda.buyListCount == 1 )
         {
-            bzda.field_8F8 = 0;
+            bzda.selBuyListIdx = 0;
         }
-        else if ( bzda.field_8E8 <= bzda.field_8F8 )
+        else if ( bzda.buyListCount <= bzda.selBuyListIdx )
         {
-            bzda.field_8F8 = bzda.field_8E8 - 1;
+            bzda.selBuyListIdx = bzda.buyListCount - 1;
         }
     }
     else
     {
-        bzda.field_8F8 = -1;
+        bzda.selBuyListIdx = -1;
     }
 }
 
@@ -4214,10 +4214,10 @@ void SwitchControlToUnit(NC_STACK_ypaworld *yw, NC_STACK_ypabact *bact1, NC_STAC
 
             yw->GuiWinClose( &gui_lstvw );
 
-            if ( bzda.field_1CC & 1 )
+            if ( bzda.enabledModes & 1 )
             {
-                if ( bzda.field_1D0 == 8 )
-                    bzda.field_1D0 = 1;
+                if ( bzda.activeMode == 8 )
+                    bzda.activeMode = 1;
             }
 
             if ( bact1 == yw->_userRobo )
@@ -4249,10 +4249,10 @@ void  BottomBarHandleInput(NC_STACK_ypaworld *yw, TInputState *inpt)
     NC_STACK_ypabact *bact1 = NULL;
     NC_STACK_ypabact *bact2 = yw->_viewerBact;
 
-    bzda.field_91C = 0;
+    bzda.pressedBtns = 0;
 
     int a2a = 1;
-    if ( bzda.field_1D4 & 1 )
+    if ( bzda.barEnabled & 1 )
     {
         switch ( inpt->HotKeyID )
         {
@@ -4303,12 +4303,12 @@ void  BottomBarHandleInput(NC_STACK_ypaworld *yw, TInputState *inpt)
 
         if ( yw->_userUnit == yw->_userRobo )
         {
-            if ( robo_map.field_1E8 & 8 )
-                robo_map.field_1E8 &= 0xFFFFFFF7;
+            if ( robo_map.stateFlags & 8 )
+                robo_map.stateFlags &= 0xFFFFFFF7;
         }
-        else if ( !(robo_map.field_1E8 & 8) )
+        else if ( !(robo_map.stateFlags & 8) )
         {
-            robo_map.field_1E8 |= 8;
+            robo_map.stateFlags |= 8;
         }
 
         StoreWinStatus(yw);
@@ -4331,15 +4331,15 @@ void  BottomBarHandleInput(NC_STACK_ypaworld *yw, TInputState *inpt)
                 {
                     if ( winpt->flag & TClickBoxInf::FLAG_RM_DOWN )
                     {
-                        if ( bzda.field_1D0 & 0x16 )
+                        if ( bzda.activeMode & 0x16 )
                         {
-                            bzda.field_1D0 = bzda.field_1CC & 1;
+                            bzda.activeMode = bzda.enabledModes & 1;
                             yw->SetShowingTooltipWithHotkey(Locale::TIP_GUI_NEWSQUAD, 2);
                         }
                         else
                         {
 
-                            if ( !(bzda.field_1D0 & 4) || gui_lstvw.IsClosed() )
+                            if ( !(bzda.activeMode & 4) || gui_lstvw.IsClosed() )
                             {
                                 yw->GuiWinOpen( &gui_lstvw );
                                 gui_lstvw.listFlags |= (GuiList::GLIST_FLAG_IN_SELECT | GuiList::GLIST_FLAG_NO_SCROLL);
@@ -4350,22 +4350,22 @@ void  BottomBarHandleInput(NC_STACK_ypaworld *yw, TInputState *inpt)
                             }
 
                             a2a = 0;
-                            bzda.field_1D0 = 4;
+                            bzda.activeMode = 4;
                         }
                     }
                     else
                         yw->SetShowingTooltipWithHotkey(Locale::TIP_GUI_NEWSQUAD, 2);
 
                 }
-                else if ( bzda.field_1D0 & 0x16 )
+                else if ( bzda.activeMode & 0x16 )
                 {
-                    bzda.field_1D0 = bzda.field_1CC & 1;
+                    bzda.activeMode = bzda.enabledModes & 1;
 
                     yw->SetShowingTooltipWithHotkey(Locale::TIP_GUI_NEWSQUAD, 2);
                 }
                 else
                 {
-                    if ( !(bzda.field_1D0 & 2) || gui_lstvw.IsClosed() )
+                    if ( !(bzda.activeMode & 2) || gui_lstvw.IsClosed() )
                     {
                         yw->GuiWinOpen( &gui_lstvw );
                         gui_lstvw.listFlags |= (GuiList::GLIST_FLAG_IN_SELECT | GuiList::GLIST_FLAG_NO_SCROLL);
@@ -4375,10 +4375,10 @@ void  BottomBarHandleInput(NC_STACK_ypaworld *yw, TInputState *inpt)
                         yw->GuiWinClose( &gui_lstvw );
                     }
 
-                    if ( bzda.field_8E0 <= bzda.field_8F8 )
-                        bzda.field_1D0 = 16;
+                    if ( bzda.vhclCount <= bzda.selBuyListIdx )
+                        bzda.activeMode = 16;
                     else
-                        bzda.field_1D0 = 2;
+                        bzda.activeMode = 2;
 
                     a2a = 0;
                     yw->SetShowingTooltipWithHotkey(Locale::TIP_GUI_NEWSQUAD, 2);
@@ -4388,10 +4388,10 @@ void  BottomBarHandleInput(NC_STACK_ypaworld *yw, TInputState *inpt)
             case 1: // Jump into vehicle
                 if ( winpt->flag & TClickBoxInf::FLAG_BTN_DOWN )
                 {
-                    if ( bzda.field_1D0 & 8 )
-                        bzda.field_1D0 = bzda.field_1CC & 1;
+                    if ( bzda.activeMode & 8 )
+                        bzda.activeMode = bzda.enabledModes & 1;
                     else
-                        bzda.field_1D0 = 8;
+                        bzda.activeMode = 8;
                 }
 
                 yw->SetShowingTooltipWithHotkey(Locale::TIP_GUI_TAKECONTROL, 4);
@@ -4432,14 +4432,14 @@ void  BottomBarHandleInput(NC_STACK_ypaworld *yw, TInputState *inpt)
 
             case 4: //Back to host station
                 if ( winpt->flag & (TClickBoxInf::FLAG_BTN_DOWN | TClickBoxInf::FLAG_BTN_HOLD) )
-                    bzda.field_91C |= 0x10;
+                    bzda.pressedBtns |= 0x10;
 
                 if ( winpt->flag & TClickBoxInf::FLAG_BTN_UP )
                 {
                     bact1 = yw->_userRobo;
 
                     if ( yw->_playerInHSGun )
-                        bzda.field_1D0 = 1;
+                        bzda.activeMode = 1;
                 }
 
                 yw->SetShowingTooltipWithHotkey(Locale::TIP_GUI_GOTOHS, 21);
@@ -4447,7 +4447,7 @@ void  BottomBarHandleInput(NC_STACK_ypaworld *yw, TInputState *inpt)
 
             case 5:
                 if ( winpt->flag & (TClickBoxInf::FLAG_BTN_DOWN | TClickBoxInf::FLAG_BTN_HOLD) )
-                    bzda.field_91C |= 0x20;
+                    bzda.pressedBtns |= 0x20;
 
                 if ( winpt->flag & TClickBoxInf::FLAG_BTN_UP )
                     bact1 = yw->_userUnit->_parent;
@@ -4457,7 +4457,7 @@ void  BottomBarHandleInput(NC_STACK_ypaworld *yw, TInputState *inpt)
 
             case 6: // Cycle through units in squad
                 if ( winpt->flag & (TClickBoxInf::FLAG_BTN_DOWN | TClickBoxInf::FLAG_BTN_HOLD) )
-                    bzda.field_91C |= 0x40;
+                    bzda.pressedBtns |= 0x40;
 
                 if ( yw->_userRobo == yw->_userUnit || yw->_playerInHSGun )
                 {
@@ -4477,7 +4477,7 @@ void  BottomBarHandleInput(NC_STACK_ypaworld *yw, TInputState *inpt)
 
             case 7: //Cycle through squad leader
                 if ( winpt->flag & (TClickBoxInf::FLAG_BTN_DOWN | TClickBoxInf::FLAG_BTN_HOLD) )
-                    bzda.field_91C |= 0x80;
+                    bzda.pressedBtns |= 0x80;
 
                 if ( winpt->flag & TClickBoxInf::FLAG_BTN_UP )
                     bact1 = yw->GetNextSquad();
@@ -4487,7 +4487,7 @@ void  BottomBarHandleInput(NC_STACK_ypaworld *yw, TInputState *inpt)
 
             case 8:
                 if ( winpt->flag & (TClickBoxInf::FLAG_BTN_DOWN | TClickBoxInf::FLAG_BTN_HOLD) )
-                    bzda.field_91C |= 0x100;
+                    bzda.pressedBtns |= 0x100;
 
                 if ( winpt->flag & TClickBoxInf::FLAG_BTN_UP )
                     yw->SituationAnalyzer();
@@ -4497,7 +4497,7 @@ void  BottomBarHandleInput(NC_STACK_ypaworld *yw, TInputState *inpt)
 
             case 9:
                 if ( winpt->flag & (TClickBoxInf::FLAG_BTN_DOWN | TClickBoxInf::FLAG_BTN_HOLD) )
-                    bzda.field_91C |= 0x200;
+                    bzda.pressedBtns |= 0x200;
 
                 if ( winpt->flag & TClickBoxInf::FLAG_BTN_UP )
                 {
@@ -4509,7 +4509,7 @@ void  BottomBarHandleInput(NC_STACK_ypaworld *yw, TInputState *inpt)
 
             case 10:
                 if ( winpt->flag & (TClickBoxInf::FLAG_BTN_DOWN | TClickBoxInf::FLAG_BTN_HOLD) )
-                    bzda.field_91C |= 0x400;
+                    bzda.pressedBtns |= 0x400;
 
                 if ( winpt->flag & TClickBoxInf::FLAG_BTN_UP )
                 {
@@ -4527,7 +4527,7 @@ void  BottomBarHandleInput(NC_STACK_ypaworld *yw, TInputState *inpt)
             }
         }
 
-        if ( bzda.field_1D0 & 0x29 )
+        if ( bzda.activeMode & 0x29 )
             yw->GuiWinClose(&gui_lstvw);
 
         if ( a2a )
@@ -4535,23 +4535,23 @@ void  BottomBarHandleInput(NC_STACK_ypaworld *yw, TInputState *inpt)
             gui_lstvw.InputHandle(yw, inpt);
             if ( gui_lstvw.IsOpen() )
             {
-                if ( bzda.field_1D0 == 2 || bzda.field_1D0 == 4 || bzda.field_1D0 == 16)
+                if ( bzda.activeMode == 2 || bzda.activeMode == 4 || bzda.activeMode == 16)
                 {
-                    bzda.field_8F8 = gui_lstvw.selectedEntry;
+                    bzda.selBuyListIdx = gui_lstvw.selectedEntry;
 
-                    if ( gui_lstvw.selectedEntry >= bzda.field_8E0 )
+                    if ( gui_lstvw.selectedEntry >= bzda.vhclCount )
                     {
-                        bzda.field_8F4 = gui_lstvw.selectedEntry - bzda.field_8E0;
-                        bzda.field_8EC = -1;
-                        bzda.field_1D0 = 16;
+                        bzda.selBuildIdx = gui_lstvw.selectedEntry - bzda.vhclCount;
+                        bzda.selVhclIdx = -1;
+                        bzda.activeMode = 16;
                     }
                     else
                     {
-                        bzda.field_8F4 = -1;
-                        bzda.field_8EC = gui_lstvw.selectedEntry;
+                        bzda.selBuildIdx = -1;
+                        bzda.selVhclIdx = gui_lstvw.selectedEntry;
 
-                        if ( !(bzda.field_1D0 & 4) )
-                            bzda.field_1D0 = 2;
+                        if ( !(bzda.activeMode & 4) )
+                            bzda.activeMode = 2;
                     }
                 }
             }
@@ -4576,8 +4576,8 @@ void  BottomBarHandleInput(NC_STACK_ypaworld *yw, TInputState *inpt)
 
 void EnergyPanelDrawGauge(NC_STACK_ypaworld *yw, CmdStream *cur, int x, int y, uint8_t icon, uint8_t icon2, uint8_t icon3, float a6, float a7, const std::string &a8)
 {
-    int v26 = (a6 * up_panel.field_1E4);
-    int v25 = (a7 * up_panel.field_1E4);
+    int v26 = (a6 * up_panel.barMaxLen);
+    int v25 = (a7 * up_panel.barMaxLen);
 
     if ( !v26 && a6 > 0.0 )
         v26 = 1;
@@ -4595,7 +4595,7 @@ void EnergyPanelDrawGauge(NC_STACK_ypaworld *yw, CmdStream *cur, int x, int y, u
 
     if ( v26 > 0 || v25 > 0 )
     {
-        int v13 = up_panel.field_1E0 + up_panel.field_1DC + x;
+        int v13 = up_panel.barGap + up_panel.iconWidth + x;
 
         FontUA::set_center_xpos(cur, v13);
 
@@ -4620,7 +4620,7 @@ void EnergyPanelDrawGauge(NC_STACK_ypaworld *yw, CmdStream *cur, int x, int y, u
     {
         FontUA::select_tileset(cur, 31);
 
-        FontUA::set_center_xpos(cur, x + up_panel.field_1DC + 4);
+        FontUA::set_center_xpos(cur, x + up_panel.iconWidth + 4);
         FontUA::set_ypos(cur, 0);
 
         cur->insert(cur->end(), a8.begin(), a8.end());
@@ -4776,9 +4776,9 @@ void EnergyPanelDrawCreateGauge(NC_STACK_ypaworld *yw, CmdStream *cur, int a3, i
     float a7a = 0.0;
     float a6a = (float)a6 / v15;
 
-    if ( bzda.field_1D0 & 0x16 )
+    if ( bzda.activeMode & 0x16 )
     {
-        if ( bzda.field_8F8 != -1 )
+        if ( bzda.selBuyListIdx != -1 )
             a7a = yw->_updateMessage.energy / v15;
     }
 
@@ -4820,7 +4820,7 @@ void EnergyPanelDrawBeamGauge(NC_STACK_ypaworld *yw, CmdStream *cur, int x, int 
     float a7a = 0.0;
     float a6a = (float)a6 / v15;
 
-    if ( bzda.field_1D0 & 0x20 )
+    if ( bzda.activeMode & 0x20 )
         a7a = yw->_updateMessage.energy / v15;
 
     if ( a7a <= a6a )
@@ -4847,7 +4847,7 @@ void EnergyPanelUpdateLayout(NC_STACK_ypaworld *yw)
     {
         int v3 = up_panel.x - yw->_screenSize.x / 2;
         int y = up_panel.y - yw->_screenSize.y / 2;
-        int v41 = up_panel.field_1D8 + up_panel.field_1D0;
+        int v41 = up_panel.gaugeSpacing + up_panel.gaugeWidth;
 
         NC_STACK_yparobo *robo = dynamic_cast<NC_STACK_yparobo *>(yw->_userRobo);
 
@@ -4905,7 +4905,7 @@ void EnergyPanelUpdateLayout(NC_STACK_ypaworld *yw)
         Input::Engine.RemClickBox(&up_panel);
         Input::Engine.AddClickBoxFront(&up_panel);
 
-        int x = (up_panel.field_1D4 & 0xFFFF) + v3;
+        int x = (up_panel.gaugeStartX & 0xFFFF) + v3;
 
         EnergyPanelDrawReloadGauge(yw, &up_panel.cmdCommands, x, y, v13, v32, v38, v11, arg176.ratioClamped);
 
@@ -4992,7 +4992,7 @@ void SquadManagerDrawDragIcon(NC_STACK_ypaworld *yw, CmdStream *cur, int a4, int
 {
     if ( a4 > 0 && a3 > 0 )
     {
-        if ( a4 + squadron_manager.field_2CC < yw->_screenSize.x )
+        if ( a4 + squadron_manager.iconWidth < yw->_screenSize.x )
         {
             if ( a3 + yw->_fontH < yw->_screenSize.y )
             {
@@ -5001,7 +5001,7 @@ void SquadManagerDrawDragIcon(NC_STACK_ypaworld *yw, CmdStream *cur, int a4, int
                 FontUA::set_center_xpos(cur, a4 - (yw->_screenSize.x / 2));
                 FontUA::set_center_ypos(cur, a3 - (yw->_screenSize.y / 2));
 
-                FontUA::store_u8(cur, GetVehicleTypeIcon(yw, squadron_manager.field_2BC));
+                FontUA::store_u8(cur, GetVehicleTypeIcon(yw, squadron_manager.dragUnit));
             }
         }
     }
@@ -5078,7 +5078,7 @@ void SquadManagerLayoutHostStation(NC_STACK_ypaworld *yw, NC_STACK_ypabact *bact
     {
         v13[0] = 33;
     }
-    else if ( info_log.field_255C == bact->_gid && yw->_timeStamp - info_log.msgs[info_log.field_24C].field_4 < 10000 && yw->_timeStamp / 300 & 1 )
+    else if ( info_log.last_sender_gid == bact->_gid && yw->_timeStamp - info_log.msgs[info_log.last_msg_idx].timestamp < 10000 && yw->_timeStamp / 300 & 1 )
     {
         v13[0] = 34;
     }
@@ -5090,7 +5090,7 @@ void SquadManagerLayoutHostStation(NC_STACK_ypaworld *yw, NC_STACK_ypabact *bact
 
     int v4;
 
-    if ( bzda.field_1D0 & 0x20 )
+    if ( bzda.activeMode & 0x20 )
         v4 = 9;
     else
         v4 = 0;
@@ -5164,9 +5164,9 @@ void SquadManagerLayoutSquad(NC_STACK_ypaworld *yw, NC_STACK_ypabact *bact, CmdS
     pv += '@'; //64
 
     if ( bact == v44 )
-        v46 = squadron_manager.field_2D0;
+        v46 = squadron_manager.cmdrIconX;
 
-    int v41 = squadron_manager.field_2D4;
+    int v41 = squadron_manager.kidIconsX;
 
     for ( NC_STACK_ypabact* &kid : bact->_kidList )
     {
@@ -5182,7 +5182,7 @@ void SquadManagerLayoutSquad(NC_STACK_ypaworld *yw, NC_STACK_ypabact *bact, CmdS
             if ( kid == v44 )
                 v46 = v41;
 
-            v41 += squadron_manager.field_2CC;
+            v41 += squadron_manager.iconWidth;
 
             if ( pv.size() >= 60 )
                 break;
@@ -5190,7 +5190,7 @@ void SquadManagerLayoutSquad(NC_STACK_ypaworld *yw, NC_STACK_ypabact *bact, CmdS
     }
 
     int v22;
-    if ( yw->_activeCmdrRemapIndex == -1 || bact != yw->_cmdrsRemap[ yw->_activeCmdrRemapIndex ] || bzda.field_1D0 & 0x20 )
+    if ( yw->_activeCmdrRemapIndex == -1 || bact != yw->_cmdrsRemap[ yw->_activeCmdrRemapIndex ] || bzda.activeMode & 0x20 )
         v22 = 0;
     else
         v22 = 9;
@@ -5212,7 +5212,7 @@ void SquadManagerLayoutSquad(NC_STACK_ypaworld *yw, NC_STACK_ypabact *bact, CmdS
     LayoutClippedTileString(yw->_guiTiles[28], cur, pv, squadron_manager.entryWidth - 2 * yw->_fontBorderW, 64);
     if ( v46 )
     {
-        if ( squadron_manager.entryWidth - squadron_manager.field_2CC - yw->_fontBorderW > v46 )
+        if ( squadron_manager.entryWidth - squadron_manager.iconWidth - yw->_fontBorderW > v46 )
         {
             FontUA::add_xpos(cur, -(squadron_manager.entryWidth - 2 * yw->_fontBorderW));
             FontUA::add_xpos(cur, v46);
@@ -5247,7 +5247,7 @@ void SquadManagerLayoutFooter(NC_STACK_ypaworld *yw, CmdStream *cur)
 {
     int v23 = squadron_manager.entryWidth - yw->_fontBorderW;
 
-    if ( yw->_activeCmdrRemapIndex == -1 || bzda.field_1D0 & 0x20 )
+    if ( yw->_activeCmdrRemapIndex == -1 || bzda.activeMode & 0x20 )
     {
         FontUA::select_tileset(cur, 0);
         FontUA::store_u8(cur, '{');
@@ -5349,14 +5349,14 @@ void SquadManagerLayoutItems(NC_STACK_ypaworld *yw, TInputState *inpt)
 
     SquadManagerLayoutFooter(yw, &squadron_manager.itemBlock);
 
-    if ( squadron_manager.field_2A8 & 1 )
+    if ( squadron_manager.dragFlags & 1 )
     {
-        if ( squadron_manager.field_2C8 != winpt->move.ScreenPos.x || squadron_manager.field_2CA != winpt->move.ScreenPos.y )
+        if ( squadron_manager.dragStartX != winpt->move.ScreenPos.x || squadron_manager.dragStartY != winpt->move.ScreenPos.y )
         {
-            SquadManagerDrawDragIcon(yw, &squadron_manager.itemBlock, squadron_manager.field_2C4, squadron_manager.field_2C6);
+            SquadManagerDrawDragIcon(yw, &squadron_manager.itemBlock, squadron_manager.dragIconX, squadron_manager.dragIconY);
 
-            if ( squadron_manager.field_2A8 & 2 )
-                SquadManagerDrawDragIcon(yw, &squadron_manager.itemBlock, squadron_manager.field_2C4 + squadron_manager.field_2CC / 4, squadron_manager.field_2C6 + (yw->_fontH / 4) );
+            if ( squadron_manager.dragFlags & 2 )
+                SquadManagerDrawDragIcon(yw, &squadron_manager.itemBlock, squadron_manager.dragIconX + squadron_manager.iconWidth / 4, squadron_manager.dragIconY + (yw->_fontH / 4) );
         }
     }
 
@@ -5395,11 +5395,11 @@ void SquadManagerUpdateRows(NC_STACK_ypaworld *yw)
 
 bool NC_STACK_ypaworld::SquadManagerIsDragValid()
 {
-    NC_STACK_ypabact *bct = _cmdrsRemap[squadron_manager.field_2B4];
+    NC_STACK_ypabact *bct = _cmdrsRemap[squadron_manager.dragCmdrIdx];
     if ( !bct )
         return false;
 
-    if ( bct == squadron_manager.field_2BC )
+    if ( bct == squadron_manager.dragUnit )
     {
         if (bct->_status != BACT_STATUS_DEAD && bct->_status != BACT_STATUS_CREATE && bct->_status != BACT_STATUS_BEAM )
             return true;
@@ -5408,7 +5408,7 @@ bool NC_STACK_ypaworld::SquadManagerIsDragValid()
 
     for ( NC_STACK_ypabact* &kid : bct->_kidList )
     {
-        if ( kid == squadron_manager.field_2BC )
+        if ( kid == squadron_manager.dragUnit )
         {
             if ( kid->_status != BACT_STATUS_DEAD && kid->_status != BACT_STATUS_CREATE && kid->_status != BACT_STATUS_BEAM )
                 return true;
@@ -5425,16 +5425,16 @@ void SquadManagerDropUnit(NC_STACK_ypaworld *yw, TClickBoxInf *winpt)
             || squadron_manager.squads[ winpt->selected_btnID - 8 ] == 0
             || squadron_manager.squads[ winpt->selected_btnID - 8 ] == yw->_userRobo )
     {
-        if ( squadron_manager.field_2A8 & 2 )
+        if ( squadron_manager.dragFlags & 2 )
         {
-            if ( squadron_manager.field_2BC->_host_station != squadron_manager.field_2BC->_parent )
+            if ( squadron_manager.dragUnit->_host_station != squadron_manager.dragUnit->_parent )
             {
                 NC_STACK_ypabact *v3 = NULL;
 
-                World::RefBactList *kidlist = squadron_manager.field_2BC->_kidRef.PList();
+                World::RefBactList *kidlist = squadron_manager.dragUnit->_kidRef.PList();
                 if (kidlist)
                 {
-                    World::RefBactList::iterator it = squadron_manager.field_2BC->_kidRef;
+                    World::RefBactList::iterator it = squadron_manager.dragUnit->_kidRef;
 
                     while(it != kidlist->end())
                     {
@@ -5466,9 +5466,9 @@ void SquadManagerDropUnit(NC_STACK_ypaworld *yw, TClickBoxInf *winpt)
             arg109.unit = NULL;
             arg109.mode = 3;
 
-            squadron_manager.field_2BC->ReorganizeGroup(&arg109);
+            squadron_manager.dragUnit->ReorganizeGroup(&arg109);
         }
-        yw->_activeCmdrID = squadron_manager.field_2BC->_commandID;
+        yw->_activeCmdrID = squadron_manager.dragUnit->_commandID;
         SquadManagerUpdateRows(yw);
         yw->UpdateCommanderList();
     }
@@ -5476,21 +5476,21 @@ void SquadManagerDropUnit(NC_STACK_ypaworld *yw, TClickBoxInf *winpt)
     {
         NC_STACK_ypabact *v6 = squadron_manager.squads[ winpt->selected_btnID - 8 ];
         int v7;
-        if ( squadron_manager.field_2BC->IsParentMyRobo() )
-            v7 = v6 == squadron_manager.field_2BC;
+        if ( squadron_manager.dragUnit->IsParentMyRobo() )
+            v7 = v6 == squadron_manager.dragUnit;
         else
-            v7 = v6 == squadron_manager.field_2BC->_parent;
+            v7 = v6 == squadron_manager.dragUnit->_parent;
 
         if ( !v7 )
         {
-            if ( squadron_manager.field_2A8 & 2 )
+            if ( squadron_manager.dragFlags & 2 )
             {
-                if ( squadron_manager.field_2BC->_host_station != squadron_manager.field_2BC->_parent )
+                if ( squadron_manager.dragUnit->_host_station != squadron_manager.dragUnit->_parent )
                 {
-                    World::RefBactList *kidlist = squadron_manager.field_2BC->_kidRef.PList();
+                    World::RefBactList *kidlist = squadron_manager.dragUnit->_kidRef.PList();
                     if (kidlist)
                     {
-                        World::RefBactList::iterator it = squadron_manager.field_2BC->_kidRef;
+                        World::RefBactList::iterator it = squadron_manager.dragUnit->_kidRef;
                         while ( it != kidlist->end() )
                         {
                             NC_STACK_ypabact *itbact = *it;
@@ -5508,14 +5508,14 @@ void SquadManagerDropUnit(NC_STACK_ypaworld *yw, TClickBoxInf *winpt)
                     TReorgOrder arg109;
                     arg109.mode = 1;
                     arg109.unit = v6;
-                    squadron_manager.field_2BC->ReorganizeGroup(&arg109);
+                    squadron_manager.dragUnit->ReorganizeGroup(&arg109);
                 }
             }
             else
             {
                 TReorgOrder arg109;
                 arg109.mode = 4;
-                arg109.unit = squadron_manager.field_2BC;
+                arg109.unit = squadron_manager.dragUnit;
                 v6->ReorganizeGroup(&arg109);
             }
             yw->_activeCmdrID = v6->_commandID;
@@ -5546,35 +5546,35 @@ NC_STACK_ypabact * NC_STACK_ypaworld::SquadManagerPickUnit(int sqid, int a3)
 
     if ( !v3 )
     {
-        squadron_manager.field_2B0 = -1;
-        squadron_manager.field_2AC = -1;
+        squadron_manager.pickKidIdx = -1;
+        squadron_manager.pickCmdrIdx = -1;
         return NULL;
     }
 
     if ( v3 == _userRobo )
     {
-        squadron_manager.field_2B0 = -1;
-        squadron_manager.field_2AC = -1;
+        squadron_manager.pickKidIdx = -1;
+        squadron_manager.pickCmdrIdx = -1;
         return _userRobo;
     }
 
-    squadron_manager.field_2B0 = -1;
-    squadron_manager.field_2AC = squadron_manager.firstShownEntries + sqid - 1;
+    squadron_manager.pickKidIdx = -1;
+    squadron_manager.pickCmdrIdx = squadron_manager.firstShownEntries + sqid - 1;
 
-    if ( a3 > squadron_manager.field_2D0 && a3 < squadron_manager.field_2D0 + squadron_manager.field_2CC )
+    if ( a3 > squadron_manager.cmdrIconX && a3 < squadron_manager.cmdrIconX + squadron_manager.iconWidth )
         return v3;
 
-    int v5 = a3 - squadron_manager.field_2D4;
+    int v5 = a3 - squadron_manager.kidIconsX;
     if ( v5 < 0 )
     {
-        squadron_manager.field_2B0 = -1;
-        squadron_manager.field_2AC = -1;
+        squadron_manager.pickKidIdx = -1;
+        squadron_manager.pickCmdrIdx = -1;
         return NULL;
     }
 
-    squadron_manager.field_2B0 = v5 / squadron_manager.field_2CC;
+    squadron_manager.pickKidIdx = v5 / squadron_manager.iconWidth;
 
-    int v6 = squadron_manager.field_2B0;
+    int v6 = squadron_manager.pickKidIdx;
 
     for(NC_STACK_ypabact * &bact : v3->_kidList)
     {
@@ -5588,8 +5588,8 @@ NC_STACK_ypabact * NC_STACK_ypaworld::SquadManagerPickUnit(int sqid, int a3)
         }
     }
 
-    squadron_manager.field_2B0 = -1;
-    squadron_manager.field_2AC = -1;
+    squadron_manager.pickKidIdx = -1;
+    squadron_manager.pickCmdrIdx = -1;
     return NULL;
 }
 
@@ -5597,7 +5597,7 @@ int NC_STACK_ypaworld::SquadManagerBeginDrag(TClickBoxInf *winpt)
 {
     if ( winpt->selected_btnID < 8 )
         return 0;
-    if ( bzda.field_1D0 & 8 )
+    if ( bzda.activeMode & 8 )
         return 0;
     if ( (int32_t)(winpt->selected_btnID - 8 + squadron_manager.firstShownEntries) >= squadron_manager.numEntries )
         return 0;
@@ -5611,34 +5611,34 @@ int NC_STACK_ypaworld::SquadManagerBeginDrag(TClickBoxInf *winpt)
     {
         if ( winpt->flag & TClickBoxInf::FLAG_RM_DOWN )
         {
-            robo_map.field_1D8 = v5->_position.x;
-            robo_map.field_1ED = 0;
-            robo_map.field_1DC = v5->_position.z;
+            robo_map.viewCenterX = v5->_position.x;
+            robo_map.lockViewer = 0;
+            robo_map.viewCenterZ = v5->_position.z;
 
-            RoboMapClampView(this, robo_map.field_1CC - robo_map.field_244, robo_map.field_1D2);
+            RoboMapClampView(this, robo_map.hScrollLength - robo_map.borderLeft, robo_map.vScrollLength);
         }
     }
 
     if ( v5 == _userRobo )
         return 0;
 
-    squadron_manager.field_2B4 = squadron_manager.field_2AC;
-    squadron_manager.field_2B8 = squadron_manager.field_2B0;
-    squadron_manager.field_2C8 = winpt->move.ScreenPos.x;
-    squadron_manager.field_2BC = v5;
+    squadron_manager.dragCmdrIdx = squadron_manager.pickCmdrIdx;
+    squadron_manager.dragKidIdx = squadron_manager.pickKidIdx;
+    squadron_manager.dragStartX = winpt->move.ScreenPos.x;
+    squadron_manager.dragUnit = v5;
 
     if ( v5->IsParentMyRobo() )
     {
-        squadron_manager.field_2C0 = -(winpt->move.BtnPos.x - squadron_manager.field_2D0);
+        squadron_manager.dragOffsetX = -(winpt->move.BtnPos.x - squadron_manager.cmdrIconX);
     }
     else
     {
-        int v11 = winpt->move.BtnPos.x - squadron_manager.field_2D4;
-        squadron_manager.field_2C0 = -(v11 % squadron_manager.field_2CC);
+        int v11 = winpt->move.BtnPos.x - squadron_manager.kidIconsX;
+        squadron_manager.dragOffsetX = -(v11 % squadron_manager.iconWidth);
     }
 
-    squadron_manager.field_2C2 = -winpt->move.BtnPos.y;
-    squadron_manager.field_2CA = winpt->move.ScreenPos.y;
+    squadron_manager.dragOffsetY = -winpt->move.BtnPos.y;
+    squadron_manager.dragStartY = winpt->move.ScreenPos.y;
     return 1;
 }
 
@@ -5646,7 +5646,7 @@ void NC_STACK_ypaworld::SquadManager_InputHandle(TInputState *inpt)
 {
     if ( squadron_manager.flags & (GuiBase::FLAG_CLOSED | GuiBase::FLAG_ICONIFED) )
     {
-        squadron_manager.field_2A8 &= 0xFFFFFFFE;
+        squadron_manager.dragFlags &= 0xFFFFFFFE;
         squadron_manager.InputHandle(this, inpt);
     }
     else
@@ -5654,24 +5654,24 @@ void NC_STACK_ypaworld::SquadManager_InputHandle(TInputState *inpt)
         TClickBoxInf *winpt = &inpt->ClickInf;
         SquadManagerUpdateRows(this);
 
-        if ( squadron_manager.field_2A8 & 1 )
+        if ( squadron_manager.dragFlags & 1 )
         {
             if ( SquadManagerIsDragValid() && (winpt->flag & (TClickBoxInf::FLAG_LM_HOLD | TClickBoxInf::FLAG_RM_HOLD)) != (TClickBoxInf::FLAG_LM_HOLD | TClickBoxInf::FLAG_RM_HOLD) )
             {
                 if ( winpt->flag & (TClickBoxInf::FLAG_LM_HOLD | TClickBoxInf::FLAG_RM_HOLD) )
                 {
-                    squadron_manager.field_2C4 = winpt->move.ScreenPos.x + squadron_manager.field_2C0;
-                    squadron_manager.field_2C6 = winpt->move.ScreenPos.y + squadron_manager.field_2C2;
+                    squadron_manager.dragIconX = winpt->move.ScreenPos.x + squadron_manager.dragOffsetX;
+                    squadron_manager.dragIconY = winpt->move.ScreenPos.y + squadron_manager.dragOffsetY;
                 }
                 else
                 {
                     SquadManagerDropUnit(this, winpt);
-                    squadron_manager.field_2A8 &= 0xFFFFFFFC;
+                    squadron_manager.dragFlags &= 0xFFFFFFFC;
                 }
             }
             else
             {
-                squadron_manager.field_2A8 &= 0xFFFFFFFC;
+                squadron_manager.dragFlags &= 0xFFFFFFFC;
             }
         }
         else if ( inpt->ClickInf.selected_btn == &squadron_manager )
@@ -5684,9 +5684,9 @@ void NC_STACK_ypaworld::SquadManager_InputHandle(TInputState *inpt)
                 }
                 SetShowingTooltip(Locale::TIP_ONLINEHELP);
             }
-            if ( winpt->selected_btnID == 6 && this->_activeCmdrRemapIndex != -1 && !(bzda.field_1D0 & 0x20) )
+            if ( winpt->selected_btnID == 6 && this->_activeCmdrRemapIndex != -1 && !(bzda.activeMode & 0x20) )
             {
-                int v9 = (winpt->move.BtnPos.x - squadron_manager.field_2DC) / _guiTiles[24]->map[49].w;
+                int v9 = (winpt->move.BtnPos.x - squadron_manager.aggrIconsX) / _guiTiles[24]->map[49].w;
 
                 if ( v9 >= 0 && v9 <= 4 )
                 {
@@ -5725,7 +5725,7 @@ void NC_STACK_ypaworld::SquadManager_InputHandle(TInputState *inpt)
                     break;
                 }
 
-                if ( winpt->move.BtnPos.x >= squadron_manager.field_2D8 )
+                if ( winpt->move.BtnPos.x >= squadron_manager.unitCountX )
                     SetShowingTooltip(Locale::TIP_COUNTINSQUAD);
             }
 
@@ -5733,14 +5733,14 @@ void NC_STACK_ypaworld::SquadManager_InputHandle(TInputState *inpt)
             {
                 if ( SquadManagerBeginDrag(winpt) )
                 {
-                    squadron_manager.field_2A8 &= 0xFFFFFFFC;
-                    squadron_manager.field_2A8 |= 1;
+                    squadron_manager.dragFlags &= 0xFFFFFFFC;
+                    squadron_manager.dragFlags |= 1;
 
                     if ( winpt->flag & TClickBoxInf::FLAG_RM_DOWN )
-                        squadron_manager.field_2A8 |= 3;
+                        squadron_manager.dragFlags |= 3;
 
-                    squadron_manager.field_2C4 = winpt->move.ScreenPos.x + squadron_manager.field_2C0;
-                    squadron_manager.field_2C6 = winpt->move.ScreenPos.y + squadron_manager.field_2C2;
+                    squadron_manager.dragIconX = winpt->move.ScreenPos.x + squadron_manager.dragOffsetX;
+                    squadron_manager.dragIconY = winpt->move.ScreenPos.y + squadron_manager.dragOffsetY;
                 }
             }
             if ( squadron_manager.mouseItem != -1 )
@@ -5752,7 +5752,7 @@ void NC_STACK_ypaworld::SquadManager_InputHandle(TInputState *inpt)
                     NC_STACK_ypabact *v18 = squadron_manager.squads[v17];
                     if ( v18 )
                     {
-                        if ( winpt->move.BtnPos.x < squadron_manager.field_2D0 )
+                        if ( winpt->move.BtnPos.x < squadron_manager.cmdrIconX )
                             SquadManagerShowStatusTooltip(v18);
                     }
                 }
@@ -5772,10 +5772,10 @@ void RoboMapUpdateSelectionRect()
 
     int v0 = -(pMapInter.x + robo_map.x + (pMapInter.w / 2));
     int v3 = -(pMapInter.y + robo_map.y + (pMapInter.h / 2));
-    mapSelWorldMinX = (float)(v0 + mapSelStartX) * robo_map.field_1E0 + robo_map.field_1D8;
-    mapSelWorldMaxX = (float)(v0 + mapSelEndX) * robo_map.field_1E0 + robo_map.field_1D8;
-    mapSelWorldMinZ = robo_map.field_1DC - (float)(v3 + mapSelStartY) * robo_map.field_1E4;
-    mapSelWorldMaxZ = robo_map.field_1DC - (float)(v3 + mapSelEndY) * robo_map.field_1E4;
+    mapSelWorldMinX = (float)(v0 + mapSelStartX) * robo_map.unitsPerPixelX + robo_map.viewCenterX;
+    mapSelWorldMaxX = (float)(v0 + mapSelEndX) * robo_map.unitsPerPixelX + robo_map.viewCenterX;
+    mapSelWorldMinZ = robo_map.viewCenterZ - (float)(v3 + mapSelStartY) * robo_map.unitsPerPixelY;
+    mapSelWorldMaxZ = robo_map.viewCenterZ - (float)(v3 + mapSelEndY) * robo_map.unitsPerPixelY;
 
     if ( mapSelWorldMinX > mapSelWorldMaxX )
     {
@@ -5888,7 +5888,7 @@ void RoboMapMakeSquadFromBox(NC_STACK_ypaworld *yw)
     }
 
     if ( v8 )
-        bzda.field_1D0 = bzda.field_1CC & 0x20;
+        bzda.activeMode = bzda.enabledModes & 0x20;
 
     if ( v13 )
         yw->_activeCmdrID = v13->_commandID;
@@ -5900,7 +5900,7 @@ void  RoboMap_InputHandle(NC_STACK_ypaworld *yw, TInputState *inpt)
 {
     if ( robo_map.IsClosed() )
     {
-        robo_map.field_1E8 &= 0xFFFFFDE8;
+        robo_map.stateFlags &= 0xFFFFFDE8;
     }
     else
     {
@@ -5959,22 +5959,22 @@ void  RoboMap_InputHandle(NC_STACK_ypaworld *yw, TInputState *inpt)
             break;
         }
 
-        if ( robo_map.field_1E8 & 1 )
+        if ( robo_map.stateFlags & 1 )
         {
             if ( winpt->flag & TClickBoxInf::FLAG_LM_HOLD )
             {
-                int v15 = winpt->move.ScreenPos.x + robo_map.field_218;
-                int v16 = winpt->move.ScreenPos.y + robo_map.field_21A;
+                int v15 = winpt->move.ScreenPos.x + robo_map.resizeOffsetX;
+                int v16 = winpt->move.ScreenPos.y + robo_map.resizeOffsetY;
 
-                if ( v15 < robo_map.field_210 )
-                    v15 = robo_map.field_210;
-                else if ( v15 > robo_map.field_214 )
-                    v15 = robo_map.field_214;
+                if ( v15 < robo_map.minWidth )
+                    v15 = robo_map.minWidth;
+                else if ( v15 > robo_map.maxWidth )
+                    v15 = robo_map.maxWidth;
 
-                if ( v16 < robo_map.field_212 )
-                    v16 = robo_map.field_212;
-                else if ( v16 > robo_map.field_216 )
-                    v16 = robo_map.field_216;
+                if ( v16 < robo_map.minHeight )
+                    v16 = robo_map.minHeight;
+                else if ( v16 > robo_map.maxHeight )
+                    v16 = robo_map.maxHeight;
 
                 if ( v15 + robo_map.x >= yw->_screenSize.x )
                     v15 = yw->_screenSize.x - robo_map.x;
@@ -5987,62 +5987,62 @@ void  RoboMap_InputHandle(NC_STACK_ypaworld *yw, TInputState *inpt)
             }
             else
             {
-                robo_map.field_1E8 &= 0xFFFFFFFE;
+                robo_map.stateFlags &= 0xFFFFFFFE;
                 yw->_guiDragDefaultMouse = false;
             }
         }
-        else if ( robo_map.field_1E8 & 2 )
+        else if ( robo_map.stateFlags & 2 )
         {
             if ( winpt->flag & TClickBoxInf::FLAG_LM_HOLD )
             {
-                robo_map.field_1ED = 0;
-                robo_map.field_1D8 = (yw->_mapSize.x * World::CVSectorLength) / (float)robo_map.field_1CC * (float)(winpt->move.ScreenPos.x - robo_map.field_21C ) + robo_map.field_220;
+                robo_map.lockViewer = 0;
+                robo_map.viewCenterX = (yw->_mapSize.x * World::CVSectorLength) / (float)robo_map.hScrollLength * (float)(winpt->move.ScreenPos.x - robo_map.dragStartX ) + robo_map.dragStartCenterX;
             }
             else
             {
-                robo_map.field_1E8 &= 0xFFFFFFFD;
+                robo_map.stateFlags &= 0xFFFFFFFD;
                 yw->_guiDragDefaultMouse = false;
             }
         }
-        else if ( robo_map.field_1E8 & 4 )
+        else if ( robo_map.stateFlags & 4 )
         {
             if ( winpt->flag & TClickBoxInf::FLAG_LM_HOLD )
             {
-                robo_map.field_1ED = 0;
-                robo_map.field_1DC = robo_map.field_224 - (yw->_mapSize.y * World::CVSectorLength) / (float)robo_map.field_1D2 * (float)(winpt->move.ScreenPos.y - robo_map.field_21E);
+                robo_map.lockViewer = 0;
+                robo_map.viewCenterZ = robo_map.dragStartCenterZ - (yw->_mapSize.y * World::CVSectorLength) / (float)robo_map.vScrollLength * (float)(winpt->move.ScreenPos.y - robo_map.dragStartY);
             }
             else
             {
-                robo_map.field_1E8 &= 0xFFFFFFFB;
+                robo_map.stateFlags &= 0xFFFFFFFB;
                 yw->_guiDragDefaultMouse = false;
             }
         }
-        else if ( robo_map.field_1E8 & 0x10 )
+        else if ( robo_map.stateFlags & 0x10 )
         {
             if ( winpt->flag & TClickBoxInf::FLAG_RM_HOLD )
             {
-                robo_map.field_1ED = 0;
-                robo_map.field_1D8 = robo_map.field_220 + (float)(robo_map.field_21C - winpt->move.ScreenPos.x) * robo_map.field_1E0;
-                robo_map.field_1DC = robo_map.field_224 - (float)(robo_map.field_21E - winpt->move.ScreenPos.y) * robo_map.field_1E4;
+                robo_map.lockViewer = 0;
+                robo_map.viewCenterX = robo_map.dragStartCenterX + (float)(robo_map.dragStartX - winpt->move.ScreenPos.x) * robo_map.unitsPerPixelX;
+                robo_map.viewCenterZ = robo_map.dragStartCenterZ - (float)(robo_map.dragStartY - winpt->move.ScreenPos.y) * robo_map.unitsPerPixelY;
             }
             else
             {
-                int v25 = abs(robo_map.field_21C - winpt->move.ScreenPos.x);
-                int v27 = abs(robo_map.field_21E - winpt->move.ScreenPos.y);
+                int v25 = abs(robo_map.dragStartX - winpt->move.ScreenPos.x);
+                int v27 = abs(robo_map.dragStartY - winpt->move.ScreenPos.y);
 
                 if ( v25 <= 1 && v27 <= 1 )
                 {
                     yw->_activeCmdrRemapIndex = -1;
                     yw->_activeCmdrID = 0;
 
-                    if ( bzda.field_1D0 & 0x28 )
-                        bzda.field_1D0 = bzda.field_1CC & 1;
+                    if ( bzda.activeMode & 0x28 )
+                        bzda.activeMode = bzda.enabledModes & 1;
                 }
-                robo_map.field_1E8 &= 0xFFFFFFEF;
+                robo_map.stateFlags &= 0xFFFFFFEF;
                 yw->_guiDragDefaultMouse = false;
             }
         }
-        else if ( robo_map.field_1E8 & 0x200 )
+        else if ( robo_map.stateFlags & 0x200 )
         {
             mapSelEndX = winpt->move.ScreenPos.x;
             mapSelEndY = winpt->move.ScreenPos.y;
@@ -6053,13 +6053,13 @@ void  RoboMap_InputHandle(NC_STACK_ypaworld *yw, TInputState *inpt)
             {
                 if ( abs(mapSelEndX - mapSelStartX) <= 5 || abs(mapSelEndY - mapSelStartY) <= 5 )
                 {
-                    robo_map.field_1E8 &= 0xFFFFFDFF;
+                    robo_map.stateFlags &= 0xFFFFFDFF;
                     winpt->flag |= TClickBoxInf::FLAG_LM_DOWN;
                 }
                 else
                 {
-                    bzda.field_1D0 = 1;
-                    robo_map.field_1E8 &= 0xFFFFFDFF;
+                    bzda.activeMode = 1;
+                    robo_map.stateFlags &= 0xFFFFFDFF;
                     RoboMapMakeSquadFromBox(yw);
                 }
             }
@@ -6070,11 +6070,11 @@ void  RoboMap_InputHandle(NC_STACK_ypaworld *yw, TInputState *inpt)
             {
                 if ( winpt->selected_btnID == 17 )
                 {
-                    robo_map.field_220 = robo_map.field_1D8;
-                    robo_map.field_21C = winpt->move.ScreenPos.x;
-                    robo_map.field_21E = winpt->move.ScreenPos.y;
-                    robo_map.field_224 = robo_map.field_1DC;
-                    robo_map.field_1E8 |= 0x10;
+                    robo_map.dragStartCenterX = robo_map.viewCenterX;
+                    robo_map.dragStartX = winpt->move.ScreenPos.x;
+                    robo_map.dragStartY = winpt->move.ScreenPos.y;
+                    robo_map.dragStartCenterZ = robo_map.viewCenterZ;
+                    robo_map.stateFlags |= 0x10;
                     yw->_guiDragDefaultMouse = true;
                 }
             }
@@ -6083,7 +6083,7 @@ void  RoboMap_InputHandle(NC_STACK_ypaworld *yw, TInputState *inpt)
             {
                 if ( winpt->selected_btnID == 17 )
                 {
-                    robo_map.field_1E8 |= 0x200;
+                    robo_map.stateFlags |= 0x200;
                     mapSelStartX = winpt->move.ScreenPos.x;
                     mapSelStartY = winpt->move.ScreenPos.y;
                     mapSelEndX = mapSelStartX;
@@ -6109,56 +6109,56 @@ void  RoboMap_InputHandle(NC_STACK_ypaworld *yw, TInputState *inpt)
                 switch ( winpt->selected_btnID )
                 {
                 case 16:
-                    robo_map.field_218 = robo_map.w - winpt->ldw_pos.ScreenPos.x;
-                    robo_map.field_21A = robo_map.h - winpt->ldw_pos.ScreenPos.y;
+                    robo_map.resizeOffsetX = robo_map.w - winpt->ldw_pos.ScreenPos.x;
+                    robo_map.resizeOffsetY = robo_map.h - winpt->ldw_pos.ScreenPos.y;
 
-                    robo_map.field_1E8 |= 1;
+                    robo_map.stateFlags |= 1;
                     yw->_guiDragDefaultMouse = true;
                     break;
 
                 case 14:
-                    robo_map.field_21C = winpt->ldw_pos.ScreenPos.x;
-                    robo_map.field_220 = robo_map.field_1D8;
-                    robo_map.field_1E8 |= 2;
+                    robo_map.dragStartX = winpt->ldw_pos.ScreenPos.x;
+                    robo_map.dragStartCenterX = robo_map.viewCenterX;
+                    robo_map.stateFlags |= 2;
                     yw->_guiDragDefaultMouse = true;
                     break;
 
                 case 11:
-                    robo_map.field_21E = winpt->ldw_pos.ScreenPos.y;
-                    robo_map.field_224 = robo_map.field_1DC;
-                    robo_map.field_1E8 |= 4;
+                    robo_map.dragStartY = winpt->ldw_pos.ScreenPos.y;
+                    robo_map.dragStartCenterZ = robo_map.viewCenterZ;
+                    robo_map.stateFlags |= 4;
                     yw->_guiDragDefaultMouse = true;
                     break;
 
                 case 3:
-                    if ( robo_map.field_1EC & 1 )
-                        robo_map.field_1EC &= 0xFE;
+                    if ( robo_map.layerFlags & 1 )
+                        robo_map.layerFlags &= 0xFE;
                     else
-                        robo_map.field_1EC |= 1;
+                        robo_map.layerFlags |= 1;
 
                     RoboMapZoom(yw, 0);
                     break;
 
                 case 4:
-                    if ( robo_map.field_1EC & 2 )
-                        robo_map.field_1EC &= 0xFD;
+                    if ( robo_map.layerFlags & 2 )
+                        robo_map.layerFlags &= 0xFD;
                     else
-                        robo_map.field_1EC |= 2;
+                        robo_map.layerFlags |= 2;
 
                     RoboMapZoom(yw, 0);
                     break;
 
                 case 5:
-                    if ( robo_map.field_1EC & 4 )
-                        robo_map.field_1EC &= 0xFB;
+                    if ( robo_map.layerFlags & 4 )
+                        robo_map.layerFlags &= 0xFB;
                     else
-                        robo_map.field_1EC |= 4;
+                        robo_map.layerFlags |= 4;
 
                     RoboMapZoom(yw, 0);
                     break;
 
                 case 6:
-                    robo_map.field_1ED = robo_map.field_1ED != 1;
+                    robo_map.lockViewer = robo_map.lockViewer != 1;
                     break;
 
                 default:
@@ -6171,55 +6171,55 @@ void  RoboMap_InputHandle(NC_STACK_ypaworld *yw, TInputState *inpt)
             case 13:
                 if ( winpt->flag & (TClickBoxInf::FLAG_BTN_DOWN | TClickBoxInf::FLAG_BTN_HOLD) )
                 {
-                    robo_map.field_220 = robo_map.field_1D8;
-                    robo_map.field_1ED = 0;
-                    robo_map.field_1D8 = yw->_mapSize.x * World::CVSectorLength / (-1.0 * (float)robo_map.field_1CC) + robo_map.field_1D8;
+                    robo_map.dragStartCenterX = robo_map.viewCenterX;
+                    robo_map.lockViewer = 0;
+                    robo_map.viewCenterX = yw->_mapSize.x * World::CVSectorLength / (-1.0 * (float)robo_map.hScrollLength) + robo_map.viewCenterX;
                 }
                 break;
 
             case 15:
                 if ( winpt->flag & (TClickBoxInf::FLAG_BTN_DOWN | TClickBoxInf::FLAG_BTN_HOLD) )
                 {
-                    robo_map.field_220 = robo_map.field_1D8;
-                    robo_map.field_1ED = 0;
-                    robo_map.field_1D8 = yw->_mapSize.x * World::CVSectorLength / (float)robo_map.field_1CC + robo_map.field_1D8;
+                    robo_map.dragStartCenterX = robo_map.viewCenterX;
+                    robo_map.lockViewer = 0;
+                    robo_map.viewCenterX = yw->_mapSize.x * World::CVSectorLength / (float)robo_map.hScrollLength + robo_map.viewCenterX;
                 }
                 break;
 
             case 10:
                 if ( winpt->flag & (TClickBoxInf::FLAG_BTN_DOWN | TClickBoxInf::FLAG_BTN_HOLD) )
                 {
-                    robo_map.field_224 = robo_map.field_1DC;
-                    robo_map.field_1ED = 0;
-                    robo_map.field_1DC = robo_map.field_1DC - yw->_mapSize.y * World::CVSectorLength / (-1.0 * (float)robo_map.field_1D2);
+                    robo_map.dragStartCenterZ = robo_map.viewCenterZ;
+                    robo_map.lockViewer = 0;
+                    robo_map.viewCenterZ = robo_map.viewCenterZ - yw->_mapSize.y * World::CVSectorLength / (-1.0 * (float)robo_map.vScrollLength);
                 }
                 break;
 
             case 12:
                 if ( winpt->flag & (TClickBoxInf::FLAG_BTN_DOWN | TClickBoxInf::FLAG_BTN_HOLD) )
                 {
-                    robo_map.field_224 = robo_map.field_1DC;
-                    robo_map.field_1ED = 0;
-                    robo_map.field_1DC = robo_map.field_1DC - yw->_mapSize.y * World::CVSectorLength / (float)robo_map.field_1D2;
+                    robo_map.dragStartCenterZ = robo_map.viewCenterZ;
+                    robo_map.lockViewer = 0;
+                    robo_map.viewCenterZ = robo_map.viewCenterZ - yw->_mapSize.y * World::CVSectorLength / (float)robo_map.vScrollLength;
                 }
                 break;
 
             case 9:
                 if ( winpt->flag & (TClickBoxInf::FLAG_BTN_DOWN | TClickBoxInf::FLAG_BTN_HOLD) )
-                    robo_map.field_1E8 |= 0x20;
+                    robo_map.stateFlags |= 0x20;
 
                 if ( winpt->flag & TClickBoxInf::FLAG_BTN_UP )
                 {
                     int tmp1, tmp2, tmp3, tmp4;
-                    tmp1 = robo_map.field_208;
-                    tmp2 = robo_map.field_20A;
-                    tmp3 = robo_map.field_20C;
-                    tmp4 = robo_map.field_20E;
+                    tmp1 = robo_map.altX;
+                    tmp2 = robo_map.altY;
+                    tmp3 = robo_map.altW;
+                    tmp4 = robo_map.altH;
 
-                    robo_map.field_208 = robo_map.x;
-                    robo_map.field_20A = robo_map.y;
-                    robo_map.field_20C = robo_map.w;
-                    robo_map.field_20E = robo_map.h;
+                    robo_map.altX = robo_map.x;
+                    robo_map.altY = robo_map.y;
+                    robo_map.altW = robo_map.w;
+                    robo_map.altH = robo_map.h;
 
                     robo_map.x = tmp1;
                     robo_map.y = tmp2;
@@ -6243,7 +6243,7 @@ void  RoboMap_InputHandle(NC_STACK_ypaworld *yw, TInputState *inpt)
 
             case 7:
                 if ( winpt->flag & (TClickBoxInf::FLAG_BTN_DOWN | TClickBoxInf::FLAG_BTN_HOLD) )
-                    robo_map.field_1E8 |= 0x40;
+                    robo_map.stateFlags |= 0x40;
 
                 if ( winpt->flag & TClickBoxInf::FLAG_BTN_UP )
                     RoboMapZoom(yw, 1);
@@ -6252,7 +6252,7 @@ void  RoboMap_InputHandle(NC_STACK_ypaworld *yw, TInputState *inpt)
 
             case 8:
                 if ( winpt->flag & (TClickBoxInf::FLAG_BTN_DOWN | TClickBoxInf::FLAG_BTN_HOLD) )
-                    robo_map.field_1E8 |= 0x80;
+                    robo_map.stateFlags |= 0x80;
 
                 if ( winpt->flag & TClickBoxInf::FLAG_BTN_UP )
                     RoboMapZoom(yw, 2);
@@ -6302,7 +6302,7 @@ void  RoboMap_InputHandle(NC_STACK_ypaworld *yw, TInputState *inpt)
 
 void InfoLogLayoutMessage(NC_STACK_ypaworld *yw, CmdStream *cur, int id)
 {
-    int v5 = id + info_log.field_254 + info_log.firstShownEntries;
+    int v5 = id + info_log.oldest_msg_idx + info_log.firstShownEntries;
 
     if ( v5 >= 64 )
         v5 -= 64;
@@ -7050,14 +7050,14 @@ void NC_STACK_ypaworld::HandleGuiInput(TInputState *inpt)
 
 NC_STACK_ypabact * NC_STACK_ypaworld::GetLastMsgSender()
 {
-    if ( !info_log.field_255C )
+    if ( !info_log.last_sender_gid )
         return NULL;
 
     for (NC_STACK_ypabact *comm : _cmdrsRemap)
     {
         NC_STACK_ypabact *found = NULL;
         
-        if ( info_log.field_255C == comm->_gid )
+        if ( info_log.last_sender_gid == comm->_gid )
         {
             found = comm;
         }
@@ -7068,7 +7068,7 @@ NC_STACK_ypabact * NC_STACK_ypaworld::GetLastMsgSender()
                 if ( bact->_status != BACT_STATUS_DEAD && 
                      bact->_status != BACT_STATUS_CREATE && 
                      bact->_status != BACT_STATUS_BEAM && 
-                     bact->_gid == info_log.field_255C )
+                     bact->_gid == info_log.last_sender_gid )
                 {
                     found = bact;
                     break;
@@ -7078,7 +7078,7 @@ NC_STACK_ypabact * NC_STACK_ypaworld::GetLastMsgSender()
 
         if (found)
         {
-            if ( (_timeStamp - info_log.field_2560) > 10000 )
+            if ( (_timeStamp - info_log.last_msg_time) > 10000 )
                 return NULL;
             
             return found;
@@ -7130,7 +7130,7 @@ void NC_STACK_ypaworld::UpdateCommanderList()
         {
             if ( _activeCmdrID == 0 )
             {
-                if ( bzda.field_1D0 & 6 )
+                if ( bzda.activeMode & 6 )
                 {
                     _activeCmdrID = _cmdrsRemap.back()->_commandID;
                     _activeCmdrRemapIndex = _cmdrsRemap.size() - 1;
@@ -7179,7 +7179,7 @@ void RoboMapUpdateLayout(NC_STACK_ypaworld *yw)
     if ( robo_map.IsOpen() )
     {
         RoboMapCalcScrollThumbs(yw);
-        RoboMapClampView(yw, robo_map.field_1CC - robo_map.field_244, robo_map.field_1D2);
+        RoboMapClampView(yw, robo_map.hScrollLength - robo_map.borderLeft, robo_map.vScrollLength);
         RoboMapLayoutFrame(yw);
         RoboMapLayoutHScroll(yw);
         RoboMapLayoutVScroll(yw);
@@ -7191,17 +7191,17 @@ void RoboMapFollowViewer(NC_STACK_ypaworld *yw)
 {
     if ( robo_map.IsOpen() )
     {
-        if ( !(robo_map.field_1E8 & 0x16) && robo_map.field_1ED == 1 )
+        if ( !(robo_map.stateFlags & 0x16) && robo_map.lockViewer == 1 )
         {
             if ( yw->_viewerBact )
             {
-                robo_map.field_1D8 = yw->_viewerBact->_position.x;
-                robo_map.field_1DC = yw->_viewerBact->_position.z;
+                robo_map.viewCenterX = yw->_viewerBact->_position.x;
+                robo_map.viewCenterZ = yw->_viewerBact->_position.z;
 
-                RoboMapClampView(yw, robo_map.field_1CC - robo_map.field_244, robo_map.field_1D2);
+                RoboMapClampView(yw, robo_map.hScrollLength - robo_map.borderLeft, robo_map.vScrollLength);
             }
         }
-        robo_map.field_1E8 &= 0xFFFFFF1F;
+        robo_map.stateFlags &= 0xFFFFFF1F;
     }
 }
 
@@ -7319,31 +7319,31 @@ void UpdateVehicleList(NC_STACK_ypaworld *yw)
     {
         if ( v6 & proto.disable_enable_bitmask )
         {
-            bzda.field_2DC[v3] = i;
+            bzda.vhclProtoIds[v3] = i;
             v3++;
         }
         i++;
     }
 
-    bzda.field_8E0 = v3;
+    bzda.vhclCount = v3;
 
     protoSortWorld = yw;
 
-    qsort(bzda.field_2DC, v3, 1, CompareVehicleProtos);
+    qsort(bzda.vhclProtoIds, v3, 1, CompareVehicleProtos);
 
     if ( !v3 )
     {
-        bzda.field_8EC = -1;
+        bzda.selVhclIdx = -1;
     }
     else
     {
         if ( v3 == 1 )
         {
-            bzda.field_8EC = 0;
+            bzda.selVhclIdx = 0;
         }
-        else if ( v3 <= bzda.field_8EC )
+        else if ( v3 <= bzda.selVhclIdx )
         {
-            bzda.field_8EC = v3 - 1;
+            bzda.selVhclIdx = v3 - 1;
         }
     }
 }
@@ -7413,31 +7413,31 @@ void UpdateBuildingList(NC_STACK_ypaworld *yw)
     {
         if ( v6 & proto.EnableMask )
         {
-            bzda.field_3DC[v3] = i;
+            bzda.buildProtoIds[v3] = i;
             v3++;
         }
         i++;
     }
 
-    bzda.field_8E4 = v3;
+    bzda.buildCount = v3;
 
     protoSortWorld = yw;
 
-    qsort(bzda.field_3DC, v3, 1, CompareBuildingProtos);
+    qsort(bzda.buildProtoIds, v3, 1, CompareBuildingProtos);
 
     if ( !v3 )
     {
-        bzda.field_8F4 = -1;
+        bzda.selBuildIdx = -1;
     }
     else
     {
         if ( v3 == 1 )
         {
-            bzda.field_8F4 = 0;
+            bzda.selBuildIdx = 0;
         }
-        else if ( v3 <= bzda.field_8F4 )
+        else if ( v3 <= bzda.selBuildIdx )
         {
-            bzda.field_8F4 = v3 - 1;
+            bzda.selBuildIdx = v3 - 1;
         }
     }
 }
@@ -7453,31 +7453,31 @@ void UpdateGunList(NC_STACK_ypaworld *yw)
     {
         if ( gun.gun_obj )
         {
-            bzda.field_1DC[v4] = i;
+            bzda.gunIndices[v4] = i;
 
             if ( gun.gun_obj == yw->_userUnit )
-                bzda.field_8F0 = v4;
+                bzda.selGunIdx = v4;
 
             v4++;
         }
         i++;
     }
 
-    bzda.field_8DC = v4;
+    bzda.gunCount = v4;
 
     if ( !v4 )
     {
-        bzda.field_8F0 = -1;
+        bzda.selGunIdx = -1;
     }
     else
     {
         if ( v4 == 1 )
         {
-            bzda.field_8F0 = 0;
+            bzda.selGunIdx = 0;
         }
-        else if ( v4 <= bzda.field_8F0 )
+        else if ( v4 <= bzda.selGunIdx )
         {
-            bzda.field_8F0 = v4 - 1;
+            bzda.selGunIdx = v4 - 1;
         }
     }
 }
@@ -7952,16 +7952,16 @@ void DrawGameMessages(NC_STACK_ypaworld *yw)
 
     int v10;
 
-    if ( info_log.field_254 <= info_log.msg_count )
-        v10 = info_log.msg_count - info_log.field_254;
+    if ( info_log.oldest_msg_idx <= info_log.msg_count )
+        v10 = info_log.msg_count - info_log.oldest_msg_idx;
     else
-        v10 = info_log.msg_count + 64 - info_log.field_254;
+        v10 = info_log.msg_count + 64 - info_log.oldest_msg_idx;
 
     if ( v10 > 10 )
         v10 = 10;
 
     FontUA::select_tileset(&buf, 15);
-    FontUA::set_ypos(&buf, up_panel.field_1CC + yw->_fontH / 2);
+    FontUA::set_ypos(&buf, up_panel.panelHeight + yw->_fontH / 2);
 
 
     int v11 = (info_log.msg_count - v10) % 64;
@@ -7977,9 +7977,9 @@ void DrawGameMessages(NC_STACK_ypaworld *yw)
         if ( v11 >= 64 )
             v11 = 0;
 
-        inflog_msg *v14 = &info_log.msgs[v11];
+        TInfoLogMsg *v14 = &info_log.msgs[v11];
 
-        if ( v14->field_8 > 0 )
+        if ( v14->displayTime > 0 )
         {
             if ( !v27 )
             {
@@ -7997,11 +7997,11 @@ void DrawGameMessages(NC_STACK_ypaworld *yw)
                 if ( !v15 )
                     v15 = 1;
 
-                v14->field_8 -= yw->_frameTime * v15;
+                v14->displayTime -= yw->_frameTime * v15;
             }
 
-            if ( v14->field_4 )
-                v28 = v14->field_4;
+            if ( v14->timestamp )
+                v28 = v14->timestamp;
             else
                 v28 += 200;
 
@@ -9478,27 +9478,27 @@ void DrawRadarUnits(NC_STACK_ypaworld *yw)
     float v6 = yw->_screenSize.x / 2;
     float v7 = yw->_screenSize.y / 2;
 
-    robo_map.field_1F8 = dround((robo_map.field_25C - robo_map.field_254) * v6);
-    robo_map.field_1FC = dround((robo_map.field_260 - robo_map.field_258) * v7);
+    robo_map.viewWidth = dround((robo_map.radarRight - robo_map.radarLeft) * v6);
+    robo_map.viewHeight = dround((robo_map.radarBottom - robo_map.radarTop) * v7);
 
-    robo_map.field_1F0 = dround(robo_map.field_1D8 / robo_map.field_1E0) - (robo_map.field_1F8 / 2);
-    robo_map.field_1F4 = -dround(robo_map.field_1DC / robo_map.field_1E4) - (robo_map.field_1FC / 2);
+    robo_map.scrollPixelX = dround(robo_map.viewCenterX / robo_map.unitsPerPixelX) - (robo_map.viewWidth / 2);
+    robo_map.scrollPixelY = -dround(robo_map.viewCenterZ / robo_map.unitsPerPixelY) - (robo_map.viewHeight / 2);
 
-    robo_map.field_200 = dround(v6 * robo_map.field_254);
-    robo_map.field_204 = dround(v7 * robo_map.field_258);
+    robo_map.viewScreenX = dround(v6 * robo_map.radarLeft);
+    robo_map.viewScreenY = dround(v7 * robo_map.radarTop);
 
     Common::Rect drect;
-    drect.left = robo_map.field_200;
-    drect.top = robo_map.field_204;
-    drect.right = robo_map.field_1F8 + robo_map.field_200 - 1;
-    drect.bottom = robo_map.field_1FC + robo_map.field_204 - 1;
+    drect.left = robo_map.viewScreenX;
+    drect.top = robo_map.viewScreenY;
+    drect.right = robo_map.viewWidth + robo_map.viewScreenX - 1;
+    drect.bottom = robo_map.viewHeight + robo_map.viewScreenY - 1;
 
     GFX::Engine.SetClipCentered(drect);
 
-    int v14 = dround(robo_map.field_1F0 * robo_map.field_1E0) / World::CVSectorLength;
-    int v29 = dround(robo_map.field_1F4 * robo_map.field_1E4) / World::CVSectorLength;
-    int v28 = dround( (robo_map.field_1F8 + robo_map.field_1F0) * robo_map.field_1E0 ) / World::CVSectorLength;
-    int v30 = dround( (robo_map.field_1FC + robo_map.field_1F4) * robo_map.field_1E4 ) / World::CVSectorLength;
+    int v14 = dround(robo_map.scrollPixelX * robo_map.unitsPerPixelX) / World::CVSectorLength;
+    int v29 = dround(robo_map.scrollPixelY * robo_map.unitsPerPixelY) / World::CVSectorLength;
+    int v28 = dround( (robo_map.viewWidth + robo_map.scrollPixelX) * robo_map.unitsPerPixelX ) / World::CVSectorLength;
+    int v30 = dround( (robo_map.viewHeight + robo_map.scrollPixelY) * robo_map.unitsPerPixelY ) / World::CVSectorLength;
 
     if ( v14 < 1 )
         v14 = 1;
@@ -9581,22 +9581,22 @@ void DrawRadarUnits(NC_STACK_ypaworld *yw)
 
 void yw_RenderHUDRadare(NC_STACK_ypaworld *yw)
 {
-    float v12 = robo_map.field_1D8;
-    float v15 = robo_map.field_1DC;
-    float v14 = robo_map.field_1E0;
-    float v13 = robo_map.field_1E4;
-    int v7 = robo_map.field_1EC;
+    float v12 = robo_map.viewCenterX;
+    float v15 = robo_map.viewCenterZ;
+    float v14 = robo_map.unitsPerPixelX;
+    float v13 = robo_map.unitsPerPixelY;
+    int v7 = robo_map.layerFlags;
     int32_t v8 = robo_map.MapViewMask;
-    int v9 = robo_map.field_1EE;
+    int v9 = robo_map.zoomLevel;
 
-    robo_map.field_1EC = 1;
+    robo_map.layerFlags = 1;
     robo_map.MapViewMask = -1;
-    robo_map.field_1E8 |= 0x100;
-    robo_map.field_1EE = 3;
-    robo_map.field_1D8 = yw->_viewerBact->_position.x;
-    robo_map.field_1DC = yw->_viewerBact->_position.z;
-    robo_map.field_1E0 = 4800.0 / ((float)(yw->_screenSize.x / 2) * (robo_map.field_25C - robo_map.field_254));
-    robo_map.field_1E4 = 4800.0 / ((float)(yw->_screenSize.y / 2) * (robo_map.field_260 - robo_map.field_258));
+    robo_map.stateFlags |= 0x100;
+    robo_map.zoomLevel = 3;
+    robo_map.viewCenterX = yw->_viewerBact->_position.x;
+    robo_map.viewCenterZ = yw->_viewerBact->_position.z;
+    robo_map.unitsPerPixelX = 4800.0 / ((float)(yw->_screenSize.x / 2) * (robo_map.radarRight - robo_map.radarLeft));
+    robo_map.unitsPerPixelY = 4800.0 / ((float)(yw->_screenSize.y / 2) * (robo_map.radarBottom - robo_map.radarTop));
 
     float v19 = yw->_viewerRotation.m20;
     float v17 = yw->_viewerRotation.m22;
@@ -9614,7 +9614,7 @@ void yw_RenderHUDRadare(NC_STACK_ypaworld *yw)
         v20 = v19 / v16;
         v18 = v17 / v16;
     }
-    robo_map.field_264 = v18;
+    robo_map.radarRotM00 = v18;
 
     radarRotM01 = -v20;
     radarRotM10 = v20;
@@ -9622,14 +9622,14 @@ void yw_RenderHUDRadare(NC_STACK_ypaworld *yw)
 
     DrawRadarUnits(yw);
 
-    robo_map.field_1EC = v7;
-    robo_map.field_1EE = v9;
-    robo_map.field_1D8 = v12;
+    robo_map.layerFlags = v7;
+    robo_map.zoomLevel = v9;
+    robo_map.viewCenterX = v12;
     robo_map.MapViewMask = v8;
-    robo_map.field_1DC = v15;
-    robo_map.field_1E0 = v14;
-    robo_map.field_1E8 &= 0xFFFFFEFF;
-    robo_map.field_1E4 = v13;
+    robo_map.viewCenterZ = v15;
+    robo_map.unitsPerPixelX = v14;
+    robo_map.stateFlags &= 0xFFFFFEFF;
+    robo_map.unitsPerPixelY = v13;
 }
 
 
@@ -9778,7 +9778,7 @@ void DrawGameStatus(NC_STACK_ypaworld *yw)
 
     FontUA::select_tileset(&buf, 15);
     FontUA::set_xpos(&buf, v25);
-    FontUA::set_ypos(&buf, up_panel.field_1CC + (yw->_fontH / 2));
+    FontUA::set_ypos(&buf, up_panel.panelHeight + (yw->_fontH / 2));
 
     DrawUnitLimit(yw, &buf, v2);
     DrawNetScores(yw, &buf, yw->_gameplayStats, v2);
@@ -9854,13 +9854,13 @@ void RestoreWinStatus(NC_STACK_ypaworld *yw, NC_STACK_ypabact *bact1, NC_STACK_y
             robo_map.y = yw->_roboMapStatus.Rect.y;
             robo_map.w = yw->_roboMapStatus.Rect.w;
             robo_map.h = yw->_roboMapStatus.Rect.h;
-            robo_map.field_1EC = yw->_roboMapStatus.Data[0];
-            robo_map.field_1ED = yw->_roboMapStatus.Data[1];
-            robo_map.field_1EE = yw->_roboMapStatus.Data[2];
-            robo_map.field_208 = yw->_roboMapStatus.Data[3];
-            robo_map.field_20A = yw->_roboMapStatus.Data[4];
-            robo_map.field_20C = yw->_roboMapStatus.Data[5];
-            robo_map.field_20E = yw->_roboMapStatus.Data[6];
+            robo_map.layerFlags = yw->_roboMapStatus.Data[0];
+            robo_map.lockViewer = yw->_roboMapStatus.Data[1];
+            robo_map.zoomLevel = yw->_roboMapStatus.Data[2];
+            robo_map.altX = yw->_roboMapStatus.Data[3];
+            robo_map.altY = yw->_roboMapStatus.Data[4];
+            robo_map.altW = yw->_roboMapStatus.Data[5];
+            robo_map.altH = yw->_roboMapStatus.Data[6];
 
             RoboMapZoom(yw, 0);
         }
@@ -9899,13 +9899,13 @@ void RestoreWinStatus(NC_STACK_ypaworld *yw, NC_STACK_ypabact *bact1, NC_STACK_y
             robo_map.y = yw->_vhclMapStatus.Rect.y;
             robo_map.w = yw->_vhclMapStatus.Rect.w;
             robo_map.h = yw->_vhclMapStatus.Rect.h;
-            robo_map.field_1EC = yw->_vhclMapStatus.Data[0];
-            robo_map.field_1ED = yw->_vhclMapStatus.Data[1];
-            robo_map.field_1EE = yw->_vhclMapStatus.Data[2];
-            robo_map.field_208 = yw->_vhclMapStatus.Data[3];
-            robo_map.field_20A = yw->_vhclMapStatus.Data[4];
-            robo_map.field_20C = yw->_vhclMapStatus.Data[5];
-            robo_map.field_20E = yw->_vhclMapStatus.Data[6];
+            robo_map.layerFlags = yw->_vhclMapStatus.Data[0];
+            robo_map.lockViewer = yw->_vhclMapStatus.Data[1];
+            robo_map.zoomLevel = yw->_vhclMapStatus.Data[2];
+            robo_map.altX = yw->_vhclMapStatus.Data[3];
+            robo_map.altY = yw->_vhclMapStatus.Data[4];
+            robo_map.altW = yw->_vhclMapStatus.Data[5];
+            robo_map.altH = yw->_vhclMapStatus.Data[6];
 
             RoboMapZoom(yw, 0);
         }
@@ -9953,7 +9953,7 @@ void RestoreWinStatus(NC_STACK_ypaworld *yw, NC_STACK_ypabact *bact1, NC_STACK_y
     }
 
     if ( bact2->_bact_type != BACT_TYPES_ROBO )
-        robo_map.field_1ED = 1;
+        robo_map.lockViewer = 1;
 }
 
 
@@ -9967,7 +9967,7 @@ void RestoreWinStatus(NC_STACK_ypaworld *yw, NC_STACK_ypabact *bact1, NC_STACK_y
 
 int NC_STACK_ypaworld::yw_MouseFindCreationPoint(TClickBoxInf *winp)
 {
-    const World::TVhclProto &vhcl = _vhclProtos[bzda.field_2DC[bzda.field_8EC]];
+    const World::TVhclProto &vhcl = _vhclProtos[bzda.vhclProtoIds[bzda.selVhclIdx]];
 
     vec3d v47( (float)(winp->move.ScreenPos.x - (_screenSize.x / 2)) / (float)(_screenSize.x / 2),
                (float)(winp->move.ScreenPos.y - (_screenSize.y / 2)) / (float)(_screenSize.y / 2),
@@ -10029,7 +10029,7 @@ int NC_STACK_ypaworld::yw_MouseFindCreationPoint(TClickBoxInf *winp)
 
 int NC_STACK_ypaworld::UserActCreateCheck(TClickBoxInf *winp)
 {
-    if ( _guiActFlags & 8 || bzda.field_8EC == -1 )
+    if ( _guiActFlags & 8 || bzda.selVhclIdx == -1 )
         return 4;
 
     NC_STACK_yparobo *robo = dynamic_cast<NC_STACK_yparobo *>(_userRobo);
@@ -10051,7 +10051,7 @@ int NC_STACK_ypaworld::UserActCreateCheck(TClickBoxInf *winp)
 
 int NC_STACK_ypaworld::UserActBuildCheck()
 {
-    if ( !(_guiActFlags & 0x10) || bzda.field_8F4 == -1 )
+    if ( !(_guiActFlags & 0x10) || bzda.selBuildIdx == -1 )
         return 1; // NO with no tip
 
     NC_STACK_yparobo *robo = dynamic_cast<NC_STACK_yparobo *>(_userRobo);
@@ -10271,19 +10271,19 @@ void NC_STACK_ypaworld::ComputeMouseSelectFlags(TInputState *arg)
             }
         }
 
-        if ( bzda.field_1D0 == 8 )
+        if ( bzda.activeMode == 8 )
             _guiActFlags |= 2;
-        else if ( bzda.field_1D0 == 1 || bzda.field_1D0 == 2 || bzda.field_1D0 == 4 || bzda.field_1D0 == 16 || bzda.field_1D0 == 32 )
+        else if ( bzda.activeMode == 1 || bzda.activeMode == 2 || bzda.activeMode == 4 || bzda.activeMode == 16 || bzda.activeMode == 32 )
             _guiActFlags |= 0x83;
     }
 }
 
 void NC_STACK_ypaworld::yw_MAP_MouseSelect(TClickBoxInf *winp)
 {
-    int v23 = winp->move.BtnPos.x + robo_map.field_1D8 / robo_map.field_1E0 - (robo_map.field_1F8 / 2);
-    int v24 = winp->move.BtnPos.y - (robo_map.field_1DC / robo_map.field_1E4) - (robo_map.field_1FC / 2);
+    int v23 = winp->move.BtnPos.x + robo_map.viewCenterX / robo_map.unitsPerPixelX - (robo_map.viewWidth / 2);
+    int v24 = winp->move.BtnPos.y - (robo_map.viewCenterZ / robo_map.unitsPerPixelY) - (robo_map.viewHeight / 2);
 
-    int v9 = robo_map.field_1EE + 2;
+    int v9 = robo_map.zoomLevel + 2;
 
     Common::Point pt( v23 >> v9, v24 >> v9);
 
@@ -10295,12 +10295,12 @@ void NC_STACK_ypaworld::yw_MAP_MouseSelect(TClickBoxInf *winp)
         {
             _cellOnMouse = &cell;
             _guiActFlags |= 0x10;
-            _cellMouseIsectPos.x = (float)v23 * robo_map.field_1E0 + 0.5;
+            _cellMouseIsectPos.x = (float)v23 * robo_map.unitsPerPixelX + 0.5;
             _cellMouseIsectPos.y = cell.height;
-            _cellMouseIsectPos.z = -((float)v24 * robo_map.field_1E4 + 0.75);
+            _cellMouseIsectPos.z = -((float)v24 * robo_map.unitsPerPixelY + 0.75);
         }
 
-        if ( _guiActFlags & 2 && !(bzda.field_1D0 & 0x30) && cell.IsCanSee(_userRobo->_owner) )
+        if ( _guiActFlags & 2 && !(bzda.activeMode & 0x30) && cell.IsCanSee(_userRobo->_owner) )
         {
 
             int v16 = 0;
@@ -10313,8 +10313,8 @@ void NC_STACK_ypaworld::yw_MAP_MouseSelect(TClickBoxInf *winp)
                     {
                         if ( v17->_status != BACT_STATUS_CREATE && v17->_status != BACT_STATUS_DEAD && v17->_status != BACT_STATUS_BEAM && v17->_bact_type != BACT_TYPES_MISSLE )
                         {
-                            int v19 = v17->_position.x / robo_map.field_1E0;
-                            int v20 = v17->_position.z / robo_map.field_1E4;
+                            int v19 = v17->_position.x / robo_map.unitsPerPixelX;
+                            int v20 = v17->_position.z / robo_map.unitsPerPixelY;
 
                             if ( abs(v19 - v23) <= 8 && abs(-v20 - v24) <= 8 )
                             {
@@ -10491,16 +10491,16 @@ void NC_STACK_ypaworld::UpdateActionEnergyCost()
 {
     _updateMessage.energy = 0;
 
-    if ( bzda.field_1D0 == 2 || bzda.field_1D0 == 4 )
+    if ( bzda.activeMode == 2 || bzda.activeMode == 4 )
     {
-        if ( bzda.field_8EC != -1 )
+        if ( bzda.selVhclIdx != -1 )
         {
-            _updateMessage.energy = dround(GetUnitLimitCostFactor() * (2 * _vhclProtos[bzda.field_2DC[bzda.field_8EC]].energy));
+            _updateMessage.energy = dround(GetUnitLimitCostFactor() * (2 * _vhclProtos[bzda.vhclProtoIds[bzda.selVhclIdx]].energy));
         }
     }
-    else if ( bzda.field_1D0 == 16 && bzda.field_8F4 != -1 )
+    else if ( bzda.activeMode == 16 && bzda.selBuildIdx != -1 )
     {
-        _updateMessage.energy = dround(GetUnitLimitCostFactor() * _buildProtos[bzda.field_3DC[bzda.field_8F4]].Energy);
+        _updateMessage.energy = dround(GetUnitLimitCostFactor() * _buildProtos[bzda.buildProtoIds[bzda.selBuildIdx]].Energy);
     }
 }
 
@@ -10542,9 +10542,9 @@ void NC_STACK_ypaworld::ExecuteMouseAction(int arg)
         }
 
         if ( _userRobo != _bactOnMouse )
-            bzda.field_1D0 = bzda.field_1CC & 1;
+            bzda.activeMode = bzda.enabledModes & 1;
         else
-            bzda.field_1D0 = bzda.field_1CC & 0x20;
+            bzda.activeMode = bzda.enabledModes & 0x20;
         break;
 
     case World::DOACTION_2:
@@ -10565,7 +10565,7 @@ void NC_STACK_ypaworld::ExecuteMouseAction(int arg)
                 _updateMessage.target_Bact = _bactOnMouse;
             }
 
-            bzda.field_1D0 = bzda.field_1CC & 1;
+            bzda.activeMode = bzda.enabledModes & 1;
         }
         break;
 
@@ -10588,10 +10588,10 @@ void NC_STACK_ypaworld::ExecuteMouseAction(int arg)
 
     case World::DOACTION_ADD_UNIT1:
         _updateMessage.user_action = World::DOACTION_ADD_UNIT1;
-        _updateMessage.protoID = bzda.field_2DC[bzda.field_8EC];
+        _updateMessage.protoID = bzda.vhclProtoIds[bzda.selVhclIdx];
         _updateMessage.target_point = _mouseVector * _mouseSelDistance + _viewerPosition;
 
-        bzda.field_1D0 = 4;
+        bzda.activeMode = 4;
 
         _activeCmdrRemapIndex = -1;
         _activeCmdrID = 0;
@@ -10603,7 +10603,7 @@ void NC_STACK_ypaworld::ExecuteMouseAction(int arg)
             _updateMessage.user_action = World::DOACTION_ADD_UNIT2;
             _updateMessage.selectBact = _cmdrsRemap[_activeCmdrRemapIndex];
 
-            _updateMessage.protoID = bzda.field_2DC[bzda.field_8EC];
+            _updateMessage.protoID = bzda.vhclProtoIds[bzda.selVhclIdx];
             _updateMessage.target_point = _mouseVector * _mouseSelDistance + _viewerPosition;
         }
         break;
@@ -10623,11 +10623,11 @@ void NC_STACK_ypaworld::ExecuteMouseAction(int arg)
 
     case World::DOACTION_6:
         _updateMessage.user_action = World::DOACTION_6;
-        _updateMessage.protoID = bzda.field_3DC[bzda.field_8F4];
+        _updateMessage.protoID = bzda.buildProtoIds[bzda.selBuildIdx];
         _updateMessage.target_Sect = _cellOnMouse;
         _updateMessage.target_point = _cellMouseIsectPos;
         _updateMessage.target_Bact = NULL;
-        bzda.field_1D0 = bzda.field_1CC & 1;
+        bzda.activeMode = bzda.enabledModes & 1;
         break;
 
     case World::DOACTION_10:
@@ -10635,7 +10635,7 @@ void NC_STACK_ypaworld::ExecuteMouseAction(int arg)
         _updateMessage.target_Sect = _cellOnMouse;
         _updateMessage.target_point = _cellMouseIsectPos;
         _updateMessage.target_Bact = NULL;
-        bzda.field_1D0 = 1;
+        bzda.activeMode = 1;
         break;
 
     case World::DOACTION_19:
@@ -10669,7 +10669,7 @@ void NC_STACK_ypaworld::HandleWorldMouse(TInputState *arg)
         {
             mousePointer = 0;
         }
-        else if ( robo_map.field_1E8 & 0x200 )
+        else if ( robo_map.stateFlags & 0x200 )
         {
             mousePointer = 2;
         }
@@ -10679,7 +10679,7 @@ void NC_STACK_ypaworld::HandleWorldMouse(TInputState *arg)
             mousePointer = 1;
             doAction = World::DOACTION_0;
 
-            if ( bzda.field_1D0 == 1 )
+            if ( bzda.activeMode == 1 )
             {
                 if ( !(_guiActFlags & 0x10) )
                 {
@@ -10715,7 +10715,7 @@ void NC_STACK_ypaworld::HandleWorldMouse(TInputState *arg)
                     }
                 }
             }
-            else if ( bzda.field_1D0 == 2 )
+            else if ( bzda.activeMode == 2 )
             {
                 if ( !(_guiActFlags & 8) )
                 {
@@ -10786,7 +10786,7 @@ void NC_STACK_ypaworld::HandleWorldMouse(TInputState *arg)
                     }
                 }
             }
-            else if ( bzda.field_1D0 == 4 )
+            else if ( bzda.activeMode == 4 )
             {
                 if ( !(_guiActFlags & 8) )
                 {
@@ -10858,7 +10858,7 @@ void NC_STACK_ypaworld::HandleWorldMouse(TInputState *arg)
                     }
                 }
             }
-            else if (bzda.field_1D0 == 8 )
+            else if (bzda.activeMode == 8 )
             {
                 if ( _guiActFlags & 0x20 )
                 {
@@ -10875,7 +10875,7 @@ void NC_STACK_ypaworld::HandleWorldMouse(TInputState *arg)
                     }
                 }
             }
-            else if ( bzda.field_1D0 == 16 )
+            else if ( bzda.activeMode == 16 )
             {
                 if ( _guiActFlags & 0x20 )
                 {
@@ -10927,7 +10927,7 @@ void NC_STACK_ypaworld::HandleWorldMouse(TInputState *arg)
                     }
                 }
             }
-            else if ( bzda.field_1D0 == 32 )
+            else if ( bzda.activeMode == 32 )
             {
                 if ( _guiActFlags & 0x20 )
                 {
@@ -11054,7 +11054,7 @@ void NC_STACK_ypaworld::HandleWorldMouse(TInputState *arg)
             break;
         }
 
-        if ( squadron_manager.field_2A8 & 1 )
+        if ( squadron_manager.dragFlags & 1 )
             v19.pointer_id = 1;
 
         GFX::Engine.SetCursor(v19.pointer_id, 0);
@@ -11111,7 +11111,7 @@ void NC_STACK_ypaworld::PrepareUserInput(TInputState *inpt)
                 || winp->selected_btn == &robo_map
                 || winp->selected_btn == &bzda
                 || winp->selected_btn == &squadron_manager
-                || (!(bzda.field_1D0 & 1) && _activeCmdrRemapIndex != -1) )
+                || (!(bzda.activeMode & 1) && _activeCmdrRemapIndex != -1) )
         {
             if ( _mouseGrabbed )
             {
@@ -11119,8 +11119,8 @@ void NC_STACK_ypaworld::PrepareUserInput(TInputState *inpt)
             }
             else
             {
-                if ( winp->selected_btn != &robo_map && winp->selected_btn != &bzda && !(bzda.field_1D0 & 1) )
-                    bzda.field_1D0 = bzda.field_1CC & 1;
+                if ( winp->selected_btn != &robo_map && winp->selected_btn != &bzda && !(bzda.activeMode & 1) )
+                    bzda.activeMode = bzda.enabledModes & 1;
             }
         }
         else
@@ -11379,9 +11379,9 @@ void NC_STACK_ypaworld::RelayoutGameGui()
     SetNetGameWindowLayout(this);
 
     // The map keeps a second rectangle for its minimise/maximise toggle.
-    ClampToGuiArea(this, robo_map.x, robo_map.y, robo_map.w, robo_map.h, robo_map.field_210, robo_map.field_212);
-    ClampToGuiArea(this, robo_map.field_208, robo_map.field_20A, robo_map.field_20C, robo_map.field_20E,
-                   robo_map.field_210, robo_map.field_212);
+    ClampToGuiArea(this, robo_map.x, robo_map.y, robo_map.w, robo_map.h, robo_map.minWidth, robo_map.minHeight);
+    ClampToGuiArea(this, robo_map.altX, robo_map.altY, robo_map.altW, robo_map.altH,
+                   robo_map.minWidth, robo_map.minHeight);
 
     GuiList *windows[] = {&squadron_manager, &info_log, &exit_menu, &lstvw2, &gui_lstvw};
     for (GuiList *win : windows)

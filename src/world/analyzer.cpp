@@ -4,7 +4,7 @@
 #include "../yw_internal.h"
 #include "locale/locale.h"
 
-extern bzd bzda;
+extern TBottomBar bzda;
 
 namespace World
 {
@@ -199,9 +199,9 @@ bool GameAnalyzer::IsSpottedEnemyPS(NC_STACK_ypaworld *world)
 bool GameAnalyzer::IsCanBuildPowerStation(NC_STACK_ypaworld *world)
 {
     int32_t enrg = ((NC_STACK_yparobo *)world->_userRobo)->getROBO_battVehicle();
-    for(int i = 0; i < bzda.field_8E4; i++)
+    for(int i = 0; i < bzda.buildCount; i++)
     {
-        TBuildingProto &proto = world->_buildProtos.at( bzda.field_3DC[i] );
+        TBuildingProto &proto = world->_buildProtos.at( bzda.buildProtoIds[i] );
         if (proto.ModelID == 1 && enrg >= proto.Energy)
             return true;            
     }

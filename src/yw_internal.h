@@ -113,152 +113,152 @@ class squadMan: public GuiList
 {
 public:
     std::array<NC_STACK_ypabact *, 24> squads;
-    int field_2A8;
-    int field_2AC;
-    int field_2B0;
-    int field_2B4;
-    int field_2B8;
-    NC_STACK_ypabact *field_2BC;
-    int16_t field_2C0;
-    int16_t field_2C2;
-    int16_t field_2C4;
-    int16_t field_2C6;
-    int16_t field_2C8;
-    int16_t field_2CA;
-    int field_2CC;
-    int field_2D0;
-    int field_2D4;
-    int field_2D8;
-    int field_2DC;
+    int dragFlags;
+    int pickCmdrIdx;
+    int pickKidIdx;
+    int dragCmdrIdx;
+    int dragKidIdx;
+    NC_STACK_ypabact *dragUnit;
+    int16_t dragOffsetX;
+    int16_t dragOffsetY;
+    int16_t dragIconX;
+    int16_t dragIconY;
+    int16_t dragStartX;
+    int16_t dragStartY;
+    int iconWidth;
+    int cmdrIconX;
+    int kidIconsX;
+    int unitCountX;
+    int aggrIconsX;
 };
 
 class energPanel : public GuiBase
 {
 public:
-    int field_1CC = 0;
-    int field_1D0 = 0;
-    int field_1D4 = 0;
-    int field_1D8 = 0;
-    int field_1DC = 0;
-    int field_1E0 = 0;
-    int field_1E4 = 0;
+    int panelHeight = 0;
+    int gaugeWidth = 0;
+    int gaugeStartX = 0;
+    int gaugeSpacing = 0;
+    int iconWidth = 0;
+    int barGap = 0;
+    int barMaxLen = 0;
 };
 
-struct bzd_t1
+struct TBuyListEntry
 {
-    int i = 0;
-    int d = 0;
+    int kind = 0;
+    int protoId = 0;
 };
 
-class bzd : public GuiBase
+class TBottomBar : public GuiBase
 {
 public:
-    int field_1CC = 0;
-    int field_1D0 = 0;
-    int field_1D4 = 0;
-    int field_1D8 = 0;
-    uint8_t field_1DC[256] = {0};
-    uint8_t field_2DC[256] = {0};
-    uint8_t field_3DC[256] = {0};
-    bzd_t1 field_4DC[512];
-    int field_8DC = 0;
-    int field_8E0 = 0;
-    int field_8E4 = 0;
-    int field_8E8 = 0;
-    int field_8EC = 0;
-    int field_8F0 = 0;
-    int field_8F4 = 0;
-    int field_8F8 = 0;
-    int field_8FC = 0;
-    int field_900 = 0;
-    int field_904 = 0;
-    int field_908 = 0;
-    int field_90C = 0;
-    int field_910 = 0;
+    int enabledModes = 0;
+    int activeMode = 0;
+    int barEnabled = 0;
+    int inputAttached = 0;
+    uint8_t gunIndices[256] = {0};
+    uint8_t vhclProtoIds[256] = {0};
+    uint8_t buildProtoIds[256] = {0};
+    TBuyListEntry buyList[512];
+    int gunCount = 0;
+    int vhclCount = 0;
+    int buildCount = 0;
+    int buyListCount = 0;
+    int selVhclIdx = 0;
+    int selGunIdx = 0;
+    int selBuildIdx = 0;
+    int selBuyListIdx = 0;
+    int groupGap = 0;
+    int buyListWidth = 0;
+    int createGroupX = 0;
+    int windowGroupX = 0;
+    int unitGroupX = 0;
+    int toolGroupX = 0;
     int field_914 = 0;
-    int field_918 = 0;
-    int field_91C = 0;
+    int buttonsY = 0;
+    int pressedBtns = 0;
     int field_920 = 0;
 };
 
-struct inflog_msg
+struct TInfoLogMsg
 {
     int id = 0;
-    int field_4 = 0;
-    int field_8 = 0;
+    int timestamp = 0;
+    int displayTime = 0;
     char txt[128] = {0};
 };
 
 class yw_infolog : public GuiList
 {
 public:
-    int field_248 = 0;
-    int field_24C = 0;
-    int field_250 = 0;
-    int field_254 = 0;
+    int time_col_width = 0;
+    int last_msg_idx = 0;
+    int last_msg_prio = 0;
+    int oldest_msg_idx = 0;
     int msg_count = 0;
-    inflog_msg msgs[64];
-    uint32_t field_255C = 0;
-    int field_2560 = 0;
-    int field_2564 = 0;
-    int field_2568 = 0;
-    int field_256C = 0;
+    TInfoLogMsg msgs[64];
+    uint32_t last_sender_gid = 0;
+    int last_msg_time = 0;
+    int last_msg_id = 0;
+    int last_msg_lines = 0;
+    int last_msg_duration = 0;
 };
 
 class tehMap : public GuiBase
 {
 public:
-    int16_t field_1CC;
-    int16_t field_1CE;
-    int16_t field_1D0;
-    int16_t field_1D2;
-    int16_t field_1D4;
-    int16_t field_1D6;
-    float field_1D8;
-    float field_1DC;
-    float field_1E0;
-    float field_1E4;
-    int field_1E8;
-    uint8_t field_1EC;
-    uint8_t field_1ED;
-    uint8_t field_1EE;
+    int16_t hScrollLength;
+    int16_t hThumbPos;
+    int16_t hThumbSize;
+    int16_t vScrollLength;
+    int16_t vThumbPos;
+    int16_t vThumbSize;
+    float viewCenterX;
+    float viewCenterZ;
+    float unitsPerPixelX;
+    float unitsPerPixelY;
+    int stateFlags;
+    uint8_t layerFlags;
+    uint8_t lockViewer;
+    uint8_t zoomLevel;
     int32_t MapViewMask;
-    int field_1F0;
-    int field_1F4;
-    int field_1F8;
-    int field_1FC;
-    int field_200;
-    int field_204;
-    int16_t field_208;
-    int16_t field_20A;
-    int16_t field_20C;
-    int16_t field_20E;
-    int16_t field_210;
-    int16_t field_212;
-    int16_t field_214;
-    int16_t field_216;
-    int16_t field_218;
-    int16_t field_21A;
-    int16_t field_21C;
-    int16_t field_21E;
-    float field_220;
-    float field_224;
-    int field_228;
-    int field_22C;
-    int field_230;
-    int field_234;
-    int field_238;
-    int field_23C;
-    int field_240;
-    int field_244;
-    int field_248;
-    int field_24C;
-    int field_250;
-    float field_254;
-    float field_258;
-    float field_25C;
-    float field_260;
-    float field_264;
+    int scrollPixelX;
+    int scrollPixelY;
+    int viewWidth;
+    int viewHeight;
+    int viewScreenX;
+    int viewScreenY;
+    int16_t altX;
+    int16_t altY;
+    int16_t altW;
+    int16_t altH;
+    int16_t minWidth;
+    int16_t minHeight;
+    int16_t maxWidth;
+    int16_t maxHeight;
+    int16_t resizeOffsetX;
+    int16_t resizeOffsetY;
+    int16_t dragStartX;
+    int16_t dragStartY;
+    float dragStartCenterX;
+    float dragStartCenterZ;
+    int minThumbSize;
+    int toolBtnWidth;
+    int toolBtnHeight;
+    int toolBarOffsetX;
+    int sizeBtnWidth;
+    int borderTop;
+    int borderBottom;
+    int borderLeft;
+    int borderRight;
+    int borderTotalW;
+    int borderTotalH;
+    float radarLeft;
+    float radarTop;
+    float radarRight;
+    float radarBottom;
+    float radarRotM00;
     
     CmdStream t1_cmdbuf_1;
     CmdStream t1_cmdbuf_2;

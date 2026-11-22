@@ -5468,30 +5468,30 @@ void NC_STACK_ypaworld::ShowMessage(TInfoMessage *arg)
         VoiceMessagePlayMsg(arg->unit, arg->Priority, arg->MsgID);
 
     if ( arg->unit )
-        info_log.field_255C = arg->unit->_gid;
+        info_log.last_sender_gid = arg->unit->_gid;
     else
-        info_log.field_255C = 0;
+        info_log.last_sender_gid = 0;
 
-    info_log.field_2560 = _timeStamp;
-    info_log.field_2564 = arg->MsgID;
+    info_log.last_msg_time = _timeStamp;
+    info_log.last_msg_id = arg->MsgID;
 
     if ( !arg->txt.empty() )
     {
-        inflog_msg *v6;
+        TInfoLogMsg *v6;
 
-        if ( info_log.field_250 >= 5 )
+        if ( info_log.last_msg_prio >= 5 )
         {
             info_log.msg_count++;
 
             if ( info_log.msg_count >= 64 )
                 info_log.msg_count = 0;
 
-            if ( info_log.field_254 == info_log.msg_count )
+            if ( info_log.oldest_msg_idx == info_log.msg_count )
             {
-                info_log.field_254++;
+                info_log.oldest_msg_idx++;
 
-                if ( info_log.field_254 >= 64 )
-                    info_log.field_254 = 0;
+                if ( info_log.oldest_msg_idx >= 64 )
+                    info_log.oldest_msg_idx = 0;
             }
 
             info_log.numEntries++;;
@@ -5501,26 +5501,26 @@ void NC_STACK_ypaworld::ShowMessage(TInfoMessage *arg)
 
             v6 = &info_log.msgs[info_log.msg_count];
 
-            info_log.field_24C = info_log.msg_count;
+            info_log.last_msg_idx = info_log.msg_count;
         }
         else
         {
-            info_log.msg_count = info_log.field_24C;
+            info_log.msg_count = info_log.last_msg_idx;
 
-            v6 = &info_log.msgs[info_log.field_24C];
+            v6 = &info_log.msgs[info_log.last_msg_idx];
         }
 
-        info_log.field_256C = 5000;
-        info_log.field_2568 = 1;
-        info_log.field_250 = arg->Priority;
+        info_log.last_msg_duration = 5000;
+        info_log.last_msg_lines = 1;
+        info_log.last_msg_prio = arg->Priority;
 
         if ( arg->unit )
             v6->id = arg->unit->_gid;
         else
             v6->id = 0;
 
-        v6->field_8 = 7000;
-        v6->field_4 = _timeStamp;
+        v6->displayTime = 7000;
+        v6->timestamp = _timeStamp;
 
         const char *v5 = arg->txt.c_str();
 
@@ -5539,12 +5539,12 @@ void NC_STACK_ypaworld::ShowMessage(TInfoMessage *arg)
                 if ( info_log.msg_count >= 64 )
                     info_log.msg_count = 0;
 
-                if ( info_log.field_254 == info_log.msg_count )
+                if ( info_log.oldest_msg_idx == info_log.msg_count )
                 {
-                    info_log.field_254++;
+                    info_log.oldest_msg_idx++;
 
-                    if ( info_log.field_254 >= 64 )
-                        info_log.field_254 = 0;
+                    if ( info_log.oldest_msg_idx >= 64 )
+                        info_log.oldest_msg_idx = 0;
                 }
 
                 info_log.numEntries++;
@@ -5552,8 +5552,8 @@ void NC_STACK_ypaworld::ShowMessage(TInfoMessage *arg)
                 if ( info_log.numEntries > 64 )
                     info_log.numEntries = 64;
 
-                info_log.field_256C += 5000;
-                info_log.field_2568++;
+                info_log.last_msg_duration += 5000;
+                info_log.last_msg_lines++;
 
                 v6 = &info_log.msgs[ info_log.msg_count ];
 
@@ -5562,8 +5562,8 @@ void NC_STACK_ypaworld::ShowMessage(TInfoMessage *arg)
                 else
                     v6->id = 0;
 
-                v6->field_8 = 7000;
-                v6->field_4 = 0;
+                v6->displayTime = 7000;
+                v6->timestamp = 0;
             }
             else if ( v10 < 125 )
             {
