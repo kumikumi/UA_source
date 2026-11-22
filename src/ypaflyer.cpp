@@ -67,7 +67,7 @@ size_t NC_STACK_ypaflyer::SetParameters(IDVList &stak)
     return 1;
 }
 
-void NC_STACK_ypaflyer::sb_0x4b255c(float a2, vec3d v, int a4)
+void NC_STACK_ypaflyer::PitchAndBank(float a2, vec3d v, int a4)
 {
     float v38 = _force / _airconst;
 
@@ -235,7 +235,7 @@ void NC_STACK_ypaflyer::sb_0x4b255c(float a2, vec3d v, int a4)
 }
 
 
-void NC_STACK_ypaflyer::ypaflyer_func70__sub0(float angl)
+void NC_STACK_ypaflyer::TurnToTargetAndSetLift(float angl)
 {
     if ( _target_dir.x != 0.0 || _target_dir.z != 0.0 )
     {
@@ -540,7 +540,7 @@ void NC_STACK_ypaflyer::AI_layer3(update_msg *arg)
             }
         }
 
-        ypaflyer_func70__sub0(a2a);
+        TurnToTargetAndSetLift(a2a);
 
         move_msg arg74;
         arg74.flag = 0;
@@ -548,7 +548,7 @@ void NC_STACK_ypaflyer::AI_layer3(update_msg *arg)
 
         Move(&arg74);
 
-        sb_0x4b255c(a2a, a3, 0);
+        PitchAndBank(a2a, a3, 0);
 
 
         bact_arg75 arg75;
@@ -1025,7 +1025,7 @@ void NC_STACK_ypaflyer::User_layer(update_msg *arg)
                 _fly_dir.y -= 0.2;
             }
 
-            sb_0x4b255c(a2, a3, 1);
+            PitchAndBank(a2, a3, 1);
         }
     }
     else if ( _status == BACT_STATUS_DEAD )

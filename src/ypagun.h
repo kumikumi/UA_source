@@ -18,8 +18,8 @@ public:
     virtual void EnergyInteract(update_msg *arg);
     virtual void Renew();
     virtual bool TestTargetSector(const NC_STACK_ypabact *) const override;
-    virtual void ypagun_func128(const vec3d &basis, bool directDown);
-    virtual vec3d ypagun_func129(const vec3d &axis, float angle);
+    virtual void SetGunBasis(const vec3d &basis, bool directDown);
+    virtual vec3d RotateGunBasis(const vec3d &axis, float angle);
 
     NC_STACK_ypagun()
     {

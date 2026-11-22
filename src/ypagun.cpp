@@ -588,7 +588,7 @@ size_t NC_STACK_ypagun::SetPosition(bact_arg80 *arg)
         if ( arg136.isect )
             _position.y = arg136.isectPos.y - _overeof;
 
-        ypagun_func128(vec3d(0, 0, 1.0), false);
+        SetGunBasis(vec3d(0, 0, 1.0), false);
     }
     else if ( !(arg->field_C & 4) )
     {
@@ -662,7 +662,7 @@ bool NC_STACK_ypagun::TestTargetSector(const NC_STACK_ypabact * cel_unit) const
     return 0;
 }
 
-void NC_STACK_ypagun::ypagun_func128(const vec3d &_basis, bool directDown)
+void NC_STACK_ypagun::SetGunBasis(const vec3d &_basis, bool directDown)
 {
     vec3d basis = _basis;
     float ln = basis.length();
@@ -728,7 +728,7 @@ void NC_STACK_ypagun::ypagun_func128(const vec3d &_basis, bool directDown)
 }
 
 
-vec3d NC_STACK_ypagun::ypagun_func129(const vec3d &axis, float angle)
+vec3d NC_STACK_ypagun::RotateGunBasis(const vec3d &axis, float angle)
 {
     _gunBasis = mat3x3(axis, -angle, MAT_FLAG_INV_SIN).Transform(_gunBasis);
 

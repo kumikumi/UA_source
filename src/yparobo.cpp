@@ -794,7 +794,7 @@ void NC_STACK_yparobo::RotateGunsAroundAxis(const vec3d &vaxis, float angle)
             NC_STACK_ypagun *gungun = dynamic_cast<NC_STACK_ypagun *>(gun.gun_obj);
 
             if (gungun)
-                gun.dir = gungun->ypagun_func129(vaxis, -angle);
+                gun.dir = gungun->RotateGunBasis(vaxis, -angle);
         }
     }
 }
@@ -5885,7 +5885,7 @@ void NC_STACK_yparobo::setROBO_proto(World::TRoboProto *proto)
         {
             if (gungun)
             {
-                gungun->ypagun_func128(gun.dir, false);
+                gungun->SetGunBasis(gun.dir, false);
 
                 gungun->setGUN_roboGun(1);
             }

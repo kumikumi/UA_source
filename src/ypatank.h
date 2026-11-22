@@ -66,7 +66,7 @@ public:
 
 
     vec3d TankTip(vec3d v);
-    void ypatank_func87__sub0(NC_STACK_ypabact *bact2);
+    void TankAbsorbPlasmaEnergy(NC_STACK_ypabact *bact2);
 
     //Data
 public:

@@ -2085,7 +2085,7 @@ void NC_STACK_ypaworld::sb_0x456384(const Common::Point &cellId, int ownerid2, i
                         gun_obj->_owner = ownerid2;
 
                         if (gunn)
-                            gunn->ypagun_func128(GunProto.Dir, false);
+                            gunn->SetGunBasis(GunProto.Dir, false);
 
                         setState_msg v34;
                         v34.newStatus = BACT_STATUS_CREATE;
@@ -2735,7 +2735,7 @@ void NC_STACK_ypaworld::RefreshUnitPRT(NC_STACK_ypabact *unit, NC_STACK_ypabact 
     {
         NC_STACK_ypagun *guno = (NC_STACK_ypagun *)unit;
 
-        guno->ypagun_func128(guno->_gunBasis, false);
+        guno->SetGunBasis(guno->_gunBasis, false);
     }
 
     setState_msg arg78;

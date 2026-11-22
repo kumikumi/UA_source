@@ -395,7 +395,7 @@ public:
     virtual void EnergyInteract(update_msg *arg);
     virtual void ApplyImpulse(bact_arg83 *arg);
     virtual void ModifyEnergy(bact_arg84 *arg);
-    virtual bool ypabact_func85(vec3d *arg);
+    virtual bool IsFastAlong(vec3d *arg);
     virtual size_t CrashOrLand(bact_arg86 *arg);
     virtual size_t CollisionWithBact(int arg);
     virtual void Recoil(bact_arg88 *arg);
@@ -422,13 +422,13 @@ public:
     virtual void CorrectPositionOnLand();
     virtual void CorrectPositionInLevelBox(void *);
     virtual void NetUpdate(update_msg *arg);
-    virtual void ypabact_func117(update_msg *arg);
+    virtual void NetPredictMotion(update_msg *arg);
     virtual void Release();
     virtual size_t SetStateInternal(setState_msg *arg);
     virtual void ChangeSectorEnergy(yw_arg129 *arg);
     virtual void DeadTimeUpdate(update_msg *arg);
-    virtual void ypabact_func122(update_msg *arg);
-    virtual void ypabact_func123(update_msg *arg);
+    virtual void NetInterpolateMotion(update_msg *arg);
+    virtual void NetExtrapolateMotion(update_msg *arg);
     virtual size_t PathFinder(bact_arg124 *arg);
     virtual size_t SetPath(bact_arg124 *arg);
     
@@ -530,8 +530,8 @@ public:
     bool IsNeedsWaypoints() const;
     bool IsAnyKidWithoutSecondUnitTarget() const;
     
-    void sub_4843BC(NC_STACK_ypabact *bact2, int a3);
-    void sub_493480(NC_STACK_ypabact *bact2, int mode);
+    void UpdateVisor(NC_STACK_ypabact *bact2, int a3);
+    void NetBroadcastReorder(NC_STACK_ypabact *bact2, int mode);
     void StartDestFX(const World::DestFX &fx);
 
     void DoTargetWaypoint();
@@ -746,6 +746,6 @@ protected:
     NC_STACK_ypaworld *_world;
 };
 
-void sb_0x4874c4(NC_STACK_ypabact *bact, int a2, int a3, float a4);
+void ShrinkAndSpinPlasma(NC_STACK_ypabact *bact, int a2, int a3, float a4);
 
 #endif // YBACT_H_INCLUDED

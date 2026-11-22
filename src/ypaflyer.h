@@ -38,8 +38,8 @@ public:
     virtual int getFLY_type();
     
     
-    void sb_0x4b255c(float a2, vec3d v, int a4);
-    void ypaflyer_func70__sub0(float angl);
+    void PitchAndBank(float a2, vec3d v, int a4);
+    void TurnToTargetAndSetLift(float angl);
 
     //Data
     static constexpr const char * __ClassName = "ypaflyer.class";

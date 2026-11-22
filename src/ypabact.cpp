@@ -536,7 +536,7 @@ void NC_STACK_ypabact::FixBeyondTheWorld()
     FixSectorFall();
 }
 
-void sub_481F94(NC_STACK_ypabact *bact)
+void ReleaseExpiredMissiles(NC_STACK_ypabact *bact)
 {
     for (World::MissileList::iterator it = bact->_missiles_list.begin(); it != bact->_missiles_list.end(); )
     {
@@ -632,7 +632,7 @@ void NC_STACK_ypabact::Update(update_msg *arg)
     for( NC_STACK_ypamissile *misl : Utils::IterateListCopy<NC_STACK_ypamissile *>(_missiles_list))
         misl->Update(arg);
 
-    sub_481F94(this);
+    ReleaseExpiredMissiles(this);
 
     if ( _oflags & BACT_OFLAG_VIEWER )
     {
@@ -1255,7 +1255,7 @@ void NC_STACK_ypabact::AI_layer2(update_msg *arg)
         AI_layer3(arg);
 }
 
-void AI_layer3__sub1(NC_STACK_ypabact *bact, update_msg *arg)
+void TiltThrustTowardTarget(NC_STACK_ypabact *bact, update_msg *arg)
 {
     bact->_thraction = bact->_force;
 
@@ -1334,7 +1334,7 @@ void AI_layer3__sub1(NC_STACK_ypabact *bact, update_msg *arg)
     }
 }
 
-void AI_layer3__sub0(NC_STACK_ypabact *bact, int a2)
+void TurnToFlyDirection(NC_STACK_ypabact *bact, int a2)
 {
     if ( clp_acos(bact->_rotation.m11) > 0.003 && (bact->_fly_dir.z != 0.0 || bact->_fly_dir.x != 0.0) && bact->_fly_dir_length > 0.0 )
     {
@@ -1633,7 +1633,7 @@ void NC_STACK_ypabact::AI_layer3(update_msg *arg)
             }
         }
 
-        AI_layer3__sub1(this, arg);
+        TiltThrustTowardTarget(this, arg);
 
         /*if ( bact->status_flg & BACT_STFLAG_DODGE ) //Unused flag
             bact->fly_dir_length *= 0.95;*/
@@ -1646,7 +1646,7 @@ void NC_STACK_ypabact::AI_layer3(update_msg *arg)
 
         Move(&arg74);
 
-        AI_layer3__sub0(this, arg->frameTime);
+        TurnToFlyDirection(this, arg->frameTime);
 
         bact_arg75 arg75;
 
@@ -3667,7 +3667,7 @@ void NC_STACK_ypabact::ModifyEnergy(bact_arg84 *arg)
     }
 }
 
-bool NC_STACK_ypabact::ypabact_func85(vec3d *arg)
+bool NC_STACK_ypabact::IsFastAlong(vec3d *arg)
 {
     float tmp2 = arg->dot( _fly_dir * _fly_dir_length );
 
@@ -3678,7 +3678,7 @@ bool NC_STACK_ypabact::ypabact_func85(vec3d *arg)
 }
 
 
-void CrashOrLand__sub1(NC_STACK_ypabact *bact)
+void PushOffSideways(NC_STACK_ypabact *bact)
 {
     if ( bact->_fly_dir.x < 0.0 )
         bact->_fly_dir.x -= 7.0;
@@ -3703,7 +3703,7 @@ void CrashOrLand__sub1(NC_STACK_ypabact *bact)
         bact->_fly_dir /= v4;
 }
 
-void sub_48AB14(NC_STACK_ypabact *bact, const vec3d &vec)
+void AlignToGroundNormal(NC_STACK_ypabact *bact, const vec3d &vec)
 {
     vec3d vaxis = bact->_rotation.AxisY() * vec;
 
@@ -3716,7 +3716,7 @@ void sub_48AB14(NC_STACK_ypabact *bact, const vec3d &vec)
     }
 }
 
-void CrashOrLand__sub0(NC_STACK_ypabact *bact, int a2)
+void AnimateScaleFX(NC_STACK_ypabact *bact, int a2)
 {
     bact->_status_flg |= BACT_STFLAG_SCALE;
 
@@ -3763,7 +3763,7 @@ size_t NC_STACK_ypabact::CrashOrLand(bact_arg86 *arg)
 
     if ( _status_flg & BACT_STFLAG_SEFFECT )
     {
-        CrashOrLand__sub0(this, arg->field_two);
+        AnimateScaleFX(this, arg->field_two);
     }
     else
     {
@@ -3834,7 +3834,7 @@ size_t NC_STACK_ypabact::CrashOrLand(bact_arg86 *arg)
                     {
                         if ( _bact_type == BACT_TYPES_TANK || _bact_type == BACT_TYPES_CAR )
                         {
-                            CrashOrLand__sub1(this);
+                            PushOffSideways(this);
                             return 0;
                         }
 
@@ -3925,7 +3925,7 @@ size_t NC_STACK_ypabact::CrashOrLand(bact_arg86 *arg)
 
                                 _fly_dir_length *= _fly_dir.XZ().length();
 
-                                sub_48AB14(this, a2a);
+                                AlignToGroundNormal(this, a2a);
 
                                 _reb_count = 0;
                             }
@@ -4028,7 +4028,7 @@ size_t NC_STACK_ypabact::CrashOrLand(bact_arg86 *arg)
 
                                 _fly_dir_length *= _fly_dir.XZ().length();
 
-                                sub_48AB14(this, a2a);
+                                AlignToGroundNormal(this, a2a);
 
                                 _reb_count = 0;
                             }
@@ -4062,7 +4062,7 @@ size_t NC_STACK_ypabact::CrashOrLand(bact_arg86 *arg)
 }
 
 
-void CollisionWithBact__sub0(NC_STACK_ypabact *bact, NC_STACK_ypabact *a2)
+void AbsorbPlasmaEnergy(NC_STACK_ypabact *bact, NC_STACK_ypabact *a2)
 {
     int v2 = (int)((float)a2->_energy_max * 0.7);
 
@@ -4189,7 +4189,7 @@ size_t NC_STACK_ypabact::CollisionWithBact(int arg)
                     }
                     else
                     {
-                        CollisionWithBact__sub0(this, bnode);
+                        AbsorbPlasmaEnergy(this, bnode);
 
                         bnode->_scale_time = -1;
 
@@ -5540,7 +5540,7 @@ size_t NC_STACK_ypabact::FireMinigun(bact_arg105 *arg)
 }
 
 
-void NC_STACK_ypabact::sub_4843BC(NC_STACK_ypabact *bact2, int a3)
+void NC_STACK_ypabact::UpdateVisor(NC_STACK_ypabact *bact2, int a3)
 {
     bact_hudi hudi;
 
@@ -5726,7 +5726,7 @@ size_t NC_STACK_ypabact::UserTargeting(bact_arg106 *arg)
 
     if ( targeto )
     {
-        sub_4843BC(targeto, a3a);
+        UpdateVisor(targeto, a3a);
 
         setTarget_msg arg67;
         arg67.tgt_type = BACT_TGT_TYPE_UNIT;
@@ -5739,7 +5739,7 @@ size_t NC_STACK_ypabact::UserTargeting(bact_arg106 *arg)
         return 1;
     }
 
-    sub_4843BC(NULL, a3a);
+    UpdateVisor(NULL, a3a);
     arg->ret_bact = NULL;
 
     return 0;
@@ -5815,7 +5815,7 @@ bool NC_STACK_ypabact::GetFightMotivation(float *arg)
     return false;
 }
 
-NC_STACK_ypabact *sb_0x493984__sub1(NC_STACK_ypabact *bact)
+NC_STACK_ypabact *FindKidNearestTarget(NC_STACK_ypabact *bact)
 {
     vec3d v12;
 
@@ -5852,7 +5852,7 @@ NC_STACK_ypabact *sb_0x493984__sub1(NC_STACK_ypabact *bact)
     return new_leader;
 }
 
-NC_STACK_ypabact *sb_0x493984__sub0(NC_STACK_ypabact *bact)
+NC_STACK_ypabact *FindHealthiestNearbyKid(NC_STACK_ypabact *bact)
 {
     float tmp = 0.0;
     NC_STACK_ypabact *new_leader = NULL;
@@ -5883,16 +5883,16 @@ NC_STACK_ypabact *sb_0x493984__sub0(NC_STACK_ypabact *bact)
     return new_leader;
 }
 
-NC_STACK_ypabact *sb_0x493984(NC_STACK_ypabact *bact, int a2)
+NC_STACK_ypabact *PassGroupToNewLeader(NC_STACK_ypabact *bact, int a2)
 {
     if ( !bact->_kidList.empty() )
     {
         NC_STACK_ypabact *new_leader = NULL;
 
         if (a2)
-            new_leader = sb_0x493984__sub1(bact);
+            new_leader = FindKidNearestTarget(bact);
         else
-            new_leader = sb_0x493984__sub0(bact);
+            new_leader = FindHealthiestNearbyKid(bact);
 
         if (!new_leader)
             return NULL;
@@ -5920,7 +5920,7 @@ NC_STACK_ypabact *sb_0x493984(NC_STACK_ypabact *bact, int a2)
     return NULL;
 }
 
-void NC_STACK_ypabact::sub_493480(NC_STACK_ypabact *bact2, int mode)
+void NC_STACK_ypabact::NetBroadcastReorder(NC_STACK_ypabact *bact2, int mode)
 {
     if ( _world->_isNetGame )
     {
@@ -5979,7 +5979,7 @@ void NC_STACK_ypabact::ReorganizeGroup(bact_arg109 *arg)
                 }
 
                 CopyTargetOf(arg->field_4);
-                sub_493480(arg->field_4, 1);
+                NetBroadcastReorder(arg->field_4, 1);
             }
         }
         break;
@@ -6016,7 +6016,7 @@ void NC_STACK_ypabact::ReorganizeGroup(bact_arg109 *arg)
                     }
 
                     _commandID = arg->field_4->_commandID;
-                    sub_493480(this, 2);
+                    NetBroadcastReorder(this, 2);
                 }
                 else
                 {
@@ -6028,7 +6028,7 @@ void NC_STACK_ypabact::ReorganizeGroup(bact_arg109 *arg)
 
                         _host_station->setROBO_commCount(a4 + 1);
                     }
-                    sub_493480(this, 2);
+                    NetBroadcastReorder(this, 2);
                 }
             }
         }
@@ -6044,10 +6044,10 @@ void NC_STACK_ypabact::ReorganizeGroup(bact_arg109 *arg)
 
             if ( _host_station == _parent )
             {
-                NC_STACK_ypabact *v14 = sb_0x493984(this, 0);
+                NC_STACK_ypabact *v14 = PassGroupToNewLeader(this, 0);
 
                 if ( v14 )
-                    sub_493480(v14, 13);
+                    NetBroadcastReorder(v14, 13);
             }
             else
             {
@@ -6061,17 +6061,17 @@ void NC_STACK_ypabact::ReorganizeGroup(bact_arg109 *arg)
                 _commandID |= _owner << 24;
 
             _host_station->setROBO_commCount(a4 + 1);
-            sub_493480(this, 3);
+            NetBroadcastReorder(this, 3);
         }
         break;
 
     case 4:
         if ( arg->field_4->IsParentMyRobo() )
         {
-            NC_STACK_ypabact *v19 = sb_0x493984(arg->field_4, 0);
+            NC_STACK_ypabact *v19 = PassGroupToNewLeader(arg->field_4, 0);
 
             if ( v19 )
-                sub_493480(v19, 14);
+                NetBroadcastReorder(v19, 14);
         }
 
         AddSubject(arg->field_4);
@@ -6079,7 +6079,7 @@ void NC_STACK_ypabact::ReorganizeGroup(bact_arg109 *arg)
         arg->field_4->_commandID = _commandID;
 
         arg->field_4->CopyTargetOf(this);
-        sub_493480(this, 4);
+        NetBroadcastReorder(this, 4);
         break;
 
     case 6:
@@ -6088,14 +6088,14 @@ void NC_STACK_ypabact::ReorganizeGroup(bact_arg109 *arg)
 
         if ( !a4 )
         {
-            NC_STACK_ypabact *v21 = sb_0x493984(this, 1);
+            NC_STACK_ypabact *v21 = PassGroupToNewLeader(this, 1);
 
             if ( v21 )
             {
                 v21->AddSubject(this);
                 v21->_commandID = _commandID;
 
-                sub_493480(v21, 6);
+                NetBroadcastReorder(v21, 6);
             }
         }
     }
@@ -6670,7 +6670,7 @@ void ypabact_NetUpdate_VPHACKS(NC_STACK_ypabact *bact, update_msg *upd)
         if ( engy > 25000 )
             engy = 25000;
 
-        sb_0x4874c4(bact, engy, upd->frameTime, 0.75);
+        ShrinkAndSpinPlasma(bact, engy, upd->frameTime, 0.75);
         bact->_scale_time -= upd->frameTime;
 
         if ( bact->_scale_time < 0 )
@@ -6762,7 +6762,7 @@ void NC_STACK_ypabact::NetUpdate(update_msg *upd)
 
     _clock += upd->frameTime;
 
-    ypabact_func117(upd);
+    NetPredictMotion(upd);
 
     for ( NC_STACK_ypamissile* misl : Utils::IterateListCopy<NC_STACK_ypamissile *>(_missiles_list) )
     {
@@ -6770,7 +6770,7 @@ void NC_STACK_ypabact::NetUpdate(update_msg *upd)
         misl->Update(upd);
     }
 
-    sub_481F94(this);
+    ReleaseExpiredMissiles(this);
 
     _tForm.Pos = _position;
 
@@ -6797,12 +6797,12 @@ void NC_STACK_ypabact::NetUpdate(update_msg *upd)
     SFXEngine::SFXe.UpdateSoundCarrier(&_soundcarrier);
 }
 
-void NC_STACK_ypabact::ypabact_func117(update_msg *upd)
+void NC_STACK_ypabact::NetPredictMotion(update_msg *upd)
 {
     if (_world->_netInterpolate)
-        ypabact_func122(upd);
+        NetInterpolateMotion(upd);
     else
-        ypabact_func123(upd);
+        NetExtrapolateMotion(upd);
 }
 
 void NC_STACK_ypabact::Release()
@@ -7183,7 +7183,7 @@ void NC_STACK_ypabact::ChangeSectorEnergy(yw_arg129 *arg)
     }
 }
 
-void sb_0x4874c4(NC_STACK_ypabact *bact, int a2, int a3, float a4)
+void ShrinkAndSpinPlasma(NC_STACK_ypabact *bact, int a2, int a3, float a4)
 {
     if (a2 == 0)
         a2 = 1;
@@ -7242,7 +7242,7 @@ void NC_STACK_ypabact::DeadTimeUpdate(update_msg *arg)
                 }
                 else
                 {
-                    sb_0x4874c4(this, a2, arg->frameTime, 0.75);
+                    ShrinkAndSpinPlasma(this, a2, arg->frameTime, 0.75);
 
                     if ( _yls_time <= 0 )
                         _status_flg |= BACT_STFLAG_NORENDER;
@@ -7290,7 +7290,7 @@ void NC_STACK_ypabact::DeadTimeUpdate(update_msg *arg)
     }
 }
 
-void NC_STACK_ypabact::ypabact_func122(update_msg *upd)
+void NC_STACK_ypabact::NetInterpolateMotion(update_msg *upd)
 {
     float ftime = upd->frameTime * 0.001;
 
@@ -7335,7 +7335,7 @@ void NC_STACK_ypabact::ypabact_func122(update_msg *upd)
     }
 }
 
-void NC_STACK_ypabact::ypabact_func123(update_msg *upd)
+void NC_STACK_ypabact::NetExtrapolateMotion(update_msg *upd)
 {
     float ftime = upd->frameTime * 0.001;
     float stupd = (upd->gTime - _lastFrmStamp) * 0.001;

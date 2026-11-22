@@ -1812,7 +1812,7 @@ size_t yw_handleNormMsg(NC_STACK_ypaworld *yw, windp_recvMsg *msg, std::string *
                 NC_STACK_ypagun *kmnd_gn = dynamic_cast<NC_STACK_ypagun *>(kmnd);
 
                 if (kmnd_gn)
-                    kmnd_gn->ypagun_func128(bvMsg->vhcl[0].base, false);
+                    kmnd_gn->SetGunBasis(bvMsg->vhcl[0].base, false);
 
                 setState_msg ssms;
                 ssms.newStatus = BACT_STATUS_CREATE;
@@ -1841,7 +1841,7 @@ size_t yw_handleNormMsg(NC_STACK_ypaworld *yw, windp_recvMsg *msg, std::string *
                         NC_STACK_ypagun *slv_gn = dynamic_cast<NC_STACK_ypagun *>(slv);
 
                         if (slv_gn)
-                            slv_gn->ypagun_func128(bvMsg->vhcl[idid].base, false);
+                            slv_gn->SetGunBasis(bvMsg->vhcl[idid].base, false);
 
                         ssms.newStatus = BACT_STATUS_CREATE;
                         ssms.setFlags = 0;

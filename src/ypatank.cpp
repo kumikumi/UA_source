@@ -1178,7 +1178,7 @@ void NC_STACK_ypatank::ApplyImpulse(bact_arg83 *arg)
         _position = v24;
 }
 
-void NC_STACK_ypatank::ypatank_func87__sub0(NC_STACK_ypabact *bact2)
+void NC_STACK_ypatank::TankAbsorbPlasmaEnergy(NC_STACK_ypabact *bact2)
 {
     int v23 = (float)bact2->_energy_max * 0.7;
 
@@ -1319,7 +1319,7 @@ size_t NC_STACK_ypatank::CollisionWithBact(int arg)
 
                             if ( v114 && v126 < v115 )
                             {
-                                ypatank_func87__sub0(v12);
+                                TankAbsorbPlasmaEnergy(v12);
 
                                 v12->_scale_time = -1;
 
