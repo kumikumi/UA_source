@@ -2254,7 +2254,7 @@ public:
     void recorder_world_to_frame(TGameRecorder *rcrd);
     void recorder_write_frame();
     NC_STACK_ypabact *recorder_newObject(trec_bct *oinf);
-    void ypaworld_func163__sub1(TGameRecorder *rcrd, int a3);
+    void AdvanceReplay(TGameRecorder *rcrd, int a3);
     
     void SetShowingTooltip(int32_t id)
     {
@@ -2332,7 +2332,7 @@ public:
     bool IsGamePlaySector(const Common::Point &sz) const;
     bool IsSector(const Common::Point &sz) const;
     bool IsSectorBorder(const Common::Point &sz, int border) const;
-    int sb_0x4f8f64__sub3__sub0(const Common::Point &sector);
+    int SectorBeamEnergy(const Common::Point &sector);
     TSectorCollision sub_44DBF8(int _dx, int _dz, int _dxx, int _dzz, int flags);
     void sub_44E07C(TSectorCollision &arg);
     void sub_44D8B8(ypaworld_arg136 *arg, const TSectorCollision &loc);

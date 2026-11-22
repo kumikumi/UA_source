@@ -5791,7 +5791,7 @@ void NC_STACK_ypaworld::PlayReplayFrame(base_64arg *arg)
     _guiVisor.field_4 = 0;
 
     if ( repl->field_7C != 1 )
-        ypaworld_func163__sub1(repl, arg->DTime);
+        AdvanceReplay(repl, arg->DTime);
 
     CameraPrepareRender(repl, _userUnit, arg->field_8);
 

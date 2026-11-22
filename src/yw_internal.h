@@ -286,20 +286,20 @@ void UpdateBuildingList(NC_STACK_ypaworld *yw);
 
 int sub_47B388(int a1, const std::string &a2);
 
-void sb_0x4d7c08__sub0__sub0(NC_STACK_ypaworld *yw);
+void DrawGameMessages(NC_STACK_ypaworld *yw);
 
 
 typedef void ( *wis_color_func)(NC_STACK_ypaworld *, float, float, float, float, SDL_Color *, SDL_Color *);
 
-int sb_0x4d7c08__sub0__sub0__sub0(NC_STACK_ypaworld *yw);
-void sb_0x4d7c08__sub0__sub4(NC_STACK_ypaworld *yw);
+int DrawTechUpgrade(NC_STACK_ypaworld *yw);
+void DrawHud(NC_STACK_ypaworld *yw);
 void yw_RenderHUDTarget(NC_STACK_ypaworld *yw, sklt_wis *wis);
 
 void yw_RenderCursorOverUnit(NC_STACK_ypaworld *yw, NC_STACK_ypabact *bact);
 
 
 void yw_RenderHUDRadare(NC_STACK_ypaworld *yw);
-void sb_0x4d7c08__sub0__sub2(NC_STACK_ypaworld *yw);
+void DrawGameStatus(NC_STACK_ypaworld *yw);
 
 
 void UpdateReloadRatios(NC_STACK_ypaworld *yw);
@@ -353,7 +353,7 @@ int recorder_go_to_frame(NC_STACK_ypaworld *yw, TGameRecorder *rcrd, int wanted_
 int recorder_open_replay(TGameRecorder *rcrd);
 void recorder_stoprec(NC_STACK_ypaworld *yw);
 
-void ypaworld_func163__sub1(NC_STACK_ypaworld *yw, TGameRecorder *rcrd, int a3);
+void AdvanceReplay(NC_STACK_ypaworld *yw, TGameRecorder *rcrd, int a3);
 
 void sub_4D0C24(NC_STACK_ypaworld *yw, const std::string &a1, const std::string &a2);
 

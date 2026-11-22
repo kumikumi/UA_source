@@ -4411,7 +4411,7 @@ int NC_STACK_ypaworld::recorder_go_to_frame(TGameRecorder *rcrd, int wanted_fram
 }
 
 
-void NC_STACK_ypaworld::ypaworld_func163__sub1(TGameRecorder *rcrd, int dTime)
+void NC_STACK_ypaworld::AdvanceReplay(TGameRecorder *rcrd, int dTime)
 {
     if ( dTime )
     {
@@ -4450,7 +4450,7 @@ void NC_STACK_ypaworld::ypaworld_func163__sub1(TGameRecorder *rcrd, int dTime)
     }
 }
 
-void ypaworld_func163__sub2__sub1(NC_STACK_ypaworld *yw, float fperiod, TInputState *inpt)
+void ReplayCameraMove(NC_STACK_ypaworld *yw, float fperiod, TInputState *inpt)
 {
     TGameRecorder *rcrd = yw->_replayPlayer;
 
@@ -4486,7 +4486,7 @@ void ypaworld_func163__sub2__sub1(NC_STACK_ypaworld *yw, float fperiod, TInputSt
     rcrd->field_44.x += v21 * v13;
 }
 
-void ypaworld_func163__sub2__sub0(NC_STACK_ypaworld *yw, float fperiod, TInputState *inpt)
+void ReplayCameraTurn(NC_STACK_ypaworld *yw, float fperiod, TInputState *inpt)
 {
     float v3 = inpt->Sliders[10] * 2.5 * fperiod;
 
@@ -4520,10 +4520,10 @@ void NC_STACK_ypaworld::CameraPrepareRender(TGameRecorder *rcrd, NC_STACK_ypabac
     if ( inpt->Buttons.Is(0) )
         rcrd->rotation_matrix = mat3x3::Ident();
 
-    ypaworld_func163__sub2__sub1(this, fperiod, inpt);
+    ReplayCameraMove(this, fperiod, inpt);
 
     if ( _mouseGrabbed )
-        ypaworld_func163__sub2__sub0(this, fperiod, inpt);
+        ReplayCameraTurn(this, fperiod, inpt);
 
     if ( rcrd->field_80 == 16 )
     {

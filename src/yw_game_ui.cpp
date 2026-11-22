@@ -254,7 +254,7 @@ void CreateEnergyPanel(NC_STACK_ypaworld *yw)
 }
 
 
-Common::Point sub_4F681C(vec2d in)
+Common::Point RoboMapWorldToScreen(vec2d in)
 {
     if ( robo_map.field_1E8 & 0x100 )
     {
@@ -269,16 +269,16 @@ Common::Point sub_4F681C(vec2d in)
                         , robo_map.field_204 + dround(-in.y / robo_map.field_1E4) - robo_map.field_1F4 );
 }
 
-void sub_4F68FC(float a3, float a4, float a5, float a6, SDL_Color a7)
+void RoboMapDrawWorldLine(float a3, float a4, float a5, float a6, SDL_Color a7)
 {
     GFX::Engine.raster_func217(a7);
-    GFX::Engine.raster_func201( Common::Line( sub_4F681C({a3, a4}), sub_4F681C({a5, a6}) )  );
+    GFX::Engine.raster_func201( Common::Line( RoboMapWorldToScreen({a3, a4}), RoboMapWorldToScreen({a5, a6}) )  );
 }
 
 
 void RoboMapDrawIcon(CmdStream *cur, float a1, float a2, char a3, int a4, int a5)
 {
-    Common::Point tmp = sub_4F681C( {a1, a2} );
+    Common::Point tmp = RoboMapWorldToScreen( {a1, a2} );
 
     int v7 = tmp.x - a4 / 2 - robo_map.field_200;
     int v8 = tmp.y - a5 / 2 - robo_map.field_204;
@@ -350,7 +350,7 @@ void RoboMapDrawIcon(CmdStream *cur, float a1, float a2, char a3, int a4, int a5
     }
 }
 
-void sub_4F72E8(NC_STACK_ypaworld *yw, NC_STACK_ypabact *bact)
+void RoboMapDrawOrders(NC_STACK_ypaworld *yw, NC_STACK_ypabact *bact)
 {
     if ( bact != yw->_userRobo && bact->_host_station != bact->_parent && bact->_parent )
     {
@@ -371,7 +371,7 @@ void sub_4F72E8(NC_STACK_ypaworld *yw, NC_STACK_ypabact *bact)
             bct = bact->_parent;
         }
 
-        sub_4F68FC(bact->_position.x, bact->_position.z, bct->_position.x, bct->_position.z, clr);
+        RoboMapDrawWorldLine(bact->_position.x, bact->_position.z, bct->_position.x, bct->_position.z, clr);
         return;
     }
 
@@ -379,23 +379,23 @@ void sub_4F72E8(NC_STACK_ypaworld *yw, NC_STACK_ypabact *bact)
     {
         NC_STACK_ypabact *bct = bact->_secndT.pbact;
 
-        sub_4F68FC(bact->_position.x, bact->_position.z, bct->_position.x, bct->_position.z,  yw->GetColor(10));
+        RoboMapDrawWorldLine(bact->_position.x, bact->_position.z, bct->_position.x, bct->_position.z,  yw->GetColor(10));
         return;
     }
 
     if ( bact->_secndTtype == BACT_TGT_TYPE_CELL )
     {
-        sub_4F68FC(bact->_position.x, bact->_position.z, bact->_sencdTpos.x, bact->_sencdTpos.z, yw->GetColor(10));
+        RoboMapDrawWorldLine(bact->_position.x, bact->_position.z, bact->_sencdTpos.x, bact->_sencdTpos.z, yw->GetColor(10));
     }
     else
     {
         if ( bact->_primTtype == BACT_TGT_TYPE_CELL )
         {
-            sub_4F68FC(bact->_position.x, bact->_position.z, bact->_primTpos.x, bact->_primTpos.z, yw->GetColor(9));
+            RoboMapDrawWorldLine(bact->_position.x, bact->_position.z, bact->_primTpos.x, bact->_primTpos.z, yw->GetColor(9));
         }
         else if ( bact->_primTtype == BACT_TGT_TYPE_UNIT )
         {
-            sub_4F68FC(bact->_position.x, bact->_position.z, bact->_primT.pbact->_position.x, bact->_primT.pbact->_position.z, yw->GetColor(9));
+            RoboMapDrawWorldLine(bact->_position.x, bact->_position.z, bact->_primT.pbact->_position.x, bact->_primT.pbact->_position.z, yw->GetColor(9));
         }
 
         if ( bact->_status_flg & BACT_STFLAG_WAYPOINT )
@@ -405,22 +405,22 @@ void sub_4F72E8(NC_STACK_ypaworld *yw, NC_STACK_ypabact *bact)
                 SDL_Color clr = yw->GetColor(9);
 
                 for (int i = 1; i < bact->_waypoints_count; i++)
-                    sub_4F68FC(bact->_waypoints[i - 1].x, bact->_waypoints[i - 1].z, bact->_waypoints[i].x, bact->_waypoints[i].z, clr);
+                    RoboMapDrawWorldLine(bact->_waypoints[i - 1].x, bact->_waypoints[i - 1].z, bact->_waypoints[i].x, bact->_waypoints[i].z, clr);
 
-                sub_4F68FC(bact->_waypoints[bact->_waypoints_count - 1].x, bact->_waypoints[bact->_waypoints_count - 1].z, bact->_waypoints[0].x, bact->_waypoints[0].z, clr);
+                RoboMapDrawWorldLine(bact->_waypoints[bact->_waypoints_count - 1].x, bact->_waypoints[bact->_waypoints_count - 1].z, bact->_waypoints[0].x, bact->_waypoints[0].z, clr);
             }
             else if ( bact->_waypoints_count > 0 )
             {
                 SDL_Color clr = yw->GetColor(9);
 
                 for (int i = bact->_current_waypoint; i < bact->_waypoints_count - 1; i++)
-                    sub_4F68FC(bact->_waypoints[i].x, bact->_waypoints[i].z, bact->_waypoints[i + 1].x, bact->_waypoints[i + 1].z, clr);
+                    RoboMapDrawWorldLine(bact->_waypoints[i].x, bact->_waypoints[i].z, bact->_waypoints[i + 1].x, bact->_waypoints[i + 1].z, clr);
             }
         }
     }
 }
 
-void  sb_0x4f8f64__sub1__sub0(NC_STACK_ypaworld *yw)
+void  RoboMapDrawRoboAIDebug(NC_STACK_ypaworld *yw)
 {
     for( NC_STACK_ypabact* &bact : yw->_unitsList )
     {
@@ -482,7 +482,7 @@ void  sb_0x4f8f64__sub1__sub0(NC_STACK_ypaworld *yw)
                 {
                     vec2d secC = World::SectorIDToCenterPos2( {v10 % yw->_mapSize.x, v10 / yw->_mapSize.x} );
 
-                    sub_4F68FC(bact->_position.x, bact->_position.z, secC.x, secC.y, yw->GetColor(i));
+                    RoboMapDrawWorldLine(bact->_position.x, bact->_position.z, secC.x, secC.y, yw->GetColor(i));
                 }
             }
 
@@ -492,7 +492,7 @@ void  sb_0x4f8f64__sub1__sub0(NC_STACK_ypaworld *yw)
                 vec2d secC = World::SectorIDToCenterPos2( {robo->_roboBuildingCellID % yw->_mapSize.x, robo->_roboBuildingCellID / yw->_mapSize.x} );
 
                 if ( (yw->_timeStamp / 300) & 1 )
-                    sub_4F68FC(bact->_position.x, bact->_position.z, secC.x, secC.y, yw->GetColor(0));
+                    RoboMapDrawWorldLine(bact->_position.x, bact->_position.z, secC.x, secC.y, yw->GetColor(0));
             }
 
             if ( robo->_roboVehicleDuty )
@@ -501,7 +501,7 @@ void  sb_0x4f8f64__sub1__sub0(NC_STACK_ypaworld *yw)
 
                 if ( (yw->_timeStamp / 300) & 1 )
                 {
-                    sub_4F68FC(bact->_position.x, bact->_position.z, secC.x, secC.y, yw->GetColor(7));
+                    RoboMapDrawWorldLine(bact->_position.x, bact->_position.z, secC.x, secC.y, yw->GetColor(7));
                 }
             }
         }
@@ -514,7 +514,7 @@ void RoboMapDrawLines(NC_STACK_ypaworld *yw)
     {
         if ( yw->_userRobo != yw->_userUnit && yw->_userUnit->_parent )
         {
-            sub_4F68FC(yw->_userUnit->_position.x, yw->_userUnit->_position.z, yw->_userUnit->_parent->_position.x, yw->_userUnit->_parent->_position.z, yw->GetColor(11));
+            RoboMapDrawWorldLine(yw->_userUnit->_position.x, yw->_userUnit->_position.z, yw->_userUnit->_parent->_position.x, yw->_userUnit->_parent->_position.z, yw->GetColor(11));
 
             if ( yw->_userUnit->IsParentMyRobo() )
             {
@@ -535,7 +535,7 @@ void RoboMapDrawLines(NC_STACK_ypaworld *yw)
                 }
 
                 if ( v7 )
-                    sub_4F68FC(yw->_userUnit->_position.x, yw->_userUnit->_position.z, a5, a6, yw->GetColor(9));
+                    RoboMapDrawWorldLine(yw->_userUnit->_position.x, yw->_userUnit->_position.z, a5, a6, yw->GetColor(9));
             }
         }
     }
@@ -546,12 +546,12 @@ void RoboMapDrawLines(NC_STACK_ypaworld *yw)
             for (NC_STACK_ypabact* const comm: yw->_cmdrsRemap)
             {
                 if (comm->_status != BACT_STATUS_DEAD)
-                    sub_4F72E8(yw, comm);
+                    RoboMapDrawOrders(yw, comm);
 
                 for( NC_STACK_ypabact* &kid : comm->_kidList )
                 {
                     if ( kid->_status != BACT_STATUS_DEAD )
-                        sub_4F72E8(yw, kid);
+                        RoboMapDrawOrders(yw, kid);
                 }
             }
         }
@@ -562,14 +562,14 @@ void RoboMapDrawLines(NC_STACK_ypaworld *yw)
                 NC_STACK_ypabact *tmp = yw->_cmdrsRemap[yw->_activeCmdrRemapIndex];
 
                 if ( tmp->_status != BACT_STATUS_DEAD )
-                    sub_4F72E8(yw, tmp);
+                    RoboMapDrawOrders(yw, tmp);
             }
         }
 
         if ( yw->_userUnit )
         {
-            sub_4F68FC(yw->_userUnit->_position.x, 0.0, yw->_userUnit->_position.x, -yw->_mapLength.y, yw->GetColor(13));
-            sub_4F68FC(0.0, yw->_userUnit->_position.z, yw->_mapLength.x, yw->_userUnit->_position.z, yw->GetColor(13));
+            RoboMapDrawWorldLine(yw->_userUnit->_position.x, 0.0, yw->_userUnit->_position.x, -yw->_mapLength.y, yw->GetColor(13));
+            RoboMapDrawWorldLine(0.0, yw->_userUnit->_position.z, yw->_mapLength.x, yw->_userUnit->_position.z, yw->GetColor(13));
         }
 
         if ( robo_map.field_1E8 & 0x200 )
@@ -599,13 +599,13 @@ void RoboMapDrawLines(NC_STACK_ypaworld *yw)
     }
 
     if ( yw->_showDebugMode )
-        sb_0x4f8f64__sub1__sub0(yw);
+        RoboMapDrawRoboAIDebug(yw);
 }
 
 
-void sb_0x4f8f64__sub2__sub0(CmdStream *cur, float a1, float a2, char a3, int a4, int a5)
+void RoboMapDrawIconStrip(CmdStream *cur, float a1, float a2, char a3, int a4, int a5)
 {
-    Common::Point tmp = sub_4F681C( {a1, a2} );
+    Common::Point tmp = RoboMapWorldToScreen( {a1, a2} );
 
     int v8 = tmp.x - a4 / 2 - robo_map.field_200;
     int v9 = tmp.y - a4 / 2 - robo_map.field_204;
@@ -743,7 +743,7 @@ void RoboMapDrawSpecialSectors(NC_STACK_ypaworld *yw, CmdStream *cur)
                                 v9 = 0x87;
 
                             RoboMapDrawIcon(cur, tmp.x, tmp.y, 0x89, a4, a4);
-                            sb_0x4f8f64__sub2__sub0(cur, tmp.x, tmp.y, v9, a4, a4 / 8);
+                            RoboMapDrawIconStrip(cur, tmp.x, tmp.y, v9, a4, a4 / 8);
                         }
                     }
                 }
@@ -1040,15 +1040,15 @@ void RoboMapDrawUnit(NC_STACK_ypaworld *yw, CmdStream *cur, int height, int widt
             float v16 = v36 * 0.0 + v14 * v24 + bact->_position.x;
             float v15 = v34 * 0.0 + v36 * v24 + bact->_position.z;
 
-            sub_4F68FC(a3, v28, v16, v15, clr);
+            RoboMapDrawWorldLine(a3, v28, v16, v15, clr);
 
             float v27 = v36 * v22 + v14 * v25 + bact->_position.x;
             float v29 = v34 * v22 + v36 * v25 + bact->_position.z;
 
-            sub_4F68FC(v27, v29, v16, v15, clr);
+            RoboMapDrawWorldLine(v27, v29, v16, v15, clr);
 
             if ( v31 )
-                sub_4F68FC(a3, v28, v27, v29, clr); // Also draw base of view triangle
+                RoboMapDrawWorldLine(a3, v28, v27, v29, clr); // Also draw base of view triangle
         }
 
         if ( bact->_bact_type != BACT_TYPES_MISSLE && bact->_bact_type != BACT_TYPES_ROBO && bact->_owner == yw->_userRobo->_owner )
@@ -1083,7 +1083,7 @@ void RoboMapDrawUnit(NC_STACK_ypaworld *yw, CmdStream *cur, int height, int widt
     }
 }
 
-NC_STACK_ypabact * sub_4D3C3C(NC_STACK_ypabact *bact)
+NC_STACK_ypabact * GetSquadLeader(NC_STACK_ypabact *bact)
 {
     if ( !bact )
         return NULL;
@@ -1097,7 +1097,7 @@ NC_STACK_ypabact * sub_4D3C3C(NC_STACK_ypabact *bact)
     return bact;
 }
 
-void sub_4F7BE8(NC_STACK_ypaworld *yw, CmdStream *cur, NC_STACK_ypabact *bact, int a2, int a4, int a5, int a6)
+void RoboMapDrawSquadIcons(NC_STACK_ypaworld *yw, CmdStream *cur, NC_STACK_ypabact *bact, int a2, int a4, int a5, int a6)
 {
     if ( bact )
     {
@@ -1113,7 +1113,7 @@ void sub_4F7BE8(NC_STACK_ypaworld *yw, CmdStream *cur, NC_STACK_ypabact *bact, i
     }
 }
 
-int NC_STACK_ypaworld::sb_0x4f8f64__sub3__sub0(const Common::Point &sector)
+int NC_STACK_ypaworld::SectorBeamEnergy(const Common::Point &sector)
 {
     int enrg = 0;
 
@@ -1129,11 +1129,11 @@ int NC_STACK_ypaworld::sb_0x4f8f64__sub3__sub0(const Common::Point &sector)
     return enrg;
 }
 
-void sb_0x4f8f64__sub3__sub1(NC_STACK_ypaworld *yw, const std::string &labl, int tileset_id, CmdStream *cur, int a4, int a5)
+void RoboMapDrawSectorLabel(NC_STACK_ypaworld *yw, const std::string &labl, int tileset_id, CmdStream *cur, int a4, int a5)
 {
     int v8 = yw->_guiTiles[tileset_id]->GetWidth(labl);
 
-    Common::Point tmp = sub_4F681C( World::SectorIDToPos2( {a4, a5} ) );
+    Common::Point tmp = RoboMapWorldToScreen( World::SectorIDToPos2( {a4, a5} ) );
 
     int v9 = tmp.x - robo_map.field_200;
     int v10 = tmp.y - robo_map.field_204;
@@ -1269,11 +1269,11 @@ void RoboMapDrawMarkers(NC_STACK_ypaworld *yw, CmdStream *cur)
                 }
                 else
                 {
-                    NC_STACK_ypabact *v25 = sub_4D3C3C(yw->_bactOnMouse);
+                    NC_STACK_ypabact *v25 = GetSquadLeader(yw->_bactOnMouse);
 
                     if ( v25 )
                     {
-                        sub_4F7BE8(yw, cur, v25, v114, 0x85, a4, a5);
+                        RoboMapDrawSquadIcons(yw, cur, v25, v114, 0x85, a4, a5);
                     }
 
                 }
@@ -1307,7 +1307,7 @@ void RoboMapDrawMarkers(NC_STACK_ypaworld *yw, CmdStream *cur)
 
             if ( v47 )
             {
-                sub_4F7BE8(yw, cur, v47, v114, 0x84, a4, a5);
+                RoboMapDrawSquadIcons(yw, cur, v47, v114, 0x84, a4, a5);
 
                 if ( v47->_primTtype == BACT_TGT_TYPE_CELL )
                 {
@@ -1384,7 +1384,7 @@ void RoboMapDrawMarkers(NC_STACK_ypaworld *yw, CmdStream *cur)
     {
         if ( gate.PCell->PurposeType == cellArea::PT_GATEOPENED )
         {
-            int v81 = yw->sb_0x4f8f64__sub3__sub0(gate.CellId);
+            int v81 = yw->SectorBeamEnergy(gate.CellId);
 
             int v85 = 1;
 
@@ -1394,7 +1394,7 @@ void RoboMapDrawMarkers(NC_STACK_ypaworld *yw, CmdStream *cur)
             }
 
             if ( v85 )
-                sb_0x4f8f64__sub3__sub1(yw,  fmt::sprintf("%d / %d", 2 * v81, 2 * yw->_beamEnergyCapacity), 0x1F, cur, gate.CellId.x, gate.CellId.y);
+                RoboMapDrawSectorLabel(yw,  fmt::sprintf("%d / %d", 2 * v81, 2 * yw->_beamEnergyCapacity), 0x1F, cur, gate.CellId.x, gate.CellId.y);
         }
     }
 }
@@ -2919,7 +2919,7 @@ int GUI_Open(NC_STACK_ypaworld *yw)
 }
 
 
-void sb_0x4d7c08__sub0__sub1()
+void DrawBuildPanel()
 {
     if ( bzda.IsOpen() )
     {
@@ -2935,7 +2935,7 @@ void DrawGameInterface(NC_STACK_ypaworld *yw)
 {
     if ( yw->_userUnit->_bact_type != BACT_TYPES_MISSLE )
     {
-        sb_0x4d7c08__sub0__sub4(yw);
+        DrawHud(yw);
 
         for(GuiBaseList::iterator it = yw->_guiActive.begin(); it != yw->_guiActive.end(); it++)
         {
@@ -2958,12 +2958,12 @@ void DrawGameInterface(NC_STACK_ypaworld *yw)
 
         if ( yw->_userUnit->_status != BACT_STATUS_DEAD )
         {
-            sb_0x4d7c08__sub0__sub0(yw);
-            sb_0x4d7c08__sub0__sub2(yw);
+            DrawGameMessages(yw);
+            DrawGameStatus(yw);
         }
         draw_tooltip(yw);
         GFX::Engine.ProcessDrawSeq(up_panel.cmdCommands, &up_panel.cmdInclude);
-        sb_0x4d7c08__sub0__sub1();
+        DrawBuildPanel();
     }
 }
 
@@ -7898,7 +7898,7 @@ void NC_STACK_ypaworld::VoiceMessagePlayMsg(NC_STACK_ypabact *unit, int priority
     }
 }
 
-void sb_0x4d7c08__sub0__sub0(NC_STACK_ypaworld *yw)
+void DrawGameMessages(NC_STACK_ypaworld *yw)
 {
     
     CmdStream buf;
@@ -7947,7 +7947,7 @@ void sb_0x4d7c08__sub0__sub0(NC_STACK_ypaworld *yw)
         }
     }
 
-    if ( sb_0x4d7c08__sub0__sub0__sub0(yw) )
+    if ( DrawTechUpgrade(yw) )
         return;
 
     int v10;
@@ -8537,7 +8537,7 @@ void yw_RenderHUDInfo(NC_STACK_ypaworld *yw, sklt_wis *wis, CmdStream *cur, floa
     }
 }
 
-void sb_0x4d7c08__sub0__sub0__sub0__sub0(NC_STACK_ypaworld *yw, sklt_wis *wis, CmdStream *cur, float a4, float a5, int bldId, int a7)
+void DrawTechUpgradeBuildingName(NC_STACK_ypaworld *yw, sklt_wis *wis, CmdStream *cur, float a4, float a5, int bldId, int a7)
 {
     //yw->GetColor(25);
     //yw->GetColor(34);
@@ -8557,7 +8557,7 @@ void sb_0x4d7c08__sub0__sub0__sub0__sub0(NC_STACK_ypaworld *yw, sklt_wis *wis, C
     }
 }
 
-int sb_0x4d7c08__sub0__sub0__sub0(NC_STACK_ypaworld *yw)
+int DrawTechUpgrade(NC_STACK_ypaworld *yw)
 {
     //Tech update draw
     GFX::Engine.raster_func210( Common::FRect(-1.0, -1.0, 1.0, 1.0) );
@@ -8607,7 +8607,7 @@ int sb_0x4d7c08__sub0__sub0__sub0(NC_STACK_ypaworld *yw)
     if ( v6 )
         yw_RenderHUDInfo(yw, wis, &buf, 0.0, -0.5, 0, v6, a8);
     else if ( v14 )
-        sb_0x4d7c08__sub0__sub0__sub0__sub0(yw, wis, &buf, 0.0, -0.5, v14, a8);
+        DrawTechUpgradeBuildingName(yw, wis, &buf, 0.0, -0.5, v14, a8);
 
     FontUA::set_end(&buf);
 
@@ -8882,7 +8882,7 @@ void yw_RenderHUDVectorGFX(NC_STACK_ypaworld *yw, CmdStream *cur)
         GFX::Engine.raster_func221(Common::Rect());
 }
 
-void sb_0x4d7c08__sub0__sub4__sub0__sub0(NC_STACK_ypaworld *yw, CmdStream *cur, NC_STACK_ypabact *bact)
+void DrawNetPlayerName(NC_STACK_ypaworld *yw, CmdStream *cur, NC_STACK_ypabact *bact)
 {
     if ( yw->_GameShell )
     {
@@ -9077,7 +9077,7 @@ void yw_RenderOverlayCursors(NC_STACK_ypaworld *yw, CmdStream *cur)
                                     if ( bct->_status_flg & BACT_STFLAG_ISVIEW )
                                     {
                                         if ( yw->_GameShell )
-                                            sb_0x4d7c08__sub0__sub4__sub0__sub0(yw, cur, bct);
+                                            DrawNetPlayerName(yw, cur, bct);
                                     }
                                 }
                             }
@@ -9093,7 +9093,7 @@ void yw_RenderOverlayCursors(NC_STACK_ypaworld *yw, CmdStream *cur)
     }
 }
 
-void sb_0x4d7c08__sub0__sub4(NC_STACK_ypaworld *yw)
+void DrawHud(NC_STACK_ypaworld *yw)
 {
     CmdStream buf;
     buf.reserve(1024);
@@ -9466,7 +9466,7 @@ void yw_RenderCursorOverUnit(NC_STACK_ypaworld *yw, NC_STACK_ypabact *bact)
 
 
 
-void sb_0x4d7c08__sub0__sub4__sub2__sub0(NC_STACK_ypaworld *yw)
+void DrawRadarUnits(NC_STACK_ypaworld *yw)
 {
     // Render units on radare
 
@@ -9534,7 +9534,7 @@ void sb_0x4d7c08__sub0__sub4__sub2__sub0(NC_STACK_ypaworld *yw)
                                                 , robo_map.w
                                                 , robo_map.h };
 
-                            if ( r.IsIn( sub_4F681C( bact->_position.XZ() ) ) )
+                            if ( r.IsIn( RoboMapWorldToScreen( bact->_position.XZ() ) ) )
                                 v19 = 1;
                         }
 
@@ -9620,7 +9620,7 @@ void yw_RenderHUDRadare(NC_STACK_ypaworld *yw)
     flt_516504 = v20;
     flt_51650C = v18;
 
-    sb_0x4d7c08__sub0__sub4__sub2__sub0(yw);
+    DrawRadarUnits(yw);
 
     robo_map.field_1EC = v7;
     robo_map.field_1EE = v9;
@@ -9644,7 +9644,7 @@ int sub_47F360(const void *a1, const void *a2)
     return (((const aab *)a2)->b) - (((const aab *)a1)->b);
 }
 
-void sb_0x4d7c08__sub0__sub2__sub1(NC_STACK_ypaworld *yw, CmdStream *cur, const std::array<World::TPlayerStatus, World::CVFractionsCount> &statuses, int a3)
+void DrawNetScores(NC_STACK_ypaworld *yw, CmdStream *cur, const std::array<World::TPlayerStatus, World::CVFractionsCount> &statuses, int a3)
 {
     if ( yw->_isNetGame )
     {
@@ -9735,7 +9735,7 @@ void sb_0x4d7c08__sub0__sub2__sub1(NC_STACK_ypaworld *yw, CmdStream *cur, const 
 }
 
 
-void sb_0x4d7c08__sub0__sub2__sub0(NC_STACK_ypaworld *yw, CmdStream *cur, int a3)
+void DrawUnitLimit(NC_STACK_ypaworld *yw, CmdStream *cur, int a3)
 {
     if ( yw->_isNetGame )
     {
@@ -9768,7 +9768,7 @@ void sb_0x4d7c08__sub0__sub2__sub0(NC_STACK_ypaworld *yw, CmdStream *cur, int a3
     }
 }
 
-void sb_0x4d7c08__sub0__sub2(NC_STACK_ypaworld *yw)
+void DrawGameStatus(NC_STACK_ypaworld *yw)
 {
     CmdStream buf;
     buf.reserve(1024);
@@ -9780,8 +9780,8 @@ void sb_0x4d7c08__sub0__sub2(NC_STACK_ypaworld *yw)
     FontUA::set_xpos(&buf, v25);
     FontUA::set_ypos(&buf, up_panel.field_1CC + (yw->_fontH / 2));
 
-    sb_0x4d7c08__sub0__sub2__sub0(yw, &buf, v2);
-    sb_0x4d7c08__sub0__sub2__sub1(yw, &buf, yw->_gameplayStats, v2);
+    DrawUnitLimit(yw, &buf, v2);
+    DrawNetScores(yw, &buf, yw->_gameplayStats, v2);
 
     for (const TMapSuperItem &sitem : yw->_levelInfo.SuperItems)
     {
