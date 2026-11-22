@@ -4031,6 +4031,9 @@ int yw_NetCheckPlayersInGame(NC_STACK_ypaworld *yw)
 
     FontUA::set_end(&buf);
 
+    // TODO(multiplayer): This presents its own frame from inside the simulation
+    // step, and RenderFrame then presents the game frame too, so the text can
+    // flicker.
     GFX::Engine.BeginFrame();
 
     GFX::Engine.ProcessDrawSeq(buf);

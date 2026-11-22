@@ -631,6 +631,9 @@ void NC_STACK_ypaworld::SaveUnitTransforms()
 // Moves every unit and the camera stepFraction of the way through the last
 // step, from where they started it towards where they ended it, until
 // RestoreUnitTransforms.
+// TODO(bug): HUD markers, map icons and the sky are placed from unit
+// positions, not these interpolated transforms, so they can lag by up to
+// one step.
 void NC_STACK_ypaworld::InterpolateUnitTransforms(float stepFraction)
 {
     _steppedTForms.clear();
@@ -1910,6 +1913,7 @@ void NC_STACK_ypaworld::FindUnitOnRay(TUnitRayQuery *arg)
         v27 = 0;
     }
 
+    // TODO(bug): No check for a zero-length ray.
     vec3d v41 = arg->vect / arg->distance;
 
     while ( v35 >= 0 )
@@ -2222,6 +2226,10 @@ bool NC_STACK_ypaworld::InitGameShell(UserData *usr)
         return  false;
     }
 
+    // TODO(multiplayer): GetRemoteStart never fills callSIGN, so this copies an
+    // uninitialised buffer. It also never sets isClient and isHoster together,
+    // so the isHoster branch below can't run and a remote-started host never
+    // enters remote mode.
     if ( v67.isClient )
     {
         _GameShell->netPlayerName = v67.callSIGN;
@@ -5505,6 +5513,9 @@ void NC_STACK_ypaworld::ShowMessage(TInfoMessage *arg)
         }
         else
         {
+            // TODO(bug): Overwriting a low-priority message doesn't take its lines off
+            // numEntries, so the new message's extra lines count again and the log can
+            // show stale rows.
             info_log.msg_count = info_log.last_msg_idx;
 
             v6 = &info_log.msgs[info_log.last_msg_idx];
@@ -6155,6 +6166,8 @@ size_t NC_STACK_ypaworld::LoadGame(const std::string &saveFile)
     maxLoadedCommandID++;
     bact_id++;
 
+    // TODO(bug): Without a user robo, nextCommandID keeps its value from before
+    // the load.
     if ( _userRobo )
         dynamic_cast<NC_STACK_yparobo *>(_userRobo) ->setROBO_commCount(maxLoadedCommandID);
 

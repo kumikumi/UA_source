@@ -4284,6 +4284,9 @@ void NC_STACK_yparobo::AI_checkWorld(update_msg *arg)
         if ( v22 > _roboDangerValue )
         {
             TCommanderSearch arg128_1;
+            // TODO(bug): tgt_pos and tgt are left unset, but FindMatchingCommander turns
+            // tgt_pos into a sector for unit searches too, and reads tgt when
+            // prim_comm_id is 0.
             arg128_1.flags = 2;
             arg128_1.tgType = BACT_TGT_TYPE_UNIT;
             arg128_1.prim_comm_id = v91;
@@ -5394,6 +5397,8 @@ void NC_STACK_yparobo::FindMatchingCommander(TCommanderSearch *arg)
                         arg->found_comm = node;
                     }
                 }
+                // TODO(bug): v21 stays 0 even when this commander matches, so with flag 2
+                // the loop never stops early and the last match wins, not the first.
                 v21 = 0;
             }
             else
@@ -5445,6 +5450,7 @@ void NC_STACK_yparobo::FindMatchingCommander(TCommanderSearch *arg)
     }
 }
 
+// TODO(cleanup): setTarget_msg::priority carries a command ID here.
 size_t NC_STACK_yparobo::GetTargetByCommandID(setTarget_msg *arg)
 {
     if ( !arg->priority )

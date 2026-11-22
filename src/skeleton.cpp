@@ -202,6 +202,8 @@ bool NC_STACK_skeleton::PolygonCheckInvisible(const std::vector<UAskeleton::Vert
 }
 
 
+// TODO(cleanup): Never called, and TSkeletonPolygonParams::minZ/maxZ are
+// never read even here.
 bool NC_STACK_skeleton::PreparePolygon(TSkeletonPolygonParams *arg)
 {
     std::vector<vec3d> PolyVertex;

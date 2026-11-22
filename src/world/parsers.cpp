@@ -535,6 +535,8 @@ int VhclProtoParser::Handle(ScriptParser::Parser &parser, const std::string &p1,
         else
             _vhcl->max_speed = (_vhcl->force) / _vhcl->airconst;
 
+        // TODO(cleanup): max_speed_disp and max_speed are never read, and the int16_t
+        // can overflow for fast units.
         _vhcl->max_speed_disp = (_vhcl->max_speed / 10) * 1200.0;
 
         return ScriptParser::RESULT_SCOPE_END;

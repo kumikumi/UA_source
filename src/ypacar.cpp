@@ -513,6 +513,9 @@ void NC_STACK_ypacar::User_layer(update_msg *arg)
                 arg74.flag = 0;
             }
 
+            // TODO(bug): Overwrites the flag set just above, so the handbrake flag 2
+            // never reaches Move. The tank version doesn't do this. Could be in the
+            // original too.
             arg74.flag = 0;
             arg74.period = v78;
 

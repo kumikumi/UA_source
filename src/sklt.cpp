@@ -442,6 +442,8 @@ rsrc * NC_STACK_sklt::CreateResource(IDVList &stak)
         return NULL;
 }
 
+// TODO(bug): With OpenedStream == 1, the early returns after opening the file
+// (a failed write or popChunk) leak it.
 size_t NC_STACK_sklt::SaveResource(TSaveResourceParams *arg)
 {
     UAskeleton::Data *sklt = (UAskeleton::Data *)getRsrc_pData();

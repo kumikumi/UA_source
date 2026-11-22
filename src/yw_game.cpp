@@ -1060,6 +1060,7 @@ TSectorCollision NC_STACK_ypaworld::GetSectorCollision(int _dx, int _dz, int _dx
     return tmp;
 }
 
+// TODO(cleanup): Duplicates CalcPolygonPlane in sklt.cpp.
 void RecalcCollisionPlane(UAskeleton::Data *arg, int id)
 {
     UAskeleton::Polygon &tr = arg->polygons[id];

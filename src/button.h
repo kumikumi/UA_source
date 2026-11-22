@@ -54,6 +54,7 @@ public:
         int16_t xpos;
         int16_t ypos;
         int16_t width;
+        // TODO(cleanup): Never read or written.
         int16_t height;
         std::string caption;
         std::string caption2;

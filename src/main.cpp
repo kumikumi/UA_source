@@ -318,6 +318,8 @@ std::string PickReplayFile(uint32_t a1)
 
     int v2 = a1 % userdata.snaps.size();
 
+    // TODO(bug): lastReplayIndex starts at 0, so with several replays the first
+    // pick can never be replay 0.
     if ( lastReplayIndex == v2 )
     {
         if ( v2 )
@@ -336,6 +338,8 @@ std::string PickReplayFile(uint32_t a1)
 
 int RunReplay(TUpdateArgs *arg)
 {
+    // TODO(cleanup): replayStarted is set before replay mode starts and never
+    // cleared, so it is always true here.
     if ( (userdata.p_YW->_replayPlayer->frame_count - 3) <= userdata.p_YW->_replayPlayer->frame_id  &&  replayStarted )
     {
         ypaworld->StopReplay();

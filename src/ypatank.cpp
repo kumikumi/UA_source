@@ -1194,6 +1194,9 @@ void NC_STACK_ypatank::TankAbsorbPlasmaEnergy(NC_STACK_ypabact *bact2)
     {
         NC_STACK_yparobo *robo = _host_station;
 
+        // TODO(bug): Fills the tank before working out the excess, so the host
+        // station gets the whole amount, not just the overflow. AbsorbPlasmaEnergy
+        // in ypabact.cpp does it in the right order; this otherwise duplicates it.
         _energy = _energy_max;
 
         int v10 = (int)v3 - (_energy_max - _energy);

@@ -163,6 +163,10 @@ size_t NC_STACK_button::Add(WidgetDesc *arg)
     /*if ( idd >= 48 )
         return 0;*/
 
+    // TODO(bug): Entries are added before the checks below, so an early return
+    // leaves buttons and widgets longer than widget_count. A slider without
+    // slider data returns after widget_count++ and leaves a NULL slider that
+    // UpdateSlider, Refresh and ProcessWidgetsEvents dereference.
     buttons.emplace_back();
     widgets.emplace_back(); //field_d8[idd] = (WidgetEntry *)AllocVec(sizeof(WidgetEntry), 65537);
 
@@ -275,6 +279,7 @@ size_t NC_STACK_button::Enable(WidgetState *arg)
         if ( widgets[id].button_type != TYPE_CAPTION )
         {
             buttons[id].w = widgets[id].width;
+            // TODO(bug): Add sizes the hit box from tileset_up; this uses tileset_down.
             buttons[id].h = GFX::Engine.GetTileset( widgets[id].tileset_down )->h;
         }
 

@@ -40,6 +40,9 @@ struct TRoboColl
 
 struct TRoboCollSet
 {
+    // TODO(bug): Should probably be a float. TurnRoboAboutOwnUpAxis and
+    // TurnRoboAboutWorldUpAxis store float angles here, so turns under one
+    // radian become 0 and the "turn back on collision" code almost never runs.
     int lastTurnAngle = 0;
     std::vector<TRoboColl> roboColls;
     

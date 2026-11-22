@@ -1539,6 +1539,7 @@ void CreateNetGameWindow(NC_STACK_ypaworld *yw)
 }
 
 //netgui update
+// TODO(multiplayer): A stub, so netgamelst's members are only ever written.
 void NetGameWindowHandleInput(NC_STACK_ypaworld *yw, TInputState *inpt)
 {
     dprintf("MAKE ME %s (multiplayer)\n", "NetGameWindowHandleInput");

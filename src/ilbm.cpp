@@ -608,6 +608,8 @@ int VBMP__WRITE_TO_FILE(IFFile *mfile, ResBitmap *bitm)
     return mfile->popChunk() == IFFile::IFF_ERR_OK;
 }
 
+// TODO(bug): With OpenedStream == 1, the early returns after opening the file
+// (no bitmap, failed write) leak it.
 size_t NC_STACK_ilbm::SaveResource(TSaveResourceParams *arg)
 {
     IFFile *mfile;

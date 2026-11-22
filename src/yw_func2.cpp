@@ -4100,6 +4100,8 @@ void UserData::GameShellUiHandleInput()
         network_button->Enable(&v410);
     }
 
+    // TODO(bug): "!= A || != B" is always true, so this is just !nInputMode.
+    // Probably meant &&.
     if ( !nInputMode && (netSelMode != NETSCREEN_ENTER_NAME || netSelMode != NETSCREEN_ENTER_IP) )
     {
         v410.butID = UIWidgets::NETWORK_MENU_WIDGET_IDS::TXTBOX;

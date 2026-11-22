@@ -4868,6 +4868,7 @@ void NC_STACK_ypabact::Renew()
 
 void NC_STACK_ypabact::HandBrake(update_msg *arg)
 {
+    // TODO(bug): 9.77665 here; gravity is 9.80665 everywhere else.
     _thraction = _mass * 9.77665;
 
     float v53 = arg->frameTime * 0.001;
@@ -4879,6 +4880,8 @@ void NC_STACK_ypabact::HandBrake(update_msg *arg)
         float v62 = clp_acos( _rotation.AxisY().dot( vec3d(0.0, 1.0, 0.0) ) );
         float v11 = _maxrot * v53;
 
+        // TODO(bug): Multiplies two angles. Probably meant to clamp to v11, the
+        // most it may turn this step.
         if ( v62 > v11 )
             v62 = (v62 * 1.5) * v11;
 
@@ -5040,6 +5043,8 @@ size_t NC_STACK_ypabact::CheckFireAI(TFireCheck *arg)
             }
             else
             {
+                // TODO(bug): Odd minimum radius; the minigun branch below uses 40.0. Check
+                // against the original.
                 v32 = 3.0625;
             }
         }
@@ -7648,6 +7653,7 @@ size_t NC_STACK_ypabact::SetPath(TPathRequest *arg)
     // path find caller for ground squads
     int maxsteps = arg->steps_cnt;
 
+    // TODO(cleanup): The same as tgt_type != 1.
     if ( arg->tgt_type >= 2 || arg->tgt_type != 1 )
         return 0; //may be 1   CHECK IT
 

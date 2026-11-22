@@ -608,6 +608,8 @@ void RoboMapDrawIconStrip(CmdStream *cur, float a1, float a2, char a3, int a4, i
     Common::Point tmp = RoboMapWorldToScreen( {a1, a2} );
 
     int v8 = tmp.x - a4 / 2 - robo_map.viewScreenX;
+    // TODO(bug): Centres vertically by the width (a4); RoboMapDrawIcon uses the
+    // height (a5). Same result for square icons.
     int v9 = tmp.y - a4 / 2 - robo_map.viewScreenY;
     int v10 = v8 + a4;
     int v11 = v9 + a5;
@@ -2395,6 +2397,8 @@ void ValidateWinStatus(NC_STACK_ypaworld *yw, TMFWinStatus *status)
 
     if ( status->Valid )
     {
+        // TODO(bug): Always checks the robo map's second rect, even when validating
+        // the vehicle map's status. Probably meant status->Data.
         if ( yw->_roboMapStatus.Data[4] < yw->_upScreenBorder
                 || yw->_roboMapStatus.Data[3] + yw->_roboMapStatus.Data[5] > yw->_screenSize.x
                 || yw->_roboMapStatus.Data[6] + yw->_roboMapStatus.Data[4] > yw->_screenSize.y - yw->_downScreenBorder )
@@ -2410,6 +2414,8 @@ void RoboMapZoom(NC_STACK_ypaworld *yw, int a2)
         robo_map.zoomLevel--;
 
 
+    // TODO(cleanup): Zooming is clamped to 1..4, so the level 0 cases here and in
+    // the map drawing only run if a saved status holds 0.
     if ( robo_map.zoomLevel > 4 )
         robo_map.zoomLevel = 4;
     else if ( robo_map.zoomLevel < 1 )
@@ -3410,6 +3416,8 @@ void gui_update_tools(NC_STACK_ypaworld *yw, CmdStream *cur)
         FontUA::store_u8(cur, 63);
     }
 
+    // TODO(bug): Height and width are swapped; the other buttons pass W, H.
+    // Harmless while the icons are square.
     bzda.buttons[9] = ButtonBox(yw->_iconOrderW + bzda.toolGroupX, bzda.buttonsY, yw->_iconOrderH, yw->_iconOrderW); // help_btn
 
     if ( bzda.pressedBtns & 0x200 )
@@ -4300,6 +4308,7 @@ void  BottomBarHandleInput(NC_STACK_ypaworld *yw, TInputState *inpt)
             }
         }
 
+        // TODO(cleanup): stateFlags bit 8 is set and cleared here but never read.
         if ( yw->_userUnit == yw->_userRobo )
         {
             if ( robo_map.stateFlags & 8 )
@@ -4904,6 +4913,7 @@ void EnergyPanelUpdateLayout(NC_STACK_ypaworld *yw)
         Input::Engine.RemClickBox(&up_panel);
         Input::Engine.AddClickBoxFront(&up_panel);
 
+        // TODO(cleanup): The & 0xFFFF is a 16-bit leftover from the decompile.
         int x = (up_panel.gaugeStartX & 0xFFFF) + v3;
 
         EnergyPanelDrawReloadGauge(yw, &up_panel.cmdCommands, x, y, v13, v32, v38, v11, arg176.ratioClamped);
@@ -5394,6 +5404,8 @@ void SquadManagerUpdateRows(NC_STACK_ypaworld *yw)
 
 bool NC_STACK_ypaworld::SquadManagerIsDragValid()
 {
+    // TODO(bug): No bounds check. If squads die during a drag, _cmdrsRemap
+    // shrinks and this reads past its end.
     NC_STACK_ypabact *bct = _cmdrsRemap[squadron_manager.dragCmdrIdx];
     if ( !bct )
         return false;
@@ -9195,6 +9207,8 @@ void HudColorRadialPulse(NC_STACK_ypaworld *yw, float x1, float y1, float x2, fl
 void HudColorTimeBlend(NC_STACK_ypaworld *yw, float x1, float y1, float x2, float y2, SDL_Color *out1, SDL_Color *out2)
 {
     int v7 = yw->_timeStamp % 300;
+    // TODO(bug): This blend factor is at most 0.01, so the colour hardly changes.
+    // Maybe meant / 300.0; check against the original.
     float v9 = v7 / 30000.0;
 
     THudState *v8 = &yw->_hud;
@@ -9228,6 +9242,8 @@ void yw_RenderHUDTarget(NC_STACK_ypaworld *yw, THudState *wis)
         else
             vhcl = NULL;
 
+        // TODO(bug): vhcl is NULL when there is no user unit, and is dereferenced
+        // right away.
         if ( vhcl->hud_wireframe )
             hud_wure = vhcl->hud_wireframe->GetSkelet();
         else

@@ -362,6 +362,7 @@ struct ColorFx
     ColorFx(int id, float pwr) : Id(id), Pwr(pwr) {};
 };
 
+// TODO(cleanup): bitm is written but never read; SetCursor only takes the id.
 struct TCursorParams
 {
     ResBitmap *bitm = NULL;
