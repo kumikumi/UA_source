@@ -163,29 +163,36 @@ size_t NC_STACK_button::Add(WidgetDesc *arg)
     /*if ( idd >= 48 )
         return 0;*/
 
-    // TODO(bug): Entries are added before the checks below, so an early return
-    // leaves buttons and widgets longer than widget_count. A slider without
-    // slider data returns after widget_count++ and leaves a NULL slider that
-    // UpdateSlider, Refresh and ProcessWidgetsEvents dereference.
     buttons.emplace_back();
     widgets.emplace_back(); //field_d8[idd] = (WidgetEntry *)AllocVec(sizeof(WidgetEntry), 65537);
 
     WidgetEntry &sbt = widgets[widget_count];
     ButtonBox &bt = buttons[widget_count];
 
+    // Takes the new entries back off when the widget is rejected.
+    auto reject = [this]() -> size_t
+    {
+        buttons.pop_back();
+        widgets.pop_back();
+        return 0;
+    };
+
     if (   arg->button_type != TYPE_BUTTON
             && arg->button_type != TYPE_CHECKBX
             && arg->button_type != TYPE_CAPTION
             && arg->button_type != TYPE_RADIOBTN
             && arg->button_type != TYPE_SLIDER )
-        return 0;
+        return reject();
+
+    if ( arg->button_type == TYPE_SLIDER && !arg->slider )
+        return reject();
 
     sbt.button_type = arg->button_type;
 
     if ( arg->button_type != NC_STACK_button::TYPE_SLIDER )
     {
         if ( arg->caption.empty() )
-            return 0;
+            return reject();
 
         sbt.caption = arg->caption;
 
@@ -200,7 +207,7 @@ size_t NC_STACK_button::Add(WidgetDesc *arg)
     sbt.width = arg->width;
 
     if ( sbt.xpos < 0 || sbt.ypos < 0 || sbt.width < 0 || sbt.width + sbt.xpos > w )
-        return 0;
+        return reject();
 
     sbt.down_id = arg->downCode;
     sbt.up_id = arg->upCode;
@@ -230,9 +237,6 @@ size_t NC_STACK_button::Add(WidgetDesc *arg)
 
     if ( sbt.button_type == TYPE_SLIDER )
     {
-        if ( !arg->slider )
-            return 0;
-
         Slider *sbtt = new Slider;
         if ( sbtt )
         {

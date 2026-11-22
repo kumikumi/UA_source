@@ -583,6 +583,7 @@ uint32_t NC_STACK_windp::GetPlayerCount() const
 bool NC_STACK_windp::GetRemoteStart(TRemoteStartInfo *arg)
 {
     //check remote start
+    arg->callSIGN[0] = '\0';
     arg->isClient = false;
     arg->isHoster = false;
 

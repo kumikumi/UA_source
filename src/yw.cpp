@@ -2231,10 +2231,10 @@ bool NC_STACK_ypaworld::InitGameShell(UserData *usr)
         return  false;
     }
 
-    // TODO(multiplayer): GetRemoteStart never fills callSIGN, so this copies an
-    // uninitialised buffer. It also never sets isClient and isHoster together,
-    // so the isHoster branch below can't run and a remote-started host never
-    // enters remote mode.
+    // TODO(multiplayer): GetRemoteStart never fills callSIGN, so the name is
+    // empty. It also never sets isClient and isHoster together, so the
+    // isHoster branch below can't run and a remote-started host never enters
+    // remote mode.
     if ( remoteStart.isClient )
     {
         _GameShell->netPlayerName = remoteStart.callSIGN;
@@ -5805,9 +5805,7 @@ void NC_STACK_ypaworld::PlayReplayFrame(TUpdateArgs *arg)
 
     GFX::Engine.EndFrame();
 
-    // TODO(bug): Stores the replay render time as PFID_UPDATETIME, which the debug
-    // overlay shows as "prof ai". RenderFrame uses PFID_RENDERTIME.
-    _profileVals[PFID_UPDATETIME] = profiler_end(renderStart);
+    _profileVals[PFID_RENDERTIME] = profiler_end(renderStart);
 
     HandleSnapshotKeys(this, arg->Input);
 

@@ -2280,9 +2280,11 @@ void NC_STACK_ypabact::Move(move_msg *arg)
     float scaledSpeed = fabs(_fly_dir_length) * maxPitch;
     float sideForceSq = _force * _force - _mass * 100.0 * _mass;
 
-    // TODO(bug): sqrt() of a negative sideForceSq is NaN when _force < 10 * _mass, and
-    // the NaN then goes into the int Sounds[0].Pitch below (undefined).
-    float pitchFactor = scaledSpeed / (sqrt(sideForceSq) / _airconst_static);
+    // Too little force to fly: no pitch change, rather than a NaN that would
+    // end up in the int Pitch.
+    float pitchFactor = 0.0;
+    if ( sideForceSq > 0.0 )
+        pitchFactor = scaledSpeed / (sqrt(sideForceSq) / _airconst_static);
 
     if ( pitchFactor > maxPitch )
         pitchFactor = maxPitch;

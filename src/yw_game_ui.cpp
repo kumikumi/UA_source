@@ -2400,11 +2400,10 @@ void ValidateWinStatus(NC_STACK_ypaworld *yw, TMFWinStatus *status)
 
     if ( status->Valid )
     {
-        // TODO(bug): Always checks the robo map's second rect, even when validating
-        // the vehicle map's status. Probably meant status->Data.
-        if ( yw->_roboMapStatus.Data[4] < yw->_upScreenBorder
-                || yw->_roboMapStatus.Data[3] + yw->_roboMapStatus.Data[5] > yw->_screenSize.x
-                || yw->_roboMapStatus.Data[6] + yw->_roboMapStatus.Data[4] > yw->_screenSize.y - yw->_downScreenBorder )
+        // Data[3..6] hold the window's other (size button) rect.
+        if ( status->Data[4] < yw->_upScreenBorder
+                || status->Data[3] + status->Data[5] > yw->_screenSize.x
+                || status->Data[6] + status->Data[4] > yw->_screenSize.y - yw->_downScreenBorder )
             status->Valid = false;
     }
 }
@@ -3419,9 +3418,7 @@ void gui_update_tools(NC_STACK_ypaworld *yw, CmdStream *cur)
         FontUA::store_u8(cur, 63);
     }
 
-    // TODO(bug): Height and width are swapped; the other buttons pass W, H.
-    // Harmless while the icons are square.
-    bzda.buttons[9] = ButtonBox(yw->_iconOrderW + bzda.toolGroupX, bzda.buttonsY, yw->_iconOrderH, yw->_iconOrderW); // help_btn
+    bzda.buttons[9] = ButtonBox(yw->_iconOrderW + bzda.toolGroupX, bzda.buttonsY, yw->_iconOrderW, yw->_iconOrderH); // help_btn
 
     if ( bzda.pressedBtns & 0x200 )
         FontUA::select_tileset(cur, 22);
