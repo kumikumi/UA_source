@@ -1502,11 +1502,14 @@ void RoboMapDrawOverlay(NC_STACK_ypaworld *yw)
     if ( vii >= yw->_mapSize.y )
         vii = yw->_mapSize.y - 1;
 
-    robo_map.t1_cmdbuf_3.clear();
+    // A buffer of its own: t1_cmdbuf_3 holds the sectors, which only the
+    // simulation step rebuilds. Reusing it here made frames without a step
+    // draw this overlay in place of the sectors, so the grid flickered.
+    robo_map.overlayCmds.clear();
     
-    sb_0x4f8f64__sub2(yw, &robo_map.t1_cmdbuf_3);
+    sb_0x4f8f64__sub2(yw, &robo_map.overlayCmds);
 
-    FontUA::select_tileset(&robo_map.t1_cmdbuf_3, setid);
+    FontUA::select_tileset(&robo_map.overlayCmds, setid);
 
     sb_0x4f8f64__sub1(yw);
 
@@ -1524,11 +1527,11 @@ void RoboMapDrawOverlay(NC_STACK_ypaworld *yw)
                     {
                         if ( bct->_bact_type == BACT_TYPES_ROBO )
                         {
-                            FontUA::select_tileset(&robo_map.t1_cmdbuf_3, 1);
+                            FontUA::select_tileset(&robo_map.overlayCmds, 1);
 
-                            sub_4F6DFC(yw, &robo_map.t1_cmdbuf_3, yw->_guiTiles[1]->h, yw->_guiTiles[1]->map[24].w, bct, 0);
+                            sub_4F6DFC(yw, &robo_map.overlayCmds, yw->_guiTiles[1]->h, yw->_guiTiles[1]->map[24].w, bct, 0);
 
-                            FontUA::select_tileset(&robo_map.t1_cmdbuf_3, setid);
+                            FontUA::select_tileset(&robo_map.overlayCmds, setid);
 
                             v41++;
                         }
@@ -1538,13 +1541,13 @@ void RoboMapDrawOverlay(NC_STACK_ypaworld *yw)
 
                             if ( !gn->IsRoboGun() || bct == yw->_userUnit )
                             {
-                                sub_4F6DFC(yw, &robo_map.t1_cmdbuf_3, height, width, bct, a6);
+                                sub_4F6DFC(yw, &robo_map.overlayCmds, height, width, bct, a6);
                                 v41++;
                             }
                         }
                         else
                         {
-                            sub_4F6DFC(yw, &robo_map.t1_cmdbuf_3, height, width, bct, a6);
+                            sub_4F6DFC(yw, &robo_map.overlayCmds, height, width, bct, a6);
                             v41++;
                         }
                     }
@@ -1578,7 +1581,7 @@ void RoboMapDrawOverlay(NC_STACK_ypaworld *yw)
                                 {
                                     if ( bct->_status != BACT_STATUS_CREATE && bct->_status != BACT_STATUS_BEAM && bct->_status != BACT_STATUS_DEAD )
                                     {
-                                        sub_4F6980(&robo_map.t1_cmdbuf_3, bct->_position.x, bct->_position.z, 0x85, height, width);
+                                        sub_4F6980(&robo_map.overlayCmds, bct->_position.x, bct->_position.z, 0x85, height, width);
                                         v41++;
                                     }
                                 }
@@ -1589,11 +1592,11 @@ void RoboMapDrawOverlay(NC_STACK_ypaworld *yw)
             }
         }
     }
-    sb_0x4f8f64__sub3(yw, &robo_map.t1_cmdbuf_3);
-    sb_0x4f8f64__sub0(yw, &robo_map.t1_cmdbuf_3);
-    FontUA::set_end(&robo_map.t1_cmdbuf_3);
+    sb_0x4f8f64__sub3(yw, &robo_map.overlayCmds);
+    sb_0x4f8f64__sub0(yw, &robo_map.overlayCmds);
+    FontUA::set_end(&robo_map.overlayCmds);
 
-    GFX::Engine.ProcessDrawSeq(robo_map.t1_cmdbuf_3);
+    GFX::Engine.ProcessDrawSeq(robo_map.overlayCmds);
 }
 
 void RoboMapCalcScrollThumbs(NC_STACK_ypaworld *yw)
@@ -2285,6 +2288,7 @@ void  CreateRoboMap(NC_STACK_ypaworld *yw)
     robo_map.t1_cmdbuf_1.reserve(256);
     robo_map.t1_cmdbuf_2.reserve(256);
     robo_map.t1_cmdbuf_3.reserve(32768);
+    robo_map.overlayCmds.reserve(32768);
 
     robo_map.flags = (GuiBase::FLAG_WITH_HELP | GuiBase::FLAG_CLOSED | GuiBase::FLAG_WITH_CLOSE | GuiBase::FLAG_WITH_DRAGBAR);
     robo_map.field_228 = 8;

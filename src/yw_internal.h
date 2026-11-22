@@ -265,7 +265,8 @@ public:
     
     CmdStream t1_cmdbuf_1;
     CmdStream t1_cmdbuf_2;
-    CmdStream t1_cmdbuf_3;
+    CmdStream t1_cmdbuf_3; // Sectors, built by the simulation step
+    CmdStream overlayCmds; // Units and markers, built while drawing
 };
 
 struct debrif_t1
