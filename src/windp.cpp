@@ -976,7 +976,7 @@ void UserData::AfterMapChoose()
             std::string bff = fmt::sprintf("%d%s%s%s%s", netLevelID, "|", netPlayerName, "|", p_YW->_buildDate);
 
             if (p_YW->_netDriver->GetProvType() == 4) //MODEM!!!!
-                GFX::Engine.windd_func320(NULL);
+                GFX::Engine.BeginSystemDialog(NULL);
 
             windp_openSessionMsg os;
             os.name = bff.c_str();
@@ -985,7 +985,7 @@ void UserData::AfterMapChoose()
             size_t res = p_YW->_netDriver->CreateSession(&os);
 
             if (p_YW->_netDriver->GetProvType() == 4) //MODEM!!!!
-                GFX::Engine.windd_func321(NULL);
+                GFX::Engine.EndSystemDialog(NULL);
 
             if ( !res )
                 return;
@@ -1021,7 +1021,7 @@ void UserData::yw_NetOKProvider()
 {
     if ( netSel == 0 || netSel == 1 )
     {
-        GFX::Engine.windd_func320(NULL);
+        GFX::Engine.BeginSystemDialog(NULL);
 
         if ( p_YW->_netDriver->SetMode(netSel == 0) )
         {
@@ -1037,7 +1037,7 @@ void UserData::yw_NetOKProvider()
             netNameCurPos = netName.size();
         }
 
-        GFX::Engine.windd_func321(NULL);
+        GFX::Engine.EndSystemDialog(NULL);
 
         update_time_norm = 200;
         flush_time_norm = 200;
@@ -1054,12 +1054,12 @@ void UserData::yw_JoinNetGame()
         if ( p_YW->_netDriver->GetSessionName(&gName) )
         {
             if ( p_YW->_netDriver->GetProvType() == 4 )
-                GFX::Engine.windd_func320(NULL);
+                GFX::Engine.BeginSystemDialog(NULL);
 
             if ( p_YW->_netDriver->JoinSession(gName.name) )
             {
                 if ( p_YW->_netDriver->GetProvType() == 4 )
-                    GFX::Engine.windd_func321(NULL);
+                    GFX::Engine.EndSystemDialog(NULL);
 
                 netName = "";
                 netNameCurPos = 0;
@@ -1118,7 +1118,7 @@ void UserData::yw_JoinNetGame()
             else
             {
                 if ( p_YW->_netDriver->GetProvType() == 4 )
-                    GFX::Engine.windd_func320(NULL);
+                    GFX::Engine.BeginSystemDialog(NULL);
 
                 //sb_0x46bb54__sub0(p_ypaworld, get_lang_string(p_ypaworld->string_pointers_p2, 2400, "YPA ERROR MESSAGE"), get_lang_string(p_ypaworld->string_pointers_p2, 2401, "SESSION NOT LONGER AVAILABLE"));
                 fmt::printf("%s: %s\n", Locale::Text::Advanced(Locale::ADV_ERRHEAD), Locale::Text::Advanced(Locale::ADV_ERRNOSESS));
@@ -1138,7 +1138,7 @@ void UserData::yw_JoinNetGame()
     else
     {
         if ( p_YW->_netDriver->GetProvType() == 4 )
-            GFX::Engine.windd_func320(NULL);
+            GFX::Engine.BeginSystemDialog(NULL);
 
         if ( p_YW->_netDriver->EnumSessions(NULL) )
         {
@@ -1146,7 +1146,7 @@ void UserData::yw_JoinNetGame()
         }
 
         if ( p_YW->_netDriver->GetProvType() == 4 )
-            GFX::Engine.windd_func321(NULL);
+            GFX::Engine.EndSystemDialog(NULL);
     }
 }
 
@@ -1213,12 +1213,12 @@ void UserData::JoinLobbyLessGame()
         if ( p_YW->_netDriver->GetSessionName(&gName) )
         {
             if ( p_YW->_netDriver->GetProvType() == 4 )
-                GFX::Engine.windd_func320(NULL);
+                GFX::Engine.BeginSystemDialog(NULL);
 
             if ( p_YW->_netDriver->JoinSession(gName.name) )
             {
                 if ( p_YW->_netDriver->GetProvType() == 4 )
-                    GFX::Engine.windd_func321(NULL);
+                    GFX::Engine.EndSystemDialog(NULL);
 
                 netName = "";
                 netNameCurPos = 0;
@@ -1277,7 +1277,7 @@ void UserData::JoinLobbyLessGame()
             else
             {
                 if ( p_YW->_netDriver->GetProvType() == 4 )
-                    GFX::Engine.windd_func320(NULL);
+                    GFX::Engine.BeginSystemDialog(NULL);
 
                 //sb_0x46bb54__sub0(p_ypaworld, get_lang_string(p_ypaworld->string_pointers_p2, 2400, "YPA ERROR MESSAGE"), get_lang_string(p_ypaworld->string_pointers_p2, 2401, "SESSION NOT LONGER AVAILABLE"));
                 fmt::printf("%s: %s\n", Locale::Text::Advanced(Locale::ADV_ERRHEAD), Locale::Text::Advanced(Locale::ADV_ERRNOSESS));
@@ -1297,7 +1297,7 @@ void UserData::JoinLobbyLessGame()
     else
     {
         if ( p_YW->_netDriver->GetProvType() == 4 )
-            GFX::Engine.windd_func320(NULL);
+            GFX::Engine.BeginSystemDialog(NULL);
 
         if ( p_YW->_netDriver->EnumSessions(NULL) )
         {
@@ -1305,7 +1305,7 @@ void UserData::JoinLobbyLessGame()
         }
 
         if ( p_YW->_netDriver->GetProvType() == 4 )
-            GFX::Engine.windd_func321(NULL);
+            GFX::Engine.EndSystemDialog(NULL);
     }
 }
 

@@ -551,25 +551,25 @@ private:
 
 public:
     virtual size_t ReadIniSettings();
-    virtual size_t raster_func198(const Common::FLine &arg);
-    virtual size_t raster_func199(const Common::Line &arg);
-    virtual size_t raster_func200(const Common::FLine &arg);
-    virtual size_t raster_func201(const Common::Line &r);
-    virtual size_t raster_func202(rstr_arg204 *arg);
-    virtual size_t raster_func204(rstr_arg204 *arg);
-    virtual void raster_func207(int id, TileMap *tiles);
-    virtual TileMap *raster_func208(int id);
-    virtual int raster_func208(TileMap *tiles);
+    virtual size_t DrawLineNormalized(const Common::FLine &arg);
+    virtual size_t DrawLineCentered(const Common::Line &arg);
+    virtual size_t DrawClippedLineNormalized(const Common::FLine &arg);
+    virtual size_t DrawClippedLineCentered(const Common::Line &r);
+    virtual size_t DrawBitmapNormalized(rstr_arg204 *arg);
+    virtual size_t DrawClippedBitmapNormalized(rstr_arg204 *arg);
+    virtual void _SetTileset(int id, TileMap *tiles);
+    virtual TileMap *_GetTileset(int id);
+    virtual int GetTilesetID(TileMap *tiles);
     
     virtual void ProcessDrawSeq(const CmdStream &cmdline, const CmdIncludes *arr = NULL);
     
-    virtual void raster_func210(const Common::FRect &arg);
-    virtual void raster_func211(const Common::Rect &arg);
+    virtual void SetClipNormalized(const Common::FRect &arg);
+    virtual void SetClipCentered(const Common::Rect &arg);
     virtual void BeginScene();
     virtual void EndScene();
     virtual size_t raster_func217(SDL_Color color);
-    virtual void raster_func218(rstr_218_arg *arg);
-    virtual void raster_func221(const Common::Rect &arg);
+    virtual void DrawMaskedBitmapNormalized(rstr_218_arg *arg);
+    virtual void SetInverseClipCentered(const Common::Rect &arg);
     virtual void BeginFrame();
     virtual void EndFrame();
     virtual void SetColorEffectsPowers(const std::vector<ColorFx> &arg);
@@ -578,9 +578,9 @@ public:
     virtual void FreeTexture(ResBitmap *arg);
     virtual void display_func271(IDVPair *stak);
     virtual void SaveScreenshot(const std::string & screenName);
-    virtual void windd_func320(IDVPair *);
-    virtual void windd_func321(IDVPair *);
-    virtual void windd_func322(windd_dlgBox *dlgBox);
+    virtual void BeginSystemDialog(IDVPair *);
+    virtual void EndSystemDialog(IDVPair *);
+    virtual void ShowTextInputDialog(windd_dlgBox *dlgBox);
     
     virtual const std::vector<TGFXDeviceInfo>& GetDevices();
     virtual void SetDeviceByGUID(const std::string &guid, bool writefile = true);
@@ -684,14 +684,14 @@ protected:
     void DrawTextEntry(const ScreenText *txt);
 
     
-    void win3d_func274__sub0(FSMgr::FileHandle *fil);
+    void WriteScreenshotPPM(FSMgr::FileHandle *fil);
 
     static SDL_Cursor *wrapLoadCursor(const char *name);
 
     void _setFrustumClip(float near, float far);
     
-    void sub_420EDC(Common::Line line, uint8_t r, uint8_t g, uint8_t b);
-    char * windd_func322__sub0(const char *box_title, const char *box_ok, const char *box_cancel, const char *box_startText, uint32_t timer_time, void (*timer_func)(int, int, int), void *timer_context, int replace, int maxLen);
+    void DrawClippedLine(Common::Line line, uint8_t r, uint8_t g, uint8_t b);
+    char * RunTextInputDialog(const char *box_title, const char *box_ok, const char *box_cancel, const char *box_startText, uint32_t timer_time, void (*timer_func)(int, int, int), void *timer_context, int replace, int maxLen);
     
     void ApplyResolution();
 

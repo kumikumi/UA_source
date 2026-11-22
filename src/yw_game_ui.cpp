@@ -272,7 +272,7 @@ Common::Point RoboMapWorldToScreen(vec2d in)
 void RoboMapDrawWorldLine(float a3, float a4, float a5, float a6, SDL_Color a7)
 {
     GFX::Engine.raster_func217(a7);
-    GFX::Engine.raster_func201( Common::Line( RoboMapWorldToScreen({a3, a4}), RoboMapWorldToScreen({a5, a6}) )  );
+    GFX::Engine.DrawClippedLineCentered( Common::Line( RoboMapWorldToScreen({a3, a4}), RoboMapWorldToScreen({a5, a6}) )  );
 }
 
 
@@ -579,19 +579,19 @@ void RoboMapDrawLines(NC_STACK_ypaworld *yw)
 
             GFX::Engine.raster_func217( yw->GetColor(12) );
             
-            GFX::Engine.raster_func201( {dword_516510 - wh,
+            GFX::Engine.DrawClippedLineCentered( {dword_516510 - wh,
                                          dword_516514 - hh,
                                          dword_516518 - wh,
                                          dword_516514 - hh} );
-            GFX::Engine.raster_func201( {dword_516518 - wh,
+            GFX::Engine.DrawClippedLineCentered( {dword_516518 - wh,
                                          dword_516514 - hh,
                                          dword_516518 - wh,
                                          dword_51651C - hh} );
-            GFX::Engine.raster_func201( {dword_516518 - wh,
+            GFX::Engine.DrawClippedLineCentered( {dword_516518 - wh,
                                          dword_51651C - hh,
                                          dword_516510 - wh,
                                          dword_51651C - hh} );
-            GFX::Engine.raster_func201( {dword_516510 - wh,
+            GFX::Engine.DrawClippedLineCentered( {dword_516510 - wh,
                                          dword_51651C - hh,
                                          dword_516510 - wh,
                                          dword_516514 - hh} );
@@ -1483,7 +1483,7 @@ void RoboMapDrawOverlay(NC_STACK_ypaworld *yw)
     robo_map.field_1F0 = robo_map.field_1D8 / robo_map.field_1E0 - (robo_map.w - robo_map.field_24C) / 2;
     robo_map.field_1F4 = -(robo_map.field_1DC / robo_map.field_1E4 + (robo_map.h - robo_map.field_250) / 2);
 
-    GFX::Engine.raster_func211(rect);
+    GFX::Engine.SetClipCentered(rect);
 
     int v33 = robo_map.field_1F0 >> v39;
     int v38 = robo_map.field_1F4 >> v39;
@@ -8129,7 +8129,7 @@ void yw_RenderVector2D(NC_STACK_ypaworld *yw, UAskeleton::Data *wire, float posX
                     GFX::Engine.raster_func217(v34);
                 }
 
-                GFX::Engine.raster_func200(v29);
+                GFX::Engine.DrawClippedLineNormalized(v29);
             }
         }
     }
@@ -8560,7 +8560,7 @@ void DrawTechUpgradeBuildingName(NC_STACK_ypaworld *yw, sklt_wis *wis, CmdStream
 int DrawTechUpgrade(NC_STACK_ypaworld *yw)
 {
     //Tech update draw
-    GFX::Engine.raster_func210( Common::FRect(-1.0, -1.0, 1.0, 1.0) );
+    GFX::Engine.SetClipNormalized( Common::FRect(-1.0, -1.0, 1.0, 1.0) );
 
     sklt_wis *wis = &yw->_hud;
 
@@ -8852,7 +8852,7 @@ void yw_RenderHUDCompass(NC_STACK_ypaworld *yw, sklt_wis *wis)
 
 void yw_RenderHUDVectorGFX(NC_STACK_ypaworld *yw, CmdStream *cur)
 {
-    GFX::Engine.raster_func210( Common::FRect(-1.0, -1.0, 1.0, 1.0) );
+    GFX::Engine.SetClipNormalized( Common::FRect(-1.0, -1.0, 1.0, 1.0) );
 
     Common::Rect v7;
 
@@ -8864,22 +8864,22 @@ void yw_RenderHUDVectorGFX(NC_STACK_ypaworld *yw, CmdStream *cur)
         v7.bottom = robo_map.h + v7.top;
     }
 
-    GFX::Engine.raster_func221(v7);
+    GFX::Engine.SetInverseClipCentered(v7);
 
     sklt_wis *wis = &yw->_hud;
 
     yw_RenderHUDCompass(yw, wis);
 
-    GFX::Engine.raster_func221(Common::Rect());
+    GFX::Engine.SetInverseClipCentered(Common::Rect());
 
     yw_RenderHUDTarget(yw, wis);
 
-    GFX::Engine.raster_func221(v7);
+    GFX::Engine.SetInverseClipCentered(v7);
 
     yw_RenderHUDInfo(yw, wis, cur, -0.7, 0.3, yw->_userUnit, -1, 0x10);
 
     if ( robo_map.IsOpen() )
-        GFX::Engine.raster_func221(Common::Rect());
+        GFX::Engine.SetInverseClipCentered(Common::Rect());
 }
 
 void DrawNetPlayerName(NC_STACK_ypaworld *yw, CmdStream *cur, NC_STACK_ypabact *bact)
@@ -9493,7 +9493,7 @@ void DrawRadarUnits(NC_STACK_ypaworld *yw)
     drect.right = robo_map.field_1F8 + robo_map.field_200 - 1;
     drect.bottom = robo_map.field_1FC + robo_map.field_204 - 1;
 
-    GFX::Engine.raster_func211(drect);
+    GFX::Engine.SetClipCentered(drect);
 
     int v14 = dround(robo_map.field_1F0 * robo_map.field_1E0) / World::CVSectorLength;
     int v29 = dround(robo_map.field_1F4 * robo_map.field_1E4) / World::CVSectorLength;

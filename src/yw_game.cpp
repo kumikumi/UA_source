@@ -61,11 +61,11 @@ void draw_splashScreen(NC_STACK_ypaworld *yw, NC_STACK_bitmap *splashScreen)
         GFX::Engine.SetCursor(v4.pointer_id, 0);
 
         GFX::Engine.BeginFrame();
-        GFX::Engine.raster_func202(&a4);
+        GFX::Engine.DrawBitmapNormalized(&a4);
         GFX::Engine.EndFrame();
 
         GFX::Engine.BeginFrame();
-        GFX::Engine.raster_func202(&a4);
+        GFX::Engine.DrawBitmapNormalized(&a4);
         GFX::Engine.EndFrame();
     }
 }
@@ -89,12 +89,12 @@ void drawSplashScreenWithTOD(NC_STACK_ypaworld *yw, NC_STACK_bitmap *splashScree
         GFX::Engine.SetCursor(v4.pointer_id, 0);
 
         GFX::Engine.BeginFrame();
-        GFX::Engine.raster_func202(&a4);
+        GFX::Engine.DrawBitmapNormalized(&a4);
         splashScreen_OutText(yw, text, yw->_screenSize.x / 7, yw->_screenSize.y / 5);
         GFX::Engine.EndFrame();
 
         GFX::Engine.BeginFrame();
-        GFX::Engine.raster_func202(&a4);
+        GFX::Engine.DrawBitmapNormalized(&a4);
         splashScreen_OutText(yw, text, yw->_screenSize.x / 7, yw->_screenSize.y / 5);
         GFX::Engine.EndFrame();
     }

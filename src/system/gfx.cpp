@@ -529,7 +529,7 @@ void GFXEngine::ApplyResolution()
 }
 
 
-size_t GFXEngine::raster_func198(const Common::FLine &arg)
+size_t GFXEngine::DrawLineNormalized(const Common::FLine &arg)
 {
     float tX = _field_554 - 1.0;
     float tY = _field_558 - 1.0;
@@ -548,7 +548,7 @@ size_t GFXEngine::raster_func198(const Common::FLine &arg)
 }
 
 
-size_t GFXEngine::raster_func199(const Common::Line &arg)
+size_t GFXEngine::DrawLineCentered(const Common::Line &arg)
 {
     DrawLine(Screen(),
                       Common::Line(_field_54c + arg.x1, _field_550 + arg.y1,
@@ -560,7 +560,7 @@ size_t GFXEngine::raster_func199(const Common::Line &arg)
     return 1;
 }
 
-void GFXEngine::sub_420EDC(Common::Line line, uint8_t r, uint8_t g, uint8_t b)
+void GFXEngine::DrawClippedLine(Common::Line line, uint8_t r, uint8_t g, uint8_t b)
 {
     if ( line.ClipBy(_clip) )
     {
@@ -592,12 +592,12 @@ void GFXEngine::sub_420EDC(Common::Line line, uint8_t r, uint8_t g, uint8_t b)
     }
 }
 
-size_t GFXEngine::raster_func200(const Common::FLine &arg)
+size_t GFXEngine::DrawClippedLineNormalized(const Common::FLine &arg)
 {
     float tX = _field_554 - 1.0;
     float tY = _field_558 - 1.0;
 
-    sub_420EDC (Common::Line( (arg.x1 + 1.0) * tX
+    DrawClippedLine (Common::Line( (arg.x1 + 1.0) * tX
                             , (arg.y1 + 1.0) * tY
                             , (arg.x2 + 1.0) * tX
                             , (arg.y2 + 1.0) * tY),
@@ -608,9 +608,9 @@ size_t GFXEngine::raster_func200(const Common::FLine &arg)
     return 1;
 }
 
-size_t GFXEngine::raster_func201(const Common::Line &l)
+size_t GFXEngine::DrawClippedLineCentered(const Common::Line &l)
 {
-    sub_420EDC( Common::Line( _field_54c + l.x1
+    DrawClippedLine( Common::Line( _field_54c + l.x1
                             , _field_550 + l.y1
                             , _field_54c + l.x2
                             , _field_550 + l.y2),
@@ -621,7 +621,7 @@ size_t GFXEngine::raster_func201(const Common::Line &l)
     return 1;
 }
 
-size_t GFXEngine::raster_func202(rstr_arg204 *arg)
+size_t GFXEngine::DrawBitmapNormalized(rstr_arg204 *arg)
 {
     Common::Rect r1;
     r1.left   = (arg->float4.left   + 1.0) * (arg->pbitm->width / 2);
@@ -643,7 +643,7 @@ size_t GFXEngine::raster_func202(rstr_arg204 *arg)
     return 1;
 }
 
-size_t GFXEngine::raster_func204(rstr_arg204 *arg)
+size_t GFXEngine::DrawClippedBitmapNormalized(rstr_arg204 *arg)
 {   
     Common::Rect r1;
     r1.left   = (arg->float4.left   + 1.0) * (arg->pbitm->width / 2);
@@ -1404,17 +1404,17 @@ void GFXEngine::Rasterize(uint32_t RasterEtapes)
 }
 
 
-void GFXEngine::raster_func207(int id, TileMap *t)
+void GFXEngine::_SetTileset(int id, TileMap *t)
 {
     _tiles[id] = t;
 }
 
-TileMap *GFXEngine::raster_func208(int id)
+TileMap *GFXEngine::_GetTileset(int id)
 {
     return _tiles[id];
 }
 
-int GFXEngine::raster_func208(TileMap *t)
+int GFXEngine::GetTilesetID(TileMap *t)
 {
     if ( t )
     {
@@ -1712,7 +1712,7 @@ void GFXEngine::ProcessDrawSeq(const CmdStream &drawSeq, const CmdIncludes *incl
 }
 
 
-void GFXEngine::raster_func210(const Common::FRect &arg)
+void GFXEngine::SetClipNormalized(const Common::FRect &arg)
 {
     _clip = Common::Rect(   (arg.left + 1.0) * (_field_554 + -1.0),
                             (arg.top + 1.0) * (_field_558 + -1.0),
@@ -1720,7 +1720,7 @@ void GFXEngine::raster_func210(const Common::FRect &arg)
                             (arg.bottom + 1.0) * (_field_558 + -1.0) );
     }
 
-void GFXEngine::raster_func211(const Common::Rect &arg)
+void GFXEngine::SetClipCentered(const Common::Rect &arg)
 {
     _clip = Common::Rect(   _field_54c + arg.left,
                             _field_550 + arg.top,
@@ -1760,7 +1760,7 @@ size_t GFXEngine::raster_func217(SDL_Color color)
     return 0;
 }
 
-void GFXEngine::raster_func218(rstr_218_arg *arg)
+void GFXEngine::DrawMaskedBitmapNormalized(rstr_218_arg *arg)
 {
     Common::Rect sRect( (arg->rect1.left + 1.0) * (arg->bitm_intern->width / 2),
                         (arg->rect1.top + 1.0) * (arg->bitm_intern->height / 2),
@@ -1775,7 +1775,7 @@ void GFXEngine::raster_func218(rstr_218_arg *arg)
     BlitScaleMasked(arg->bitm_intern->swTex, sRect, arg->bitm_intern2->swTex, arg->flg, Screen(), dRect);
 }
 
-void GFXEngine::raster_func221(const Common::Rect &arg)
+void GFXEngine::SetInverseClipCentered(const Common::Rect &arg)
 {
     _inverseClip.left = _field_54c + arg.left;
     _inverseClip.top = _field_550 + arg.top;
@@ -1921,7 +1921,7 @@ void GFXEngine::display_func271(IDVPair *stak)
 
 }
 
-void GFXEngine::win3d_func274__sub0(FSMgr::FileHandle *fil)
+void GFXEngine::WriteScreenshotPPM(FSMgr::FileHandle *fil)
 {
     int bf_w = 0, bf_h = 0;
 
@@ -1960,17 +1960,17 @@ void GFXEngine::SaveScreenshot(const std::string & screenName)
     FSMgr::FileHandle *fil = uaOpenFileAlloc(fmt::sprintf("%s.ppm", screenName), "wb");
     if ( fil )
     {
-        win3d_func274__sub0(fil);
+        WriteScreenshotPPM(fil);
         delete fil;
     }
 }
 
 
-void GFXEngine::windd_func320(IDVPair *)
+void GFXEngine::BeginSystemDialog(IDVPair *)
 {
 }
 
-void GFXEngine::windd_func321(IDVPair *)
+void GFXEngine::EndSystemDialog(IDVPair *)
 {
 }
 
@@ -1978,18 +1978,18 @@ void GFXEngine::windd_func321(IDVPair *)
 
 
 
-char * GFXEngine::windd_func322__sub0(const char *box_title, const char *box_ok, const char *box_cancel, const char *box_startText, uint32_t timer_time, void (*timer_func)(int, int, int), void *timer_context, int replace, int maxLen)
+char * GFXEngine::RunTextInputDialog(const char *box_title, const char *box_ok, const char *box_cancel, const char *box_startText, uint32_t timer_time, void (*timer_func)(int, int, int), void *timer_context, int replace, int maxLen)
 {
-    dprintf("MAKE ME %s\n","windd_func322__sub0");
+    dprintf("MAKE ME %s\n","RunTextInputDialog");
     return NULL;
 }
 
 //Show DLGBox with edit field and get entered value
-void GFXEngine::windd_func322(windd_dlgBox *dlgBox)
+void GFXEngine::ShowTextInputDialog(windd_dlgBox *dlgBox)
 {
-    windd_func320(NULL);
+    BeginSystemDialog(NULL);
 
-    dlgBox->result = windd_func322__sub0(
+    dlgBox->result = RunTextInputDialog(
                          dlgBox->title,
                          dlgBox->ok,
                          dlgBox->cancel,
@@ -2000,7 +2000,7 @@ void GFXEngine::windd_func322(windd_dlgBox *dlgBox)
                          dlgBox->replace,
                          dlgBox->maxLen);
 
-    windd_func321(NULL);
+    EndSystemDialog(NULL);
 }
 
 
@@ -2865,12 +2865,12 @@ void GFXEngine::SetShadeRmp(ResBitmap *rmp)
 
 TileMap * GFXEngine::GetTileset(int id)
 {
-    return raster_func208(id);
+    return _GetTileset(id);
 }
 
 void GFXEngine::SetTileset(TileMap *tileset, int id)
 {
-    raster_func207(id, tileset);
+    _SetTileset(id, tileset);
 }
 
 

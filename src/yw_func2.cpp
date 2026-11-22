@@ -2091,9 +2091,9 @@ void UserData::GameShellUiHandleInput()
             {
                 if ( Input->KbdLastHit == Input::KC_SPACE )
                 {
-                    GFX::Engine.windd_func320(NULL);
+                    GFX::Engine.BeginSystemDialog(NULL);
                     p_YW->_netDriver->EnumSessions(NULL);
-                    GFX::Engine.windd_func321(NULL);
+                    GFX::Engine.EndSystemDialog(NULL);
                 }
             }
         }
@@ -3582,7 +3582,7 @@ void UserData::GameShellUiHandleInput()
 //                    v339.timer_func = NULL;
 //                    v339.startText = netName;
 //
-//                    windd->windd_func322(&v339);
+//                    windd->ShowTextInputDialog(&v339);
 //
 //                    if ( v339.result )
 //                    {
@@ -3691,7 +3691,7 @@ void UserData::GameShellUiHandleInput()
 //                    v316.timer_func = NULL;
 //                    v316.maxLen = 64;
 //
-//                    windd->windd_func322(&v316);
+//                    windd->ShowTextInputDialog(&v316);
 //
 //                    if ( v316.result )
 //                    {

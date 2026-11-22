@@ -565,7 +565,7 @@ bool NC_STACK_ypaworld::SimulationStep(base_64arg *arg)
 //          dlgBox.startText = "";
 //          dlgBox.timer_func = sub_44674C;
 //
-//          yw->win3d->windd_func322(&dlgBox);
+//          yw->win3d->ShowTextInputDialog(&dlgBox);
 //
             _doNotRender = false;
 //
@@ -2587,7 +2587,7 @@ void NC_STACK_ypaworld::GameShellInitBkgMode(int mode)
 
 bool NC_STACK_ypaworld::GameShellInitBkg()
 {
-    GFX::Engine.raster_func211(Common::Rect (-(_screenSize.x / 2), -(_screenSize.y / 2), _screenSize.x / 2, _screenSize.y / 2) );
+    GFX::Engine.SetClipCentered(Common::Rect (-(_screenSize.x / 2), -(_screenSize.y / 2), _screenSize.x / 2, _screenSize.y / 2) );
     GameShellInitBkgMode(_GameShell->EnvMode);
     return true;
 }

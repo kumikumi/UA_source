@@ -1178,7 +1178,7 @@ void NC_STACK_ypaworld::GameShellBlitBkg(NC_STACK_bitmap *bitm)
     a4.float14 = Common::FRect(-1.0, -1.0, 1.0, 1.0);
     a4.float4 = Common::FRect(-1.0, -1.0, 1.0, 1.0);
 
-    GFX::Engine.raster_func202(&a4);
+    GFX::Engine.DrawBitmapNormalized(&a4);
 }
 
 void NC_STACK_ypaworld::sub_4491A0(const std::string &movie_fname)
@@ -1373,7 +1373,7 @@ void NC_STACK_ypaworld::DrawMapRegionsTutorial()
         a4.float4 = Common::FRect(-1.0, -1.0, 1.0, 1.0);
         a4.float14 = Common::FRect(-1.0, -1.0, 1.0, 1.0);
 
-        GFX::Engine.raster_func202(&a4);
+        GFX::Engine.DrawBitmapNormalized(&a4);
 
         for (size_t i = 0; i < _globalMapRegions.MapRegions.size(); i++)
         {
@@ -1401,7 +1401,7 @@ void NC_STACK_ypaworld::DrawMapRegionsTutorial()
                     v17.rect2 = region.Rect;
                     v17.rect1 = v17.rect2;
 
-                    GFX::Engine.raster_func218(&v17);
+                    GFX::Engine.DrawMaskedBitmapNormalized(&v17);
                 }
             }
         }
@@ -1443,7 +1443,7 @@ void NC_STACK_ypaworld::DrawMapRegions()
         a4.float4 = Common::FRect(-1.0, -1.0, 1.0, 1.0);
         a4.float14 = Common::FRect(-1.0, -1.0, 1.0, 1.0);
 
-        GFX::Engine.raster_func202(&a4);
+        GFX::Engine.DrawBitmapNormalized(&a4);
         //printf("field_BE38 %d \n",yw->LevelNet->field_BE38);
 
         for (size_t i = 0; i < _globalMapRegions.MapRegions.size(); i++)
@@ -1480,7 +1480,7 @@ void NC_STACK_ypaworld::DrawMapRegions()
                     v17.rect2 = region.Rect;
                     v17.rect1 = v17.rect2;
 
-                    GFX::Engine.raster_func218(&v17);
+                    GFX::Engine.DrawMaskedBitmapNormalized(&v17);
                 }
             }
         }
@@ -1729,7 +1729,7 @@ bool NC_STACK_ypaworld::InitDebrief()
 
     _briefScreen.ZoomFromGate = _levelInfo.State == TLevelInfo::STATE_COMPLETED;
 
-    GFX::Engine.raster_func210( Common::FRect(-1.0, -1.0, 1.0, 1.0) );
+    GFX::Engine.SetClipNormalized( Common::FRect(-1.0, -1.0, 1.0, 1.0) );
 
     _briefScreen.Stage = TBriefengScreen::STAGE_NONE;
     _briefScreen.TimerStatus = TBriefengScreen::TIMER_NORMAL;

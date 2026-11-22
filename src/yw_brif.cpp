@@ -845,10 +845,10 @@ void ypaworld_func158__sub4__sub1__sub4__sub2(NC_STACK_ypaworld *yw, TBriefengSc
                 }
 
                 GFX::Engine.raster_func217(GFX::Engine.Color(0, 160, 160));
-                GFX::Engine.raster_func198(v20);
+                GFX::Engine.DrawLineNormalized(v20);
 
                 GFX::Engine.raster_func217(GFX::Engine.Color(0, 64, 64));
-                GFX::Engine.raster_func198(v21);
+                GFX::Engine.DrawLineNormalized(v21);
             }
         }
 
@@ -1052,10 +1052,10 @@ void ypaworld_func158__sub4__sub1__sub4(NC_STACK_ypaworld *yw, UserData *usr, TI
             a4.float4 = Common::FRect(-1.0, -1.0, 1.0, 1.0);
             a4.float14 = Common::FRect(-1.0, -1.0, 1.0, 1.0);
 
-            GFX::Engine.raster_func204(&a4);
+            GFX::Engine.DrawClippedBitmapNormalized(&a4);
         }
 
-        GFX::Engine.raster_func204(&brf->MapBlitParams);
+        GFX::Engine.DrawClippedBitmapNormalized(&brf->MapBlitParams);
 
         GFX::Engine.draw2DandFlush();
 
@@ -1370,8 +1370,8 @@ void yw_DebriefRenderSectorsOwners(NC_STACK_ypaworld *yw, TBriefengScreen *brf)
                     arg198_1.y2 = v21 + v16;
 
                     GFX::Engine.raster_func217( yw->GetColor(owner) );
-                    GFX::Engine.raster_func198(arg198);
-                    GFX::Engine.raster_func198(arg198_1);
+                    GFX::Engine.DrawLineNormalized(arg198);
+                    GFX::Engine.DrawLineNormalized(arg198_1);
                 }
             }
 
@@ -2124,10 +2124,10 @@ void yw_debriefUpdate(NC_STACK_ypaworld *yw, TInputState *inpt)
             arg204.float4 = Common::FRect(-1.0, -1.0, 1.0, 1.0);
             arg204.float14 = Common::FRect(-1.0, -1.0, 1.0, 1.0);
 
-            GFX::Engine.raster_func204(&arg204);
+            GFX::Engine.DrawClippedBitmapNormalized(&arg204);
         }
 
-        GFX::Engine.raster_func204(&brf->MapBlitParams);
+        GFX::Engine.DrawClippedBitmapNormalized(&brf->MapBlitParams);
     }
 
     switch ( brf->Stage )
