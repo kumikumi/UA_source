@@ -1277,7 +1277,7 @@ void NC_STACK_ypaworld::FreeDebrief()
 }
 
 // Select map
-void ypaworld_func158__sub4__sub1__sub0(NC_STACK_ypaworld *yw, TInputState *inpt)
+void UpdateHoveredMapRegion(NC_STACK_ypaworld *yw, TInputState *inpt)
 {
     float v3 = (float)inpt->ClickInf.move.ScreenPos.x / (float)yw->_screenSize.x;
     float v4 = (float)inpt->ClickInf.move.ScreenPos.y / (float)yw->_screenSize.y;
@@ -1689,7 +1689,7 @@ ON_ERR:
     return false;
 }
 
-int NC_STACK_ypaworld::ypaworld_func158__sub4__sub1__sub5__sub0(TLevelDescription *mapproto, const std::string &filename)
+int NC_STACK_ypaworld::ParseDebriefLevelDesc(TLevelDescription *mapproto, const std::string &filename)
 {
     *mapproto = TLevelDescription();
 
@@ -1744,7 +1744,7 @@ bool NC_STACK_ypaworld::InitDebrief()
     _briefScreen.OwnMap = _lvlPrimevalOwnMap;
     _briefScreen.TypMap = _lvlPrimevalTypeMap;
 
-    if ( !ypaworld_func158__sub4__sub1__sub5__sub0(&_briefScreen.Desc, _globalMapRegions.MapRegions[_levelInfo.LevelID].MapDirectory) )
+    if ( !ParseDebriefLevelDesc(&_briefScreen.Desc, _globalMapRegions.MapRegions[_levelInfo.LevelID].MapDirectory) )
         goto ON_ERR;
 
     if (_briefScreen.Desc.Dbmaps.empty())
@@ -1844,7 +1844,7 @@ void yw_calcPlayerScore(NC_STACK_ypaworld *yw)
     }
 }
 
-void NC_STACK_ypaworld::ypaworld_func158__sub4__sub1()
+void NC_STACK_ypaworld::UpdateCampaignScreen()
 {
     if ( _levelInfo.State != TLevelInfo::STATE_COMPLETED && _levelInfo.State != TLevelInfo::STATE_ABORTED )
     {
@@ -1869,7 +1869,7 @@ void NC_STACK_ypaworld::ypaworld_func158__sub4__sub1()
                 }
                 else
                 {
-                    ypaworld_func158__sub4__sub1__sub4(this, _GameShell, _GameShell->Input);
+                    UpdateBriefingScreen(this, _GameShell, _GameShell->Input);
                 }
             }
             else if ( _levelInfo.State == TLevelInfo::STATE_DEBRIEFING )
@@ -1887,7 +1887,7 @@ void NC_STACK_ypaworld::ypaworld_func158__sub4__sub1()
         }
         else
         {
-            ypaworld_func158__sub4__sub1__sub0(this, _GameShell->Input);
+            UpdateHoveredMapRegion(this, _GameShell->Input);
 
             if ( _GameShell->EnvMode == ENVMODE_TUTORIAL )
                 DrawMapRegionsTutorial();

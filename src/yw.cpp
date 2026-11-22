@@ -5346,7 +5346,7 @@ void NC_STACK_ypaworld::GameShellBkgProcess()
     {
     case ENVMODE_TUTORIAL:
     case ENVMODE_SINGLEPLAY:
-        ypaworld_func158__sub4__sub1();
+        UpdateCampaignScreen();
         break;
 
     case ENVMODE_TITLE:

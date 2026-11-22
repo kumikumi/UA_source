@@ -1124,7 +1124,7 @@ void UserData::sub_46DC1C()
 }
 
 
-int UserData::ypaworld_func158__sub0__sub7()
+int UserData::IsSaveGameOutdated()
 {
     FSMgr::FileHandle *fl = uaOpenFileAlloc(fmt::sprintf("save:%s/sgisold.txt",UserName), "r");
     if ( !fl )
@@ -1677,17 +1677,17 @@ void UserData::ShowConfirmDialog( int a2, const std::string &txt1, const std::st
     confirm_button->ShowScreen();
 }
 
-void ypaworld_func158__sub0__sub9(NC_STACK_ypaworld *yw)
+void BriefRequestPlayLevel(NC_STACK_ypaworld *yw)
 {
     yw->_briefScreen.Stage = TBriefengScreen::STAGE_PLAYLEVEL;
 }
 
-void ShowInputSettings2(NC_STACK_ypaworld *yw)
+void BriefRestart(NC_STACK_ypaworld *yw)
 {
     yw->_briefScreen.TimerStatus = TBriefengScreen::TIMER_RESTART;
 }
 
-void ShowInputSettings1(NC_STACK_ypaworld *yw)
+void BriefFastForward(NC_STACK_ypaworld *yw)
 {
     yw->_briefScreen.TimerStatus = TBriefengScreen::TIMER_FAST;
 }
@@ -2038,7 +2038,7 @@ void UserData::ShowAbout()
 }
 
 
-int ypaworld_func158__sub0__sub6(char a1)
+int IsValidFileNameChar(char a1)
 {
     if (a1 == '/' || a1 == '\\' || a1 == ':' || a1 == '*' || a1 == '?' || a1 == '"' || a1 == '<' || a1 == '>' || a1 == '|')
         return 0;
@@ -2473,12 +2473,12 @@ void UserData::GameShellUiHandleInput()
 
             sub_bar_button->HideScreen();
 
-            ypaworld_func158__sub0__sub9(p_YW);
+            BriefRequestPlayLevel(p_YW);
         }
         break;
 
         case 1021:
-            if ( ypaworld_func158__sub0__sub7() )
+            if ( IsSaveGameOutdated() )
             {
                 ShowConfirmDialog(1, Locale::Text::Advanced(Locale::ADV_WANTTOLOAD)
                             , Locale::Text::Advanced(Locale::ADV_DISCARDPROGRESS), 0);
@@ -2491,11 +2491,11 @@ void UserData::GameShellUiHandleInput()
             break;
 
         case 1016:
-            ShowInputSettings2(p_YW);
+            BriefRestart(p_YW);
             break;
 
         case 1020:
-            ShowInputSettings1(p_YW);
+            BriefFastForward(p_YW);
             break;
 
         case 1026:
@@ -2965,7 +2965,7 @@ void UserData::GameShellUiHandleInput()
                 {
                     if ( Input->chr >= ' ' )
                     {
-                        if ( ypaworld_func158__sub0__sub6(Input->chr) )
+                        if ( IsValidFileNameChar(Input->chr) )
                         {
                             userNameDir.insert(userNameDirCursor, 1, Input->chr);
                             userNameDirCursor++;

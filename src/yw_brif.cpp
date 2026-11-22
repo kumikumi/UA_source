@@ -10,7 +10,7 @@
 
 extern GuiList stru_5C91D0;
 
-void ypaworld_func158__sub4__sub1__sub4__sub3(NC_STACK_ypaworld *yw, TInputState *inpt, TBriefengScreen *brf)
+void BriefStartMapScaling(NC_STACK_ypaworld *yw, TInputState *inpt, TBriefengScreen *brf)
 {
     SFXEngine::SFXe.StopMusicTrack();
     if ( yw->_GameShell->missiontrack )
@@ -58,7 +58,7 @@ void ypaworld_func158__sub4__sub1__sub4__sub3(NC_STACK_ypaworld *yw, TInputState
     brf->PreTextTime = brf->CurrTime;
 }
 
-void ypaworld_func158__sub4__sub1__sub4__sub4(NC_STACK_ypaworld *yw, TInputState *inpt, TBriefengScreen *brf)
+void BriefUpdateMapScaling(NC_STACK_ypaworld *yw, TInputState *inpt, TBriefengScreen *brf)
 {
     int v5 = brf->CurrTime - brf->StartTime;
 
@@ -175,7 +175,7 @@ int yw_MBLoadSet(NC_STACK_ypaworld *yw, int setID)
     return 1;
 }
 
-void ypaworld_func158__sub4__sub1__sub4__sub5(NC_STACK_ypaworld *yw, TInputState *inpt, TBriefengScreen *brf)
+void BriefLoadLevelSet(NC_STACK_ypaworld *yw, TInputState *inpt, TBriefengScreen *brf)
 {
     brf->AddObjectsFlag = true;
     brf->TextTime = brf->CurrTime;
@@ -198,7 +198,7 @@ void ypaworld_func158__sub4__sub1__sub4__sub5(NC_STACK_ypaworld *yw, TInputState
     }
 }
 
-void ypaworld_func158__sub4__sub1__sub4__sub6(NC_STACK_ypaworld *yw, TInputState *inpt, TBriefengScreen *brf)
+void BriefSetupPlayerHostStation(NC_STACK_ypaworld *yw, TInputState *inpt, TBriefengScreen *brf)
 {
     brf->ViewingObject = TBriefObject();
 
@@ -225,7 +225,7 @@ void NC_STACK_ypaworld::BriefingSetObject(const TBriefObject &obj, bool doAdd)
         SFXEngine::SFXe.startSound(&_GameShell->samples1_info, 11);
 }
 
-void ypaworld_func158__sub4__sub1__sub4__sub7(NC_STACK_ypaworld *yw, TInputState *inpt, TBriefengScreen *brf)
+void BriefUpdatePlayerHostStation(NC_STACK_ypaworld *yw, TInputState *inpt, TBriefengScreen *brf)
 {
     if ( brf->CurrTime - brf->StartTime >= 2500 )
     {
@@ -302,7 +302,7 @@ void yw_BriefUpdateKeySectors(NC_STACK_ypaworld *yw, TInputState *inpt, TBriefen
     }
 }
 
-void ypaworld_func158__sub4__sub1__sub4__sub10(NC_STACK_ypaworld *yw, TInputState *inpt, TBriefengScreen *brf)
+void BriefSetupTechUpgrades(NC_STACK_ypaworld *yw, TInputState *inpt, TBriefengScreen *brf)
 {
     brf->ViewingObject = TBriefObject();
 
@@ -320,7 +320,7 @@ void ypaworld_func158__sub4__sub1__sub4__sub10(NC_STACK_ypaworld *yw, TInputStat
     brf->Stage = (brf->ElementsCount == 0) + TBriefengScreen::STAGE_TECH_RN;
 }
 
-void ypaworld_func158__sub4__sub1__sub4__sub11(NC_STACK_ypaworld *yw, TInputState *inpt, TBriefengScreen *brf)
+void BriefUpdateTechUpgrades(NC_STACK_ypaworld *yw, TInputState *inpt, TBriefengScreen *brf)
 {
     int elmID = (brf->CurrTime - brf->StartTime) / 2500;
     if ( elmID >= brf->ElementsCount )
@@ -356,7 +356,7 @@ void ypaworld_func158__sub4__sub1__sub4__sub11(NC_STACK_ypaworld *yw, TInputStat
     }
 }
 
-void ypaworld_func158__sub4__sub1__sub4__sub12(NC_STACK_ypaworld *yw, TInputState *inpt, TBriefengScreen *brf)
+void BriefSetupEnemyHostStations(NC_STACK_ypaworld *yw, TInputState *inpt, TBriefengScreen *brf)
 {
     brf->ViewingObject = TBriefObject();
 
@@ -375,7 +375,7 @@ void ypaworld_func158__sub4__sub1__sub4__sub12(NC_STACK_ypaworld *yw, TInputStat
     brf->Stage = TBriefengScreen::STAGE_ENMHS_RN + (brf->ElementsCount == 0);
 }
 
-void ypaworld_func158__sub4__sub1__sub4__sub13(NC_STACK_ypaworld *yw, TInputState *inpt, TBriefengScreen *brf)
+void BriefUpdateEnemyHostStations(NC_STACK_ypaworld *yw, TInputState *inpt, TBriefengScreen *brf)
 {
     int v5 = (brf->CurrTime - brf->StartTime) / 2500;
 
@@ -409,7 +409,7 @@ void ypaworld_func158__sub4__sub1__sub4__sub13(NC_STACK_ypaworld *yw, TInputStat
     }
 }
 
-void ypaworld_func158__sub4__sub1__sub4__sub14(NC_STACK_ypaworld *yw, TInputState *inpt, TBriefengScreen *brf)
+void BriefSetupEnemyForces(NC_STACK_ypaworld *yw, TInputState *inpt, TBriefengScreen *brf)
 {
     brf->ViewingObject = TBriefObject();
 
@@ -428,7 +428,7 @@ void ypaworld_func158__sub4__sub1__sub4__sub14(NC_STACK_ypaworld *yw, TInputStat
     brf->Stage = (brf->ElementsCount == 0) + TBriefengScreen::STAGE_ENMFRC_RN;
 }
 
-void ypaworld_func158__sub4__sub1__sub4__sub15(NC_STACK_ypaworld *yw, TInputState *inpt, TBriefengScreen *brf)
+void BriefUpdateEnemyForces(NC_STACK_ypaworld *yw, TInputState *inpt, TBriefengScreen *brf)
 {
     int v5 = (brf->CurrTime - brf->StartTime) / 2500;
     if ( v5 >= brf->ElementsCount )
@@ -465,7 +465,7 @@ void ypaworld_func158__sub4__sub1__sub4__sub15(NC_STACK_ypaworld *yw, TInputStat
     }
 }
 
-void ypaworld_func158__sub4__sub1__sub4__sub16(NC_STACK_ypaworld *yw, TInputState *inpt, TBriefengScreen *brf)
+void BriefSetupFriendlyForces(NC_STACK_ypaworld *yw, TInputState *inpt, TBriefengScreen *brf)
 {
     brf->ViewingObject = TBriefObject();
     
@@ -485,7 +485,7 @@ void ypaworld_func158__sub4__sub1__sub4__sub16(NC_STACK_ypaworld *yw, TInputStat
     brf->Stage = (brf->ElementsCount == 0) + TBriefengScreen::STAGE_BUDDY_RN;
 }
 
-void ypaworld_func158__sub4__sub1__sub4__sub17(NC_STACK_ypaworld *yw, TInputState *inpt, TBriefengScreen *brf)
+void BriefUpdateFriendlyForces(NC_STACK_ypaworld *yw, TInputState *inpt, TBriefengScreen *brf)
 {
     int v5 = (brf->CurrTime - brf->StartTime) / 2500;
     if ( v5 >= brf->ElementsCount )
@@ -523,7 +523,7 @@ void ypaworld_func158__sub4__sub1__sub4__sub17(NC_STACK_ypaworld *yw, TInputStat
     }
 }
 
-void ypaworld_func158__sub4__sub1__sub4__sub18(NC_STACK_ypaworld *yw, TInputState *inpt, TBriefengScreen *brf)
+void BriefSetupGates(NC_STACK_ypaworld *yw, TInputState *inpt, TBriefengScreen *brf)
 {
     brf->ViewingObject = TBriefObject();
 
@@ -544,7 +544,7 @@ void ypaworld_func158__sub4__sub1__sub4__sub18(NC_STACK_ypaworld *yw, TInputStat
     brf->Stage = (brf->ElementsCount == 0) + TBriefengScreen::STAGE_GATE_RN;
 }
 
-void ypaworld_func158__sub4__sub1__sub4__sub19(NC_STACK_ypaworld *yw, TInputState *inpt, TBriefengScreen *brf)
+void BriefUpdateGates(NC_STACK_ypaworld *yw, TInputState *inpt, TBriefengScreen *brf)
 {
     int elmID = (brf->CurrTime - brf->StartTime) / 2500;
 
@@ -581,7 +581,7 @@ void ypaworld_func158__sub4__sub1__sub4__sub19(NC_STACK_ypaworld *yw, TInputStat
     }
 }
 
-void ypaworld_func158__sub4__sub1__sub4__sub21(NC_STACK_ypaworld *yw, TInputState *inpt, TBriefengScreen *brf)
+void BriefSelectObjectUnderCursor(NC_STACK_ypaworld *yw, TInputState *inpt, TBriefengScreen *brf)
 {
     int v20 = -1;
 
@@ -741,7 +741,7 @@ void sub_4ED434(NC_STACK_ypaworld *yw, TBriefengScreen *brf)
     FontUA::set_end(&stru_5C91D0.itemBlock);
 }
 
-void ypaworld_func158__sub4__sub1__sub4__sub1(NC_STACK_ypaworld *yw, TBriefengScreen *brf)
+void BriefDrawObjectMarkers(NC_STACK_ypaworld *yw, TBriefengScreen *brf)
 {
     CmdStream cmdStream;
     cmdStream.reserve(1024);
@@ -785,7 +785,7 @@ void ypaworld_func158__sub4__sub1__sub4__sub1(NC_STACK_ypaworld *yw, TBriefengSc
     GFX::Engine.ProcessDrawSeq(cmdStream);
 }
 
-void ypaworld_func158__sub4__sub1__sub4__sub0(NC_STACK_ypaworld *yw)
+void BriefDrawLevelTitle(NC_STACK_ypaworld *yw)
 {
     int w = yw->_screenSize.x / 2;
     int h = yw->_screenSize.y / 2;
@@ -810,7 +810,7 @@ void ypaworld_func158__sub4__sub1__sub4__sub0(NC_STACK_ypaworld *yw)
     GFX::Engine.ProcessDrawSeq(buf);
 }
 
-void ypaworld_func158__sub4__sub1__sub4__sub2(NC_STACK_ypaworld *yw, TBriefengScreen *brf, TInputState *inpt, int obj_id, char a4)
+void BriefDrawViewedObjectCaption(NC_STACK_ypaworld *yw, TBriefengScreen *brf, TInputState *inpt, int obj_id, char a4)
 {
     if ( brf->ViewingObject.ObjType )
     {
@@ -885,7 +885,7 @@ void ypaworld_func158__sub4__sub1__sub4__sub2(NC_STACK_ypaworld *yw, TBriefengSc
     }
 }
 
-void ypaworld_func158__sub4__sub1__sub4(NC_STACK_ypaworld *yw, UserData *usr, TInputState *inpt)
+void UpdateBriefingScreen(NC_STACK_ypaworld *yw, UserData *usr, TInputState *inpt)
 {
     TBriefengScreen *brf = &yw->_briefScreen;
 
@@ -953,20 +953,20 @@ void ypaworld_func158__sub4__sub1__sub4(NC_STACK_ypaworld *yw, UserData *usr, TI
         switch ( yw->_briefScreen.Stage )
         {
         case TBriefengScreen::STAGE_LOADED:
-            ypaworld_func158__sub4__sub1__sub4__sub3(yw, inpt, brf);
+            BriefStartMapScaling(yw, inpt, brf);
             break;
         case TBriefengScreen::STAGE_SCALING:
-            ypaworld_func158__sub4__sub1__sub4__sub4(yw, inpt, brf);
+            BriefUpdateMapScaling(yw, inpt, brf);
             break;
         case TBriefengScreen::STAGE_SCALEEND:
-            ypaworld_func158__sub4__sub1__sub4__sub5(yw, inpt, brf);
+            BriefLoadLevelSet(yw, inpt, brf);
             break;
         case TBriefengScreen::STAGE_PLAYER_ST:
-            ypaworld_func158__sub4__sub1__sub4__sub6(yw, inpt, brf);
+            BriefSetupPlayerHostStation(yw, inpt, brf);
             break;
         case TBriefengScreen::STAGE_PLAYER_RN:
             if ( yw->_briefScreen.SelectedObjID == -1 )
-                ypaworld_func158__sub4__sub1__sub4__sub7(yw, inpt, brf);
+                BriefUpdatePlayerHostStation(yw, inpt, brf);
             break;
         case TBriefengScreen::STAGE_PLAYER_END:
             yw->_briefScreen.Stage = TBriefengScreen::STAGE_GATE_ST;
@@ -982,52 +982,52 @@ void ypaworld_func158__sub4__sub1__sub4(NC_STACK_ypaworld *yw, UserData *usr, TI
             yw->_briefScreen.Stage = TBriefengScreen::STAGE_TECH_ST;
             break;
         case TBriefengScreen::STAGE_TECH_ST:
-            ypaworld_func158__sub4__sub1__sub4__sub10(yw, inpt, brf);
+            BriefSetupTechUpgrades(yw, inpt, brf);
             break;
         case TBriefengScreen::STAGE_TECH_RN:
             if ( yw->_briefScreen.SelectedObjID == -1 )
-                ypaworld_func158__sub4__sub1__sub4__sub11(yw, inpt, brf);
+                BriefUpdateTechUpgrades(yw, inpt, brf);
             break;
         case TBriefengScreen::STAGE_TECH_END:
             yw->_briefScreen.Stage = TBriefengScreen::STAGE_ENMHS_ST;
             break;
         case TBriefengScreen::STAGE_ENMHS_ST:
-            ypaworld_func158__sub4__sub1__sub4__sub12(yw, inpt, brf);
+            BriefSetupEnemyHostStations(yw, inpt, brf);
             break;
         case TBriefengScreen::STAGE_ENMHS_RN:
             if ( yw->_briefScreen.SelectedObjID == -1 )
-                ypaworld_func158__sub4__sub1__sub4__sub13(yw, inpt, brf);
+                BriefUpdateEnemyHostStations(yw, inpt, brf);
             break;
         case TBriefengScreen::STAGE_ENMHS_END:
             yw->_briefScreen.Stage = TBriefengScreen::STAGE_ENMFRC_ST;
             break;
         case TBriefengScreen::STAGE_ENMFRC_ST:
-            ypaworld_func158__sub4__sub1__sub4__sub14(yw, inpt, brf);
+            BriefSetupEnemyForces(yw, inpt, brf);
             break;
         case TBriefengScreen::STAGE_ENMFRC_RN:
             if ( yw->_briefScreen.SelectedObjID == -1 )
-                ypaworld_func158__sub4__sub1__sub4__sub15(yw, inpt, brf);
+                BriefUpdateEnemyForces(yw, inpt, brf);
             break;
         case TBriefengScreen::STAGE_ENMFRC_END:
             yw->_briefScreen.Stage = TBriefengScreen::STAGE_BUDDY_ST;
             break;
         case TBriefengScreen::STAGE_BUDDY_ST:
-            ypaworld_func158__sub4__sub1__sub4__sub16(yw, inpt, brf);
+            BriefSetupFriendlyForces(yw, inpt, brf);
             break;
         case TBriefengScreen::STAGE_BUDDY_RN:
             if ( yw->_briefScreen.SelectedObjID == -1 )
-                ypaworld_func158__sub4__sub1__sub4__sub17(yw, inpt, brf);
+                BriefUpdateFriendlyForces(yw, inpt, brf);
             break;
         case TBriefengScreen::STAGE_BUDDY_END:
             yw->_briefScreen.AddObjectsFlag = false;
             yw->_briefScreen.Stage = TBriefengScreen::STAGE_PLAYER_ST;
             break;
         case TBriefengScreen::STAGE_GATE_ST:
-            ypaworld_func158__sub4__sub1__sub4__sub18(yw, inpt, brf);
+            BriefSetupGates(yw, inpt, brf);
             break;
         case TBriefengScreen::STAGE_GATE_RN:
             if ( yw->_briefScreen.SelectedObjID == -1 )
-                ypaworld_func158__sub4__sub1__sub4__sub19(yw, inpt, brf);
+                BriefUpdateGates(yw, inpt, brf);
             break;
         case TBriefengScreen::STAGE_GATE_END:
             yw->_briefScreen.Stage = TBriefengScreen::STAGE_KEYS_ST;
@@ -1041,7 +1041,7 @@ void ypaworld_func158__sub4__sub1__sub4(NC_STACK_ypaworld *yw, UserData *usr, TI
 
         sub_4ED434(yw, brf);
 
-        ypaworld_func158__sub4__sub1__sub4__sub21(yw, inpt, brf);
+        BriefSelectObjectUnderCursor(yw, inpt, brf);
 
         if ( brf->BriefingMapImg )
         {
@@ -1061,12 +1061,12 @@ void ypaworld_func158__sub4__sub1__sub4(NC_STACK_ypaworld *yw, UserData *usr, TI
 
         ypaworld_func158__DrawVehicle(yw, brf, inpt);
 
-        ypaworld_func158__sub4__sub1__sub4__sub1(yw, brf);
-        ypaworld_func158__sub4__sub1__sub4__sub0(yw);
+        BriefDrawObjectMarkers(yw, brf);
+        BriefDrawLevelTitle(yw);
 
         GFX::Engine.ProcessDrawSeq(stru_5C91D0.cmdCommands, &stru_5C91D0.cmdInclude);
 
-        ypaworld_func158__sub4__sub1__sub4__sub2(yw, brf, inpt, 0, 2);
+        BriefDrawViewedObjectCaption(yw, brf, inpt, 0, 2);
     }
 }
 
@@ -1099,7 +1099,7 @@ void sub_449310(Common::FRect *rect)
         rect->bottom = -1.0;
 }
 
-void ypaworld_func158__sub4__sub1__sub6__sub0(NC_STACK_ypaworld *yw, TInputState *struc, TBriefengScreen *brf)
+void DebriefStartMapScaling(NC_STACK_ypaworld *yw, TInputState *struc, TBriefengScreen *brf)
 {
     brf->StartTime = brf->CurrTime;
     brf->Stage = TBriefengScreen::STAGE_SCALING;
@@ -1159,7 +1159,7 @@ void ypaworld_func158__sub4__sub1__sub6__sub0(NC_STACK_ypaworld *yw, TInputState
         SFXEngine::SFXe.startSound(&yw->_GameShell->samples1_info, 11);
 }
 
-void ypaworld_func158__sub4__sub1__sub6__sub1(NC_STACK_ypaworld *yw, TInputState *struc, TBriefengScreen *brf)
+void DebriefUpdateMapScaling(NC_STACK_ypaworld *yw, TInputState *struc, TBriefengScreen *brf)
 {
     int v4 = brf->CurrTime - brf->StartTime;
 
@@ -1180,7 +1180,7 @@ void ypaworld_func158__sub4__sub1__sub6__sub1(NC_STACK_ypaworld *yw, TInputState
     }
 }
 
-void ypaworld_func158__sub4__sub1__sub6__sub2(NC_STACK_ypaworld *yw, TInputState *struc, TBriefengScreen *brf)
+void DebriefStartHistoryReplay(NC_STACK_ypaworld *yw, TInputState *struc, TBriefengScreen *brf)
 {
     brf->StartTime = brf->CurrTime;
     brf->Stage = TBriefengScreen::STAGE_PLAYER_RN;
@@ -1384,7 +1384,7 @@ void yw_DebriefRenderSectorsOwners(NC_STACK_ypaworld *yw, TBriefengScreen *brf)
 }
 
 
-void ypaworld_func158__sub4__sub1__sub6__sub3__sub6(NC_STACK_ypaworld *yw, TBriefengScreen *brf)
+void DebriefDrawLevelTitle(NC_STACK_ypaworld *yw, TBriefengScreen *brf)
 {
     int v14 = (yw->_screenSize.x / 2) * -0.934375;
     int v13 = (yw->_screenSize.x / 2) * 0.03125;
@@ -2086,7 +2086,7 @@ void yw_DebriefRunDebrief(NC_STACK_ypaworld *yw, TInputState *struc, TBriefengSc
         }
     }
 
-    ypaworld_func158__sub4__sub1__sub6__sub3__sub6(yw, brf);
+    DebriefDrawLevelTitle(yw, brf);
 }
 
 void yw_debriefUpdate(NC_STACK_ypaworld *yw, TInputState *inpt)
@@ -2133,11 +2133,11 @@ void yw_debriefUpdate(NC_STACK_ypaworld *yw, TInputState *inpt)
     switch ( brf->Stage )
     {
     case TBriefengScreen::STAGE_LOADED:
-        ypaworld_func158__sub4__sub1__sub6__sub0(yw, inpt, brf);
+        DebriefStartMapScaling(yw, inpt, brf);
         break;
 
     case TBriefengScreen::STAGE_SCALING:
-        ypaworld_func158__sub4__sub1__sub6__sub1(yw, inpt, brf);
+        DebriefUpdateMapScaling(yw, inpt, brf);
         break;
 
     case TBriefengScreen::STAGE_SCALEEND:
@@ -2145,7 +2145,7 @@ void yw_debriefUpdate(NC_STACK_ypaworld *yw, TInputState *inpt)
         break;
 
     case TBriefengScreen::STAGE_PLAYER_ST:
-        ypaworld_func158__sub4__sub1__sub6__sub2(yw, inpt, brf);
+        DebriefStartHistoryReplay(yw, inpt, brf);
         break;
 
     case TBriefengScreen::STAGE_PLAYER_RN:

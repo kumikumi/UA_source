@@ -786,7 +786,7 @@ public:
     void sub_46D960();
     void ShowOptionsMenu();
     void GameShellUiOpenNetwork();
-    int ypaworld_func158__sub0__sub7();
+    int IsSaveGameOutdated();
     void ShowConfirmDialog(int a2, const std::string &txt1, const std::string &txt2, int a5);
     void ShowMenuMsgBox(int code, const std::string &txt1, const std::string &txt2, bool OkOnly);
     void sub_46D2B4();
@@ -2095,10 +2095,10 @@ public:
     void sub_4491A0(const std::string &movie_fname);
     bool LoadProtosScript(const std::string &filename);
     bool sb_0x4e1a88__sub0__sub0(TLevelDescription *mapp, const std::string &fname);
-    void ypaworld_func158__sub4__sub1();
+    void UpdateCampaignScreen();
     bool InitDebrief();
     void FreeDebrief();
-    int ypaworld_func158__sub4__sub1__sub5__sub0(TLevelDescription *mapproto, const std::string &filename);
+    int ParseDebriefLevelDesc(TLevelDescription *mapproto, const std::string &filename);
     int sub_4DA41C(TLevelDescription *mapp, const std::string &fname);
     bool InitBriefing(int lvlid);
     void FreeBriefing();
