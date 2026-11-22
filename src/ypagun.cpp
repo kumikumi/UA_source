@@ -118,21 +118,21 @@ size_t NC_STACK_ypagun::SetParameters(IDVList &stak)
 
 bool NC_STACK_ypagun::CheckPedestal()
 {
-    TRayIntersection arg136;
-    arg136.stPos = _position;
-    arg136.vect.x = 0;
+    TRayIntersection ray;
+    ray.stPos = _position;
+    ray.vect.x = 0;
 
     if ( _gunFlags & GUN_FLAGS_FALLDOWN )
-        arg136.vect.y = -_height;
+        ray.vect.y = -_height;
     else
-        arg136.vect.y = _height;
+        ray.vect.y = _height;
 
-    arg136.vect.z = 0;
-    arg136.flags = 0;
+    ray.vect.z = 0;
+    ray.flags = 0;
 
-    _world->IntersectRay(&arg136);
+    _world->IntersectRay(&ray);
 
-    return arg136.isect != 0;
+    return ray.isect != 0;
 }
 
 void NC_STACK_ypagun::AI_layer3(update_msg *arg)
@@ -166,12 +166,12 @@ void NC_STACK_ypagun::AI_layer3(update_msg *arg)
             {
                 _gunFireCount = 0;
 
-                setState_msg arg78;
-                arg78.unsetFlags = BACT_STFLAG_FIRE;
-                arg78.newStatus = BACT_STATUS_NOPE;
-                arg78.setFlags = 0;
+                setState_msg stateMsg;
+                stateMsg.unsetFlags = BACT_STFLAG_FIRE;
+                stateMsg.newStatus = BACT_STATUS_NOPE;
+                stateMsg.setFlags = 0;
 
-                SetState(&arg78);
+                SetState(&stateMsg);
             }
         }
 
@@ -181,12 +181,12 @@ void NC_STACK_ypagun::AI_layer3(update_msg *arg)
             {
                 if ( _status_flg & BACT_STFLAG_FIRE )
                 {
-                    setState_msg arg78;
-                    arg78.unsetFlags = BACT_STFLAG_FIRE;
-                    arg78.newStatus = BACT_STATUS_NOPE;
-                    arg78.setFlags = 0;
+                    setState_msg stateMsg;
+                    stateMsg.unsetFlags = BACT_STFLAG_FIRE;
+                    stateMsg.newStatus = BACT_STATUS_NOPE;
+                    stateMsg.setFlags = 0;
 
-                    SetState(&arg78);
+                    SetState(&stateMsg);
                 }
             }
             break;
@@ -288,29 +288,29 @@ void NC_STACK_ypagun::AI_layer3(update_msg *arg)
         if ( fabs(y_delta) > 0.001 )
             _rotation = mat3x3::RotateX(y_delta * 0.3) * _rotation;
 
-        TFightTarget arg75;
-        arg75.fperiod = fTime;
-        arg75.g_time = _clock;
-        arg75.target.pbact = _secndT.pbact;
+        TFightTarget fightTarget;
+        fightTarget.fperiod = fTime;
+        fightTarget.g_time = _clock;
+        fightTarget.target.pbact = _secndT.pbact;
 
-        FightWithBact(&arg75);
+        FightWithBact(&fightTarget);
 
         if ( !TestTargetSector(_secndT.pbact) )
         {
-            setTarget_msg arg67;
-            arg67.tgt_type = BACT_TGT_TYPE_NONE;
-            arg67.priority = 1;
+            setTarget_msg targetMsg;
+            targetMsg.tgt_type = BACT_TGT_TYPE_NONE;
+            targetMsg.priority = 1;
 
-            SetTarget(&arg67);
+            SetTarget(&targetMsg);
 
             if ( _gunType == GUN_TYPE_PROTO )
             {
-                setState_msg arg78;
-                arg78.unsetFlags = BACT_STFLAG_FIRE;
-                arg78.newStatus = BACT_STATUS_NOPE;
-                arg78.setFlags = 0;
+                setState_msg stateMsg;
+                stateMsg.unsetFlags = BACT_STFLAG_FIRE;
+                stateMsg.newStatus = BACT_STATUS_NOPE;
+                stateMsg.setFlags = 0;
 
-                SetState(&arg78);
+                SetState(&stateMsg);
             }
         }
     }
@@ -325,12 +325,12 @@ void NC_STACK_ypagun::AI_layer3(update_msg *arg)
 
         if ( _scale_time <= 0 )
         {
-            setState_msg arg78;
-            arg78.newStatus = BACT_STATUS_NORMAL;
-            arg78.setFlags = 0;
-            arg78.unsetFlags = 0;
+            setState_msg stateMsg;
+            stateMsg.newStatus = BACT_STATUS_NORMAL;
+            stateMsg.setFlags = 0;
+            stateMsg.unsetFlags = 0;
 
-            SetState(&arg78);
+            SetState(&stateMsg);
         }
         break;
 
@@ -349,9 +349,9 @@ void NC_STACK_ypagun::User_layer(update_msg *arg)
         {
             if ( _viewer_position.length() >= 3.0 )
             {
-                float v33 = arg->frameTime + 50.0;
+                float damping = arg->frameTime + 50.0;
 
-                _viewer_position *= 50.0 / v33;
+                _viewer_position *= 50.0 / damping;
             }
             else
             {
@@ -362,40 +362,40 @@ void NC_STACK_ypagun::User_layer(update_msg *arg)
             {
                 if ( !arg->inpt->Buttons.IsAny({0, 1}) )
                 {
-                    setState_msg arg78;
-                    arg78.setFlags = 0;
-                    arg78.newStatus = BACT_STATUS_NOPE;
-                    arg78.unsetFlags = BACT_STFLAG_FIRE;
+                    setState_msg stateMsg;
+                    stateMsg.setFlags = 0;
+                    stateMsg.newStatus = BACT_STATUS_NOPE;
+                    stateMsg.unsetFlags = BACT_STFLAG_FIRE;
 
-                    SetState(&arg78);
+                    SetState(&stateMsg);
                 }
             }
 
-            TMissileLaunch arg79;
-            arg79.tgType = BACT_TGT_TYPE_CELL;
-            arg79.tgt_pos = _position + _rotation.AxisZ() * (World::CVSectorLength * 3.0);
+            TMissileLaunch launch;
+            launch.tgType = BACT_TGT_TYPE_CELL;
+            launch.tgt_pos = _position + _rotation.AxisZ() * (World::CVSectorLength * 3.0);
 
-            TAimQuery arg106;
-            arg106.aim_dir = _rotation.AxisZ();
-            arg106.flags = 5;
+            TAimQuery aimQuery;
+            aimQuery.aim_dir = _rotation.AxisZ();
+            aimQuery.flags = 5;
 
-            if ( UserTargeting(&arg106) )
+            if ( UserTargeting(&aimQuery) )
             {
-                arg79.target.pbact = arg106.ret_bact;
-                arg79.tgType = BACT_TGT_TYPE_UNIT;
+                launch.target.pbact = aimQuery.ret_bact;
+                launch.tgType = BACT_TGT_TYPE_UNIT;
             }
 
             if ( arg->inpt->Buttons.IsAny({0, 1}) )
             {
                 if ( _gunType == GUN_TYPE_REAL )
                 {
-                    arg79.weapon = _weapon;
-                    arg79.direction = _rotation.AxisZ();
-                    arg79.g_time = _clock;
-                    arg79.start_point = _fire_pos;
-                    arg79.flags = (arg->inpt->Buttons.Is(1) ? 1 : 0) | 2;
+                    launch.weapon = _weapon;
+                    launch.direction = _rotation.AxisZ();
+                    launch.g_time = _clock;
+                    launch.start_point = _fire_pos;
+                    launch.flags = (arg->inpt->Buttons.Is(1) ? 1 : 0) | 2;
 
-                    if ( LaunchMissile(&arg79) )
+                    if ( LaunchMissile(&launch) )
                     {
                         _viewer_position = vec3d(0, 0, -25.0);
                     }
@@ -405,20 +405,20 @@ void NC_STACK_ypagun::User_layer(update_msg *arg)
 //            if ( ~(ypabact.field_3D6 & 0x100) ) CHECK IT
                     if ( !(_status_flg & BACT_STFLAG_FIRE) )
                     {
-                        setState_msg arg78;
-                        arg78.unsetFlags = 0;
-                        arg78.newStatus = BACT_STATUS_NOPE;
-                        arg78.setFlags = BACT_STFLAG_FIRE;
+                        setState_msg stateMsg;
+                        stateMsg.unsetFlags = 0;
+                        stateMsg.newStatus = BACT_STATUS_NOPE;
+                        stateMsg.setFlags = BACT_STFLAG_FIRE;
 
-                        SetState(&arg78);
+                        SetState(&stateMsg);
                     }
 
-                    TMinigunShot arg105;
-                    arg105.dir = _rotation.AxisZ();
-                    arg105.period = fTime;
-                    arg105.gTime = _clock;
+                    TMinigunShot shot;
+                    shot.dir = _rotation.AxisZ();
+                    shot.period = fTime;
+                    shot.gTime = _clock;
 
-                    FireMinigun(&arg105);
+                    FireMinigun(&shot);
 
                     if ( _gunFlags & GUN_FLAGS_SHOT )
                     {
@@ -495,55 +495,55 @@ void NC_STACK_ypagun::FightWithBact(TFightTarget *arg)
     {
         if ( _gunType == GUN_TYPE_REAL )
         {
-            TMissileLaunch arg79;
-            arg79.direction = vTgt;
-            arg79.start_point = _fire_pos;
-            arg79.tgType = BACT_TGT_TYPE_UNIT;
-            arg79.target.pbact = arg->target.pbact;
-            arg79.weapon = _weapon;
-            arg79.g_time = arg->g_time;
-            arg79.flags = (!getBACT_inputting() ? 4 : 0);
+            TMissileLaunch launch;
+            launch.direction = vTgt;
+            launch.start_point = _fire_pos;
+            launch.tgType = BACT_TGT_TYPE_UNIT;
+            launch.target.pbact = arg->target.pbact;
+            launch.weapon = _weapon;
+            launch.g_time = arg->g_time;
+            launch.flags = (!getBACT_inputting() ? 4 : 0);
 
-            if ( LaunchMissile(&arg79) )
+            if ( LaunchMissile(&launch) )
             {
                 _gunFireCount = _gunFireTime;
 
-                setState_msg arg78;
-                arg78.unsetFlags = 0;
-                arg78.newStatus = BACT_STATUS_NOPE;
-                arg78.setFlags = BACT_STFLAG_FIRE;
+                setState_msg stateMsg;
+                stateMsg.unsetFlags = 0;
+                stateMsg.newStatus = BACT_STATUS_NOPE;
+                stateMsg.setFlags = BACT_STFLAG_FIRE;
 
-                SetState(&arg78);
+                SetState(&stateMsg);
             }
         }
         else if ( _gunType == GUN_TYPE_PROTO )
         {
             if ( !(_status_flg & BACT_STFLAG_FIRE) )
             {
-                setState_msg arg78;
-                arg78.unsetFlags = 0;
-                arg78.newStatus = BACT_STATUS_NOPE;
-                arg78.setFlags = BACT_STFLAG_FIRE;
+                setState_msg stateMsg;
+                stateMsg.unsetFlags = 0;
+                stateMsg.newStatus = BACT_STATUS_NOPE;
+                stateMsg.setFlags = BACT_STFLAG_FIRE;
 
-                SetState(&arg78);
+                SetState(&stateMsg);
             }
 
-            TMinigunShot arg105;
-            arg105.period = arg->fperiod;
-            arg105.gTime = arg->g_time;
-            arg105.dir = _rotation.AxisZ();
+            TMinigunShot shot;
+            shot.period = arg->fperiod;
+            shot.gTime = arg->g_time;
+            shot.dir = _rotation.AxisZ();
 
-            FireMinigun(&arg105);
+            FireMinigun(&shot);
         }
     }
     else if ( _gunType == GUN_TYPE_PROTO )
     {
-        setState_msg arg78;
-        arg78.setFlags = 0;
-        arg78.newStatus = BACT_STATUS_NOPE;
-        arg78.unsetFlags = BACT_STFLAG_FIRE;
+        setState_msg stateMsg;
+        stateMsg.setFlags = 0;
+        stateMsg.newStatus = BACT_STATUS_NOPE;
+        stateMsg.unsetFlags = BACT_STFLAG_FIRE;
 
-        SetState(&arg78);
+        SetState(&stateMsg);
     }
 }
 
@@ -553,8 +553,8 @@ void NC_STACK_ypagun::Die()
     {
         NC_STACK_ypabact::Die();
 
-        int v6 = 1;
-        HandleVisChildrens(&v6);
+        int visMode = 1;
+        HandleVisChildrens(&visMode);
 
         if ( (_gunFlags & GUN_FLAGS_ROBO) && _host_station )
         {
@@ -574,19 +574,19 @@ size_t NC_STACK_ypagun::SetPosition(TUnitPlacement *arg)
 
     if ( _gunFlags & GUN_FLAGS_GROUND )
     {
-        TRayIntersection arg136;
-        arg136.stPos.x = arg->pos.x;
-        arg136.stPos.y = arg->pos.y + -10000.0;
-        arg136.stPos.z = arg->pos.z;
-        arg136.vect.x = 0;
-        arg136.vect.y = 20000.0;
-        arg136.vect.z = 0;
-        arg136.flags = 0;
+        TRayIntersection ray;
+        ray.stPos.x = arg->pos.x;
+        ray.stPos.y = arg->pos.y + -10000.0;
+        ray.stPos.z = arg->pos.z;
+        ray.vect.x = 0;
+        ray.vect.y = 20000.0;
+        ray.vect.z = 0;
+        ray.flags = 0;
 
-        _world->IntersectRay(&arg136);
+        _world->IntersectRay(&ray);
 
-        if ( arg136.isect )
-            _position.y = arg136.isectPos.y - _overeof;
+        if ( ray.isect )
+            _position.y = ray.isectPos.y - _overeof;
 
         SetGunBasis(vec3d(0, 0, 1.0), false);
     }
@@ -597,8 +597,8 @@ size_t NC_STACK_ypagun::SetPosition(TUnitPlacement *arg)
 
     _old_pos = _position;
 
-    int v12 = 2;
-    HandleVisChildrens(&v12);
+    int visMode = 2;
+    HandleVisChildrens(&visMode);
 
     return 1;
 }
@@ -677,9 +677,9 @@ void NC_STACK_ypagun::SetGunBasis(const vec3d &_basis, bool directDown)
     {
         if ( basis.x != 0.0 || basis.z != 0.0 )
         {
-            float v12 = -1.0 / ( basis.y / basis.XZ().length() );
+            float invSlope = -1.0 / ( basis.y / basis.XZ().length() );
 
-            _rotation.m11 = sqrt(POW2(v12) / (POW2(v12) + 1.0));
+            _rotation.m11 = sqrt(POW2(invSlope) / (POW2(invSlope) + 1.0));
 
             if ( basis.x != 0.0 )
             {

@@ -34,12 +34,12 @@ size_t NC_STACK_embed::LoadingFromIFF(IFFile **file)
 
     while ( 1 )
     {
-        int v5 = mfile->parse();
+        int iffRes = mfile->parse();
 
-        if ( v5 == -2 )
+        if ( iffRes == -2 )
             break;
 
-        if ( v5 )
+        if ( iffRes )
         {
             if ( obj_ok )
                 Deinit();
@@ -119,12 +119,12 @@ size_t NC_STACK_embed::SavingIntoIFF(IFFile **file)
             mfile->writeU8(0);
             mfile->popChunk();
 
-            TSaveResourceParams arg66;
-            arg66.filename = NULL;
-            arg66.file = mfile;
-            arg66.OpenedStream = 2;
+            TSaveResourceParams saveParams;
+            saveParams.filename = NULL;
+            saveParams.file = mfile;
+            saveParams.OpenedStream = 2;
 
-            if ( !embd_obj->SaveResource(&arg66 ) )
+            if ( !embd_obj->SaveResource(&saveParams ) )
                 return 0;
         }
     }

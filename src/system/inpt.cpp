@@ -659,9 +659,9 @@ void INPEngine::FFDOTankEngine(int state, float p1, float p2)
 
             _ffTankEngine.Run();
 
-            float a2 = p1 * 16383.0; // 5000
-            float a3 = 1000.0 / (p2 * 13.0 + 5.0);
-            _ffTankEngine.Update(a2, a3);
+            float magnitude = p1 * 16383.0; // 5000
+            float period = 1000.0 / (p2 * 13.0 + 5.0);
+            _ffTankEngine.Update(magnitude, period);
         }
         else if ( state == FF_STATE_STOP )
         {
@@ -669,9 +669,9 @@ void INPEngine::FFDOTankEngine(int state, float p1, float p2)
         }
         else if ( state == FF_STATE_UPDATE )
         {
-            float v5 = p1 * 19660.0; // 6000
-            float v6 = 1000.0 / (p2 * 13.0 + 5.0);
-            _ffTankEngine.Update(v5, v6);
+            float magnitude = p1 * 19660.0; // 6000
+            float period = 1000.0 / (p2 * 13.0 + 5.0);
+            _ffTankEngine.Update(magnitude, period);
         }
     }
 }
@@ -688,9 +688,9 @@ void INPEngine::FFDOJetEngine(int state, float p1, float p2)
 
             _ffJetEngine.Run();
 
-            float a2 = p1 * 19660.0; // 6000
-            float a3 = 1000.0 / (p2 * 12.0 + 14.0);
-            _ffJetEngine.Update(a2, a3);
+            float magnitude = p1 * 19660.0; // 6000
+            float period = 1000.0 / (p2 * 12.0 + 14.0);
+            _ffJetEngine.Update(magnitude, period);
         }
         else if ( state == FF_STATE_STOP )
         {
@@ -698,9 +698,9 @@ void INPEngine::FFDOJetEngine(int state, float p1, float p2)
         }
         else if ( state == FF_STATE_UPDATE )
         {
-            float v5 = p1 * 19660.0; // 6000
-            float v6 = 1000.0 / (p2 * 12.0 + 14.0);
-            _ffJetEngine.Update(v5, v6);
+            float magnitude = p1 * 19660.0; // 6000
+            float period = 1000.0 / (p2 * 12.0 + 14.0);
+            _ffJetEngine.Update(magnitude, period);
         }
     }
 }
@@ -717,9 +717,9 @@ void INPEngine::FFDOHeliEngine(int state, float p1, float p2)
 
             _ffCopterEngine.Run();
 
-            float a2 = p1 * 26213.6; //8000.0;
-            float a3 = 1000.0 / (p2 * 12.0 + 6.0);
-            _ffCopterEngine.Update(a2, a3);
+            float magnitude = p1 * 26213.6; //8000.0;
+            float period = 1000.0 / (p2 * 12.0 + 6.0);
+            _ffCopterEngine.Update(magnitude, period);
         }
         else if ( state == FF_STATE_STOP )
         {
@@ -727,9 +727,9 @@ void INPEngine::FFDOHeliEngine(int state, float p1, float p2)
         }
         else if ( state == FF_STATE_UPDATE )
         {
-            float v5 = p1 * 26213.6; //8000.0;
-            float v6 = 1000.0 / (p2 * 12.0 + 6.0);
-            _ffCopterEngine.Update(v5, v6);
+            float magnitude = p1 * 26213.6; //8000.0;
+            float period = 1000.0 / (p2 * 12.0 + 6.0);
+            _ffCopterEngine.Update(magnitude, period);
         }
     }
 }
@@ -827,7 +827,7 @@ void INPEngine::FFDOBombFire(int state)
     }
 }
 
-void INPEngine::FFDOCollision(int state, float a2, float a3, float a4)
+void INPEngine::FFDOCollision(int state, float force, float dirX, float dirY)
 {
     if ( _ffCollide.OK() )
     {
@@ -835,7 +835,7 @@ void INPEngine::FFDOCollision(int state, float a2, float a3, float a4)
         {
             _ffCollide.Stop();
 
-            _ffCollide.Update(a2, a3, a4);
+            _ffCollide.Update(force, dirX, dirY);
 
             _ffCollide.Run();
         }
@@ -846,7 +846,7 @@ void INPEngine::FFDOCollision(int state, float a2, float a3, float a4)
     }
 }
 
-void INPEngine::FFDOShake(int state, float a2, float a3, float a4, float a5)
+void INPEngine::FFDOShake(int state, float power, float duration, float dirX, float dirY)
 {
     if ( _ffShake.OK() )
     {
@@ -854,7 +854,7 @@ void INPEngine::FFDOShake(int state, float a2, float a3, float a4, float a5)
         {
             _ffShake.Stop();
 
-            _ffShake.Update(a2, a3, a4, a5);
+            _ffShake.Update(power, duration, dirX, dirY);
 
             _ffShake.Run();
         }

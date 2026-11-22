@@ -49,10 +49,10 @@ size_t NC_STACK_bmpanim::LoadingFromIFF(IFFile **file)
 
     while ( 1 )
     {
-        int v8 = mfile->parse();
-        if ( v8 == IFFile::IFF_ERR_EOC )
+        int iffRes = mfile->parse();
+        if ( iffRes == IFFile::IFF_ERR_EOC )
             break;
-        if ( v8 )
+        if ( iffRes )
             return 0;
 
         if ( mfile->GetCurrentChunk().Is(TAG_STRC) )
@@ -89,16 +89,16 @@ size_t NC_STACK_bmpanim::SavingIntoIFF(IFFile **file)
 {
     IFFile *mfile = *file;
 
-    std::string a3 = getRsrc_name();
+    std::string resName = getRsrc_name();
 
-    if ( a3.empty() )
+    if ( resName.empty() )
     {
         return 0;
     }
 
     TSaveResourceParams sv;
     sv.OpenedStream = 1;
-    sv.filename = a3.c_str();
+    sv.filename = resName.c_str();
     sv.file = NULL;
 
     if ( SaveResource(&sv) != 1 )
@@ -118,7 +118,7 @@ size_t NC_STACK_bmpanim::SavingIntoIFF(IFFile **file)
     mfile->writeS16B(6); //offset of name
     mfile->writeS16B(_animType);
 
-    mfile->write(a3.c_str(), a3.size() + 1);
+    mfile->write(resName.c_str(), resName.size() + 1);
     mfile->popChunk();
     return mfile->popChunk() == IFFile::IFF_ERR_OK;
 }
@@ -309,7 +309,7 @@ ResBmpAnm *NC_STACK_bmpanim::LoadFromFile(const std::string &name, IFFile *iff)
     return pdata;
 }
 
-ResBmpAnm * NC_STACK_bmpanim::ConstructBAnm(const std::string &className, std::vector<std::string> *a2, std::vector< std::vector<tUtV> >*a3, int num, BAnmFrame *frames)
+ResBmpAnm * NC_STACK_bmpanim::ConstructBAnm(const std::string &className, std::vector<std::string> *bitmapNames, std::vector< std::vector<tUtV> >*texCoords, int num, BAnmFrame *frames)
 {
     ResBmpAnm *banm = new ResBmpAnm();
 
@@ -317,7 +317,7 @@ ResBmpAnm * NC_STACK_bmpanim::ConstructBAnm(const std::string &className, std::v
         return NULL;
 
     banm->ClassName = className;
-    banm->BitmapNames = *a2;
+    banm->BitmapNames = *bitmapNames;
     
     banm->Bitmaps.resize( banm->BitmapNames.size() );
 
@@ -334,7 +334,7 @@ ResBmpAnm * NC_STACK_bmpanim::ConstructBAnm(const std::string &className, std::v
         }
     }
     
-    banm->TexCoords = *a3;
+    banm->TexCoords = *texCoords;
 
     banm->FrameData.resize(num);
 
@@ -364,23 +364,23 @@ rsrc * NC_STACK_bmpanim::CreateResource(IDVList &stak)
     if ( res )
     {
 
-        const std::string a1 = stak.Get<std::string>(BANM_ATT_CLASSNAME, "");
-        if ( !a1.empty() )
+        const std::string className = stak.Get<std::string>(BANM_ATT_CLASSNAME, "");
+        if ( !className.empty() )
         {
             std::vector<std::string> *titles = stak.Get<std::vector<std::string> *>(BANM_ATT_FILE_TITLES, NULL);
             std::vector< std::vector<tUtV> > *opls = stak.Get< std::vector< std::vector<tUtV> >* >(BANM_ATT_OUTLINES, NULL);
             int num = stak.Get<int32_t>(BANM_ATT_FRAMECNT, 0);
-            BAnmFrame *v7 = stak.Get<BAnmFrame *>(BANM_ATT_SEQDATA, NULL);
+            BAnmFrame *frames = stak.Get<BAnmFrame *>(BANM_ATT_SEQDATA, NULL);
 
-            if ( titles && opls && num && v7 )
-                res->data = ConstructBAnm(a1, titles, opls, num, v7);
+            if ( titles && opls && num && frames )
+                res->data = ConstructBAnm(className, titles, opls, num, frames);
         }
         else
         {
-            const std::string v9 = stak.Get<std::string>(RSRC_ATT_NAME, "");
+            const std::string resName = stak.Get<std::string>(RSRC_ATT_NAME, "");
             IFFile *iff = stak.Get<IFFile *>(RSRC_ATT_PIFFFILE, NULL);
-            if ( !v9.empty() )
-                res->data = LoadFromFile(v9, iff);
+            if ( !resName.empty() )
+                res->data = LoadFromFile(resName, iff);
         }
 
         if ( !res->data )
@@ -395,11 +395,11 @@ rsrc * NC_STACK_bmpanim::CreateResource(IDVList &stak)
 
 size_t NC_STACK_bmpanim::FreeResource(rsrc *res)
 {
-    ResBmpAnm *v5 = (ResBmpAnm *)res->data;
+    ResBmpAnm *banm = (ResBmpAnm *)res->data;
 
-    if ( v5 )
+    if ( banm )
     {
-        delete v5;
+        delete banm;
         res->data = NULL;
     }
     return NC_STACK_bitmap::FreeResource(res);

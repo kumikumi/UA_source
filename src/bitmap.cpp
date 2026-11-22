@@ -11,10 +11,10 @@ size_t NC_STACK_bitmap::Init(IDVList &stak)
     if ( !NC_STACK_rsrc::Init(stak) )
         return 0;
 
-    std::vector<tUtV> *v9 = stak.Get<std::vector<tUtV> *>(BMD_ATT_OUTLINE, NULL);
+    std::vector<tUtV> *outline = stak.Get<std::vector<tUtV> *>(BMD_ATT_OUTLINE, NULL);
 
-    if ( v9 )
-        outline_coords = *v9;
+    if ( outline )
+        outline_coords = *outline;
 
     bitm_intern = (ResBitmap *)getRsrc_pData();
 

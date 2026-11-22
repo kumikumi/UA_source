@@ -56,11 +56,11 @@ Common::Point        NC_STACK_winp::_joyZRZpos;
 
 void sdlInputResetLog()
 {
-    FSMgr::FileHandle *v0 = uaOpenFileAlloc("env/sdlInputLog.txt", "w");
-    if ( v0 )
+    FSMgr::FileHandle *f = uaOpenFileAlloc("env/sdlInputLog.txt", "w");
+    if ( f )
     {
-        v0->printf("YPA SDL Input log\n---------------------\n");
-        delete v0;
+        f->printf("YPA SDL Input log\n---------------------\n");
+        delete f;
     }
 }
 
@@ -420,7 +420,7 @@ float NC_STACK_winp::GetSlider()
     if ( _bindedKey < 0 )
         return 0.0;
 
-    int v6 = 1;
+    int idle = 1;
 
     switch ( _bindedKey )
     {
@@ -429,7 +429,7 @@ float NC_STACK_winp::GetSlider()
             _sliderPos += _mMove.x * 8;
 
             if ( _mMove.x )
-                v6 = 0;
+                idle = 0;
         }
         break;
 
@@ -438,158 +438,158 @@ float NC_STACK_winp::GetSlider()
             _sliderPos += _mMove.y * 8;
 
             if ( _mMove.y )
-                v6 = 0;
+                idle = 0;
         }
         break;
 
         case Input::KC_JOYX:
         {
-            int v12 = _sliderPos;
+            int pos = _sliderPos;
 
-            if ( v12 > _joyXYpos.x )
+            if ( pos > _joyXYpos.x )
             {
-                v12 -= 37;
+                pos -= 37;
 
-                if ( v12 < _joyXYpos.x )
-                    v12 = _joyXYpos.x;
+                if ( pos < _joyXYpos.x )
+                    pos = _joyXYpos.x;
             }
-            else if ( v12 < _joyXYpos.x )
+            else if ( pos < _joyXYpos.x )
             {
-                v12 += 37;
+                pos += 37;
 
-                if ( v12 > _joyXYpos.x )
-                    v12 = _joyXYpos.x;
+                if ( pos > _joyXYpos.x )
+                    pos = _joyXYpos.x;
             }
-            _sliderPos = v12;
-            v6 = 0;
+            _sliderPos = pos;
+            idle = 0;
         }
         break;
 
         case Input::KC_JOYY:
         {
-            int v12 = _sliderPos;
+            int pos = _sliderPos;
 
-            if ( v12 > _joyXYpos.y )
+            if ( pos > _joyXYpos.y )
             {
-                v12 -= 37;
+                pos -= 37;
 
-                if ( v12 < _joyXYpos.y )
-                    v12 = _joyXYpos.y;
+                if ( pos < _joyXYpos.y )
+                    pos = _joyXYpos.y;
             }
-            else if ( v12 < _joyXYpos.y )
+            else if ( pos < _joyXYpos.y )
             {
-                v12 += 37;
+                pos += 37;
 
-                if ( v12 > _joyXYpos.y )
-                    v12 = _joyXYpos.y;
+                if ( pos > _joyXYpos.y )
+                    pos = _joyXYpos.y;
             }
-            _sliderPos = v12;
-            v6 = 0;
+            _sliderPos = pos;
+            idle = 0;
         }
         break;
 
         case Input::KC_JOYTHROTTLE:
         {
-            int v12 = _sliderPos;
+            int pos = _sliderPos;
 
-            if ( v12 > -_joyZRZpos.x )
+            if ( pos > -_joyZRZpos.x )
             {
-                v12 -= 37;
+                pos -= 37;
 
-                if ( v12 < -_joyZRZpos.x )
-                    v12 = -_joyZRZpos.x;
+                if ( pos < -_joyZRZpos.x )
+                    pos = -_joyZRZpos.x;
             }
-            else if ( v12 < -_joyZRZpos.x )
+            else if ( pos < -_joyZRZpos.x )
             {
-                v12 += 37;
+                pos += 37;
 
-                if ( v12 > -_joyZRZpos.x )
-                    v12 = -_joyZRZpos.x;
+                if ( pos > -_joyZRZpos.x )
+                    pos = -_joyZRZpos.x;
             }
-            _sliderPos = v12;
-            v6 = 0;
+            _sliderPos = pos;
+            idle = 0;
         }
         break;
 
         case Input::KC_JOYHATX:
         {
-            int v12 = _sliderPos;
+            int pos = _sliderPos;
 
-            if ( v12 > _joyPov.x )
+            if ( pos > _joyPov.x )
             {
-                v12 -= 37;
+                pos -= 37;
 
-                if ( v12 < _joyPov.x )
-                    v12 = _joyPov.x;
+                if ( pos < _joyPov.x )
+                    pos = _joyPov.x;
             }
-            else if ( v12 < _joyPov.x )
+            else if ( pos < _joyPov.x )
             {
-                v12 += 37;
+                pos += 37;
 
-                if ( v12 > _joyPov.x )
-                    v12 = _joyPov.x;
+                if ( pos > _joyPov.x )
+                    pos = _joyPov.x;
             }
-            _sliderPos = v12;
-            v6 = 0;
+            _sliderPos = pos;
+            idle = 0;
         }
         break;
 
         case Input::KC_JOYHATY:
         {
-            int v12 = _sliderPos;
+            int pos = _sliderPos;
 
-            if ( v12 > _joyPov.y )
+            if ( pos > _joyPov.y )
             {
-                v12 -= 37;
+                pos -= 37;
 
-                if ( v12 < _joyPov.y )
-                    v12 = _joyPov.y;
+                if ( pos < _joyPov.y )
+                    pos = _joyPov.y;
             }
-            else if ( v12 < _joyPov.y )
+            else if ( pos < _joyPov.y )
             {
-                v12 += 37;
+                pos += 37;
 
-                if ( v12 > _joyPov.y )
-                    v12 = _joyPov.y;
+                if ( pos > _joyPov.y )
+                    pos = _joyPov.y;
             }
-            _sliderPos = v12;
-            v6 = 0;
+            _sliderPos = pos;
+            idle = 0;
         }
         break;
         
         case Input::KC_JOYRUDDER:
         {
-            int v12 = _sliderPos;
+            int pos = _sliderPos;
 
-            if ( v12 > _joyZRZpos.y )
+            if ( pos > _joyZRZpos.y )
             {
-                v12 -= 37;
+                pos -= 37;
 
-                if ( v12 < _joyZRZpos.y )
-                    v12 = _joyZRZpos.y;
+                if ( pos < _joyZRZpos.y )
+                    pos = _joyZRZpos.y;
             }
-            else if ( v12 < _joyZRZpos.y )
+            else if ( pos < _joyZRZpos.y )
             {
-                v12 += 37;
+                pos += 37;
 
-                if ( v12 > _joyZRZpos.y )
-                    v12 = _joyZRZpos.y;
+                if ( pos > _joyZRZpos.y )
+                    pos = _joyZRZpos.y;
             }
-            _sliderPos = v12;
-            v6 = 0;
+            _sliderPos = pos;
+            idle = 0;
         }
         break;
 
         default:
             if (Input::Engine.KeyMatrix.at( _bindedKey ).down )
             {
-                v6 = 0;
+                idle = 0;
                 _sliderPos += 37;
             }
             break;
     }
 
-    if ( v6 )
+    if ( idle )
         _sliderPos = 8 * _sliderPos / 10;
 
     if ( _sliderPos > 300 )

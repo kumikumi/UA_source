@@ -349,7 +349,7 @@ float SFXEngine::audio_rnd()
 void SFXEngine::audio_InsertSoundSource(TSoundSource *smpl)
 {
     int min_i = -1;
-    int v3 = 1000000;
+    int minPriority = 1000000;
 
     if ( digDriver->inited() )
     {
@@ -357,16 +357,16 @@ void SFXEngine::audio_InsertSoundSource(TSoundSource *smpl)
         {
             if ( soundSources[i] )
             {
-                if ( soundSources[i]->Priority < v3 )
+                if ( soundSources[i]->Priority < minPriority )
                 {
                     min_i = i;
-                    v3 = soundSources[i]->Priority;
+                    minPriority = soundSources[i]->Priority;
                 }
             }
             else
             {
                 min_i = i;
-                v3 = 0;
+                minPriority = 0;
                 i = audio_channels;
             }
         }
@@ -374,12 +374,12 @@ void SFXEngine::audio_InsertSoundSource(TSoundSource *smpl)
         if ( min_i == -1 )
             ypa_log_out("-> audio_InsertSoundSource(): <min_i> not initialized.\n");
 
-        if ( min_i != -1 && v3 < smpl->Priority )
+        if ( min_i != -1 && minPriority < smpl->Priority )
             soundSources[min_i] = smpl;
     }
 }
 
-int SFXEngine::FindFragmentAt(TSoundSource *smpl, int a2, int *a3)
+int SFXEngine::FindFragmentAt(TSoundSource *smpl, int elapsed, int *fragTime)
 {
     int i = 0;
 
@@ -388,30 +388,30 @@ int SFXEngine::FindFragmentAt(TSoundSource *smpl, int a2, int *a3)
         if ( !pr.Loop )
             break;
 
-        int v9 = pr.SampleRate + pr.Sample->SampleRate + smpl->Pitch;
+        int rate = pr.SampleRate + pr.Sample->SampleRate + smpl->Pitch;
 
-        if ( v9 <= 0 )
-            v9 = 1;
+        if ( rate <= 0 )
+            rate = 1;
 
-        int v10 = (pr.Loop * pr.rlSmplCnt / 1024) / v9;
+        int fragDuration = (pr.Loop * pr.rlSmplCnt / 1024) / rate;
 
-        if ( a2 < v10 )
+        if ( elapsed < fragDuration )
             break;
 
-        a2 -= v10;
+        elapsed -= fragDuration;
         
         i++;
     }
 
-    if ( a3 )
-        *a3 = a2;
+    if ( fragTime )
+        *fragTime = elapsed;
 
     return i;
 }
 
 void SFXEngine::SoundCarrierProcessSounds(TSndCarrier *smpls, float distance)
 {
-    float v10 = distance / 200.0;
+    float attenuation = distance / 200.0;
 
     for (TSoundSource &snd : smpls->Sounds)
     {
@@ -421,7 +421,7 @@ void SFXEngine::SoundCarrierProcessSounds(TSndCarrier *smpls, float distance)
 
             if ( snd.IsEnabled() )
             {
-                int v6 = currentTime - snd.StartTime;
+                int elapsed = currentTime - snd.StartTime;
 
                 if ( snd.IsFragmented() )
                 {
@@ -433,7 +433,7 @@ void SFXEngine::SoundCarrierProcessSounds(TSndCarrier *smpls, float distance)
 
                 bool ok = true;
 
-                if ( !snd.IsLoop() && !snd.IsPlay() && v6 > 0 )
+                if ( !snd.IsLoop() && !snd.IsPlay() && elapsed > 0 )
                 {
                     if ( snd.IsFragmented() )
                     {
@@ -443,7 +443,7 @@ void SFXEngine::SoundCarrierProcessSounds(TSndCarrier *smpls, float distance)
                             ok = false;
                         }
                     }
-                    else if ( (v6 * (snd.Pitch + snd.PSample->SampleRate) / 1024) > snd.PSample->bufsz )
+                    else if ( (elapsed * (snd.Pitch + snd.PSample->SampleRate) / 1024) > snd.PSample->bufsz )
                     {
                         snd.SetEnabled(false);
                         ok = false;
@@ -457,8 +457,8 @@ void SFXEngine::SoundCarrierProcessSounds(TSndCarrier *smpls, float distance)
                     if ( snd.IsFragmented() )
                         snd.ResultVol += snd.PFragments->at(fragId).Vol;
 
-                    if ( v10 >= 1.0 )
-                        snd.ResultVol /= v10;
+                    if ( attenuation >= 1.0 )
+                        snd.ResultVol /= attenuation;
 
                     if ( snd.ResultVol > 4 )
                     {
@@ -476,7 +476,7 @@ void SFXEngine::SoundCarrierProcessSounds(TSndCarrier *smpls, float distance)
 void SFXEngine::audio_InsertPalFX(TSoundSource *smpl)
 {
     int min_i = -1;
-    int a1 = 1000000;
+    int minMag = 1000000;
 
     for (int i = 0; i < audio_num_palfx; i++)
     {
@@ -484,14 +484,14 @@ void SFXEngine::audio_InsertPalFX(TSoundSource *smpl)
         {
             if ( palFXs[i]->PFxMag )
             {
-                a1 = palFXs[i]->PFxMag;
+                minMag = palFXs[i]->PFxMag;
                 min_i = i;
             }
         }
         else
         {
             min_i = i;
-            a1 = 0;
+            minMag = 0;
             i = audio_num_palfx;
         }
     }
@@ -499,13 +499,13 @@ void SFXEngine::audio_InsertPalFX(TSoundSource *smpl)
     if ( min_i == -1 )
         ypa_log_out("-> audio_InsertPalFX(): <min_i> not initialized.\n");
 
-    if ( min_i != -1 && a1 < smpl->PFxMag )
+    if ( min_i != -1 && minMag < smpl->PFxMag )
         palFXs[min_i] = smpl;
 }
 
 void SFXEngine::SoundCarrierProcessPFx(TSndCarrier *smpls, float distance)
 {
-    float v6 = distance / 300.0;
+    float attenuation = distance / 300.0;
 
     for (TSoundSource &snd : smpls->Sounds)
     {
@@ -524,8 +524,8 @@ void SFXEngine::SoundCarrierProcessPFx(TSndCarrier *smpls, float distance)
                 else
                     snd.PFxMag = (snd.PPFx->mag1 - snd.PPFx->mag0) * ((float)(currentTime - snd.StartTime) / (float)snd.PPFx->time) + snd.PPFx->mag0;
 
-                if ( v6 >= 1.0 )
-                    snd.PFxMag /= v6;
+                if ( attenuation >= 1.0 )
+                    snd.PFxMag /= attenuation;
 
                 audio_InsertPalFX(&snd);
             }
@@ -536,24 +536,24 @@ void SFXEngine::SoundCarrierProcessPFx(TSndCarrier *smpls, float distance)
 void SFXEngine::InsertShakeFX(TSoundSource *smpl)
 {
     int min_i = -1;
-    int var_1C = 1000;
+    int minMag = 1000;
 
     for (int i = 0; i < audio_num_shakefx; i++)
     {
-        TSoundSource *v5 = ShakeFXs[i];
+        TSoundSource *fx = ShakeFXs[i];
 
-        if ( v5 )
+        if ( fx )
         {
-            if ( var_1C > v5->ShkMag )
+            if ( minMag > fx->ShkMag )
             {
-                var_1C = v5->ShkMag;
+                minMag = fx->ShkMag;
                 min_i = i;
             }
         }
         else
         {
             min_i = i;
-            var_1C = 0;
+            minMag = 0;
             i = audio_num_shakefx;
         }
     }
@@ -561,7 +561,7 @@ void SFXEngine::InsertShakeFX(TSoundSource *smpl)
     if ( min_i == -1 )
         ypa_log_out("-> audio_InsertShakeFX(): <min_i> not initialized.\n");
 
-    if ( min_i != -1 && var_1C < smpl->ShkMag )
+    if ( min_i != -1 && minMag < smpl->ShkMag )
         ShakeFXs[min_i] = smpl;
 }
 
@@ -584,10 +584,10 @@ void SFXEngine::SoundCarrierProcessShake(TSndCarrier *smpls, float distance)
                 else
                     snd.ShkMag = (snd.PShkFx->mag1 - snd.PShkFx->mag0) * ((float)(currentTime - snd.StartTime) / (float)snd.PShkFx->time) + snd.PShkFx->mag0;
 
-                float v6 = distance * snd.PShkFx->mute;
+                float attenuation = distance * snd.PShkFx->mute;
 
-                if ( v6 >= 1.0 )
-                    snd.ShkMag /= v6;
+                if ( attenuation >= 1.0 )
+                    snd.ShkMag /= attenuation;
 
                 InsertShakeFX(&snd);
             }
@@ -620,24 +620,24 @@ void SFXEngine::FreeEndedChannels()
     //Free ended channels
     for (int i = 0; i < audio_channels; i++)
     {
-        TSoundSource *v2 = snd_channels[i].sndSouce;
+        TSoundSource *src = snd_channels[i].sndSouce;
 
-        if ( v2 )
+        if ( src )
         {
-            int v3 = 1;
+            int orphaned = 1;
 
             for (int j = 0; j < audio_channels; j++)
             {
-                if ( v2 == soundSources[j] )
+                if ( src == soundSources[j] )
                 {
-                    v3 = 0;
+                    orphaned = 0;
                     break;
                 }
             }
 
-            if ( v3 )
+            if ( orphaned )
             {
-                v2->SetPlay(false);
+                src->SetPlay(false);
 
                 snd_channels[i].sndSouce = NULL;
 
@@ -650,28 +650,28 @@ void SFXEngine::FreeEndedChannels()
 void SFXEngine::AssignFreeChannels()
 {
     //Find free snd_channel
-    int v1 = 0;
+    int chanIdx = 0;
 
     for (int i = 0; i < audio_channels; i++)
     {
-        TSoundSource *v3 = soundSources[i];
+        TSoundSource *src = soundSources[i];
 
-        if ( v3 && !v3->IsPlay() )
+        if ( src && !src->IsPlay() )
         {
-            while ( v1 < audio_channels )
+            while ( chanIdx < audio_channels )
             {
-                if ( !snd_channels[v1].sndSouce )
+                if ( !snd_channels[chanIdx].sndSouce )
                 {
-                    snd_channels[v1].sndSouce = v3;
+                    snd_channels[chanIdx].sndSouce = src;
                     break;
                 }
                 else
                 {
-                    v1++;
+                    chanIdx++;
                 }
             }
 
-            if ( v1 == audio_channels )
+            if ( chanIdx == audio_channels )
                 break;
         }
     }
@@ -679,52 +679,52 @@ void SFXEngine::AssignFreeChannels()
 
 void SFXEngine::CalcPlayParams(TSoundSource *smpl)
 {
-    TSndCarrier *v2 = smpl->PCarrier;
+    TSndCarrier *carrier = smpl->PCarrier;
 
-    vec3d v3 = listenerPos - v2->Position;
-    float v27 = v3.length();
+    vec3d toListener = listenerPos - carrier->Position;
+    float dist = toListener.length();
 
-    vec3d v8 = v2->Vector - listenerVelocity;
-    float v20 = v8.length();
+    vec3d relVel = carrier->Vector - listenerVelocity;
+    float relSpeed = relVel.length();
 
-    float v21 = v27  *  v20;
-    float v19 = 0.0;
+    float distSpeed = dist  *  relSpeed;
+    float cosAngle = 0.0;
 
-    if ( v21 > 0.0 )
-        v19 = v3.dot( v8 ) / v21;
+    if ( distSpeed > 0.0 )
+        cosAngle = toListener.dot( relVel ) / distSpeed;
 
-    int v14;
+    int baseRate;
 
     if ( smpl->IsFragmented() )
-        v14 = smpl->PFragments->at(smpl->CurrentFrag).SampleRate + smpl->PFragments->at(smpl->CurrentFrag).Sample->SampleRate + smpl->Pitch;
+        baseRate = smpl->PFragments->at(smpl->CurrentFrag).SampleRate + smpl->PFragments->at(smpl->CurrentFrag).Sample->SampleRate + smpl->Pitch;
     else
-        v14 = smpl->Pitch + smpl->PSample->SampleRate;
+        baseRate = smpl->Pitch + smpl->PSample->SampleRate;
 
-    if ( v14 < 2000 )
-        v14 = 2000;
-    else if ( v14 > 44100 )
-        v14 = 44100;
+    if ( baseRate < 2000 )
+        baseRate = 2000;
+    else if ( baseRate > 44100 )
+        baseRate = 44100;
 
-    float v31 = listenerRotation.AxisX().dot( v3 );
+    float sideDist = listenerRotation.AxisX().dot( toListener );
 
-    smpl->ResultRate = v14 + v14 * (int)(v19 * v20) / 400;
+    smpl->ResultRate = baseRate + baseRate * (int)(cosAngle * relSpeed) / 400;
 
-    float v32;
+    float pan;
 
-    if ( v27 <= 0.0 )
+    if ( dist <= 0.0 )
     {
-        v32 = 0.0;
+        pan = 0.0;
     }
     else if ( audio_rev_stereo )
     {
-        v32 = v31 / v27;
+        pan = sideDist / dist;
     }
     else
     {
-        v32 = v31 / -v27;
+        pan = sideDist / -dist;
     }
 
-    smpl->ResultPan = (v32 * 64.0 + 64.0);
+    smpl->ResultPan = (pan * 64.0 + 64.0);
 
     if ( smpl->ResultVol < 0 )
         smpl->ResultVol = 0;
@@ -736,14 +736,14 @@ void SFXEngine::CalcPlayParams(TSoundSource *smpl)
     else if ( smpl->ResultPan > 127 )
         smpl->ResultPan = 127;
 
-    if ( v14 / 2 <= smpl->ResultRate )
+    if ( baseRate / 2 <= smpl->ResultRate )
     {
-        if ( smpl->ResultRate > v14 * 2)
-            smpl->ResultRate = v14 * 2;
+        if ( smpl->ResultRate > baseRate * 2)
+            smpl->ResultRate = baseRate * 2;
     }
     else
     {
-        smpl->ResultRate = v14 / 2;
+        smpl->ResultRate = baseRate / 2;
     }
 }
 
@@ -751,14 +751,14 @@ void SFXEngine::sound_eos_clbk(void *_smpl)
 {
     walsmpl *smpl = static_cast<walsmpl *>(_smpl);
 
-    int v2 = 0;
+    int chanIdx = 0;
     TSoundSource *v3 = NULL;
 
     for (int i = 0; i < SFXe.audio_channels; i++)
     {
         if ( smpl == SFXe.snd_channels[i].hSample )
         {
-            v2 = i;
+            chanIdx = i;
             v3 = SFXe.snd_channels[i].sndSouce;
             break;
         }
@@ -787,24 +787,24 @@ void SFXEngine::sound_eos_clbk(void *_smpl)
                         if ( !SFXe.snd_channels[i].sndSouce )
                         {
                             smpl = SFXe.snd_channels[i].hSample;
-                            SFXe.snd_channels[v2].sndSouce = NULL;
+                            SFXe.snd_channels[chanIdx].sndSouce = NULL;
                             SFXe.snd_channels[i].sndSouce = v3;
                         }
                     }
 
-                    TSampleParams *v10 = &v3->PFragments->at( v3->CurrentFrag );
+                    TSampleParams *frag = &v3->PFragments->at( v3->CurrentFrag );
 
                     wrapper_playSound(
                         SFXe.digDriver,
                         smpl,
                         sound_eos_clbk,
-                        (char *)v10->Sample->Data + v10->rlOffset,
-                        v10->rlSmplCnt,
+                        (char *)frag->Sample->Data + frag->rlOffset,
+                        frag->rlSmplCnt,
                         v3->ResultRate,
                         v3->ResultVol,
                         SFXe.audio_volume,
                         v3->ResultPan,
-                        v10->Loop,
+                        frag->Loop,
                         0);
                 }
             }
@@ -819,52 +819,52 @@ void SFXEngine::sound_eos_clbk(void *_smpl)
 
 void SFXEngine::StartChannel(int id, TSoundSource *smpl)
 {
-    walsmpl *v3 = snd_channels[id].hSample;
+    walsmpl *hwSample = snd_channels[id].hSample;
 
     smpl->SetPlay(true);
 
     if ( smpl->IsFragmented() )
     {
-        int v4 = currentTime - smpl->StartTime;
-        int v8;
+        int elapsed = currentTime - smpl->StartTime;
+        int startOffset;
 
-        if ( v4 <= 0 )
+        if ( elapsed <= 0 )
         {
             smpl->CurrentFrag = 0;
-            v8 = 0;
+            startOffset = 0;
         }
         else
         {
-            int a3;
-            size_t v7 = FindFragmentAt(smpl, v4, &a3);
+            int fragTime;
+            size_t fragIdx = FindFragmentAt(smpl, elapsed, &fragTime);
 
-            if ( v7 == smpl->PFragments->size() )
-                v7 = smpl->PFragments->size() - 1;
+            if ( fragIdx == smpl->PFragments->size() )
+                fragIdx = smpl->PFragments->size() - 1;
 
-            v8 = ((smpl->ResultRate * a3) / 1024) % smpl->PFragments->at(v7).rlSmplCnt;
-            smpl->CurrentFrag = v7;
+            startOffset = ((smpl->ResultRate * fragTime) / 1024) % smpl->PFragments->at(fragIdx).rlSmplCnt;
+            smpl->CurrentFrag = fragIdx;
         }
 
-        TSampleParams *v9 = &smpl->PFragments->at(smpl->CurrentFrag);
+        TSampleParams *frag = &smpl->PFragments->at(smpl->CurrentFrag);
 
         wrapper_playSound(
             digDriver,
-            v3,
+            hwSample,
             sound_eos_clbk,
-            (char *)v9->Sample->Data + v9->rlOffset,
-            v9->rlSmplCnt,
+            (char *)frag->Sample->Data + frag->rlOffset,
+            frag->rlSmplCnt,
             smpl->ResultRate,
             smpl->ResultVol,
             audio_volume,
             smpl->ResultPan,
-            v9->Loop,
-            v8);
+            frag->Loop,
+            startOffset);
     }
     else
     {
         wrapper_playSound(
             digDriver,
-            v3,
+            hwSample,
             sound_eos_clbk,
             smpl->PSample->Data,
             smpl->PSample->bufsz,
@@ -881,19 +881,19 @@ void SFXEngine::UpdateChannels()
 {
     for (int i = 0; i < audio_channels; i++)
     {
-        TSoundSource *v2 = snd_channels[i].sndSouce;
-        walsmpl *v3 = snd_channels[i].hSample;
+        TSoundSource *src = snd_channels[i].sndSouce;
+        walsmpl *hwSample = snd_channels[i].hSample;
 
-        if ( v2 )
+        if ( src )
         {
-            if ( v2->PSample || v2->IsFragmented() )
+            if ( src->PSample || src->IsFragmented() )
             {
                 CalcPlayParams(snd_channels[i].sndSouce);
 
-                if ( v2->IsPlay() )
-                    wrapper_setSampleVRP(digDriver, v3, v2->ResultRate, v2->ResultVol, v2->ResultPan);
+                if ( src->IsPlay() )
+                    wrapper_setSampleVRP(digDriver, hwSample, src->ResultRate, src->ResultVol, src->ResultPan);
                 else
-                    StartChannel(i, v2);
+                    StartChannel(i, src);
             }
             else
             {
@@ -911,16 +911,16 @@ void SFXEngine::UpdatePaletteEffects()
     int i = 0;
     for (i = 0; i < audio_num_palfx; i++)
     {
-        TSoundSource *v3 = palFXs[i];
+        TSoundSource *src = palFXs[i];
 
-        if ( !v3 )
+        if ( !src )
             break;
         
-        float magpwr = v3->PFxMag * GFX::Engine.GetColorEffectPower(v3->PPFx->slot);
+        float magpwr = src->PFxMag * GFX::Engine.GetColorEffectPower(src->PPFx->slot);
 
         pwr -= magpwr;
         
-        fxes.emplace_back(v3->PPFx->slot, magpwr);
+        fxes.emplace_back(src->PPFx->slot, magpwr);
     }
 
     if ( i )
@@ -949,11 +949,11 @@ void SFXEngine::UpdateShake()
 
     for (i = 0; i < audio_num_shakefx && ShakeFXs[i]; i++)
     {
-        TSoundSource *v2 = ShakeFXs[i];
+        TSoundSource *src = ShakeFXs[i];
 
-        tmp.x += audio_rnd() * v2->ShkMag * v2->PShkFx->pos.x;
-        tmp.y += audio_rnd() * v2->ShkMag * v2->PShkFx->pos.y;
-        tmp.z += audio_rnd() * v2->ShkMag * v2->PShkFx->pos.z;
+        tmp.x += audio_rnd() * src->ShkMag * src->PShkFx->pos.x;
+        tmp.y += audio_rnd() * src->ShkMag * src->PShkFx->pos.y;
+        tmp.z += audio_rnd() * src->ShkMag * src->PShkFx->pos.z;
     }
 
     if ( i > 0 )
@@ -1010,13 +1010,13 @@ const mat3x3 &SFXEngine::EndSoundFrame()
     return shakeMatrix;
 }
 
-void SFXEngine::BeginSoundFrame(int a1, const vec3d &a2, const vec3d &a3, const mat3x3 &a4)
+void SFXEngine::BeginSoundFrame(int dtime, const vec3d &pos, const vec3d &velocity, const mat3x3 &rotation)
 {
-    currentTime += a1;
+    currentTime += dtime;
 
-    listenerPos = a2;
-    listenerVelocity = a3;
-    listenerRotation = a4;
+    listenerPos = pos;
+    listenerVelocity = velocity;
+    listenerRotation = rotation;
 
     soundSources.fill(NULL);
     palFXs.fill(NULL);

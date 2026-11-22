@@ -274,14 +274,14 @@ public:
     void UpdateSoundCarrier(TSndCarrier *smpls);
     const mat3x3 &EndSoundFrame(); //Update sounds and return shake matrix
 
-    void BeginSoundFrame(int a1, const vec3d &a2, const vec3d &a3, const mat3x3 &a4);
+    void BeginSoundFrame(int dtime, const vec3d &pos, const vec3d &velocity, const mat3x3 &rotation);
     TSoundSource *SndGetTopShake();
 
 protected:
 
     float audio_rnd();
     void audio_InsertSoundSource(TSoundSource *smpl);
-    int FindFragmentAt(TSoundSource *smpl, int a2, int *a3);
+    int FindFragmentAt(TSoundSource *smpl, int elapsed, int *fragTime);
     void SoundCarrierProcessSounds(TSndCarrier *smpls, float a2);
     void audio_InsertPalFX(TSoundSource *smpl);
     void SoundCarrierProcessPFx(TSndCarrier *smpls, float a2);

@@ -89,10 +89,10 @@ size_t NC_STACK_nucleus::LoadingFromIFF(IFFile **file)
 
     while ( 1 )
     {
-        signed int v6 = mfile->parse();
-        if ( v6 == IFFile::IFF_ERR_EOC )
+        signed int iffRes = mfile->parse();
+        if ( iffRes == IFFile::IFF_ERR_EOC )
             break;
-        if ( v6 )
+        if ( iffRes )
         {
             Deinit();
             return 0;
@@ -159,12 +159,12 @@ NC_STACK_nucleus *NC_STACK_nucleus::LoadObjectFromIFF(IFFile *mfile)
     NC_STACK_nucleus *obj = NULL;
     while ( 1 )
     {
-        int v4 = mfile->parse();
+        int iffRes = mfile->parse();
 
-        if ( v4 == IFFile::IFF_ERR_EOC )
+        if ( iffRes == IFFile::IFF_ERR_EOC )
             break;
 
-        if ( v4 )
+        if ( iffRes )
             return NULL;
 
         const IFFile::Context &chunk = mfile->GetCurrentChunk();
@@ -187,11 +187,11 @@ NC_STACK_nucleus *NC_STACK_nucleus::LoadObjectFromIFF(IFFile *mfile)
         }
         else if ( chunk.Is(TAG_FORM) )
         {
-            IFFile *v11 = mfile;
+            IFFile *formFile = mfile;
 
             obj = clss->_newinstance();
 
-            if ( !obj->LoadingFromIFF(&v11) )
+            if ( !obj->LoadingFromIFF(&formFile) )
             {
                 delete obj;
                 return NULL;

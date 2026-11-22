@@ -143,10 +143,10 @@ public:
 
     void InputHandle(NC_STACK_ypaworld *yw, TInputState *struc);
 
-    void PosOnSelected(int a2);
+    void PosOnSelected(int entryIdx);
 
-    void ItemsPreLayout(NC_STACK_ypaworld *yw, CmdStream *cmdbuf, int tileset, const char *a5);
-    void ItemsPostLayout(NC_STACK_ypaworld *yw, CmdStream *cmdbuf, int tileset, const char *a5);
+    void ItemsPreLayout(NC_STACK_ypaworld *yw, CmdStream *cmdbuf, int tileset, const char *borderChars);
+    void ItemsPostLayout(NC_STACK_ypaworld *yw, CmdStream *cmdbuf, int tileset, const char *borderChars);
 };
 
 

@@ -250,10 +250,10 @@ void GFXEngine::DrawTextEntry(const ScreenText *txt)
                 SDL_SetClipRect(Screen(), &clipRect);
 
 
-                int v10 = ((p4 - _font.height) / 2) - 2 + p2;
+                int textY = ((p4 - _font.height) / 2) - 2 + p2;
                 if ( txt->flag & 0x10 )
                 {
-                    v10++;
+                    textY++;
                     p1++;
                 }
 
@@ -282,7 +282,7 @@ void GFXEngine::DrawTextEntry(const ScreenText *txt)
                     want.w = tmp->w;
                     want.h = tmp->h;
                     want.x = p1 + 2;
-                    want.y = v10 + 1;
+                    want.y = textY + 1;
 
                     SDL_BlitSurface(tmp, NULL, Screen(), &want);
 
@@ -305,7 +305,7 @@ void GFXEngine::DrawTextEntry(const ScreenText *txt)
                     want.w = tmp->w;
                     want.h = tmp->h;
                     want.x = p1 + 1;
-                    want.y = v10;
+                    want.y = textY;
 
                     SDL_BlitSurface(tmp, NULL, Screen(), &want);
                     SDL_FreeSurface(tmp);
@@ -320,15 +320,15 @@ void GFXEngine::DrawTextEntry(const ScreenText *txt)
 
 void GFXEngine::AddScreenText(const std::string &string, int p1, int p2, int p3, int p4, int flag)
 {
-    ScreenText *v8 = new ScreenText;
-    v8->string = string;
-    v8->p1 = p1;
-    v8->p2 = p2;
-    v8->p3 = p3;
-    v8->p4 = p4;
-    v8->flag = flag;
+    ScreenText *entry = new ScreenText;
+    entry->string = string;
+    entry->p1 = p1;
+    entry->p2 = p2;
+    entry->p3 = p3;
+    entry->p4 = p4;
+    entry->flag = flag;
 
-    _font.entries.push_back(v8);
+    _font.entries.push_back(entry);
 }
 
 void GFXEngine::DrawScreenText()
@@ -1435,7 +1435,7 @@ void GFXEngine::ProcessDrawSeq(const CmdStream &drawSeq, const CmdIncludes *incl
         const int32_t pos;
     };
     
-    int v11;
+    int normalCopy;
 
     int bytesPerColor = Screen()->format->BytesPerPixel;
 
@@ -1463,7 +1463,7 @@ void GFXEngine::ProcessDrawSeq(const CmdStream &drawSeq, const CmdIncludes *incl
 
     //if v11 = 0 - clone first column of tile  (count = line_width)
     //if v11 = 1 - normal copy of tile
-    v11 = 1;
+    normalCopy = 1;
 
 
     int x_off = 0;
@@ -1473,11 +1473,11 @@ void GFXEngine::ProcessDrawSeq(const CmdStream &drawSeq, const CmdIncludes *incl
 
     while ( 1 )
     {
-        int v13 = FontUA::get_u8(*curStream, &curPos);
+        int glyph = FontUA::get_u8(*curStream, &curPos);
 
-        if ( v13 )
+        if ( glyph )
         {
-            Common::PointRect &chrr = tile->map[v13];
+            Common::PointRect &chrr = tile->map[glyph];
 
             int cpy_width;
 
@@ -1500,7 +1500,7 @@ void GFXEngine::ProcessDrawSeq(const CmdStream &drawSeq, const CmdIncludes *incl
             srcR.top = chrr.y + y_off;
             srcR.bottom = chrr.y + y_off + cpy_height;
             
-            if (v11)
+            if (normalCopy)
                 srcR.right = chrr.x + x_off + cpy_width;
             else
                 srcR.right = chrr.x + x_off + 1;
@@ -1523,7 +1523,7 @@ void GFXEngine::ProcessDrawSeq(const CmdStream &drawSeq, const CmdIncludes *incl
             line_width = 0;
             x_off = 0;
             x_out += cpy_width;
-            v11 = 1;
+            normalCopy = 1;
         }
         else // 0
         {
@@ -1622,7 +1622,7 @@ void GFXEngine::ProcessDrawSeq(const CmdStream &drawSeq, const CmdIncludes *incl
             case 10:
                 line_width = FontUA::get_u8(*curStream, &curPos);
 
-                v11 = 0;
+                normalCopy = 0;
                 x_off = 0;
 
                 break;
@@ -1631,7 +1631,7 @@ void GFXEngine::ProcessDrawSeq(const CmdStream &drawSeq, const CmdIncludes *incl
 
                 line_width = FontUA::get_u8(*curStream, &curPos);
 
-                v11 = 0;
+                normalCopy = 0;
                 x_off = 0;
 
                 line_width -= (x_out - x_pos_line);
@@ -1661,7 +1661,7 @@ void GFXEngine::ProcessDrawSeq(const CmdStream &drawSeq, const CmdIncludes *incl
 
             case 17:
                 line_width = FontUA::get_s16(*curStream, &curPos);
-                v11 = 0;
+                normalCopy = 0;
                 x_off = 0;
                 line_width -= (x_out - x_pos_line);
                 break;

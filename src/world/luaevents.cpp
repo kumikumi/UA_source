@@ -214,12 +214,12 @@ int LuaEvents::Lua_WrldShowMessageID(lua_State *l)
     NC_STACK_ypaworld *wrld = (NC_STACK_ypaworld *)lua_touserdata(l, 1);
     int32_t msgId = lua_tointeger(l, 2);
     
-    TInfoMessage arg159;
-    arg159.Priority = 100;
-    arg159.unit = NULL;
-    arg159.MsgID = msgId;
+    TInfoMessage infoMsg;
+    infoMsg.Priority = 100;
+    infoMsg.unit = NULL;
+    infoMsg.MsgID = msgId;
     
-    wrld->ShowMessage(&arg159);
+    wrld->ShowMessage(&infoMsg);
     return 0;
 }
 

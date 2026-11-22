@@ -235,10 +235,10 @@ int ProcessGameplayFrame(int32_t frameTicks, bool timeFrozen)
             tmpSettingsSaved = 0;
         }
 
-        int v0 = 1;
+        int keepRunning = 1;
 
         if ( userdata.remoteMode )
-            v0 = 0;
+            keepRunning = 0;
 
         if ( userdata.EnvMode == ENVMODE_NETPLAY )
         {
@@ -261,7 +261,7 @@ int ProcessGameplayFrame(int32_t frameTicks, bool timeFrozen)
             GameScreenMode = GAME_SCREEN_MODE_MENU;
             Input::Engine.QueryInput(&input_states);
 
-            if (!v0)
+            if (!keepRunning)
                 return 0;
         }
         else
@@ -311,29 +311,29 @@ int ProcessGameplayFrame(int32_t frameTicks, bool timeFrozen)
     return 1;
 }
 
-std::string PickReplayFile(uint32_t a1)
+std::string PickReplayFile(uint32_t seed)
 {
     if ( userdata.snaps.empty() )
         return std::string();
 
-    int v2 = a1 % userdata.snaps.size();
+    int replayIndex = seed % userdata.snaps.size();
 
     // TODO(bug): lastReplayIndex starts at 0, so with several replays the first
     // pick can never be replay 0.
-    if ( lastReplayIndex == v2 )
+    if ( lastReplayIndex == replayIndex )
     {
-        if ( v2 )
+        if ( replayIndex )
         {
-            v2 = v2 - 1;
+            replayIndex = replayIndex - 1;
         }
         else if ( (userdata.snaps.size() - 1) > 0 )
         {
-            v2 = 1;
+            replayIndex = 1;
         }
     }
 
-    lastReplayIndex = v2;
-    return userdata.snaps[v2];
+    lastReplayIndex = replayIndex;
+    return userdata.snaps[replayIndex];
 }
 
 int RunReplay(TUpdateArgs *arg)
@@ -359,49 +359,49 @@ int RunReplay(TUpdateArgs *arg)
 
     ypaworld->PlayReplayFrame(arg);
 
-    TReplayControl arg165;
-    arg165.command = 0;
-    arg165.frame = 0;
+    TReplayControl replayControl;
+    replayControl.command = 0;
+    replayControl.frame = 0;
 
     int cont_play = 1;
 
     if ( arg->Input->KbdLastHit == Input::KC_N )
     {
-        arg165.command = 4;
+        replayControl.command = 4;
     }
     else if ( arg->Input->KbdLastHit == Input::KC_P )
     {
-        arg165.command = 2;
+        replayControl.command = 2;
     }
     else if ( arg->Input->KbdLastHit == Input::KC_R )
     {
-        arg165.command = 3;
+        replayControl.command = 3;
     }
     else if ( arg->Input->KbdLastHit == Input::KC_S )
     {
-        arg165.command = 1;
+        replayControl.command = 1;
     }
     else if ( arg->Input->KbdLastHit == Input::KC_V )
     {
-        arg165.frame = -10;
-        arg165.command = 7;
+        replayControl.frame = -10;
+        replayControl.command = 7;
     }
     else if ( arg->Input->KbdLastHit == Input::KC_B )
     {
-        arg165.command = 5;
+        replayControl.command = 5;
     }
     else if ( arg->Input->KbdLastHit == Input::KC_M )
     {
-        arg165.frame = 10;
-        arg165.command = 7;
+        replayControl.frame = 10;
+        replayControl.command = 7;
     }
     else if ( arg->Input->KbdLastHit == Input::KC_SPACE || arg->Input->KbdLastHit == Input::KC_ESCAPE )
     {
         cont_play = 0;
     }
 
-    if ( arg165.command )
-        ypaworld->ControlReplay(&arg165);
+    if ( replayControl.command )
+        ypaworld->ControlReplay(&replayControl);
 
     return cont_play;
 }
@@ -466,11 +466,11 @@ int ProcessMenuFrame()
         if ( !userdata.SaveBuildProtoState() )
             return 0;
 
-        TLevelLoadRequest v22;
-        v22.lvlID = userdata.envAction.params[0];
-        v22.mode = 0;
+        TLevelLoadRequest loadRequest;
+        loadRequest.lvlID = userdata.envAction.params[0];
+        loadRequest.mode = 0;
 
-        if ( !ypaworld->AdvancedCreateLevel(&v22) )
+        if ( !ypaworld->AdvancedCreateLevel(&loadRequest) )
         {
             ypa_log_out("Sorry, unable to init this level!\n");
 
@@ -484,7 +484,7 @@ int ProcessMenuFrame()
     {
         GameScreenMode = GAME_SCREEN_MODE_UNKNOWN;
 
-        const TLevelInfo &a4 = ypaworld->GetLevelInfo();
+        const TLevelInfo &levelInfo = ypaworld->GetLevelInfo();
 
         userdata.SaveSettings();
         ypaworld->CloseGameShell();
@@ -494,7 +494,7 @@ int ProcessMenuFrame()
 
         if ( !ypaworld->LoadGame( fmt::sprintf("save:%s/%d.sgm", userdata.UserName, 0) ) )
         {
-            ypa_log_out("Error while loading level (level %d, User %s\n", a4.LevelID, userdata.UserName.c_str());
+            ypa_log_out("Error while loading level (level %d, User %s\n", levelInfo.LevelID, userdata.UserName.c_str());
 
             ypaworld->DeinitGameShell();
             return 0;
@@ -513,13 +513,13 @@ int ProcessMenuFrame()
 
         ypaworld->CloseGameShell();
 
-        TLevelLoadRequest v22;
-        v22.lvlID = userdata.envAction.params[0];
-        v22.mode = 0;
+        TLevelLoadRequest loadRequest;
+        loadRequest.lvlID = userdata.envAction.params[0];
+        loadRequest.mode = 0;
 
         GameScreenMode = GAME_SCREEN_MODE_UNKNOWN;
 
-        if ( !ypaworld->CreateNetLevel(&v22) )
+        if ( !ypaworld->CreateNetLevel(&loadRequest) )
         {
             ypa_log_out("Sorry, unable to init this level for network!\n");
             ypaworld->DeinitGameShell();
@@ -797,16 +797,16 @@ int yw_initGameWithSettings()
 
     userdata.diskListActiveElement = -1;
 
-    int v8 = 1;
+    int profileIndex = 1;
     for ( ProfileList::iterator it = userdata.profiles.begin(); it != userdata.profiles.end(); it++ )
     {
         if ( !StriCmp(it->name, userdata.UserName) )
         {
-            userdata.diskListActiveElement = v8;
+            userdata.diskListActiveElement = profileIndex;
             break;
         }
 
-        v8++;
+        profileIndex++;
     }
 
     return ypaworld->LoadSettings(settingsFileName,

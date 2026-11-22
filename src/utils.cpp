@@ -156,12 +156,12 @@ FSMgr::FileHandle *uaOpenFileAlloc(const std::string &src_path, const std::strin
 {
     std::string path = correctSeparatorAndExt( Common::Env.ApplyPrefix(src_path) );
 
-    FSMgr::FileHandle *v4 = FSMgr::iDir::openFileAlloc(path, mode);
+    FSMgr::FileHandle *file = FSMgr::iDir::openFileAlloc(path, mode);
 
-    if ( !v4 )
+    if ( !file )
         ypa_log_out("uaOpenFile('%s','%s') failed!\n", path.c_str(), mode.c_str());
 
-    return v4;
+    return file;
 }
 
 FSMgr::FileHandle uaOpenFile(const std::string &src_path, const std::string &mode)

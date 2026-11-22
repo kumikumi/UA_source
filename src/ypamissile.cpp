@@ -186,37 +186,37 @@ bool NC_STACK_ypamissile::TubeCollisionTest()
     int collisionCount = 0;
     float collisionSumRadius = 0.0;
 
-    bool a5 = _mislEmitter->getBACT_inputting();
+    bool canHitOwn = _mislEmitter->getBACT_inputting();
 
-    if ( !a5 )
-        a5 = getBACT_viewer();
+    if ( !canHitOwn )
+        canHitOwn = getBACT_viewer();
 
-    TSectorInfo arg130;
-    arg130.pos_x = _old_pos.x;
-    arg130.pos_z = _old_pos.z;
-    _world->GetSectorInfo(&arg130);
+    TSectorInfo sectInfo;
+    sectInfo.pos_x = _old_pos.x;
+    sectInfo.pos_z = _old_pos.z;
+    _world->GetSectorInfo(&sectInfo);
 
     cellArea *pCells[3];
 
-    pCells[0] = arg130.pcell;
+    pCells[0] = sectInfo.pcell;
 
-    arg130.pos_x = _position.x;
-    arg130.pos_z = _position.z;
-    _world->GetSectorInfo(&arg130);
+    sectInfo.pos_x = _position.x;
+    sectInfo.pos_z = _position.z;
+    _world->GetSectorInfo(&sectInfo);
 
-    pCells[2] = arg130.pcell;
+    pCells[2] = sectInfo.pcell;
 
-    if ( arg130.pcell == pCells[0] )
+    if ( sectInfo.pcell == pCells[0] )
     {
         pCells[1] = pCells[0];
     }
     else
     {
-        arg130.pos_x = (_position.x - _old_pos.x) * 0.5 + _old_pos.x;
-        arg130.pos_z = (_position.z - _old_pos.z) * 0.5 + _old_pos.z;
-        _world->GetSectorInfo(&arg130);
+        sectInfo.pos_x = (_position.x - _old_pos.x) * 0.5 + _old_pos.x;
+        sectInfo.pos_z = (_position.z - _old_pos.z) * 0.5 + _old_pos.z;
+        _world->GetSectorInfo(&sectInfo);
 
-        pCells[1] = arg130.pcell;
+        pCells[1] = sectInfo.pcell;
     }
 
     for (int i = 0; i < 3; i++)
@@ -239,7 +239,7 @@ bool NC_STACK_ypamissile::TubeCollisionTest()
                         continue;
                 }
 
-                if ( !a5 && bct->_owner == _mislEmitter->_owner )
+                if ( !canHitOwn && bct->_owner == _mislEmitter->_owner )
                 {
                     continue;
                 }
@@ -269,25 +269,25 @@ bool NC_STACK_ypamissile::TubeCollisionTest()
                 if ( _mislType == MISL_BOMB && bct->_position.y < _mislStartHeight )
                     continue;
 
-                World::TRoboCollSet *v82 = bct->getBACT_collNodes();
+                World::TRoboCollSet *collNodes = bct->getBACT_collNodes();
 
-                int v7;
-                if ( v82 )
-                    v7 = v82->roboColls.size();
+                int collCount;
+                if ( collNodes )
+                    collCount = collNodes->roboColls.size();
                 else
-                    v7 = 1;
+                    collCount = 1;
 
-                for (int j = v7 - 1; j >= 0; j--)
+                for (int j = collCount - 1; j >= 0; j--)
                 {
                     float radius;
                     vec3d ttmp;
 
-                    if ( v82 )
+                    if ( collNodes )
                     {
-                        World::TRoboColl *v8 = &v82->roboColls[j];
-                        radius = v8->robo_coll_radius;
+                        World::TRoboColl *coll = &collNodes->roboColls[j];
+                        radius = coll->robo_coll_radius;
 
-                        ttmp = bct->_position + bct->_rotation.Transpose().Transform(v8->coll_pos);
+                        ttmp = bct->_position + bct->_rotation.Transpose().Transform(coll->coll_pos);
                     }
                     else
                     {
@@ -295,7 +295,7 @@ bool NC_STACK_ypamissile::TubeCollisionTest()
                         radius = bct->_radius;
                     }
 
-                    if ( !v82 || radius >= 0.01 )
+                    if ( !collNodes || radius >= 0.01 )
                     {
                         vec3d to_enemy = ttmp - _old_pos;
                         vec3d dist_vect = _position - _old_pos;
@@ -345,7 +345,7 @@ bool NC_STACK_ypamissile::TubeCollisionTest()
                                     Will hit only when distance ~ wpn_radius */
                                 if ( sqrt( POW2(dist_vect_len) + POW2(vp_len) ) > fabs(to_enemy_len - wpn_radius) )
                                 {
-                                    NC_STACK_ypabact *a1 = _world->getYW_userHostStation();
+                                    NC_STACK_ypabact *userStation = _world->getYW_userHostStation();
 
                                     collisionSumRadius += radius;
                                     collisionCount++;
@@ -355,58 +355,58 @@ bool NC_STACK_ypamissile::TubeCollisionTest()
 
                                     
 
-                                    int v83 = bct->getBACT_inputting();
+                                    int targetIsUser = bct->getBACT_inputting();
 
-                                    int v92 = 0;
+                                    int damage = 0;
 
                                     switch ( bct->_bact_type )
                                     {
                                     case BACT_TYPES_BACT:
-                                        v92 = _energy * _mislEnergyHeli;
+                                        damage = _energy * _mislEnergyHeli;
                                         break;
 
                                     case BACT_TYPES_TANK:
                                     case BACT_TYPES_CAR:
-                                        v92 = _energy * _mislEnergyTank;
+                                        damage = _energy * _mislEnergyTank;
                                         break;
 
                                     case BACT_TYPES_FLYER:
                                     case BACT_TYPES_UFO:
-                                        v92 = _energy * _mislEnergyFlyer;
+                                        damage = _energy * _mislEnergyFlyer;
                                         break;
 
                                     case BACT_TYPES_ROBO:
-                                        v92 = _energy * _mislEnergyRobo;
+                                        damage = _energy * _mislEnergyRobo;
                                         break;
 
                                     default:
-                                        v92 = _energy;
+                                        damage = _energy;
                                         break;
                                     }
 
-                                    float v46;
-                                    float v47;
+                                    float rawDamage;
+                                    float damageDiv;
 
-                                    if ( v83 || bct->getBACT_viewer() )
+                                    if ( targetIsUser || bct->getBACT_viewer() )
                                     {
-                                        v46 = v92 * (100 - bct->_shield);
-                                        v47 = 250;
+                                        rawDamage = damage * (100 - bct->_shield);
+                                        damageDiv = 250;
                                     }
                                     else
                                     {
-                                        v46 = v92 * (100 - bct->_shield);
-                                        v47 = 100.0;
+                                        rawDamage = damage * (100 - bct->_shield);
+                                        damageDiv = 100.0;
                                     }
 
-                                    v92 = ceil(v46 / v47); //Missile damage (ceil for less damage)
-                                    if ( v92 )
+                                    damage = ceil(rawDamage / damageDiv); //Missile damage (ceil for less damage)
+                                    if ( damage )
                                     {
-                                        TEnergyChange arg84;
-                                        arg84.energy = -v92;
-                                        arg84.unit = _mislEmitter;
+                                        TEnergyChange energyMsg;
+                                        energyMsg.energy = -damage;
+                                        energyMsg.unit = _mislEmitter;
 
-                                        if ( a1->_owner == _owner || !_world->_isNetGame )
-                                            bct->ModifyEnergy(&arg84);
+                                        if ( userStation->_owner == _owner || !_world->_isNetGame )
+                                            bct->ModifyEnergy(&energyMsg);
                                     }
 
                                     break;
@@ -455,19 +455,19 @@ void NC_STACK_ypamissile::AI_layer3(update_msg *arg)
 {
     _world->IsNearViewer(this);
 
-    float v40 = _target_vec.length();
+    float targetDist = _target_vec.length();
 
-    if ( v40 > 0.1 )
+    if ( targetDist > 0.1 )
     {
         if ( _primTtype != BACT_TGT_TYPE_DRCT )
-            _target_dir = _target_vec / v40;
+            _target_dir = _target_vec / targetDist;
     }
 
     _AI_time1 = 0;
 
     _thraction = _force;
 
-    float v38 = arg->frameTime * 0.001;
+    float fTime = arg->frameTime * 0.001;
 
     if ( _status == BACT_STATUS_NORMAL )
     {
@@ -480,60 +480,60 @@ void NC_STACK_ypamissile::AI_layer3(update_msg *arg)
 
             _status = BACT_STATUS_DEAD;
 
-            setState_msg arg78;
-            arg78.setFlags = BACT_STFLAG_DEATH2;
-            arg78.unsetFlags = 0;
-            arg78.newStatus = BACT_STATUS_NOPE;
+            setState_msg stateMsg;
+            stateMsg.setFlags = BACT_STFLAG_DEATH2;
+            stateMsg.unsetFlags = 0;
+            stateMsg.newStatus = BACT_STATUS_NOPE;
 
-            SetState(&arg78);
+            SetState(&stateMsg);
 
             if ( !(_mislFlags & FLAG_MISL_IGNOREBUILDS) || _pSector->PurposeType == cellArea::PT_NONE )
             {
                 if ( _world->_userRobo->_owner == _owner || !_world->_isNetGame )
                 {
-                    TSectorDamage v25;
+                    TSectorDamage sectorDamage;
 
-                    v25.pos.x = _fly_dir.x * 5.0 + _position.x;
-                    v25.pos.z = _fly_dir.z * 5.0 + _position.z;
-                    v25.energy = _energy;
-                    v25.unit = _mislEmitter;
+                    sectorDamage.pos.x = _fly_dir.x * 5.0 + _position.x;
+                    sectorDamage.pos.z = _fly_dir.z * 5.0 + _position.z;
+                    sectorDamage.energy = _energy;
+                    sectorDamage.unit = _mislEmitter;
 
-                    ChangeSectorEnergy(&v25);
+                    ChangeSectorEnergy(&sectorDamage);
                 }
             }
         }
         else
         {
-            move_msg arg74;
+            move_msg moveMsg;
 
             switch ( _mislType )
             {
             case MISL_BOMB:
-                arg74.period = v38;
-                arg74.flag = 1;
-                Move(&arg74);
+                moveMsg.period = fTime;
+                moveMsg.flag = 1;
+                Move(&moveMsg);
                 break;
 
             case MISL_DIRECT:
-                arg74.period = v38;
-                arg74.flag = 0;
-                arg74.thrustDir = CalcForceVector();
-                Move(&arg74);
+                moveMsg.period = fTime;
+                moveMsg.flag = 0;
+                moveMsg.thrustDir = CalcForceVector();
+                Move(&moveMsg);
                 break;
 
             case MISL_TARGETED:
-                arg74.period = v38;
-                arg74.flag = 0;
-                arg74.thrustDir = CalcForceVector();
-                Move(&arg74);
+                moveMsg.period = fTime;
+                moveMsg.flag = 0;
+                moveMsg.thrustDir = CalcForceVector();
+                Move(&moveMsg);
                 break;
 
             case MISL_GRENADE:
-                arg74.period = v38;
-                arg74.thrustDir = _fly_dir;
-                arg74.flag = 0;
+                moveMsg.period = fTime;
+                moveMsg.thrustDir = _fly_dir;
+                moveMsg.flag = 0;
 
-                Move(&arg74);
+                Move(&moveMsg);
                 break;
 
             default:
@@ -542,14 +542,14 @@ void NC_STACK_ypamissile::AI_layer3(update_msg *arg)
 
             if ( TubeCollisionTest() )
             {
-                setState_msg arg78;
+                setState_msg stateMsg;
                 Impact();
 
-                arg78.newStatus = BACT_STATUS_DEAD;
-                arg78.unsetFlags = 0;
-                arg78.setFlags = 0;
+                stateMsg.newStatus = BACT_STATUS_DEAD;
+                stateMsg.unsetFlags = 0;
+                stateMsg.setFlags = 0;
 
-                SetState(&arg78);
+                SetState(&stateMsg);
 
                 ResetViewing();
                 return;
@@ -558,18 +558,18 @@ void NC_STACK_ypamissile::AI_layer3(update_msg *arg)
             if ( _mislType == MISL_INTERNAL )
                 return;
             
-            TRayIntersection arg136;
-            arg136.stPos = _old_pos;
-            arg136.vect = _position - _old_pos;
-            arg136.flags = 0;
+            TRayIntersection ray;
+            ray.stPos = _old_pos;
+            ray.vect = _position - _old_pos;
+            ray.flags = 0;
 
-            _world->IntersectRay(&arg136);
+            _world->IntersectRay(&ray);
 
-            if ( arg136.isect )
+            if ( ray.isect )
             {
-                AlignMissileByNormal( arg136.skel->polygons[ arg136.polyID ].Normal() );
+                AlignMissileByNormal( ray.skel->polygons[ ray.polyID ].Normal() );
 
-                _position = arg136.isectPos;
+                _position = ray.isectPos;
 
                 ResetViewing();
 
@@ -582,41 +582,41 @@ void NC_STACK_ypamissile::AI_layer3(update_msg *arg)
 
                     _status = BACT_STATUS_DEAD;
 
-                    setState_msg arg78;
-                    arg78.setFlags = BACT_STFLAG_DEATH2;
-                    arg78.unsetFlags = 0;
-                    arg78.newStatus = BACT_STATUS_NOPE;
+                    setState_msg stateMsg;
+                    stateMsg.setFlags = BACT_STFLAG_DEATH2;
+                    stateMsg.unsetFlags = 0;
+                    stateMsg.newStatus = BACT_STATUS_NOPE;
 
-                    SetState(&arg78);
+                    SetState(&stateMsg);
 
                     if ( !(_mislFlags & FLAG_MISL_IGNOREBUILDS) || _pSector->PurposeType == cellArea::PT_NONE )
                     {
                         if ( _world->_userRobo->_owner == _owner || !_world->_isNetGame )
                         {
-                            TSectorDamage v25;
+                            TSectorDamage sectorDamage;
 
-                            v25.pos.x = _fly_dir.x * 5.0 + _position.x;
-                            v25.pos.z = _fly_dir.z * 5.0 + _position.z;
-                            v25.energy = _energy;
-                            v25.unit = _mislEmitter;
+                            sectorDamage.pos.x = _fly_dir.x * 5.0 + _position.x;
+                            sectorDamage.pos.z = _fly_dir.z * 5.0 + _position.z;
+                            sectorDamage.energy = _energy;
+                            sectorDamage.unit = _mislEmitter;
 
-                            ChangeSectorEnergy(&v25);
+                            ChangeSectorEnergy(&sectorDamage);
                         }
                     }
                 }
 
-                int a4 = _mislEmitter->getBACT_inputting();
+                int emitterIsUser = _mislEmitter->getBACT_inputting();
 
-                if ( a4 )
+                if ( emitterIsUser )
                 {
                     if ( _mislEmitter->IsParentMyRobo() )
                     {
-                        setTarget_msg arg67;
-                        arg67.tgt_type = BACT_TGT_TYPE_CELL;
-                        arg67.tgt_pos = _position;
-                        arg67.priority = 0;
+                        setTarget_msg targetMsg;
+                        targetMsg.tgt_type = BACT_TGT_TYPE_CELL;
+                        targetMsg.tgt_pos = _position;
+                        targetMsg.priority = 0;
 
-                        _mislEmitter->SetTarget(&arg67);
+                        _mislEmitter->SetTarget(&targetMsg);
                     }
                 }
             }
@@ -642,12 +642,12 @@ void NC_STACK_ypamissile::AI_layer3(update_msg *arg)
                 {
                     Impact();
 
-                    setState_msg arg78;
-                    arg78.unsetFlags = 0;
-                    arg78.setFlags = 0;
-                    arg78.newStatus = BACT_STATUS_DEAD;
+                    setState_msg stateMsg;
+                    stateMsg.unsetFlags = 0;
+                    stateMsg.setFlags = 0;
+                    stateMsg.newStatus = BACT_STATUS_DEAD;
 
-                    SetState(&arg78);
+                    SetState(&stateMsg);
 
                     ResetViewing();
                 }
@@ -670,34 +670,34 @@ void NC_STACK_ypamissile::Move(move_msg *arg)
 {
     _old_pos = _position;
 
-    float v8;
+    float gravity;
 
     if ( _status != BACT_STATUS_DEAD && _mislType != MISL_BOMB )
-        v8 = _mass * 9.80665;
+        gravity = _mass * 9.80665;
     else
-        v8 = _mass * 39.2266;
+        gravity = _mass * 39.2266;
 
-    vec3d v26(0.0, 0.0, 0.0);
+    vec3d thrust(0.0, 0.0, 0.0);
 
     if ( !(arg->flag & 1) )
-        v26 = arg->thrustDir * _thraction;
+        thrust = arg->thrustDir * _thraction;
 
-    vec3d vec1 = vec3d(0.0, v8, 0.0) + v26 - _fly_dir * (_fly_dir_length * _airconst);
+    vec3d vec1 = vec3d(0.0, gravity, 0.0) + thrust - _fly_dir * (_fly_dir_length * _airconst);
 
-    float v33 = vec1.normalise();
+    float forceMag = vec1.normalise();
 
-    if ( v33 > 0.0 )
+    if ( forceMag > 0.0 )
     {
-        vec3d v36 = _fly_dir * _fly_dir_length + vec1 * (v33 / _mass * arg->period);
+        vec3d velocity = _fly_dir * _fly_dir_length + vec1 * (forceMag / _mass * arg->period);
 
-        float v32 = v36.length();
+        float speed = velocity.length();
 
-        if ( v32 > 0.0 )
-            v36 /= v32;
+        if ( speed > 0.0 )
+            velocity /= speed;
 
-        _fly_dir = v36;
+        _fly_dir = velocity;
 
-        _fly_dir_length = v32;
+        _fly_dir_length = speed;
     }
 
     _position += _fly_dir * (_fly_dir_length * arg->period * 6.0);
@@ -799,20 +799,20 @@ void NC_STACK_ypamissile::ResetViewing()
 
 void NC_STACK_ypamissile::Impact()
 {
-    TImpulse arg83;
-    arg83.energ = _energy;
-    arg83.pos = _position;
-    arg83.dir = _fly_dir;
-    arg83.force = _fly_dir_length;
-    arg83.mass = _mass;
+    TImpulse impulse;
+    impulse.energ = _energy;
+    impulse.pos = _position;
+    impulse.dir = _fly_dir;
+    impulse.force = _fly_dir_length;
+    impulse.mass = _mass;
 
-    float v16 = _fly_dir_length * _mass;
+    float momentum = _fly_dir_length * _mass;
 
-    if ( v16 > _world->_maxImpulse && _world->_maxImpulse > 0.0 )
+    if ( momentum > _world->_maxImpulse && _world->_maxImpulse > 0.0 )
     {
-        float v7 = _world->_maxImpulse / v16;
-        arg83.force *= v7;
-        arg83.mass *= v7;
+        float scale = _world->_maxImpulse / momentum;
+        impulse.force *= scale;
+        impulse.mass *= scale;
     }
     
     /* FIXME:
@@ -822,16 +822,16 @@ void NC_STACK_ypamissile::Impact()
     {
         if ( bct->_bact_type != BACT_TYPES_MISSLE && bct->_bact_type != BACT_TYPES_ROBO && bct->_bact_type != BACT_TYPES_TANK && bct->_bact_type != BACT_TYPES_CAR && bct->_bact_type != BACT_TYPES_GUN && bct->_bact_type != BACT_TYPES_HOVER && !(bct->_status_flg & BACT_STFLAG_DEATH2) )
         {
-            int v10 = 1;
+            int canApply = 1;
 
             if ( _world->_isNetGame )
             {
                 if ( _owner != bct->_owner )
-                    v10 = 0;
+                    canApply = 0;
             }
 
-            if ( v10 )
-                bct->ApplyImpulse(&arg83);
+            if ( canApply )
+                bct->ApplyImpulse(&impulse);
         }
     }
 

@@ -38,7 +38,7 @@ public:
     virtual int getFLY_type();
     
     
-    void PitchAndBank(float a2, vec3d v, int a4);
+    void PitchAndBank(float dtime, vec3d v, int isUser);
     void TurnToTargetAndSetLift(float angl);
 
     //Data

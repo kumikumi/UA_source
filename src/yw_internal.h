@@ -27,7 +27,7 @@ int yw_InitNetwork(NC_STACK_ypaworld *yw);
 int loadTOD(NC_STACK_ypaworld *yw, const char *fname);
 int writeTOD(NC_STACK_ypaworld *yw, const char *fname, int tod);
 
-void RenderBriefingObject(NC_STACK_ypaworld *yw, TBriefengScreen *brf, TInputState *struc, int a5);
+void RenderBriefingObject(NC_STACK_ypaworld *yw, TBriefengScreen *brf, TInputState *struc, int elapsed);
 void ypaworld_func158__DrawVehicle(NC_STACK_ypaworld *yw, TBriefengScreen *brf, TInputState *struc);
 
 void set_keys_vals(NC_STACK_ypaworld *yw);
@@ -346,11 +346,11 @@ void recorder_stoprec(NC_STACK_ypaworld *yw);
 
 void AdvanceReplay(NC_STACK_ypaworld *yw, TGameRecorder *rcrd, int a3);
 
-void AddChatMessage(NC_STACK_ypaworld *yw, const std::string &a1, const std::string &a2);
+void AddChatMessage(NC_STACK_ypaworld *yw, const std::string &sender, const std::string &text);
 
 
 void PlayChatVoiceSample(NC_STACK_ypaworld *yw, int arg);
-void GetNetGemProtoIds(NC_STACK_ypaworld *yw, TMapGem *gemProt, int *a3, int *a4);
+void GetNetGemProtoIds(NC_STACK_ypaworld *yw, TMapGem *gemProt, int *vhclProtoId, int *buildProtoId);
 
 void yw_NetMsgHndlLoop(NC_STACK_ypaworld *yw);
 void yw_NetDrawStats(NC_STACK_ypaworld *yw);

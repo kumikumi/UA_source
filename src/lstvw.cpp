@@ -10,17 +10,17 @@
 
 void GuiBase::FormateTitle(NC_STACK_ypaworld *yw, int xpos, int ypos, int w, const std::string &title, CmdStream *in, uint8_t postf_char, int flag)
 {
-    int v27 = 0;
+    int closeW = 0;
     if ( flag & FLAG_WITH_CLOSE )
-        v27 = yw->_guiTiles[24]->map[65].w; // Help button
+        closeW = yw->_guiTiles[24]->map[65].w; // Help button
 
-    int v26 = 0;
+    int helpW = 0;
     if ( flag & FLAG_WITH_HELP )
-        v26 = yw->_guiTiles[24]->map[66].w; // Close button
+        helpW = yw->_guiTiles[24]->map[66].w; // Close button
 
-    int v29 = 0;
+    int postfixW = 0;
     if ( postf_char )
-        v29 = yw->_guiTiles[0]->map[postf_char].w;
+        postfixW = yw->_guiTiles[0]->map[postf_char].w;
 
     std::string buf = " ";
     buf += title;
@@ -33,7 +33,7 @@ void GuiBase::FormateTitle(NC_STACK_ypaworld *yw, int xpos, int ypos, int w, con
 
     FontUA::set_txtColor(in, yw->_iniColors[60].r, yw->_iniColors[60].g, yw->_iniColors[60].b);
 
-    FontUA::FormateClippedText(yw->_guiTiles[6], in, buf, w - v27 - v26 - v29 - yw->_fontBorderW, 99);
+    FontUA::FormateClippedText(yw->_guiTiles[6], in, buf, w - closeW - helpW - postfixW - yw->_fontBorderW, 99);
 
     if ( postf_char )
     {
@@ -187,47 +187,47 @@ void GuiList::FormateTitle(NC_STACK_ypaworld *yw)
     {
         cmdCommands.clear();
 
-        int v6 = x - (yw->_screenSize.x / 2);
-        int v9 = y - (yw->_screenSize.y / 2);
+        int xpos = x - (yw->_screenSize.x / 2);
+        int ypos = y - (yw->_screenSize.y / 2);
 
-        int v17, v16;
+        int closeW, helpW;
         if ( flags & FLAG_WITH_CLOSE )
-            v17 = yw->_fontDefCloseW;
+            closeW = yw->_fontDefCloseW;
         else
-            v17 = 0;
+            closeW = 0;
 
         if ( flags & FLAG_WITH_HELP )
-            v16 = yw->_fontDefCloseW;
+            helpW = yw->_fontDefCloseW;
         else
-            v16 = 0;
+            helpW = 0;
 
         if ( listFlags & GLIST_FLAG_WITH_TITLEBAR )
         {
-            GuiBase::FormateTitle(yw, v6, v9, w, title, &cmdCommands, 0, flags);
+            GuiBase::FormateTitle(yw, xpos, ypos, w, title, &cmdCommands, 0, flags);
             FontUA::next_line(&cmdCommands);
         }
         else
         {
             FontUA::select_tileset(&cmdCommands, 0);
-            FontUA::set_center_xpos(&cmdCommands, v6);
-            FontUA::set_center_ypos(&cmdCommands, v9);
+            FontUA::set_center_xpos(&cmdCommands, xpos);
+            FontUA::set_center_ypos(&cmdCommands, ypos);
         }
 
         FontUA::include(&cmdCommands, 1); // Data
         FontUA::include(&cmdCommands, 0); // Slider
         FontUA::set_end(&cmdCommands);
 
-        int v14 = w - v17 - v16;
+        int dragBarW = w - closeW - helpW;
 
-        buttons[1] = ButtonBox(0, 0, v14, yw->_fontH);
+        buttons[1] = ButtonBox(0, 0, dragBarW, yw->_fontH);
 
         if ( flags & FLAG_WITH_HELP )
-            buttons[7] = ButtonBox(v14, 0, v17, yw->_fontH);
+            buttons[7] = ButtonBox(dragBarW, 0, closeW, yw->_fontH);
         else
             buttons[7] = ButtonBox();
 
         if ( flags & FLAG_WITH_CLOSE )
-            buttons[0] = ButtonBox(w - v17, 0, v17, yw->_fontH);
+            buttons[0] = ButtonBox(w - closeW, 0, closeW, yw->_fontH);
         else
             buttons[0] = ButtonBox();
     }
@@ -235,46 +235,46 @@ void GuiList::FormateTitle(NC_STACK_ypaworld *yw)
 
 void GuiList::ScrollParamsFromEntries(NC_STACK_ypaworld *yw)
 {
-    int v3 = h;
+    int trackSize = h;
 
     if ( listFlags & GLIST_FLAG_WITH_TITLEBAR )
-        v3 -= yw->_fontH;
+        trackSize -= yw->_fontH;
 
     if ( listFlags & GLIST_FLAG_RESIZEABLE )
-        v3 -= yw->_fontHScrollH;
+        trackSize -= yw->_fontHScrollH;
 
-    int v4, v5;
+    int thumbSize, thumbStart;
 
     if ( numEntries )
     {
-        v4 = v3 * shownEntries / numEntries;
-        v5 = v3 * firstShownEntries / numEntries;
+        thumbSize = trackSize * shownEntries / numEntries;
+        thumbStart = trackSize * firstShownEntries / numEntries;
     }
     else
     {
-        v4 = v3;
-        v5 = 0;
+        thumbSize = trackSize;
+        thumbStart = 0;
     }
 
-    if ( v4 >= 2 )
+    if ( thumbSize >= 2 )
     {
-        if ( v4 > v3 )
-            v4 = v3;
+        if ( thumbSize > trackSize )
+            thumbSize = trackSize;
     }
     else
     {
-        v5 -= (2 - v4) / 2;
-        v4 = 2;
+        thumbStart -= (2 - thumbSize) / 2;
+        thumbSize = 2;
     }
 
-    if ( v5 < 0 )
-        v5 = 0;
-    if ( v5 + v4 > v3 )
-        v5 = v3 - v4;
+    if ( thumbStart < 0 )
+        thumbStart = 0;
+    if ( thumbStart + thumbSize > trackSize )
+        thumbStart = trackSize - thumbSize;
 
-    btnSize = v4;
-    btnStart = v5;
-    scrlSize = v3;
+    btnSize = thumbSize;
+    btnStart = thumbStart;
+    scrlSize = trackSize;
 }
 
 void GuiList::FormateScrollbar(NC_STACK_ypaworld *yw)
@@ -301,27 +301,27 @@ void GuiList::FormateScrollbar(NC_STACK_ypaworld *yw)
             ScrollParamsFromEntries(yw);
         }
 
-        int v34 = w - yw->_fontVBScrollW;
-        int v35 = 0;
+        int barX = w - yw->_fontVBScrollW;
+        int barY = 0;
 
         if ( listFlags & GLIST_FLAG_WITH_TITLEBAR )
-            v35 = yw->_fontH;
+            barY = yw->_fontH;
 
-        buttons[2] = ButtonBox(v34, v35, yw->_fontVBScrollW, btnStart); // Scroll up part
-        buttons[3] = ButtonBox(v34, btnStart + v35, yw->_fontVBScrollW, btnSize); // Scroll position
-        buttons[4] = ButtonBox(v34, btnSize + btnStart + v35,  yw->_fontVBScrollW, scrlSize - (btnSize + btnStart));
+        buttons[2] = ButtonBox(barX, barY, yw->_fontVBScrollW, btnStart); // Scroll up part
+        buttons[3] = ButtonBox(barX, btnStart + barY, yw->_fontVBScrollW, btnSize); // Scroll position
+        buttons[4] = ButtonBox(barX, btnSize + btnStart + barY,  yw->_fontVBScrollW, scrlSize - (btnSize + btnStart));
         buttons[6] = ButtonBox(0, h - lowerVborder, w - yw->_fontVBScrollW, lowerVborder);
 
         if ( listFlags & GLIST_FLAG_RESIZEABLE )
-            buttons[5] = ButtonBox(v34, scrlSize + v35, yw->_fontVBScrollW, yw->_fontHScrollH); // Resize button
+            buttons[5] = ButtonBox(barX, scrlSize + barY, yw->_fontVBScrollW, yw->_fontHScrollH); // Resize button
         else
             buttons[5] = ButtonBox();
 
-        int v7 = x + v34 - (yw->_screenSize.x / 2);
-        int v11 = y + v35 - (yw->_screenSize.y / 2);
+        int screenX = x + barX - (yw->_screenSize.x / 2);
+        int screenY = y + barY - (yw->_screenSize.y / 2);
 
-        FontUA::set_center_xpos(&scrollbar, v7);
-        FontUA::set_center_ypos(&scrollbar, v11);
+        FontUA::set_center_xpos(&scrollbar, screenX);
+        FontUA::set_center_ypos(&scrollbar, screenY);
 
         if ( btnStart > 0 )
         {
@@ -330,18 +330,18 @@ void GuiList::FormateScrollbar(NC_STACK_ypaworld *yw)
             FontUA::next_line(&scrollbar);
             FontUA::reset_tileset(&scrollbar, 12);
 
-            int v15 = btnStart - 1;
+            int remaining = btnStart - 1;
 
-            while (v15 >= yw->_fontVScrollH)
+            while (remaining >= yw->_fontVScrollH)
             {
                 FontUA::store_u8(&scrollbar, 66);
                 FontUA::next_line(&scrollbar);
-                v15 -= yw->_fontVScrollH;
+                remaining -= yw->_fontVScrollH;
             }
 
-            if ( v15 > 0 )
+            if ( remaining > 0 )
             {
-                FontUA::set_yheight(&scrollbar, v15);
+                FontUA::set_yheight(&scrollbar, remaining);
 
                 FontUA::store_u8(&scrollbar, 66);
                 FontUA::next_line(&scrollbar);
@@ -356,18 +356,18 @@ void GuiList::FormateScrollbar(NC_STACK_ypaworld *yw)
             FontUA::next_line(&scrollbar);
             FontUA::reset_tileset(&scrollbar, 12);
 
-            int v15 = btnSize - 1;
+            int remaining = btnSize - 1;
 
-            while (v15 > yw->_fontVScrollH)
+            while (remaining > yw->_fontVScrollH)
             {
                 FontUA::store_u8(&scrollbar, 67);
                 FontUA::next_line(&scrollbar);
-                v15 -= yw->_fontVScrollH;
+                remaining -= yw->_fontVScrollH;
             }
 
-            if ( v15 > 1 )
+            if ( remaining > 1 )
             {
-                FontUA::set_yheight(&scrollbar, v15 - 1);
+                FontUA::set_yheight(&scrollbar, remaining - 1);
 
                 FontUA::store_u8(&scrollbar, 67);
                 FontUA::next_line(&scrollbar);
@@ -378,22 +378,22 @@ void GuiList::FormateScrollbar(NC_STACK_ypaworld *yw)
         FontUA::store_u8(&scrollbar, 70);
         FontUA::next_line(&scrollbar);
 
-        int v26 = scrlSize - (btnStart  + btnSize);
+        int lowerPart = scrlSize - (btnStart  + btnSize);
 
-        if ( v26 > 0 )
+        if ( lowerPart > 0 )
         {
             FontUA::reset_tileset(&scrollbar, 12);
 
-            while (v26 > yw->_fontVScrollH)
+            while (lowerPart > yw->_fontVScrollH)
             {
                 FontUA::store_u8(&scrollbar, 66);
                 FontUA::next_line(&scrollbar);
-                v26 -= yw->_fontVScrollH;
+                lowerPart -= yw->_fontVScrollH;
             }
 
-            if ( v26 > 1 )
+            if ( lowerPart > 1 )
             {
-                FontUA::set_yheight(&scrollbar, v26 - 1);
+                FontUA::set_yheight(&scrollbar, lowerPart - 1);
 
                 FontUA::store_u8(&scrollbar, 66);
                 FontUA::next_line(&scrollbar);
@@ -425,13 +425,13 @@ void GuiList::FormateItemBlock(NC_STACK_ypaworld *yw)
 {
     buttons.resize(shownEntries + 8);
 
-    int v3 = upperVborder;
+    int itemsTop = upperVborder;
 
     if ( listFlags & GLIST_FLAG_WITH_TITLEBAR )
-        v3 += yw->_fontH;
+        itemsTop += yw->_fontH;
 
     for (int i = 0; i < shownEntries; i++)
-        buttons[8 + i] = ButtonBox( 0, v3 + i * entryHeight, entryWidth, entryHeight );
+        buttons[8 + i] = ButtonBox( 0, itemsTop + i * entryHeight, entryWidth, entryHeight );
 }
 
 
@@ -546,37 +546,37 @@ int GuiList::Init(NC_STACK_ypaworld *yw, tInit &in)
 }
 
 
-void GuiList::ItemsPreLayout(NC_STACK_ypaworld *yw, CmdStream *cmdbuf, int tileset, const char *a5)
+void GuiList::ItemsPreLayout(NC_STACK_ypaworld *yw, CmdStream *cmdbuf, int tileset, const char *borderChars)
 {
-    int v14 = x - (yw->_screenSize.x / 2);
-    int v12 = y - (yw->_screenSize.y / 2);
+    int xpos = x - (yw->_screenSize.x / 2);
+    int ypos = y - (yw->_screenSize.y / 2);
 
     if ( listFlags & GLIST_FLAG_WITH_TITLEBAR )
-        v12 += yw->_fontH;
+        ypos += yw->_fontH;
 
     FontUA::reset_tileset(cmdbuf, tileset);
-    FontUA::set_center_xpos(cmdbuf, v14);
-    FontUA::set_center_ypos(cmdbuf, v12);
+    FontUA::set_center_xpos(cmdbuf, xpos);
+    FontUA::set_center_ypos(cmdbuf, ypos);
 
     FontUA::set_yheight(cmdbuf, upperVborder);
 
-    FontUA::store_s8(cmdbuf, a5[0]);
+    FontUA::store_s8(cmdbuf, borderChars[0]);
 
     FontUA::op17(cmdbuf, entryWidth - yw->_fontBorderW);
 
-    FontUA::store_s8(cmdbuf, a5[1]);
-    FontUA::store_s8(cmdbuf, a5[2]);
+    FontUA::store_s8(cmdbuf, borderChars[1]);
+    FontUA::store_s8(cmdbuf, borderChars[2]);
     FontUA::next_line(cmdbuf);
 }
 
-void GuiList::ItemsPostLayout(NC_STACK_ypaworld *yw, CmdStream *cmdbuf, int tileset, const char *a5)
+void GuiList::ItemsPostLayout(NC_STACK_ypaworld *yw, CmdStream *cmdbuf, int tileset, const char *borderChars)
 {
     FontUA::reset_tileset(cmdbuf, tileset);
     FontUA::set_yoff(cmdbuf, yw->_guiTiles[tileset]->h - lowerVborder);
-    FontUA::store_s8(cmdbuf, a5[0]);
+    FontUA::store_s8(cmdbuf, borderChars[0]);
     FontUA::op17(cmdbuf, entryWidth - yw->_fontBorderW);
-    FontUA::store_s8(cmdbuf, a5[1]);
-    FontUA::store_s8(cmdbuf, a5[2]);
+    FontUA::store_s8(cmdbuf, borderChars[1]);
+    FontUA::store_s8(cmdbuf, borderChars[2]);
 }
 
 
@@ -588,10 +588,10 @@ void GuiList::InputHandle(NC_STACK_ypaworld *yw, TInputState *struc)
         return;
     }
 
-    TClickBoxInf *v6 = &struc->ClickInf;
+    TClickBoxInf *clickInf = &struc->ClickInf;
 
-    int v3 = w;
-    int v41 = h;
+    int curW = w;
+    int curH = h;
 
     listFlags &= ~GLIST_FLAG_SEL_DONE;
 
@@ -633,7 +633,7 @@ void GuiList::InputHandle(NC_STACK_ypaworld *yw, TInputState *struc)
         }
     }
 
-    yw->_guiDragDefaultMouse = (listFlags & (GLIST_FLAG_IN_RESIZING | GLIST_FLAG_IN_SCROLLING | GLIST_FLAG_IN_SELECT)) && (v6->flag & TClickBoxInf::FLAG_LM_HOLD);
+    yw->_guiDragDefaultMouse = (listFlags & (GLIST_FLAG_IN_RESIZING | GLIST_FLAG_IN_SCROLLING | GLIST_FLAG_IN_SELECT)) && (clickInf->flag & TClickBoxInf::FLAG_LM_HOLD);
 
     //printf("%x %x %d, \n", (int)&dialogBox , (int)struc->winp131arg.selected_btn , struc->winp131arg.selected_btnID);
 
@@ -642,36 +642,36 @@ void GuiList::InputHandle(NC_STACK_ypaworld *yw, TInputState *struc)
 
     if ( listFlags & GLIST_FLAG_IN_RESIZING )
     {
-        if ( v6->flag & TClickBoxInf::FLAG_LM_HOLD )
+        if ( clickInf->flag & TClickBoxInf::FLAG_LM_HOLD )
         {
-            int xps = v6->move.ScreenPos.x + rszX;
-            int yps = v6->move.ScreenPos.y + rszY;
+            int xps = clickInf->move.ScreenPos.x + rszX;
+            int yps = clickInf->move.ScreenPos.y + rszY;
 
-            int v43 = lowerVborder + upperVborder + entryHeight * maxShownEntries;
-            int v44 = lowerVborder + upperVborder + entryHeight * minShownEntries;
+            int maxH = lowerVborder + upperVborder + entryHeight * maxShownEntries;
+            int minH = lowerVborder + upperVborder + entryHeight * minShownEntries;
 
             if ( listFlags & GLIST_FLAG_WITH_TITLEBAR )
             {
-                v44 += yw->_fontH;
-                v43 += yw->_fontH;
+                minH += yw->_fontH;
+                maxH += yw->_fontH;
             }
 
-            int v16 = yw->_fontVBScrollW + maxEntryWidth;
+            int limitW = yw->_fontVBScrollW + maxEntryWidth;
 
-            if ( xps > v16 )
-                xps = v16;
+            if ( xps > limitW )
+                xps = limitW;
             else
             {
-                v16 = yw->_fontVBScrollW + minEntryWidth;
+                limitW = yw->_fontVBScrollW + minEntryWidth;
 
-                if ( xps < v16 )
-                    xps = v16;
+                if ( xps < limitW )
+                    xps = limitW;
             }
 
-            if ( yps > v43 )
-                yps = v43;
-            else if ( yps < v44)
-                yps = v44;
+            if ( yps > maxH )
+                yps = maxH;
+            else if ( yps < minH)
+                yps = minH;
 
             if ( xps + xpos >= yw->_screenSize.x )
                 xps = yw->_screenSize.x - xpos;
@@ -702,7 +702,7 @@ void GuiList::InputHandle(NC_STACK_ypaworld *yw, TInputState *struc)
     }
     else if ( listFlags & GLIST_FLAG_IN_SCROLLING )
     {
-        if ( v6->flag & TClickBoxInf::FLAG_LM_HOLD )
+        if ( clickInf->flag & TClickBoxInf::FLAG_LM_HOLD )
         {
             btnStart += struc->ClickInf.move.ScreenPos.y - scrlY;
             scrlY = struc->ClickInf.move.ScreenPos.y;
@@ -725,12 +725,12 @@ void GuiList::InputHandle(NC_STACK_ypaworld *yw, TInputState *struc)
     {
         if ( (this == struc->ClickInf.selected_btn) && (struc->ClickInf.selected_btnID >= 8) )
         {
-            if ( v6->flag & (TClickBoxInf::FLAG_LM_HOLD | TClickBoxInf::FLAG_LM_UP) )
+            if ( clickInf->flag & (TClickBoxInf::FLAG_LM_HOLD | TClickBoxInf::FLAG_LM_UP) )
             {
                 selectedEntry = firstShownEntries + struc->ClickInf.selected_btnID - 8;
                 mouseItem = selectedEntry;
 
-                if ( v6->flag & TClickBoxInf::FLAG_LM_UP )
+                if ( clickInf->flag & TClickBoxInf::FLAG_LM_UP )
                 {
                     listFlags &= ~(GLIST_FLAG_SEL_DONE | GLIST_FLAG_IN_SELECT);
                     listFlags |= GLIST_FLAG_SEL_DONE;
@@ -748,14 +748,14 @@ void GuiList::InputHandle(NC_STACK_ypaworld *yw, TInputState *struc)
 
             }
         }
-        else if ( !(v6->flag & TClickBoxInf::FLAG_LM_HOLD) )
+        else if ( !(clickInf->flag & TClickBoxInf::FLAG_LM_HOLD) )
         {
             listFlags &= ~GLIST_FLAG_IN_SELECT;
         }
         else if ( !(listFlags & GLIST_FLAG_NO_SCROLL) )
         {
-            ButtonBox &v40 = buttons[8];
-            ButtonBox &v27 = buttons[shownEntries + 7];
+            ButtonBox &firstItem = buttons[8];
+            ButtonBox &lastItem = buttons[shownEntries + 7];
 
             if ( scrollTimer > 0 )
             {
@@ -765,9 +765,9 @@ void GuiList::InputHandle(NC_STACK_ypaworld *yw, TInputState *struc)
             {
                 scrollTimer = 70;
 
-                if ( struc->ClickInf.move.ScreenPos.y >= ypos + v40.y )
+                if ( struc->ClickInf.move.ScreenPos.y >= ypos + firstItem.y )
                 {
-                    if ( struc->ClickInf.move.ScreenPos.y > ypos + v27.y + v27.h )
+                    if ( struc->ClickInf.move.ScreenPos.y > ypos + lastItem.y + lastItem.h )
                     {
                         firstShownEntries++;
 
@@ -791,9 +791,9 @@ void GuiList::InputHandle(NC_STACK_ypaworld *yw, TInputState *struc)
                 }
             }
 
-            if ( struc->ClickInf.move.ScreenPos.y >= ypos + v40.y )
+            if ( struc->ClickInf.move.ScreenPos.y >= ypos + firstItem.y )
             {
-                if ( struc->ClickInf.move.ScreenPos.y > ypos + v27.y + v27.h )
+                if ( struc->ClickInf.move.ScreenPos.y > ypos + lastItem.y + lastItem.h )
                     selectedEntry = shownEntries + firstShownEntries - 1;
             }
             else
@@ -809,13 +809,13 @@ void GuiList::InputHandle(NC_STACK_ypaworld *yw, TInputState *struc)
 
         if ( struc->ClickInf.selected_btnID == 7 )
         {
-            if ( v6->flag & (TClickBoxInf::FLAG_BTN_DOWN | TClickBoxInf::FLAG_BTN_HOLD) )
+            if ( clickInf->flag & (TClickBoxInf::FLAG_BTN_DOWN | TClickBoxInf::FLAG_BTN_HOLD) )
                 flags |= FLAG_HELP_DOWN;
-            if ( v6->flag & TClickBoxInf::FLAG_BTN_UP )
+            if ( clickInf->flag & TClickBoxInf::FLAG_BTN_UP )
                 flags &= ~FLAG_HELP_DOWN;
         }
 
-        if ( v6->flag & TClickBoxInf::FLAG_BTN_HOLD )
+        if ( clickInf->flag & TClickBoxInf::FLAG_BTN_HOLD )
         {
             if ( struc->ClickInf.selected_btnID == 2 )
             {
@@ -852,21 +852,21 @@ void GuiList::InputHandle(NC_STACK_ypaworld *yw, TInputState *struc)
             }
         }
 
-        if ( v6->flag & TClickBoxInf::FLAG_BTN_DOWN )
+        if ( clickInf->flag & TClickBoxInf::FLAG_BTN_DOWN )
         {
-            if ( v6->selected_btnID == 3 )
+            if ( clickInf->selected_btnID == 3 )
             {
                 listFlags |= GLIST_FLAG_IN_SCROLLING;
-                scrlY = v6->ldw_pos.ScreenPos.y;
+                scrlY = clickInf->ldw_pos.ScreenPos.y;
             }
-            else if ( v6->selected_btnID == 5 )
+            else if ( clickInf->selected_btnID == 5 )
             {
                 listFlags |= GLIST_FLAG_IN_RESIZING;
-                rszX = v3 - v6->ldw_pos.ScreenPos.x;
-                rszY = v41 - v6->ldw_pos.ScreenPos.y;
+                rszX = curW - clickInf->ldw_pos.ScreenPos.x;
+                rszY = curH - clickInf->ldw_pos.ScreenPos.y;
             }
 
-            if ( v6->selected_btnID >= 8 )
+            if ( clickInf->selected_btnID >= 8 )
             {
                 listFlags |= GLIST_FLAG_IN_SELECT;
                 selectedEntry = mouseItem;
@@ -875,7 +875,7 @@ void GuiList::InputHandle(NC_STACK_ypaworld *yw, TInputState *struc)
     }
     else if ( listFlags & GLIST_FLAG_INSTANT_INPUT )
     {
-        if ( v6->flag & TClickBoxInf::FLAG_LM_DOWN )
+        if ( clickInf->flag & TClickBoxInf::FLAG_LM_DOWN )
         {
             flags |= FLAG_CLOSED;
             Input::Engine.RemClickBox(this);
@@ -908,24 +908,24 @@ void GuiList::Formate(NC_STACK_ypaworld *yw)
         FormateItemBlock(yw);
 }
 
-void GuiList::PosOnSelected(int a2)
+void GuiList::PosOnSelected(int entryIdx)
 {
-    int v2 = maxShownEntries + firstShownEntries;
+    int shownEnd = maxShownEntries + firstShownEntries;
 
-    if ( a2 >= firstShownEntries && a2 <= (v2 - 1) )
+    if ( entryIdx >= firstShownEntries && entryIdx <= (shownEnd - 1) )
     {
-        if ( v2 > numEntries )
+        if ( shownEnd > numEntries )
             firstShownEntries = numEntries - maxShownEntries;
         if ( firstShownEntries < 0 )
             firstShownEntries = 0;
     }
-    else if ( numEntries - a2 <= maxShownEntries )
+    else if ( numEntries - entryIdx <= maxShownEntries )
     {
         firstShownEntries = numEntries - maxShownEntries;
     }
     else
     {
-        firstShownEntries = a2;
+        firstShownEntries = entryIdx;
     }
 }
 

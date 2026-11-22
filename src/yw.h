@@ -787,7 +787,7 @@ public:
     void ShowOptionsMenu();
     void GameShellUiOpenNetwork();
     int IsSaveGameOutdated();
-    void ShowConfirmDialog(int a2, const std::string &txt1, const std::string &txt2, int a5);
+    void ShowConfirmDialog(int mode, const std::string &txt1, const std::string &txt2, int singleButton);
     void ShowMenuMsgBox(int code, const std::string &txt1, const std::string &txt2, bool OkOnly);
     void ReloadAllInputs();
     void InputConfCopyToBackup();
@@ -2033,7 +2033,7 @@ public:
     virtual int getYW_invulnerable();
 
 protected:
-    int LevelCommonLoader(TLevelDescription *mapp, int levelID, int a5);
+    int LevelCommonLoader(TLevelDescription *mapp, int levelID, int mode);
     void FFeedback_Init();
     void FFeedback_StopAll();
     void FFeedback_VehicleChanged();
@@ -2091,7 +2091,7 @@ public:
     void DoSectorsEnergyRecalc();
     void RecalcSectorsPowerForPS(const TPowerStationInfo &ps);
     
-    void ActivateSuperItem(int id, int a3);
+    void ActivateSuperItem(int id, int resume);
     void StopSuperItem(int id);
     void TriggerSuperItem(int id);
     int LoadingParseSaveFile(const std::string &filename);
@@ -2114,7 +2114,7 @@ public:
     void DrawMapRegionsTutorial();
     void DrawMapRegions();
     
-    void RenderGame(TUpdateArgs *bs64, int a2);
+    void RenderGame(TUpdateArgs *bs64, int drawGui);
     void RenderAdditionalBeeBox(Common::Point sect, TRenderingSector *sct, baseRender_msg *bs77);
     void RenderSector(TRenderingSector *sct, baseRender_msg *bs77);
     void yw_renderSky(baseRender_msg *rndr_params);
@@ -2122,7 +2122,7 @@ public:
     void RenderSuperWave(vec2d pos, vec2d fromPos, baseRender_msg *arg);
     void RenderFillers(baseRender_msg *arg);
     
-    void PrepareFiller(cellArea *sct, cellArea *sct2, float v9h, float v8h, bool vertical, TCellFillerCh *out, bool force = false);
+    void PrepareFiller(cellArea *sct, cellArea *sct2, float startCornerHeight, float endCornerHeight, bool vertical, TCellFillerCh *out, bool force = false);
     void PrepareAllFillers();
     
     bool IsVisibleMapPos(vec2d pos);
@@ -2152,7 +2152,7 @@ public:
     
     
     NC_STACK_ypabact *yw_createUnit(int model_id);
-    void PlaceBuilding(const Common::Point &cellId, int ownerid2, int blg_id, int a7);
+    void PlaceBuilding(const Common::Point &cellId, int ownerid2, int blg_id, int skipGuns);
     void SetupPowerStationInfo(cellArea *cell, int power);
     void ResetAccumMap();
     
@@ -2187,14 +2187,14 @@ public:
     
     void CountUnitsPerOwner();
     
-    void KillUnitsInSuperBombRadius(uint8_t activate, float a5, float a6, float a7);
+    void KillUnitsInSuperBombRadius(uint8_t activate, float centerX, float centerZ, float radius);
     void UpdateSuperBombShockwave(int id);
     void UpdateTriggeredSuperItem(int id);
     void UpdateStoppedSuperItem(int id);
     void UpdateActiveSuperItem(int id);
     void UpdateSuperItems();
     void DeactivateSuperItem(int id);
-    bool IsSuperItemLostBy(int id, int a3);
+    bool IsSuperItemLostBy(int id, int owner);
     bool IsSuperItemHeldBy(int id, int owner);
     bool OwnerHasHostStation(int owner);
     
@@ -2225,8 +2225,8 @@ public:
     NC_STACK_ypabact * SquadManagerPickUnit(int sqid, int a3);
     
     bool recorder_create_camera();
-    void recorder_updateObjectList(TGameRecorder *rcrd, float a5, int period);
-    void recorder_updateObject(NC_STACK_ypabact *bact, trec_bct *oinf, TGameRecorder::TSndState *ssnd, float a5, float a6);
+    void recorder_updateObjectList(TGameRecorder *rcrd, float blend, int period);
+    void recorder_updateObject(NC_STACK_ypabact *bact, trec_bct *oinf, TGameRecorder::TSndState *ssnd, float blend, float periodSec);
     void recorder_set_bact_pos(NC_STACK_ypabact *bact, const vec3d &pos);
     int recorder_go_to_frame(TGameRecorder *rcrd, int wanted_frame_id);
     void recorder_store_bact(TGameRecorder *rcrd, World::RefBactList &bct_lst);
@@ -2286,8 +2286,8 @@ public:
     void InitGates();
     void UpdatePowerEnergy();
     void PowerStationErase(cellArea *cell);
-    void CellSetNewOwner(cellArea *cell, NC_STACK_ypabact *a5, int newOwner);
-    void CellCheckHealth(cellArea *cell, int a5, NC_STACK_ypabact *a6);
+    void CellSetNewOwner(cellArea *cell, NC_STACK_ypabact *attacker, int newOwner);
+    void CellCheckHealth(cellArea *cell, int a5, NC_STACK_ypabact *attacker);
     void InitBuddies();
     void InitSuperItems();
     bool LoadBlgMap(const std::string &mapName);
@@ -2316,7 +2316,7 @@ public:
     TSectorCollision GetSectorCollision(int _dx, int _dz, int _dxx, int _dzz, int flags);
     void FitFillerCollisionHeights(TSectorCollision &arg);
     void IntersectRaySkeleton(TRayIntersection *arg, const TSectorCollision &loc);
-    void CollideSphereWithSkeleton(TSphereCollisionQuery *arg, const TSectorCollision &a2);    
+    void CollideSphereWithSkeleton(TSphereCollisionQuery *arg, const TSectorCollision &sectorColl);    
     
     void VoiceMessageUpdate();
     void VoiceMessagePlayFile(const std::string &flname, NC_STACK_ypabact *unit, int a5);

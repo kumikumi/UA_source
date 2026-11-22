@@ -235,13 +235,13 @@ void FontUA::FormateClippedText(TileMap *, CmdStream *pos, const std::string &st
     {
         FontUA::copy_position(pos);
 
-        int v6 = width_space;
+        int remaining = width_space;
 
-        while (v6 > 0)
+        while (remaining > 0)
         {
-            if ( v6 <= 255 )
+            if ( remaining <= 255 )
             {
-                FontUA::op10(pos, v6);
+                FontUA::op10(pos, remaining);
             }
             else
             {
@@ -250,7 +250,7 @@ void FontUA::FormateClippedText(TileMap *, CmdStream *pos, const std::string &st
 
             FontUA::store_s8(pos, space_chr);
 
-            v6 -= 255;
+            remaining -= 255;
         }
 
         FontUA::add_txt(pos, width_space, 1, str);
@@ -286,15 +286,15 @@ void FontUA::TextRelWidthItem(TileMap *, CmdStream *pos, const std::string &txt,
 
 void FontUA::FormateTextAlignedClippedString(NC_STACK_ypaworld *yw, CmdStream *cmdbuf, ColumnItem *arg)
 {
-    TileMap *v3 = yw->_guiTiles[ arg->fontID ];
+    TileMap *tileset = yw->_guiTiles[ arg->fontID ];
 
-    int v4 = arg->width;
+    int textW = arg->width;
 
     if ( arg->flags & 1 )
-        v4 -= v3->map[arg->prefixChar].w;
+        textW -= tileset->map[arg->prefixChar].w;
 
     if ( arg->flags & 2 )
-        v4 -= v3->map[arg->postfixChar].w;
+        textW -= tileset->map[arg->postfixChar].w;
 
     FontUA::select_tileset(cmdbuf, arg->fontID);
 
@@ -302,17 +302,17 @@ void FontUA::FormateTextAlignedClippedString(NC_STACK_ypaworld *yw, CmdStream *c
     if ( arg->flags & 1 )
         FontUA::store_s8(cmdbuf, arg->prefixChar);
 
-    if ( v4 > 0 )
+    if ( textW > 0 )
     {
         FontUA::copy_position(cmdbuf);
 
-        int v8 = v4;
+        int remaining = textW;
 
-        while (v8 > 0)
+        while (remaining > 0)
         {
-            if ( v8 <= 255 )
+            if ( remaining <= 255 )
             {
-                FontUA::op10(cmdbuf, v8);
+                FontUA::op10(cmdbuf, remaining);
             }
             else
             {
@@ -320,25 +320,25 @@ void FontUA::FormateTextAlignedClippedString(NC_STACK_ypaworld *yw, CmdStream *c
             }
 
             FontUA::store_u8(cmdbuf, arg->spaceChar);
-            v8 -= 255;
+            remaining -= 255;
         }
 
-        int v20 = 0;
+        int alignFlags = 0;
 
         if ( arg->flags & 4 )
         {
-            v20 = 1;
+            alignFlags = 1;
         }
         else if ( arg->flags & 8 )
         {
-            v20 = 2;
+            alignFlags = 2;
         }
         else
         {
-            v20 = 4;
+            alignFlags = 4;
         }
 
-        FontUA::add_txt(cmdbuf, v4, v20, arg->txt);
+        FontUA::add_txt(cmdbuf, textW, alignFlags, arg->txt);
     }
 
     if ( arg->flags & 2 )
@@ -351,10 +351,10 @@ void FontUA::FormateAlignedClippedString(NC_STACK_ypaworld *yw, CmdStream *cmdbu
 {
     TileMap *tset = yw->_guiTiles[ arg->fontID ];
 
-    int v28 = 0;
-    int v29 = 0;
-    int v27 = 0;
-    int v26 = 0;
+    int clipLeft = 0;
+    int clipRight = 0;
+    int padLeft = 0;
+    int padRight = 0;
 
     int txtWidth = 0;
     
@@ -374,16 +374,16 @@ void FontUA::FormateAlignedClippedString(NC_STACK_ypaworld *yw, CmdStream *cmdbu
         {
             if ( arg->flags & 4 )
             {
-                v29 = -freeWidth;
+                clipRight = -freeWidth;
             }
             else if ( arg->flags & 8 )
             {
-                v28 = -freeWidth;
+                clipLeft = -freeWidth;
             }
             else if ( arg->flags & 0x10 )
             {
-                v28 = (-freeWidth) / 2;
-                v29 = (-freeWidth) - ((-freeWidth) / 2);
+                clipLeft = (-freeWidth) / 2;
+                clipRight = (-freeWidth) - ((-freeWidth) / 2);
             }
         }
     }
@@ -391,20 +391,20 @@ void FontUA::FormateAlignedClippedString(NC_STACK_ypaworld *yw, CmdStream *cmdbu
     {
         if ( arg->flags & 4 )
         {
-            v26 = freeWidth;
+            padRight = freeWidth;
         }
         else if ( arg->flags & 8 )
         {
-            v27 = freeWidth;
+            padLeft = freeWidth;
         }
         else if ( arg->flags & 0x10 )
         {
-            v27 = freeWidth / 2;
-            v26 = freeWidth - (freeWidth / 2);
+            padLeft = freeWidth / 2;
+            padRight = freeWidth - (freeWidth / 2);
         }
     }
 
-    int v16 = txtWidth - v29 - v28;
+    int visibleW = txtWidth - clipRight - clipLeft;
 
     if ( arg->flags & 1 )
         FontUA::store_u8(cmdbuf, arg->prefixChar);
@@ -413,39 +413,39 @@ void FontUA::FormateAlignedClippedString(NC_STACK_ypaworld *yw, CmdStream *cmdbu
 
     size_t cI = 0;
 
-    while (v28 > 0)
+    while (clipLeft > 0)
     {
         chr = arg->txt[cI];
         cI++;
-        v28 -= tset->GetWidth(chr);
+        clipLeft -= tset->GetWidth(chr);
     }
 
-    if ( v28 < 0 )
+    if ( clipLeft < 0 )
     {
-        FontUA::set_xoff(cmdbuf, v28 + tset->GetWidth(chr));
+        FontUA::set_xoff(cmdbuf, clipLeft + tset->GetWidth(chr));
         FontUA::store_u8(cmdbuf, chr);
     }
 
-    if ( v27 > 0 )
+    if ( padLeft > 0 )
     {
-        while ( v27 > 255 )
+        while ( padLeft > 255 )
         {
             FontUA::op10(cmdbuf, 255);
             FontUA::store_u8(cmdbuf, arg->spaceChar);
-            v27 -= 255;
+            padLeft -= 255;
         }
 
-        if ( v27 > 0 )
+        if ( padLeft > 0 )
         {
-            FontUA::op10(cmdbuf, v27);
+            FontUA::op10(cmdbuf, padLeft);
             FontUA::store_u8(cmdbuf, arg->spaceChar);
         }
     }
 
-    if (v16 > 0)
+    if (visibleW > 0)
     {
         chr = 0;
-        while ( v16 >= 0 )
+        while ( visibleW >= 0 )
         {
             if (cI >= arg->txt.size())
             {
@@ -456,27 +456,27 @@ void FontUA::FormateAlignedClippedString(NC_STACK_ypaworld *yw, CmdStream *cmdbu
             chr = arg->txt[cI];
             cI++;
 
-            v16 -= tset->GetWidth(chr);
+            visibleW -= tset->GetWidth(chr);
             FontUA::store_u8(cmdbuf, chr);
         }
         if (chr)
         {
-            FontUA::set_xwidth(cmdbuf, v16 + tset->GetWidth(chr));
+            FontUA::set_xwidth(cmdbuf, visibleW + tset->GetWidth(chr));
             FontUA::store_u8(cmdbuf, chr);
         }
     }
 
-    if ( v26 > 0 )
+    if ( padRight > 0 )
     {
-        while ( v26 > 255 )
+        while ( padRight > 255 )
         {
             FontUA::op10(cmdbuf, 255);
             FontUA::store_u8(cmdbuf, arg->spaceChar);
-            v26 -= 255;
+            padRight -= 255;
         }
-        if ( v26 > 0 )
+        if ( padRight > 0 )
         {
-            FontUA::op10(cmdbuf, v26);
+            FontUA::op10(cmdbuf, padRight);
             FontUA::store_u8(cmdbuf, arg->spaceChar);
         }
     }
@@ -486,13 +486,13 @@ void FontUA::FormateAlignedClippedString(NC_STACK_ypaworld *yw, CmdStream *cmdbu
 }
 
 
-void FontUA::FormateColumnItem(NC_STACK_ypaworld *yw, CmdStream *cmdbuf, int num, ColumnItem *a4)
+void FontUA::FormateColumnItem(NC_STACK_ypaworld *yw, CmdStream *cmdbuf, int num, ColumnItem *items)
 {
     for (int i = 0; i < num; i++)
-        if (a4[i].flags & 0x20)
-            FormateTextAlignedClippedString(yw, cmdbuf, &a4[i]);
+        if (items[i].flags & 0x20)
+            FormateTextAlignedClippedString(yw, cmdbuf, &items[i]);
         else
-            FormateAlignedClippedString(yw, cmdbuf, &a4[i]);
+            FormateAlignedClippedString(yw, cmdbuf, &items[i]);
 }
 
 

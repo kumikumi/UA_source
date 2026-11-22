@@ -79,21 +79,21 @@ size_t NC_STACK_ypaufo::SetParameters(IDVList &stak)
 
 void NC_STACK_ypaufo::AI_layer3(update_msg *arg)
 {
-    float v110 = arg->frameTime / 1000.0;
+    float dtime = arg->frameTime / 1000.0;
 
-    int v94 = getBACT_bactCollisions();
+    int bactCollisions = getBACT_bactCollisions();
 
-    int v5 = _world->IsNearViewer(this);
+    int nearViewer = _world->IsNearViewer(this);
 
-    float v108 = _target_vec.length();
+    float targetDist = _target_vec.length();
 
-    if ( v108 != 0.0 )
-        _target_dir = _target_vec / v108;
+    if ( targetDist != 0.0 )
+        _target_dir = _target_vec / targetDist;
 
-    int v8 = !_secndTtype && v108 < World::CVSectorLength;
+    int nearTarget = !_secndTtype && targetDist < World::CVSectorLength;
 
-    if ( v108 > _ufoTogo )
-        v108 = _ufoTogo;
+    if ( targetDist > _ufoTogo )
+        targetDist = _ufoTogo;
 
     switch ( _status )
     {
@@ -101,8 +101,8 @@ void NC_STACK_ypaufo::AI_layer3(update_msg *arg)
     {
         _thraction = _force;
 
-        if ( !v94
-                || (!v5 && !v8)
+        if ( !bactCollisions
+                || (!nearViewer && !nearTarget)
                 || !CollisionWithBact(arg->frameTime) )
         {
             if ( _primTtype || _secndTtype )
@@ -124,16 +124,16 @@ void NC_STACK_ypaufo::AI_layer3(update_msg *arg)
                     {
                         if ( _ufoFlags & 8 )
                         {
-                            float v17 = _maxrot * v110;
+                            float turnStep = _maxrot * dtime;
 
-                            if ( fabs(_ufoProcAngle) >= v17 )
+                            if ( fabs(_ufoProcAngle) >= turnStep )
                             {
                                 if ( _ufoProcAngle < 0.0 )
-                                    v17 = -v17;
+                                    turnStep = -turnStep;
 
-                                _ufoProcAngle -= v17;
+                                _ufoProcAngle -= turnStep;
 
-                                _rotation = mat3x3::RotateY(v17) * _rotation;
+                                _rotation = mat3x3::RotateY(turnStep) * _rotation;
                             }
                             else
                             {
@@ -141,7 +141,7 @@ void NC_STACK_ypaufo::AI_layer3(update_msg *arg)
 
                                 _ufoFlags &= 0xFFFFFFF6;
                                 _ufoProcAngle = 0;
-                                _ufoTogoRisidue = v108;
+                                _ufoTogoRisidue = targetDist;
                             }
                         }
                         else
@@ -155,45 +155,45 @@ void NC_STACK_ypaufo::AI_layer3(update_msg *arg)
                     }
                 }
 
-                move_msg arg74;
-                arg74.flag = 0;
-                arg74.period = v110;
+                move_msg moveMsg;
+                moveMsg.flag = 0;
+                moveMsg.period = dtime;
 
-                Move(&arg74);
+                Move(&moveMsg);
 
-                TRayIntersection arg136_2;
-                arg136_2.stPos = _old_pos;
+                TRayIntersection fwdRay;
+                fwdRay.stPos = _old_pos;
 
                 vec2d ttmp = _position.XZ() - _old_pos.XZ();
 
-                float v29 = ttmp.length();
+                float moveDist = ttmp.length();
 
-                if ( v29 >= 0.01 )
-                    arg136_2.vect = vec3d::X0Z(ttmp * 300.0 / v29);
+                if ( moveDist >= 0.01 )
+                    fwdRay.vect = vec3d::X0Z(ttmp * 300.0 / moveDist);
                 else
-                    arg136_2.vect = _rotation.AxisZ() * 300.0;
+                    fwdRay.vect = _rotation.AxisZ() * 300.0;
 
-                TRayIntersection arg136;
-                arg136.stPos = _position;
-                arg136.vect = vec3d::OY( _height );
+                TRayIntersection downRay;
+                downRay.stPos = _position;
+                downRay.vect = vec3d::OY( _height );
 
-                arg136_2.flags = 0;
-                arg136.flags = 0;
+                fwdRay.flags = 0;
+                downRay.flags = 0;
 
-                _world->IntersectRay(&arg136);
+                _world->IntersectRay(&downRay);
 
-                _world->IntersectRay(&arg136_2);
+                _world->IntersectRay(&fwdRay);
 
-                if ( (arg136_2.isect && arg136_2.tVal * 300.0 < _radius) || (arg136.isect && arg136.tVal * 300.0 < _radius) )
+                if ( (fwdRay.isect && fwdRay.tVal * 300.0 < _radius) || (downRay.isect && downRay.tVal * 300.0 < _radius) )
                 {
-                    TCollisionNormal arg88;
+                    TCollisionNormal collNormal;
 
-                    if ( arg136_2.isect && arg136_2.tVal * 300.0 < _radius )
-                        arg88.normal = arg136_2.skel->polygons[arg136_2.polyID].Normal();
+                    if ( fwdRay.isect && fwdRay.tVal * 300.0 < _radius )
+                        collNormal.normal = fwdRay.skel->polygons[fwdRay.polyID].Normal();
                     else
-                        arg88.normal = arg136.skel->polygons[arg136.polyID].Normal();
+                        collNormal.normal = downRay.skel->polygons[downRay.polyID].Normal();
 
-                    Recoil(&arg88);
+                    Recoil(&collNormal);
                 }
 
                 if ( _ufoFlags & 1 )
@@ -203,27 +203,27 @@ void NC_STACK_ypaufo::AI_layer3(update_msg *arg)
 
                         if ( _ufoFlags & 2 )
                         {
-                            if ( !arg136.isect || (arg136.isect && arg136.tVal > 0.8) )
+                            if ( !downRay.isect || (downRay.isect && downRay.tVal > 0.8) )
                             {
                                 _ufoFlags &= 0xFFFFFFFC;
-                                _ufoTogoRisidue = v108;
+                                _ufoTogoRisidue = targetDist;
                             }
                         }
 
                         if ( _ufoFlags & 4 )
                         {
-                            if ( arg136.isect && arg136.tVal < 0.8 )
+                            if ( downRay.isect && downRay.tVal < 0.8 )
                             {
                                 _ufoFlags &= 0xFFFFFFFA;
-                                _ufoTogoRisidue = v108;
+                                _ufoTogoRisidue = targetDist;
                             }
                         }
 
                     }
                 }
-                else if ( (arg136_2.isect && arg136_2.tVal < 0.5) || (arg136.isect && arg136.tVal < 0.5) )
+                else if ( (fwdRay.isect && fwdRay.tVal < 0.5) || (downRay.isect && downRay.tVal < 0.5) )
                 {
-                    if ( arg136.isect && arg136.tVal < 0.5 )
+                    if ( downRay.isect && downRay.tVal < 0.5 )
                     {
                         _ufoFlags |= 3;
                     }
@@ -231,100 +231,100 @@ void NC_STACK_ypaufo::AI_layer3(update_msg *arg)
                     {
                         _ufoFlags |= 9;
 
-                        vec2d polv = arg136_2.skel->polygons[arg136_2.polyID].Normal().XZ();
+                        vec2d polv = fwdRay.skel->polygons[fwdRay.polyID].Normal().XZ();
                         vec2d axsz = _rotation.AxisZ().XZ();
 
                         float tmpsq = axsz.length();
-                        float v104 = 0.0;
+                        float cosAngle = 0.0;
                         
                         if (isnormal(tmpsq))  // Not NULL, NAN, INF
-                            v104 = axsz.dot( polv ) / tmpsq;
+                            cosAngle = axsz.dot( polv ) / tmpsq;
 
                         tmpsq = polv.length();
 
                         if (isnormal(tmpsq))  // Not NULL, NAN, INF
-                            v104 /= tmpsq;
+                            cosAngle /= tmpsq;
                         else
-                            v104 = 0.0;
+                            cosAngle = 0.0;
 
-                        _ufoProcAngle = C_PI_2 - clp_acos(v104);
+                        _ufoProcAngle = C_PI_2 - clp_acos(cosAngle);
                     }
                 }
                 else if ( _ufoTogoRisidue <= 0.0 )
                 {
-                    if ( arg136.isect )
+                    if ( downRay.isect )
                     {
                         vec2d tgt2d = _target_dir.XZ();
                         vec2d axsz = _rotation.AxisZ().XZ();
 
                         float tmpsq = axsz.length();
-                        float v104 = 0.0;
+                        float cosAngle = 0.0;
                         
                         if (isnormal(tmpsq))  // Not NULL, NAN, INF
-                            v104 = tgt2d.dot( axsz ) / tmpsq;
+                            cosAngle = tgt2d.dot( axsz ) / tmpsq;
 
                         tmpsq = tgt2d.length();
 
                         if (isnormal(tmpsq))  // Not NULL, NAN, INF
-                            v104 /= tmpsq;
+                            cosAngle /= tmpsq;
                         else
-                            v104 = 0.0;
+                            cosAngle = 0.0;
 
-                        float v121 = clp_acos(v104);
+                        float turnAngle = clp_acos(cosAngle);
 
-                        if ( v121 > 0.2 )
+                        if ( turnAngle > 0.2 )
                         {
                             if ( axsz.cross( tgt2d ) < 0.0 )
-                                v121 = -v121;
+                                turnAngle = -turnAngle;
 
-                            _ufoProcAngle = v121;
+                            _ufoProcAngle = turnAngle;
                             _ufoFlags |= 9;
                         }
                     }
                     else
                     {
-                        NC_STACK_ypabact *v102 = _world->getYW_userVehicle();;
+                        NC_STACK_ypabact *userVehicle = _world->getYW_userVehicle();;
 
-                        if ( ( (_secndTtype != BACT_TGT_TYPE_UNIT || v102 != _secndT.pbact) && ( _primTtype != BACT_TGT_TYPE_UNIT || v102 != _primT.pbact) ) || _target_dir.y >= 0.0 )
+                        if ( ( (_secndTtype != BACT_TGT_TYPE_UNIT || userVehicle != _secndT.pbact) && ( _primTtype != BACT_TGT_TYPE_UNIT || userVehicle != _primT.pbact) ) || _target_dir.y >= 0.0 )
                         {
                             _ufoFlags |= 5;
                         }
                     }
                 }
 
-                TFightTarget arg75;
-                arg75.fperiod = v110;
-                arg75.g_time = _clock;
+                TFightTarget fightMsg;
+                fightMsg.fperiod = dtime;
+                fightMsg.g_time = _clock;
 
                 if ( _secndTtype == BACT_TGT_TYPE_UNIT )
                 {
-                    arg75.target.pbact = _secndT.pbact;
-                    arg75.prio = 1;
+                    fightMsg.target.pbact = _secndT.pbact;
+                    fightMsg.prio = 1;
 
-                    FightWithBact(&arg75);
+                    FightWithBact(&fightMsg);
                 }
                 else if ( _secndTtype == BACT_TGT_TYPE_CELL )
                 {
-                    arg75.pos = _sencdTpos;
-                    arg75.target.pcell = _secndT.pcell;
-                    arg75.prio = 1;
+                    fightMsg.pos = _sencdTpos;
+                    fightMsg.target.pcell = _secndT.pcell;
+                    fightMsg.prio = 1;
 
-                    FightWithSect(&arg75);
+                    FightWithSect(&fightMsg);
                 }
                 else if ( _primTtype == BACT_TGT_TYPE_UNIT )
                 {
-                    arg75.target.pbact = _primT.pbact;
-                    arg75.prio = 0;
+                    fightMsg.target.pbact = _primT.pbact;
+                    fightMsg.prio = 0;
 
-                    FightWithBact(&arg75);
+                    FightWithBact(&fightMsg);
                 }
                 else if ( _primTtype == BACT_TGT_TYPE_CELL )
                 {
-                    arg75.pos = _primTpos;
-                    arg75.target.pcell = _primT.pcell;
-                    arg75.prio = 0;
+                    fightMsg.pos = _primTpos;
+                    fightMsg.target.pcell = _primT.pcell;
+                    fightMsg.prio = 0;
 
-                    FightWithSect(&arg75);
+                    FightWithSect(&fightMsg);
                 }
                 else
                 {
@@ -332,12 +332,12 @@ void NC_STACK_ypaufo::AI_layer3(update_msg *arg)
 
                     if ( _status_flg & BACT_STFLAG_FIRE )
                     {
-                        setState_msg arg78;
-                        arg78.unsetFlags = BACT_STFLAG_FIRE;
-                        arg78.newStatus = BACT_STATUS_NOPE;
-                        arg78.setFlags = 0;
+                        setState_msg stateMsg;
+                        stateMsg.unsetFlags = BACT_STFLAG_FIRE;
+                        stateMsg.newStatus = BACT_STATUS_NOPE;
+                        stateMsg.setFlags = 0;
 
-                        SetState(&arg78);
+                        SetState(&stateMsg);
                     }
                 }
             }
@@ -345,22 +345,22 @@ void NC_STACK_ypaufo::AI_layer3(update_msg *arg)
             {
                 _status_flg &= ~(BACT_STFLAG_FIGHT_P | BACT_STFLAG_FIGHT_S);
 
-                setState_msg arg78;
+                setState_msg stateMsg;
 
                 if ( _status_flg & BACT_STFLAG_FIRE )
                 {
-                    arg78.newStatus = BACT_STATUS_NOPE;
-                    arg78.setFlags = 0;
-                    arg78.unsetFlags = BACT_STFLAG_FIRE;
+                    stateMsg.newStatus = BACT_STATUS_NOPE;
+                    stateMsg.setFlags = 0;
+                    stateMsg.unsetFlags = BACT_STFLAG_FIRE;
 
-                    SetState(&arg78);
+                    SetState(&stateMsg);
                 }
 
-                arg78.newStatus = BACT_STATUS_IDLE;
-                arg78.unsetFlags = 0;
-                arg78.setFlags = 0;
+                stateMsg.newStatus = BACT_STATUS_IDLE;
+                stateMsg.unsetFlags = 0;
+                stateMsg.setFlags = 0;
 
-                SetState(&arg78);
+                SetState(&stateMsg);
             }
         }
     }
@@ -370,49 +370,49 @@ void NC_STACK_ypaufo::AI_layer3(update_msg *arg)
     {
         if ( _clock - _newtarget_time > 500 )
         {
-            TTargetAssess arg110;
-            TTargetAssess arg110_1;
+            TTargetAssess secAssess;
+            TTargetAssess primAssess;
 
-            arg110.tgType = _secndTtype;
-            arg110.priority = 1;
+            secAssess.tgType = _secndTtype;
+            secAssess.priority = 1;
 
-            arg110_1.tgType = _primTtype;
-            arg110_1.priority = 0;
+            primAssess.tgType = _primTtype;
+            primAssess.priority = 0;
 
-            int v63 = TargetAssess(&arg110);
+            int secResult = TargetAssess(&secAssess);
 
-            int v66 = TargetAssess(&arg110_1);
+            int primResult = TargetAssess(&primAssess);
 
-            if ( v63 != TA_IGNORE || v66 != TA_IGNORE )
+            if ( secResult != TA_IGNORE || primResult != TA_IGNORE )
             {
-                if ( v63 == TA_CANCEL )
+                if ( secResult == TA_CANCEL )
                 {
-                    setTarget_msg arg67;
-                    arg67.tgt_type = BACT_TGT_TYPE_NONE;
-                    arg67.priority = 1;
+                    setTarget_msg targetMsg;
+                    targetMsg.tgt_type = BACT_TGT_TYPE_NONE;
+                    targetMsg.priority = 1;
 
-                    SetTarget(&arg67);
+                    SetTarget(&targetMsg);
                 }
 
-                if ( v66 == TA_CANCEL )
+                if ( primResult == TA_CANCEL )
                 {
-                    setTarget_msg arg67;
-                    arg67.tgt_type = BACT_TGT_TYPE_CELL;
-                    arg67.tgt_pos.x = _position.x;
-                    arg67.tgt_pos.z = _position.z;
-                    arg67.priority = 0;
+                    setTarget_msg targetMsg;
+                    targetMsg.tgt_type = BACT_TGT_TYPE_CELL;
+                    targetMsg.tgt_pos.x = _position.x;
+                    targetMsg.tgt_pos.z = _position.z;
+                    targetMsg.priority = 0;
 
-                    SetTarget(&arg67);
+                    SetTarget(&targetMsg);
                 }
 
                 if ( _primTtype || _secndTtype )
                 {
-                    setState_msg arg78;
-                    arg78.unsetFlags = BACT_STFLAG_LAND;
-                    arg78.setFlags = 0;
-                    arg78.newStatus = BACT_STATUS_NORMAL;
+                    setState_msg stateMsg;
+                    stateMsg.unsetFlags = BACT_STFLAG_LAND;
+                    stateMsg.setFlags = 0;
+                    stateMsg.newStatus = BACT_STATUS_NORMAL;
 
-                    SetState(&arg78);
+                    SetState(&stateMsg);
                     break;
                 }
             }
@@ -421,7 +421,7 @@ void NC_STACK_ypaufo::AI_layer3(update_msg *arg)
         if ( !getBACT_landingOnWait() )
         {
             _thraction = 0.0;
-            _rotation *= mat3x3::RotateY(_maxrot * v110);
+            _rotation *= mat3x3::RotateY(_maxrot * dtime);
         }
         else
         {
@@ -431,31 +431,31 @@ void NC_STACK_ypaufo::AI_layer3(update_msg *arg)
 
             if ( _status_flg & BACT_STFLAG_LAND )
             {
-                setState_msg arg78;
-                arg78.unsetFlags = 0;
-                arg78.setFlags = 0;
-                arg78.newStatus = BACT_STATUS_IDLE;
+                setState_msg stateMsg;
+                stateMsg.unsetFlags = 0;
+                stateMsg.setFlags = 0;
+                stateMsg.newStatus = BACT_STATUS_IDLE;
 
-                SetState(&arg78);
+                SetState(&stateMsg);
 
-                TRayIntersection arg136_1;
+                TRayIntersection groundRay;
 
-                arg136_1.stPos = _position;
-                arg136_1.vect = vec3d::OY(_overeof + 50.0);
-                arg136_1.flags = 0;
+                groundRay.stPos = _position;
+                groundRay.vect = vec3d::OY(_overeof + 50.0);
+                groundRay.flags = 0;
 
-                _world->IntersectRay(&arg136_1);
+                _world->IntersectRay(&groundRay);
 
-                if ( arg136_1.isect )
-                    _position.y = arg136_1.isectPos.y - _overeof;
+                if ( groundRay.isect )
+                    _position.y = groundRay.isectPos.y - _overeof;
             }
             else
             {
-                TCrashLandStep arg86;
-                arg86.flags = 0;
-                arg86.frameTime = arg->frameTime;
+                TCrashLandStep crashStep;
+                crashStep.flags = 0;
+                crashStep.frameTime = arg->frameTime;
 
-                CrashOrLand(&arg86);
+                CrashOrLand(&crashStep);
             }
         }
     }
@@ -477,9 +477,9 @@ void NC_STACK_ypaufo::AI_layer3(update_msg *arg)
 
 void NC_STACK_ypaufo::User_layer(update_msg *arg)
 {
-    float v88 = arg->frameTime / 1000.0;
+    float dtime = arg->frameTime / 1000.0;
 
-    int a4 = getBACT_bactCollisions();
+    int bactCollisions = getBACT_bactCollisions();
 
     _old_pos = _position;
 
@@ -494,32 +494,32 @@ void NC_STACK_ypaufo::User_layer(update_msg *arg)
         {
             if ( !(_status_flg & BACT_STFLAG_FIRE) )
             {
-                setState_msg arg78;
-                arg78.newStatus = BACT_STATUS_NORMAL;
-                arg78.unsetFlags = 0;
-                arg78.setFlags = 0;
+                setState_msg stateMsg;
+                stateMsg.newStatus = BACT_STATUS_NORMAL;
+                stateMsg.unsetFlags = 0;
+                stateMsg.setFlags = 0;
 
-                SetState(&arg78);
+                SetState(&stateMsg);
             }
 
             _status_flg &= ~BACT_STFLAG_LAND;
         }
         else
         {
-            TRayIntersection arg136;
-            arg136.stPos = _position;
-            arg136.vect = vec3d(0.0, 0.0, 0.0);
+            TRayIntersection groundRay;
+            groundRay.stPos = _position;
+            groundRay.vect = vec3d(0.0, 0.0, 0.0);
 
             if ( _viewer_overeof <= _viewer_radius )
-                arg136.vect.y = _viewer_radius * 1.5;
+                groundRay.vect.y = _viewer_radius * 1.5;
             else
-                arg136.vect.y = _viewer_overeof * 1.5;
+                groundRay.vect.y = _viewer_overeof * 1.5;
 
-            arg136.flags = 0;
+            groundRay.flags = 0;
 
-            _world->IntersectRay(&arg136);
+            _world->IntersectRay(&groundRay);
 
-            if ( !arg136.isect || _thraction != 0.0 || _ufoBoost > _mass * 9.80665 )
+            if ( !groundRay.isect || _thraction != 0.0 || _ufoBoost > _mass * 9.80665 )
             {
                 _status_flg &= ~BACT_STFLAG_LAND;
             }
@@ -541,12 +541,12 @@ void NC_STACK_ypaufo::User_layer(update_msg *arg)
                 {
                     if ( !(_status_flg & BACT_STFLAG_FIRE) )
                     {
-                        setState_msg arg78;
-                        arg78.newStatus = BACT_STATUS_IDLE;
-                        arg78.unsetFlags = 0;
-                        arg78.setFlags = 0;
+                        setState_msg stateMsg;
+                        stateMsg.newStatus = BACT_STATUS_IDLE;
+                        stateMsg.unsetFlags = 0;
+                        stateMsg.setFlags = 0;
 
-                        SetState(&arg78);
+                        SetState(&stateMsg);
                     }
                 }
 
@@ -560,46 +560,46 @@ void NC_STACK_ypaufo::User_layer(update_msg *arg)
                 {
                     if ( !(_status_flg & BACT_STFLAG_FIRE) )
                     {
-                        setState_msg arg78;
-                        arg78.newStatus = BACT_STATUS_IDLE;
-                        arg78.unsetFlags = 0;
-                        arg78.setFlags = 0;
+                        setState_msg stateMsg;
+                        stateMsg.newStatus = BACT_STATUS_IDLE;
+                        stateMsg.unsetFlags = 0;
+                        stateMsg.setFlags = 0;
 
-                        SetState(&arg78);
+                        SetState(&stateMsg);
                     }
                 }
             }
         }
 
-        float v23 = -arg->inpt->Sliders[0] * _maxrot * v88;
+        float yawAngle = -arg->inpt->Sliders[0] * _maxrot * dtime;
 
-        if ( fabs(v23) > 0.0 )
-            _rotation *= mat3x3::RotateY(v23);
+        if ( fabs(yawAngle) > 0.0 )
+            _rotation *= mat3x3::RotateY(yawAngle);
 
-        float v25 = arg->inpt->Sliders[1] * _maxrot * v88;
+        float pitchAngle = arg->inpt->Sliders[1] * _maxrot * dtime;
 
-        if ( fabs(v25) > 0.0 )
-            _rotation = mat3x3::RotateX(v25) * _rotation;
+        if ( fabs(pitchAngle) > 0.0 )
+            _rotation = mat3x3::RotateX(pitchAngle) * _rotation;
 
         if ( arg->inpt->Sliders[2] != 0.0 )
         {
             _ufoBoost = (arg->inpt->Sliders[2] * 4.0 + 1.0) * _mass * 9.80665;
 
-            float v85 = _pSector->height - _position.y;
-            float v96 = _height_max_user - v85;
-            float v101 = 1.0 / _height_max_user;
+            float altitude = _pSector->height - _position.y;
+            float heightLeft = _height_max_user - altitude;
+            float invMaxHeight = 1.0 / _height_max_user;
 
-            float v100 = 9.80665 * _mass * 5.0 * v96 * v101;
+            float maxBoost = 9.80665 * _mass * 5.0 * heightLeft * invMaxHeight;
 
-            if ( _ufoBoost > v100 )
-                _ufoBoost = v100;
+            if ( _ufoBoost > maxBoost )
+                _ufoBoost = maxBoost;
         }
         else
         {
             _ufoBoost = _mass * 9.80665;
         }
 
-        if ( a4 )
+        if ( bactCollisions )
         {
             if ( !(_status_flg & BACT_STFLAG_LAND) )
             {
@@ -619,38 +619,38 @@ void NC_STACK_ypaufo::User_layer(update_msg *arg)
                 _fly_dir_length = 0;
         }
 
-        TMissileLaunch arg79;
+        TMissileLaunch launch;
 
-        arg79.tgType = BACT_TGT_TYPE_DRCT;
-        arg79.tgt_pos = _rotation.AxisZ();
+        launch.tgType = BACT_TGT_TYPE_DRCT;
+        launch.tgt_pos = _rotation.AxisZ();
 
-        TAimQuery arg106;
-        arg106.flags = 5;
-        arg106.aim_dir = _rotation.AxisZ();
+        TAimQuery aimQuery;
+        aimQuery.flags = 5;
+        aimQuery.aim_dir = _rotation.AxisZ();
 
-        if ( UserTargeting(&arg106) )
+        if ( UserTargeting(&aimQuery) )
         {
-            arg79.target.pbact = arg106.ret_bact;
-            arg79.tgType = BACT_TGT_TYPE_UNIT;
+            launch.target.pbact = aimQuery.ret_bact;
+            launch.tgType = BACT_TGT_TYPE_UNIT;
         }
 
         if ( arg->inpt->Buttons.IsAny({0, 1}) )
         {
-            arg79.weapon = _weapon;
-            arg79.direction = _rotation.AxisZ();
-            arg79.tgType = BACT_TGT_TYPE_NONE;
-            arg79.g_time = _clock;
+            launch.weapon = _weapon;
+            launch.direction = _rotation.AxisZ();
+            launch.tgType = BACT_TGT_TYPE_NONE;
+            launch.g_time = _clock;
 
             if ( _clock % 2 )
-                arg79.start_point.x = -_fire_pos.x;
+                launch.start_point.x = -_fire_pos.x;
             else
-                arg79.start_point.x = _fire_pos.x;
+                launch.start_point.x = _fire_pos.x;
 
-            arg79.start_point.y = _fire_pos.y;
-            arg79.start_point.z = _fire_pos.z;
-            arg79.flags = (arg->inpt->Buttons.Is(1) ? 1 : 0);
+            launch.start_point.y = _fire_pos.y;
+            launch.start_point.z = _fire_pos.z;
+            launch.flags = (arg->inpt->Buttons.Is(1) ? 1 : 0);
 
-            LaunchMissile(&arg79);
+            LaunchMissile(&launch);
         }
 
         if ( _weapon == -1 )
@@ -694,12 +694,12 @@ void NC_STACK_ypaufo::User_layer(update_msg *arg)
             {
                 if ( arg->inpt->Buttons.Is(2) )
                 {
-                    setState_msg arg78;
-                    arg78.setFlags = 0;
-                    arg78.newStatus = BACT_STATUS_NOPE;
-                    arg78.unsetFlags = BACT_STFLAG_FIRE;
+                    setState_msg stateMsg;
+                    stateMsg.setFlags = 0;
+                    stateMsg.newStatus = BACT_STATUS_NOPE;
+                    stateMsg.unsetFlags = BACT_STFLAG_FIRE;
 
-                    SetState(&arg78);
+                    SetState(&stateMsg);
                 }
             }
 
@@ -707,106 +707,106 @@ void NC_STACK_ypaufo::User_layer(update_msg *arg)
             {
                 if ( !(_status_flg & BACT_STFLAG_FIRE) )
                 {
-                    setState_msg arg78;
-                    arg78.setFlags = BACT_STFLAG_FIRE;
-                    arg78.unsetFlags = 0;
-                    arg78.newStatus = BACT_STATUS_NOPE;
+                    setState_msg stateMsg;
+                    stateMsg.setFlags = BACT_STFLAG_FIRE;
+                    stateMsg.unsetFlags = 0;
+                    stateMsg.newStatus = BACT_STATUS_NOPE;
 
-                    SetState(&arg78);
+                    SetState(&stateMsg);
                 }
 
-                TMinigunShot arg105;
+                TMinigunShot mgShot;
 
-                arg105.dir = _rotation.AxisZ();
-                arg105.period = v88;
-                arg105.gTime = _clock;
+                mgShot.dir = _rotation.AxisZ();
+                mgShot.period = dtime;
+                mgShot.gTime = _clock;
 
-                FireMinigun(&arg105);
+                FireMinigun(&mgShot);
             }
         }
 
         if ( _status_flg & BACT_STFLAG_LAND )
         {
-            move_msg arg74;
-            arg74.flag = 0;
-            arg74.period = v88;
+            move_msg moveMsg;
+            moveMsg.flag = 0;
+            moveMsg.period = dtime;
 
-            Move(&arg74);
+            Move(&moveMsg);
         }
         else
         {
-            TSphereContact v60[10];
+            TSphereContact contacts[10];
 
             for (int i = 3; i >= 0; i--)
             {
-                move_msg arg74;
-                arg74.flag = 0;
-                arg74.period = v88;
+                move_msg moveMsg;
+                moveMsg.flag = 0;
+                moveMsg.period = dtime;
 
-                Move(&arg74);
+                Move(&moveMsg);
 
-                TSphereCollisionQuery arg137;
-                arg137.pos = _position;
-                arg137.dir = _fly_dir;
-                arg137.radius = _viewer_radius;
-                arg137.collisions = v60;
-                arg137.coll_max = 10;
-                arg137.flags = 0;
+                TSphereCollisionQuery sphereQuery;
+                sphereQuery.pos = _position;
+                sphereQuery.dir = _fly_dir;
+                sphereQuery.radius = _viewer_radius;
+                sphereQuery.collisions = contacts;
+                sphereQuery.coll_max = 10;
+                sphereQuery.flags = 0;
 
-                _world->FindSphereCollisions(&arg137);
+                _world->FindSphereCollisions(&sphereQuery);
 
-                int v49 = 0;
+                int collided = 0;
 
-                vec3d v93(0.0, 0.0, 0.0);
+                vec3d normalSum(0.0, 0.0, 0.0);
 
-                if ( arg137.coll_count )
+                if ( sphereQuery.coll_count )
                 {
 
 
-                    for (int j = 0 ; j < arg137.coll_count; j++)
-                        v93 += arg137.collisions[j].normal;
+                    for (int j = 0 ; j < sphereQuery.coll_count; j++)
+                        normalSum += sphereQuery.collisions[j].normal;
 
-                    float v89 = v93.length();
+                    float normalLen = normalSum.length();
 
-                    TCollisionNormal arg88;
+                    TCollisionNormal collNormal;
 
-                    if ( v89 != 0.0 )
-                        arg88.normal = v93 / v89;
+                    if ( normalLen != 0.0 )
+                        collNormal.normal = normalSum / normalLen;
                     else
-                        arg88.normal = _fly_dir;
+                        collNormal.normal = _fly_dir;
 
                     _thraction = 0;
 
-                    Recoil(&arg88);
+                    Recoil(&collNormal);
 
-                    v49 = 1;
+                    collided = 1;
                 }
 
-                if ( v49 == 0 )
+                if ( collided == 0 )
                 {
-                    TRayIntersection arg136;
-                    arg136.stPos = _old_pos;
-                    arg136.vect = _position - _old_pos;
+                    TRayIntersection moveRay;
+                    moveRay.stPos = _old_pos;
+                    moveRay.vect = _position - _old_pos;
 
-                    arg136.flags = 0;
+                    moveRay.flags = 0;
 
-                    _world->IntersectRay(&arg136);
+                    _world->IntersectRay(&moveRay);
 
-                    if ( arg136.isect )
+                    if ( moveRay.isect )
                     {
                         _thraction = 0;
 
-                        TCollisionNormal arg88;
+                        TCollisionNormal collNormal;
 
-                        arg88.normal = arg136.skel->polygons[arg136.polyID].Normal();
+                        collNormal.normal = moveRay.skel->polygons[moveRay.polyID].Normal();
 
-                        Recoil(&arg88);
+                        Recoil(&collNormal);
 
-                        v49 = 1;
+                        collided = 1;
                     }
                 }
 
-                if ( v49 == 0 )
+                if ( collided == 0 )
                 {
                     _status_flg &= ~BACT_STFLAG_LCRASH;
                     break;
@@ -820,14 +820,14 @@ void NC_STACK_ypaufo::User_layer(update_msg *arg)
 
                         SFXEngine::SFXe.startSound(&_soundcarrier, 5);
 
-                        TFFeedbackEffect arg180;
+                        TFFeedbackEffect ffEffect;
 
-                        arg180.effects_type = 5;
-                        arg180.strength = 1.0;
-                        arg180.pos_x = v93.x * 10.0 + _position.x;
-                        arg180.pos_z = v93.z * 10.0 + _position.z;
+                        ffEffect.effects_type = 5;
+                        ffEffect.strength = 1.0;
+                        ffEffect.pos_x = normalSum.x * 10.0 + _position.x;
+                        ffEffect.pos_z = normalSum.z * 10.0 + _position.z;
 
-                        _world->FFeedback_Play(&arg180);
+                        _world->FFeedback_Play(&ffEffect);
                     }
                 }
             }
@@ -839,53 +839,53 @@ void NC_STACK_ypaufo::Move(move_msg *arg)
 {
     _old_pos = _position;
 
-    float v55;
+    float weight;
 
     if ( _status == BACT_STATUS_DEAD )
-        v55 = _mass * 39.2266;
+        weight = _mass * 39.2266;
     else
-        v55 = _mass * 9.80665;
+        weight = _mass * 9.80665;
 
     vec3d mv(0.0, 0.0, 0.0);
 
     if ( !(arg->flag & 1) )
     {
         vec3d az = _rotation.AxisZ().X0Z();
-        float v9 = az.length();
+        float azLen = az.length();
 
-        if ( v9 <= 0.001 )
+        if ( azLen <= 0.001 )
             mv = -_rotation.AxisY().X0Z() * _ufoBoost;
         else
-            mv = az * (_thraction / v9);
+            mv = az * (_thraction / azLen);
     }
 
-    float v44 = 0.0;
+    float lift = 0.0;
 
     if ( !(arg->flag & 1) )
-        v44 = -1.0 * _ufoBoost;
+        lift = -1.0 * _ufoBoost;
 
-    vec3d v45 = vec3d::OY(v55) + mv - _fly_dir * (fabs(_fly_dir_length) * _airconst) + vec3d::OY(v44);
+    vec3d netForce = vec3d::OY(weight) + mv - _fly_dir * (fabs(_fly_dir_length) * _airconst) + vec3d::OY(lift);
 
-    float v52 = v45.length();
-    if ( v52 > 0.0 )
+    float forceLen = netForce.length();
+    if ( forceLen > 0.0 )
     {
-        vec3d v42 = _fly_dir * _fly_dir_length + v45 * (arg->period / _mass);
+        vec3d velocity = _fly_dir * _fly_dir_length + netForce * (arg->period / _mass);
 
-        float v51 = v42.length();
-        if ( v51 > 0.0 )
-            v42 /= v51;
+        float speed = velocity.length();
+        if ( speed > 0.0 )
+            velocity /= speed;
 
-        _fly_dir = v42;
+        _fly_dir = velocity;
 
-        _fly_dir_length = v51;
+        _fly_dir_length = speed;
     }
 
-    vec3d a1v = _fly_dir * (_fly_dir_length * arg->period * 6.0);
+    vec3d moveStep = _fly_dir * (_fly_dir_length * arg->period * 6.0);
 
     if ( fabs(_fly_dir_length) > 0.1 )
-        _position += a1v;
+        _position += moveStep;
 
-    _ufoTogoRisidue -= a1v.length();
+    _ufoTogoRisidue -= moveStep.length();
 
     if ( _ufoTogoRisidue < 0.0 )
         _ufoTogoRisidue = 0;
@@ -895,20 +895,20 @@ void NC_STACK_ypaufo::Move(move_msg *arg)
     _soundcarrier.Sounds[0].Pitch = _pitch;
     _soundcarrier.Sounds[0].Volume = _volume;
 
-    float v53;
+    float pitchMax;
 
     if ( _pitch_max <= -0.8 )
-        v53 = 1.2;
+        pitchMax = 1.2;
     else
-        v53 = _pitch_max;
+        pitchMax = _pitch_max;
 
-    float v58 = fabs(_fly_dir_length) / (_force / _airconst_static) * v53;
+    float pitchShift = fabs(_fly_dir_length) / (_force / _airconst_static) * pitchMax;
 
-    if ( v58 > v53 )
-        v58 = v53;
+    if ( pitchShift > pitchMax )
+        pitchShift = pitchMax;
 
     if ( _soundcarrier.Sounds[0].PSample )
-        _soundcarrier.Sounds[0].Pitch = (_soundcarrier.Sounds[0].PSample->SampleRate + _soundcarrier.Sounds[0].Pitch) * v58;
+        _soundcarrier.Sounds[0].Pitch = (_soundcarrier.Sounds[0].PSample->SampleRate + _soundcarrier.Sounds[0].Pitch) * pitchShift;
 
 }
 

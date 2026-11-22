@@ -92,17 +92,17 @@ void NC_STACK_button::UpdateSlider(WidgetEntry *sbt)
     if ( sbttt->value < sbttt->min)
         sbttt->value = sbttt->min;
 
-    int v7 = sbt->width / (sbttt->max - sbttt->min + 1) + 1;
+    int thumbWidth = sbt->width / (sbttt->max - sbttt->min + 1) + 1;
 
-    if ( v7 < 6 )
-        v7 = 6;
+    if ( thumbWidth < 6 )
+        thumbWidth = 6;
 
-    sbttt->thumbStart = (float)((sbttt->value - sbttt->min) * (sbt->width - v7) / (sbttt->max - sbttt->min)) + 0.5;
+    sbttt->thumbStart = (float)((sbttt->value - sbttt->min) * (sbt->width - thumbWidth) / (sbttt->max - sbttt->min)) + 0.5;
 
     if ( sbttt->thumbStart < 0 )
         sbttt->thumbStart = 0;
 
-    sbttt->thumbEnd = v7 + sbttt->thumbStart;
+    sbttt->thumbEnd = thumbWidth + sbttt->thumbStart;
 
     if ( sbttt->thumbEnd > sbt->width )
         sbttt->thumbEnd = sbt->width;
@@ -389,9 +389,9 @@ NC_STACK_button::ResCode NC_STACK_button::ProcessWidgetsEvents(TInputState *arg)
                     if (it->flags & FLAG_PRESSED)
                         result = ResCode(it->pressed_id, it->button_id);
 
-                    int v21 = (arg->ClickInf.move.ScreenPos.x - sbttt->scrDownX) * (sbttt->max - sbttt->min + 1);
+                    int scaledDx = (arg->ClickInf.move.ScreenPos.x - sbttt->scrDownX) * (sbttt->max - sbttt->min + 1);
 
-                    sbttt->value = sbttt->oldValue + v21 / it->width;
+                    sbttt->value = sbttt->oldValue + scaledDx / it->width;
 
                     if ( sbttt->value < sbttt->min )
                         sbttt->value = sbttt->min;
@@ -513,24 +513,24 @@ NC_STACK_button::ResCode NC_STACK_button::ProcessWidgetsEvents(TInputState *arg)
 
 void NC_STACK_button::DrawTextButton(WidgetEntry *sbt, CmdStream *pbuf)
 {
-    int v6;
+    int tilesetId;
 
     if ( sbt->flags & FLAG_DISABLED )
     {
-        v6 = sbt->tileset_disabled;
+        tilesetId = sbt->tileset_disabled;
     }
     else if ( !(sbt->flags & FLAG_PRESSED) || (sbt->flags & FLAG_NOPRESS) )
     {
-        v6 = sbt->tileset_up;
+        tilesetId = sbt->tileset_up;
     }
     else
     {
-        v6 = sbt->tileset_down;
+        tilesetId = sbt->tileset_down;
     }
 
-    TileMap *v7 = GFX::Engine.GetTileset(v6);
+    TileMap *tileset = GFX::Engine.GetTileset(tilesetId);
 
-    FontUA::select_tileset(pbuf, v6);
+    FontUA::select_tileset(pbuf, tilesetId);
 
     FontUA::set_center_xpos(pbuf, sbt->xpos + x - (screen_width / 2));
 
@@ -543,7 +543,7 @@ void NC_STACK_button::DrawTextButton(WidgetEntry *sbt, CmdStream *pbuf)
         if ( sbt->flags & FLAG_BORDER )
         {
             FontUA::store_u8(pbuf, left_chr); //Padding gfx
-            tmp += -v7->map[left_chr].w - v7->map[right_chr].w;
+            tmp += -tileset->map[left_chr].w - tileset->map[right_chr].w;
         }
     }
 
@@ -561,61 +561,61 @@ void NC_STACK_button::DrawTextButton(WidgetEntry *sbt, CmdStream *pbuf)
         }
     }
 
-    int v17;
-    std::string v18;
+    int textFlags;
+    std::string text;
 
     if ( sbt->flags & FLAG_PRESSED )
     {
         if ( sbt->flags & FLAG_NOPRESS )
-            v17 = 0;
+            textFlags = 0;
         else
-            v17 = 16;
+            textFlags = 16;
 
-        v18 = sbt->caption2;
+        text = sbt->caption2;
     }
     else
     {
-        v17 = 0;
-        v18 = sbt->caption;
+        textFlags = 0;
+        text = sbt->caption;
     }
 
     if ( sbt->flags & FLAG_CENTER )
     {
-        v17 |= 4;
+        textFlags |= 4;
     }
     else if ( sbt->flags & FLAG_RALIGN )
     {
-        v17 |= 2;
+        textFlags |= 2;
     }
     else
     {
-        v17 |= 1;
+        textFlags |= 1;
     }
 
     FontUA::set_txtColor(pbuf, sbt->txt_r, sbt->txt_g, sbt->txt_b);
 
-    FontUA::add_txt(pbuf, tmp, v17, v18);
+    FontUA::add_txt(pbuf, tmp, textFlags, text);
 }
 
 void NC_STACK_button::DrawTileButton(WidgetEntry *sbt, CmdStream *pbuf)
 {
-    int v6 = 0;
-    int v7;
+    int drawnW = 0;
+    int tilesetId;
 
     if ( sbt->flags & FLAG_DISABLED )
     {
-        v7 = sbt->tileset_disabled;
+        tilesetId = sbt->tileset_disabled;
     }
     else if ( sbt->flags & FLAG_PRESSED )
     {
-        v7 = sbt->tileset_down;
+        tilesetId = sbt->tileset_down;
     }
     else
     {
-        v7 = sbt->tileset_up;
+        tilesetId = sbt->tileset_up;
     }
 
-    TileMap *v8 = GFX::Engine.GetTileset(v7);
+    TileMap *tileset = GFX::Engine.GetTileset(tilesetId);
 
     int strwdth = 0;
 
@@ -624,30 +624,30 @@ void NC_STACK_button::DrawTileButton(WidgetEntry *sbt, CmdStream *pbuf)
         int caplen = sbt->caption2.size();
 
         for (int i = 0; i < caplen; i++)
-            strwdth += v8->map[(uint8_t)sbt->caption2[i]].w;
+            strwdth += tileset->map[(uint8_t)sbt->caption2[i]].w;
     }
     else
     {
         int caplen = sbt->caption.size();
 
         for (int i = 0; i < caplen; i++)
-            strwdth += v8->map[(uint8_t)sbt->caption[i]].w;
+            strwdth += tileset->map[(uint8_t)sbt->caption[i]].w;
     }
 
-    int v47 = (sbt->width - strwdth - v8->map[left_chr].w) / 2;
+    int centerPad = (sbt->width - strwdth - tileset->map[left_chr].w) / 2;
 
-    FontUA::select_tileset(pbuf, v7);
+    FontUA::select_tileset(pbuf, tilesetId);
 
     FontUA::set_center_xpos(pbuf, x + sbt->xpos - (screen_width / 2));
     FontUA::set_center_ypos(pbuf, y + sbt->ypos - (screen_height / 2));
 
     if ( sbt->button_type == TYPE_SLIDER )
     {
-        int v22 = 0;
-        while ( sbt->caption[v22] != 0 || sbt->caption[v22 + 1] != 0 )
+        int charIdx = 0;
+        while ( sbt->caption[charIdx] != 0 || sbt->caption[charIdx + 1] != 0 )
         {
-            pbuf->push_back( sbt->caption[v22] );
-            v22++;
+            pbuf->push_back( sbt->caption[charIdx] );
+            charIdx++;
         }
     }
     else
@@ -659,19 +659,19 @@ void NC_STACK_button::DrawTileButton(WidgetEntry *sbt, CmdStream *pbuf)
             if ( sbt->flags & FLAG_BORDER )
             {
                 FontUA::store_u8(pbuf, left_chr);
-                ttmp += -v8->map[left_chr].w - v8->map[right_chr].w;
+                ttmp += -tileset->map[left_chr].w - tileset->map[right_chr].w;
             }
         }
 
-        if ( v47 > 0 )
+        if ( centerPad > 0 )
         {
             if ( sbt->flags & FLAG_CENTER )
             {
-                FontUA::op10(pbuf, v47);
+                FontUA::op10(pbuf, centerPad);
 
                 FontUA::store_u8(pbuf, fill_chr);
 
-                v6 = v47;
+                drawnW = centerPad;
             }
         }
 
@@ -682,35 +682,35 @@ void NC_STACK_button::DrawTileButton(WidgetEntry *sbt, CmdStream *pbuf)
         else
             capt = sbt->caption;
 
-        size_t v26 = 0;
-        while ( capt[v26] && v26 < capt.size() )
+        size_t charIdx = 0;
+        while ( capt[charIdx] && charIdx < capt.size() )
         {
-            Common::PointRect &pr = v8->map[(uint8_t)capt[v26]];
-            if ( pr.w + v6 > ttmp )
+            Common::PointRect &pr = tileset->map[(uint8_t)capt[charIdx]];
+            if ( pr.w + drawnW > ttmp )
             {
-                if ( (ttmp - v6) > 2 )
+                if ( (ttmp - drawnW) > 2 )
                 {
-                    FontUA::set_xwidth(pbuf, ttmp - v6);
+                    FontUA::set_xwidth(pbuf, ttmp - drawnW);
 
-                    FontUA::store_s8(pbuf, capt[v26]);
+                    FontUA::store_s8(pbuf, capt[charIdx]);
 
-                    v6 = ttmp;
+                    drawnW = ttmp;
                 }
                 break;
             }
 
-            v6 += pr.w;
+            drawnW += pr.w;
 
-            FontUA::store_s8(pbuf, capt[v26]);
+            FontUA::store_s8(pbuf, capt[charIdx]);
 
-            v26++;
+            charIdx++;
         }
 
-        if ( v6 < ttmp )
+        if ( drawnW < ttmp )
         {
             if ( sbt->button_type != TYPE_CAPTION && sbt->flags & FLAG_BORDER )
             {
-                FontUA::op17(pbuf, sbt->width - v8->map[right_chr].w);
+                FontUA::op17(pbuf, sbt->width - tileset->map[right_chr].w);
             }
             else
             {
@@ -757,18 +757,18 @@ size_t NC_STACK_button::Draw()
 
 bool NC_STACK_button::SetText(int butID, const std::string &caption, const std::string &caption2)
 {
-    int v5 = GetIndexByID(butID);
+    int idx = GetIndexByID(butID);
 
-    if ( v5 >= 0 && v5 < widget_count &&  !caption.empty() )
+    if ( idx >= 0 && idx < widget_count &&  !caption.empty() )
     {
-        WidgetEntry &v7 = widgets[v5];
+        WidgetEntry &widget = widgets[idx];
 
-        v7.caption = caption;
+        widget.caption = caption;
 
         if ( !caption2.empty() )
-            v7.caption2 = caption2;
+            widget.caption2 = caption2;
         else
-            v7.caption2 = v7.caption;
+            widget.caption2 = widget.caption;
 
         return true;
     }
@@ -778,14 +778,14 @@ bool NC_STACK_button::SetText(int butID, const std::string &caption, const std::
 
 bool NC_STACK_button::SetText(int butID, const std::string &caption)
 {
-    int v5 = GetIndexByID(butID);
+    int idx = GetIndexByID(butID);
 
-    if ( v5 >= 0 && v5 < widget_count &&  !caption.empty() )
+    if ( idx >= 0 && idx < widget_count &&  !caption.empty() )
     {
-        WidgetEntry &v7 = widgets[v5];
+        WidgetEntry &widget = widgets[idx];
 
-        v7.caption = caption;
-        v7.caption2 = caption;
+        widget.caption = caption;
+        widget.caption2 = caption;
 
         return true;
     }

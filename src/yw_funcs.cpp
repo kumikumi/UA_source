@@ -418,13 +418,13 @@ int get_level_numb(const std::string &filename)
     else if ( buf.size() == 6 )
         buf.resize(3);
 
-    int v10 = std::stoi(buf);
-    if ( v10 < 1 || v10 >= 256 )
+    int levelNum = std::stoi(buf);
+    if ( levelNum < 1 || levelNum >= 256 )
     {
-        v10 = -1;
+        levelNum = -1;
         ypa_log_out("Invalid level num [valid: 0..127] for %s.\n", filename.c_str());
     }
-    return v10;
+    return levelNum;
 }
 
 
@@ -486,7 +486,7 @@ bool NC_STACK_ypaworld::ScanLevelFile(const std::string &fname, bool multiplayer
 
 int NC_STACK_ypaworld::ScanLevelDir(bool multiplayer)
 {
-    int v10 = 1;
+    int allOk = 1;
 
     std::string path;
 
@@ -510,23 +510,23 @@ int NC_STACK_ypaworld::ScanLevelDir(bool multiplayer)
                 else
                 {
                     ypa_log_out("Scanning [%s%s] .. FAILED.\n", path.c_str(), fsnode->getName().c_str());
-                    v10 = 0;
+                    allOk = 0;
                 }
             }
         }
     }
 
-    return v10;
+    return allOk;
 }
 
 int NC_STACK_ypaworld::yw_ScanLevels()
 {
-    int v2 = 1;
+    int allOk = 1;
     if ( !ScanLevelDir(false) )
-        v2 = 0;
+        allOk = 0;
     if ( !ScanLevelDir(true) )
-        v2 = 0;
-    return v2;
+        allOk = 0;
+    return allOk;
 }
 
 NC_STACK_base * LoadBaseFromList(const std::string &fname)
@@ -965,16 +965,16 @@ int yw_InitMouseStuff(NC_STACK_ypaworld *yw)
         }
     }
 
-    GFX::TCursorParams arg_263;
+    GFX::TCursorParams cursor;
 
-    arg_263.bitm = 0;
-    arg_263.pointer_id = 0;
-    GFX::Engine.SetCursor(arg_263.pointer_id, 0);
+    cursor.bitm = 0;
+    cursor.pointer_id = 0;
+    GFX::Engine.SetCursor(cursor.pointer_id, 0);
 
     if (yw->_mousePointers[0])
-        arg_263.bitm = yw->_mousePointers[0]->GetBitmap();
-    arg_263.pointer_id = 1;
-    GFX::Engine.SetCursor(arg_263.pointer_id, 0);
+        cursor.bitm = yw->_mousePointers[0]->GetBitmap();
+    cursor.pointer_id = 1;
+    GFX::Engine.SetCursor(cursor.pointer_id, 0);
 
     Common::Env.SetPrefix("rsrc", oldRsrc);
     return 1;
@@ -1152,7 +1152,7 @@ int loadTOD(NC_STACK_ypaworld *yw, const char *fname)
 
 int writeTOD(NC_STACK_ypaworld *yw, const char *fname, int tod)
 {
-    int v6 = 0;
+    int written = 0;
     if ( yw->_GameShell )
     {
         FSMgr::FileHandle *fil = uaOpenFileAlloc( fmt::sprintf("save:%s/%s", yw->_GameShell->UserName, fname), "w");
@@ -1161,22 +1161,22 @@ int writeTOD(NC_STACK_ypaworld *yw, const char *fname, int tod)
         {
             fil->printf("%d", tod);
             delete fil;
-            v6 = 1;
+            written = 1;
         }
     }
-    return v6;
+    return written;
 }
 
 
 void NC_STACK_ypaworld::GameShellBlitBkg(NC_STACK_bitmap *bitm)
 {
-    GFX::TBitmapBlitParams a4;
-    a4.pbitm = bitm->GetBitmap();
+    GFX::TBitmapBlitParams blitParams;
+    blitParams.pbitm = bitm->GetBitmap();
 
-    a4.dstRect = Common::FRect(-1.0, -1.0, 1.0, 1.0);
-    a4.srcRect = Common::FRect(-1.0, -1.0, 1.0, 1.0);
+    blitParams.dstRect = Common::FRect(-1.0, -1.0, 1.0, 1.0);
+    blitParams.srcRect = Common::FRect(-1.0, -1.0, 1.0, 1.0);
 
-    GFX::Engine.DrawBitmapNormalized(&a4);
+    GFX::Engine.DrawBitmapNormalized(&blitParams);
 }
 
 void NC_STACK_ypaworld::PlayGameMovie(const std::string &movie_fname)
@@ -1279,52 +1279,52 @@ void NC_STACK_ypaworld::FreeDebrief()
 // Select map
 void UpdateHoveredMapRegion(NC_STACK_ypaworld *yw, TInputState *inpt)
 {
-    float v3 = (float)inpt->ClickInf.move.ScreenPos.x / (float)yw->_screenSize.x;
-    float v4 = (float)inpt->ClickInf.move.ScreenPos.y / (float)yw->_screenSize.y;
+    float mx = (float)inpt->ClickInf.move.ScreenPos.x / (float)yw->_screenSize.x;
+    float my = (float)inpt->ClickInf.move.ScreenPos.y / (float)yw->_screenSize.y;
 
-    if (v3 < 0.0)
-        v3 = 0.0;
-    if (v3 > 1.0)
-        v3 = 1.0;
+    if (mx < 0.0)
+        mx = 0.0;
+    if (mx > 1.0)
+        mx = 1.0;
 
-    if (v4 < 0.0)
-        v4 = 0.0;
-    if (v4 > 1.0)
-        v4 = 1.0;
+    if (my < 0.0)
+        my = 0.0;
+    if (my > 1.0)
+        my = 1.0;
 
-    int v6 = 0;
-    size_t v7 = 0;
+    int selectable = 0;
+    size_t regionID = 0;
 
     if ( yw->_globalMapRegions.MaskImage )
     {
         if ( inpt->ClickInf.selected_btnID == -1 )
         {
-            ResBitmap *a4 = yw->_globalMapRegions.MaskImage->GetBitmap();
+            ResBitmap *mask = yw->_globalMapRegions.MaskImage->GetBitmap();
 
-            int xpos = a4->width * v3;
-            int ypos = a4->height * v4;
+            int xpos = mask->width * mx;
+            int ypos = mask->height * my;
 
-            SDL_LockSurface(a4->swTex);
-            v7 = ((uint8_t *)a4->swTex->pixels)[a4->swTex->pitch * ypos + xpos];
-            SDL_UnlockSurface(a4->swTex);
+            SDL_LockSurface(mask->swTex);
+            regionID = ((uint8_t *)mask->swTex->pixels)[mask->swTex->pitch * ypos + xpos];
+            SDL_UnlockSurface(mask->swTex);
             
-            if ( v7 > 0 && v7 < 256 )
+            if ( regionID > 0 && regionID < 256 )
             {
-                int v15 = yw->_globalMapRegions.MapRegions[v7].Status;
-                if ( v15 != TMapRegionInfo::STATUS_NONE && v15 != TMapRegionInfo::STATUS_DISABLED && v15 != TMapRegionInfo::STATUS_NETWORK )
-                    v6 = 1;
+                int status = yw->_globalMapRegions.MapRegions[regionID].Status;
+                if ( status != TMapRegionInfo::STATUS_NONE && status != TMapRegionInfo::STATUS_DISABLED && status != TMapRegionInfo::STATUS_NETWORK )
+                    selectable = 1;
             }
         }
     }
 
-    if ( v6 )
+    if ( selectable )
     {
-        if ( v7 != yw->_globalMapRegions.SelectedRegion )
+        if ( regionID != yw->_globalMapRegions.SelectedRegion )
         {
             if ( yw->_GameShell )
                 SFXEngine::SFXe.startSound(&yw->_GameShell->samples1_info, 8);
         }
-        yw->_globalMapRegions.SelectedRegion = v7;
+        yw->_globalMapRegions.SelectedRegion = regionID;
     }
     else
     {
@@ -1365,13 +1365,13 @@ void NC_STACK_ypaworld::DrawMapRegionsTutorial()
 {
     if ( _globalMapRegions.MenuImage && _globalMapRegions.MaskImage && _globalMapRegions.RolloverImage )
     {
-        GFX::TBitmapBlitParams a4;
-        a4.pbitm = _globalMapRegions.MenuImage->GetBitmap();
+        GFX::TBitmapBlitParams menuBlit;
+        menuBlit.pbitm = _globalMapRegions.MenuImage->GetBitmap();
 
-        a4.srcRect = Common::FRect(-1.0, -1.0, 1.0, 1.0);
-        a4.dstRect = Common::FRect(-1.0, -1.0, 1.0, 1.0);
+        menuBlit.srcRect = Common::FRect(-1.0, -1.0, 1.0, 1.0);
+        menuBlit.dstRect = Common::FRect(-1.0, -1.0, 1.0, 1.0);
 
-        GFX::Engine.DrawBitmapNormalized(&a4);
+        GFX::Engine.DrawBitmapNormalized(&menuBlit);
 
         for (size_t i = 0; i < _globalMapRegions.MapRegions.size(); i++)
         {
@@ -1391,15 +1391,15 @@ void NC_STACK_ypaworld::DrawMapRegionsTutorial()
 
                 if ( v20 )
                 {
-                    GFX::TMaskedBlitParams v17;
-                    v17.bitmap = v20;
-                    v17.mask = _globalMapRegions.MaskImage->GetBitmap();
+                    GFX::TMaskedBlitParams maskedBlit;
+                    maskedBlit.bitmap = v20;
+                    maskedBlit.mask = _globalMapRegions.MaskImage->GetBitmap();
 
-                    v17.maskIndex = i;
-                    v17.dstRect = region.Rect;
-                    v17.srcRect = v17.dstRect;
+                    maskedBlit.maskIndex = i;
+                    maskedBlit.dstRect = region.Rect;
+                    maskedBlit.srcRect = maskedBlit.dstRect;
 
-                    GFX::Engine.DrawMaskedBitmapNormalized(&v17);
+                    GFX::Engine.DrawMaskedBitmapNormalized(&maskedBlit);
                 }
             }
         }
@@ -1413,14 +1413,14 @@ void NC_STACK_ypaworld::DrawMapRegionsTutorial()
             {
                 if ( !_globalMapRegions.MapRegions[ _globalMapRegions.SelectedRegion ].MapName.empty() )
                 {
-                    const std::string v12 = GetLevelName(_globalMapRegions.SelectedRegion);
+                    const std::string levelName = GetLevelName(_globalMapRegions.SelectedRegion);
 
                     FontUA::select_tileset(&cmdBuff, 15);
                     FontUA::set_xpos(&cmdBuff, 0);
                     FontUA::set_ypos(&cmdBuff, -(_fontH + _iconOrderH + 4) );
                     FontUA::set_txtColor(&cmdBuff, _iniColors[63].r, _iniColors[63].g, _iniColors[63].b);
 
-                    FontUA::FormateCenteredSkipableItem(_guiTiles[15], &cmdBuff, v12, _screenSize.x);
+                    FontUA::FormateCenteredSkipableItem(_guiTiles[15], &cmdBuff, levelName, _screenSize.x);
                 }
             }
             FontUA::set_end(&cmdBuff);
@@ -1435,13 +1435,13 @@ void NC_STACK_ypaworld::DrawMapRegions()
 {
     if ( _globalMapRegions.MenuImage && _globalMapRegions.MaskImage && _globalMapRegions.RolloverImage && _globalMapRegions.FinishedImage && _globalMapRegions.EnabledImage )
     {
-        GFX::TBitmapBlitParams a4;
-        a4.pbitm = _globalMapRegions.MenuImage->GetBitmap();
+        GFX::TBitmapBlitParams menuBlit;
+        menuBlit.pbitm = _globalMapRegions.MenuImage->GetBitmap();
 
-        a4.srcRect = Common::FRect(-1.0, -1.0, 1.0, 1.0);
-        a4.dstRect = Common::FRect(-1.0, -1.0, 1.0, 1.0);
+        menuBlit.srcRect = Common::FRect(-1.0, -1.0, 1.0, 1.0);
+        menuBlit.dstRect = Common::FRect(-1.0, -1.0, 1.0, 1.0);
 
-        GFX::Engine.DrawBitmapNormalized(&a4);
+        GFX::Engine.DrawBitmapNormalized(&menuBlit);
         //printf("field_BE38 %d \n",yw->LevelNet->field_BE38);
 
         for (size_t i = 0; i < _globalMapRegions.MapRegions.size(); i++)
@@ -1470,15 +1470,15 @@ void NC_STACK_ypaworld::DrawMapRegions()
 
                 if ( v20 )
                 {
-                    GFX::TMaskedBlitParams v17;
-                    v17.bitmap = v20;
-                    v17.mask = _globalMapRegions.MaskImage->GetBitmap();
+                    GFX::TMaskedBlitParams maskedBlit;
+                    maskedBlit.bitmap = v20;
+                    maskedBlit.mask = _globalMapRegions.MaskImage->GetBitmap();
 
-                    v17.maskIndex = i;
-                    v17.dstRect = region.Rect;
-                    v17.srcRect = v17.dstRect;
+                    maskedBlit.maskIndex = i;
+                    maskedBlit.dstRect = region.Rect;
+                    maskedBlit.srcRect = maskedBlit.dstRect;
 
-                    GFX::Engine.DrawMaskedBitmapNormalized(&v17);
+                    GFX::Engine.DrawMaskedBitmapNormalized(&maskedBlit);
                 }
             }
         }
@@ -1492,22 +1492,22 @@ void NC_STACK_ypaworld::DrawMapRegions()
             {
                 if ( !_globalMapRegions.MapRegions[ _globalMapRegions.SelectedRegion ].MapName.empty() )
                 {
-                    const std::string v12 = GetLevelName(_globalMapRegions.SelectedRegion);
+                    const std::string levelName = GetLevelName(_globalMapRegions.SelectedRegion);
 
                     FontUA::select_tileset(&cmdBuff, 15);
                     FontUA::set_xpos(&cmdBuff, 0);
                     FontUA::set_ypos(&cmdBuff, -(_fontH + _iconOrderH + 4) );
                     FontUA::set_txtColor(&cmdBuff, _iniColors[63].r, _iniColors[63].g, _iniColors[63].b);
 
-                    FontUA::FormateCenteredSkipableItem(_guiTiles[15], &cmdBuff, v12, _screenSize.x);
+                    FontUA::FormateCenteredSkipableItem(_guiTiles[15], &cmdBuff, levelName, _screenSize.x);
                 }
             }
             FontUA::set_end(&cmdBuff);
 
             GFX::Engine.ProcessDrawSeq(cmdBuff);
         }
-        const std::string &v13 = Locale::Text::ToD(_tipOfDayId, " ");
-        splashScreen_OutText(this, v13, _screenSize.x / 20, _screenSize.x / 20);
+        const std::string &tipText = Locale::Text::ToD(_tipOfDayId, " ");
+        splashScreen_OutText(this, tipText, _screenSize.x / 20, _screenSize.x / 20);
     }
 }
 
@@ -1519,15 +1519,15 @@ int NC_STACK_ypaworld::CreateBriefingTextList()
     int top = _screenSize.y * 0.08958333333333329;
     int bottom = _screenSize.y * 0.9083333333333334;
 
-    int v5 = (bottom - top) / _fontH;
+    int visibleLines = (bottom - top) / _fontH;
 
     briefingTextList = GuiList();
 
     GuiList::tInit args;
     args.numEntries = 1;
-    args.shownEntries = v5;
-    args.minShownEntries = v5;
-    args.maxShownEntries = v5;
+    args.shownEntries = visibleLines;
+    args.minShownEntries = visibleLines;
+    args.maxShownEntries = visibleLines;
     args.withIcon = false;
     args.entryHeight = _fontH;
     args.entryWidth = (rght - lft);
@@ -1603,33 +1603,33 @@ bool NC_STACK_ypaworld::InitBriefing(int lvlid)
         {
             if ( !_levelInfo.JodieFoster[ robo.Owner ] )
             {
-                int v19;
+                int movieIdx;
 
                 switch ( robo.Owner )
                 {
                 case 2:
-                    v19 = 7;
+                    movieIdx = 7;
                     break;
                 case 3:
-                    v19 = 6;
+                    movieIdx = 6;
                     break;
                 case 4:
-                    v19 = 5;
+                    movieIdx = 5;
                     break;
                 case 5:
-                    v19 = 8;
+                    movieIdx = 8;
                     break;
                 case 6:
-                    v19 = 4;
+                    movieIdx = 4;
                     break;
                 default:
-                    v19 = -1;
+                    movieIdx = -1;
                     break;
                 }
 
-                if ( v19 != -1 && !_movies[v19].empty() )
+                if ( movieIdx != -1 && !_movies[movieIdx].empty() )
                 {
-                    _briefScreen.MovieStr = _movies[v19];
+                    _briefScreen.MovieStr = _movies[movieIdx];
 
                     _firstContactFaction = robo.Owner;
                     _briefScreen.Stage = TBriefengScreen::STAGE_MOVIE;
@@ -2059,9 +2059,9 @@ void ypaworld_func158__d3d_list_draw(NC_STACK_ypaworld *yw, UserData *usr)
     GFX::Engine.ProcessDrawSeq(usr->d3d_listvw.cmdCommands, &usr->d3d_listvw.cmdInclude);
 }
 
-void FormatEmptyListItems(NC_STACK_ypaworld *yw, GuiList *lstvw, CmdStream *pos, int a3)
+void FormatEmptyListItems(NC_STACK_ypaworld *yw, GuiList *lstvw, CmdStream *pos, int count)
 {
-    for ( int i = 0; i < a3; i++ )
+    for ( int i = 0; i < count; i++ )
         FormatListItem(yw, lstvw, pos, " ");
 }
 
@@ -2452,24 +2452,24 @@ void ypaworld_func158__locale_list_draw(NC_STACK_ypaworld *yw, UserData *usr)
 
     usr->local_listvw.ItemsPreLayout(yw, &usr->local_listvw.itemBlock, 0, "uvw");
 
-    int v5 = 0;
+    int entryIdx = 0;
     for( const auto &x : usr->lang_dlls )
     {
-        if ( v5 >= usr->local_listvw.firstShownEntries && v5 < usr->local_listvw.shownEntries + usr->local_listvw.firstShownEntries)
+        if ( entryIdx >= usr->local_listvw.firstShownEntries && entryIdx < usr->local_listvw.shownEntries + usr->local_listvw.firstShownEntries)
         {
-            if ( v5 == usr->local_listvw.selectedEntry )
+            if ( entryIdx == usr->local_listvw.selectedEntry )
                 FormatSelectedListItem(yw, &usr->local_listvw, &usr->local_listvw.itemBlock, x);
             else
                 FormatListItem(yw, &usr->local_listvw, &usr->local_listvw.itemBlock, x);
         }
 
-        v5++;
+        entryIdx++;
     }
 
-    if ( v5 > 10 )
+    if ( entryIdx > 10 )
         usr->local_listvw.shownEntries = 10;
     else
-        usr->local_listvw.shownEntries = v5;
+        usr->local_listvw.shownEntries = entryIdx;
 
     usr->local_listvw.numEntries = usr->local_listvw.shownEntries;
 
@@ -2491,48 +2491,48 @@ void ypaworld_func158__saveload_list_draw(NC_STACK_ypaworld *yw, UserData *usr)
 
     usr->disk_listvw.ItemsPreLayout(yw, &usr->disk_listvw.itemBlock, 0, "uvw");
 
-    int v54 = 0;
+    int entryIdx = 0;
 
     for ( ProfileList::iterator it = usr->profiles.begin(); it != usr->profiles.end(); it++ )
     {
-        if ( v54 >= usr->disk_listvw.firstShownEntries && v54 < usr->disk_listvw.shownEntries + usr->disk_listvw.firstShownEntries )
+        if ( entryIdx >= usr->disk_listvw.firstShownEntries && entryIdx < usr->disk_listvw.shownEntries + usr->disk_listvw.firstShownEntries )
         {
-            FontUA::ColumnItem v31[2];
+            FontUA::ColumnItem columns[2];
 
-            int v8, v9, v45, v44;
+            int fontId, fillChar, leftChar, rightChar;
 
-            if ( v54 + 1 == usr->diskListActiveElement )
+            if ( entryIdx + 1 == usr->diskListActiveElement )
             {
-                v8 = 9;
-                v9 = 99;
-                v45 = 98;
-                v44 = 100;
+                fontId = 9;
+                fillChar = 99;
+                leftChar = 98;
+                rightChar = 100;
             }
             else
             {
-                v8 = 0;
-                v9 = 102;
-                v45 = 102;
-                v44 = 102;
+                fontId = 0;
+                fillChar = 102;
+                leftChar = 102;
+                rightChar = 102;
             }
 
-            int v37 = usr->disk_listvw.entryWidth - 2 * usr->p_YW->_fontBorderW;
+            int rowWidth = usr->disk_listvw.entryWidth - 2 * usr->p_YW->_fontBorderW;
 
-            v31[0].fontID = v8;
-            v31[0].spaceChar = v9;
-            v31[0].flags = 37;
-            v31[0].width = (v37 * 0.75);
-            v31[0].prefixChar = v45;
-            v31[0].postfixChar = 0;
-            v31[0].txt = it->name;
+            columns[0].fontID = fontId;
+            columns[0].spaceChar = fillChar;
+            columns[0].flags = 37;
+            columns[0].width = (rowWidth * 0.75);
+            columns[0].prefixChar = leftChar;
+            columns[0].postfixChar = 0;
+            columns[0].txt = it->name;
 
-            v31[1].fontID = v8;
-            v31[1].spaceChar = v9;
-            v31[1].txt = fmt::sprintf("%02d:%02d:%02d", (it->totalElapsedTime / 1000) / 3600, (it->totalElapsedTime / 1000) % 3600 / 60, (it->totalElapsedTime / 1000) % 3600 % 60 );
-            v31[1].width = v37 - (v37 * 0.75);
-            v31[1].prefixChar = 0;
-            v31[1].flags = 38;
-            v31[1].postfixChar = v44;
+            columns[1].fontID = fontId;
+            columns[1].spaceChar = fillChar;
+            columns[1].txt = fmt::sprintf("%02d:%02d:%02d", (it->totalElapsedTime / 1000) / 3600, (it->totalElapsedTime / 1000) % 3600 / 60, (it->totalElapsedTime / 1000) % 3600 % 60 );
+            columns[1].width = rowWidth - (rowWidth * 0.75);
+            columns[1].prefixChar = 0;
+            columns[1].flags = 38;
+            columns[1].postfixChar = rightChar;
 
             FontUA::select_tileset(&usr->disk_listvw.itemBlock, 0);
 
@@ -2544,7 +2544,7 @@ void ypaworld_func158__saveload_list_draw(NC_STACK_ypaworld *yw, UserData *usr)
             }
             else
             {
-                if ( v54 + 1 == usr->diskListActiveElement )
+                if ( entryIdx + 1 == usr->diskListActiveElement )
                 {
                     FontUA::set_txtColor(&usr->disk_listvw.itemBlock, yw->_iniColors[62].r, yw->_iniColors[62].g, yw->_iniColors[62].b);
                 }
@@ -2554,7 +2554,7 @@ void ypaworld_func158__saveload_list_draw(NC_STACK_ypaworld *yw, UserData *usr)
                 }
             }
 
-            FormateColumnItem(yw, &usr->disk_listvw.itemBlock, 2, v31);
+            FormateColumnItem(yw, &usr->disk_listvw.itemBlock, 2, columns);
 
             FontUA::select_tileset(&usr->disk_listvw.itemBlock, 0);
 
@@ -2563,20 +2563,20 @@ void ypaworld_func158__saveload_list_draw(NC_STACK_ypaworld *yw, UserData *usr)
             FontUA::next_line(&usr->disk_listvw.itemBlock);
         }
 
-        v54++;
+        entryIdx++;
     }
 
-    if ( v54 <= 10 )
+    if ( entryIdx <= 10 )
     {
-        usr->disk_listvw.shownEntries = v54;
+        usr->disk_listvw.shownEntries = entryIdx;
 
-        for (int i = 0; i < 10 - v54; i++)
+        for (int i = 0; i < 10 - entryIdx; i++)
         {
             FormatListItem(yw, &usr->disk_listvw, &usr->disk_listvw.itemBlock, " ");
         }
     }
 
-    usr->disk_listvw.numEntries = v54;
+    usr->disk_listvw.numEntries = entryIdx;
     usr->disk_listvw.ItemsPostLayout(yw, &usr->disk_listvw.itemBlock, 0, "xyz");
 
     FontUA::set_end(&usr->disk_listvw.itemBlock);
@@ -2594,39 +2594,39 @@ void DrawConfirmBoxFrame(UserData *usr, int x1, int y1, int w, int h)
     FontUA::set_center_xpos(&buf, x1 - usr->p_YW->_screenSize.x / 2);
     FontUA::set_center_ypos(&buf, y1 - usr->p_YW->_screenSize.y / 2);
 
-    int v9 = 1;
+    int firstRow = 1;
 
-    int v6 = h;
+    int remainingH = h;
 
-    TileMap *v7 = GFX::Engine.GetTileset(0);
+    TileMap *tiles = GFX::Engine.GetTileset(0);
 
-    while ( v6 > v7->h )
+    while ( remainingH > tiles->h )
     {
-        if ( v9 )
+        if ( firstRow )
             FontUA::store_u8(&buf, 117);
         else
             FontUA::store_u8(&buf, 123);
 
         FontUA::op17(&buf, w);
 
-        if ( v9 )
+        if ( firstRow )
             FontUA::store_u8(&buf, 118);
         else
             FontUA::store_u8(&buf, 123);
 
-        if ( v9 )
+        if ( firstRow )
             FontUA::store_u8(&buf, 119);
         else
             FontUA::store_u8(&buf, 125);
 
         FontUA::next_line(&buf);
 
-        v9 = 0;
+        firstRow = 0;
 
-        v6 -= v7->h;
+        remainingH -= tiles->h;
     }
 
-    FontUA::set_yoff(&buf, v7->h - 1);
+    FontUA::set_yoff(&buf, tiles->h - 1);
 
     FontUA::store_u8(&buf, 120);
 
@@ -2646,12 +2646,12 @@ void ypaworld_func158__confirm_draw(UserData *usr)
 
     if ( usr->confirmMode )
     {
-        int v4 = yw->_screenSize.y * 0.21875;
-        int v6 = yw->_screenSize.x * 0.53125;
-        int v7 = yw->_screenSize.y * 0.3854166666666667;
-        int v8 = yw->_screenSize.x * 0.234375;
+        int boxH = yw->_screenSize.y * 0.21875;
+        int boxW = yw->_screenSize.x * 0.53125;
+        int boxY = yw->_screenSize.y * 0.3854166666666667;
+        int boxX = yw->_screenSize.x * 0.234375;
 
-        DrawConfirmBoxFrame(usr, v8, v7, v6, v4);
+        DrawConfirmBoxFrame(usr, boxX, boxY, boxW, boxH);
 
         usr->confirm_button->Draw();
     }
@@ -2720,11 +2720,11 @@ void yw_freeTileSets(NC_STACK_ypaworld *yw)
 
 void NC_STACK_ypaworld::FreeGameDataCursors()
 {
-    GFX::TCursorParams v5;
-    v5.bitm = NULL;
-    v5.pointer_id = 0;
+    GFX::TCursorParams cursor;
+    cursor.bitm = NULL;
+    cursor.pointer_id = 0;
 
-    GFX::Engine.SetCursor(v5.pointer_id, 0);
+    GFX::Engine.SetCursor(cursor.pointer_id, 0);
 
     for (NC_STACK_bitmap* &point : _mousePointers)
     {

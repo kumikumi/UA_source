@@ -429,12 +429,12 @@ void yw_write_map(NC_STACK_ypaworld *yw, const Common::PlaneBytes &map, const st
         if ( !padding.empty() )
             fil->puts(padding);
 
-        const uint8_t * v6 = map.Line(y);
+        const uint8_t * cell = map.Line(y);
         
         for (uint32_t x = 0; x < map.Width(); x++ )
         {
-            fil->printf("%02x ", *v6);
-            v6++;
+            fil->printf("%02x ", *cell);
+            cell++;
         }
 
         fil->printf("\n");
@@ -661,7 +661,7 @@ int yw_write_extraviewer(NC_STACK_ypabact *bct, FSMgr::FileHandle *fil)
 {
     if ( bct->_bact_type == BACT_TYPES_GUN )
     {
-        int v7 = -1;
+        int gunIndex = -1;
         
         fil->printf("\nbegin_extraviewer\n");
 
@@ -670,17 +670,17 @@ int yw_write_extraviewer(NC_STACK_ypabact *bct, FSMgr::FileHandle *fil)
         {
             if ( gun.gun_obj == bct )
             {
-                v7 = i;
+                gunIndex = i;
                 break;
             }
             
             i++;
         }
 
-        if ( v7 >= 0 )
+        if ( gunIndex >= 0 )
         {
             fil->printf("    kind = robogun\n");
-            fil->printf("    number = %d\n", v7);
+            fil->printf("    number = %d\n", gunIndex);
             fil->printf("end\n\n");
             return 1;
         }
@@ -704,15 +704,15 @@ bool NC_STACK_ypaworld::yw_write_units(FSMgr::FileHandle *fil)
             for ( World::RefBactList::reverse_iterator comIt = station->_kidList.rbegin(); comIt != station->_kidList.rend(); comIt++ )
             {
                 NC_STACK_ypabact *commander = *comIt;
-                bool a4 = false;
+                bool commanderIsRoboGun = false;
 
                 if ( commander->_bact_type == BACT_TYPES_GUN )
                 {
                     NC_STACK_ypagun *gun = dynamic_cast<NC_STACK_ypagun *>( commander );
-                    a4 = gun->IsRoboGun();
+                    commanderIsRoboGun = gun->IsRoboGun();
                 }
 
-                if ( !a4 )
+                if ( !commanderIsRoboGun )
                 {
                     if ( !yw_write_commander(commander, fil) )
                         return false;
@@ -729,14 +729,14 @@ bool NC_STACK_ypaworld::yw_write_units(FSMgr::FileHandle *fil)
                 for ( World::RefBactList::reverse_iterator slvIt = commander->_kidList.rbegin(); slvIt != commander->_kidList.rend(); slvIt++ )
                 {
                     NC_STACK_ypabact *slave = *slvIt;
-                    bool v9 = false;
+                    bool slaveIsRoboGun = false;
                     if ( slave->_bact_type == BACT_TYPES_GUN )
                     {
                         NC_STACK_ypagun *gun = dynamic_cast<NC_STACK_ypagun *>( slave );
-                        v9 = gun->IsRoboGun();
+                        slaveIsRoboGun = gun->IsRoboGun();
                     }
 
-                    if ( !v9 )
+                    if ( !slaveIsRoboGun )
                     {
                         if ( !yw_write_slave(slave, fil) )
                             return false;

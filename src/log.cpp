@@ -6,12 +6,12 @@
 
 void ypa_log__ypa_general_log()
 {
-    FSMgr::FileHandle *v0 = FSMgr::iDir::openFileAlloc("env/ypa_log.txt", "w");
-    if ( v0 )
+    FSMgr::FileHandle *f = FSMgr::iDir::openFileAlloc("env/ypa_log.txt", "w");
+    if ( f )
     {
-        v0->printf("YPA General Log\n");
-        v0->printf("---------------\n");
-        delete v0;
+        f->printf("YPA General Log\n");
+        f->printf("---------------\n");
+        delete f;
     }
 }
 
@@ -30,11 +30,11 @@ void ypa_log_out(const char *format, ...)
 
 void init_d3dlog()
 {
-    FSMgr::FileHandle *v0 = FSMgr::iDir::openFileAlloc("env/d3dlog.txt", "w");
-    if ( v0 )
+    FSMgr::FileHandle *f = FSMgr::iDir::openFileAlloc("env/d3dlog.txt", "w");
+    if ( f )
     {
-        v0->printf("YPA DD/D3D driver log\n---------------------\n");
-        delete v0;
+        f->printf("YPA DD/D3D driver log\n---------------------\n");
+        delete f;
     }
 }
 
@@ -53,11 +53,11 @@ void log_d3dlog(const char *format, ...)
 
 void init_dinputlog()
 {
-    FSMgr::FileHandle *v0 = FSMgr::iDir::openFileAlloc("env/dinplog.txt", "w");
-    if ( v0 )
+    FSMgr::FileHandle *f = FSMgr::iDir::openFileAlloc("env/dinplog.txt", "w");
+    if ( f )
     {
-        v0->printf("YPA DirectInput log\n---------------------\n");
-        delete v0;
+        f->printf("YPA DirectInput log\n---------------------\n");
+        delete f;
     }
 }
 

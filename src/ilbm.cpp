@@ -29,12 +29,12 @@ size_t NC_STACK_ilbm::LoadFromCibo(NC_STACK_ilbm *obj, IFFile **pmfile)
 
     while ( 1 )
     {
-        int v6 = mfile->parse();
+        int iffRes = mfile->parse();
 
-        if ( v6 == -2 )
+        if ( iffRes == -2 )
             break;
 
-        if ( v6 )
+        if ( iffRes )
             return 0;
 
         const IFFile::Context &iff_chunk = mfile->GetCurrentChunk();
@@ -195,7 +195,7 @@ void DecodeIlbmBody(BMHD_type *bmhd, const std::vector<int8_t> &ilbm_data, ResBi
         }
         for (int x = 0; x < bmhd->width; x++)
         {
-            int v16 = x / 8;
+            int byteIdx = x / 8;
 
             uint8_t bt = 0;
 
@@ -203,7 +203,7 @@ void DecodeIlbmBody(BMHD_type *bmhd, const std::vector<int8_t> &ilbm_data, ResBi
             {
                 int planOff = plan << 7;
 
-                if ( masks[7 - (x & 7)] & udp[planOff + v16] )
+                if ( masks[7 - (x & 7)] & udp[planOff + byteIdx] )
                     bt |= masks[plan];
             }
             *img_buffer = bt;
@@ -271,10 +271,10 @@ rsrc * NC_STACK_ilbm::READ_ILBM(IDVList &stak, IFFile *mfil, int transp)
 
     while ( true )
     {
-        int v10 = mfil->parse();
-        if ( v10 == IFFile::IFF_ERR_EOC )
+        int iffRes = mfil->parse();
+        if ( iffRes == IFFile::IFF_ERR_EOC )
             break;
-        if ( v10 )
+        if ( iffRes )
         {
             if ( res )
                 FreeResource(res);

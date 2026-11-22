@@ -1384,15 +1384,15 @@ void UserData::ExitFromNetworkToMain()
 
     p_YW->GuiWinClose(&network_listvw);
 
-    NC_STACK_button::WidgetState arg66;
-    arg66.butID = UIWidgets::MAIN_MENU_WIDGET_IDS::BTN_MULTIPLAYER;
-    arg66.state = 2;
+    NC_STACK_button::WidgetState btnState;
+    btnState.butID = UIWidgets::MAIN_MENU_WIDGET_IDS::BTN_MULTIPLAYER;
+    btnState.state = 2;
 
-    sub_bar_button->SetState(&arg66);
+    sub_bar_button->SetState(&btnState);
 
-    arg66.butID = 1219;
-    arg66.state = 2;
-    sub_bar_button->SetState(&arg66);
+    btnState.butID = 1219;
+    btnState.state = 2;
+    sub_bar_button->SetState(&btnState);
 
     yw_netcleanup();
 }

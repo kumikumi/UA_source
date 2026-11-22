@@ -150,19 +150,19 @@ int skeleton_read_poly(NC_STACK_sklt *obj, IFFile *mfile, UAskeleton::Data *sklt
 
     sklt->polygons.resize(polyCount);
 
-    int16_t *v14 = entries;
+    int16_t *cur = entries;
 
     for (int i = 0; i < polyCount; i++)
     {
         int vert_count = 0;
 
-        while( *v14 != -1)
+        while( *cur != -1)
         {
-            sklt->polygons[i].v[vert_count] = *v14;
+            sklt->polygons[i].v[vert_count] = *cur;
             vert_count++;
-            v14++;
+            cur++;
         }
-        v14++;
+        cur++;
 
         sklt->polygons[i].num_vertices = vert_count;
     }

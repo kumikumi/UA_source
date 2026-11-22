@@ -278,9 +278,9 @@ void UpdateViewerPosition(NC_STACK_ypaworld *yw)
 {
     if ( yw->_viewerBact->getBACT_extraViewer() )
     {
-        NC_STACK_ypabact *v4 = yw->_viewerBact;
+        NC_STACK_ypabact *viewer = yw->_viewerBact;
 
-        yw->_viewerPosition = v4->_position + v4->_rotation.Transpose().Transform(v4->_viewer_position);
+        yw->_viewerPosition = viewer->_position + viewer->_rotation.Transpose().Transform(viewer->_viewer_position);
 
         yw->_viewerRotation = yw->_viewerBact->_viewer_rotation;
     }
@@ -326,7 +326,7 @@ bool NC_STACK_ypaworld::SimulationStep(TUpdateArgs *arg)
 
     SaveUnitTransforms();
 
-    uint32_t v92 = profiler_begin();
+    uint32_t frameStart = profiler_begin();
 
     _netChatSystem = false;
 
@@ -338,19 +338,19 @@ bool NC_STACK_ypaworld::SimulationStep(TUpdateArgs *arg)
             _viewerRotation = _userUnit->_rotation;
         }
 
-        vec3d a3 = _userUnit->_fly_dir * _userUnit->_fly_dir_length;
+        vec3d velocity = _userUnit->_fly_dir * _userUnit->_fly_dir_length;
 
-        SFXEngine::SFXe.BeginSoundFrame(arg->DTime, _viewerPosition, a3, _viewerRotation);
+        SFXEngine::SFXe.BeginSoundFrame(arg->DTime, _viewerPosition, velocity, _viewerRotation);
     }
 
     if ( _framesElapsed == 1 )
     {
-        TInfoMessage arg159;
-        arg159.unit = _userRobo;
-        arg159.Priority = 128;
-        arg159.MsgID = 41;
+        TInfoMessage startMsg;
+        startMsg.unit = _userRobo;
+        startMsg.Priority = 128;
+        startMsg.MsgID = 41;
 
-        ShowMessage(&arg159);
+        ShowMessage(&startMsg);
     }
 
     UpdateReloadRatios(this);
@@ -392,17 +392,17 @@ bool NC_STACK_ypaworld::SimulationStep(TUpdateArgs *arg)
 
     HistoryEventAdd(World::History::Frame(_timeStamp));
 
-    uint32_t v22 = profiler_begin();
+    uint32_t netStart = profiler_begin();
     
     if ( _isNetGame )
         yw_NetMsgHndlLoop(this);
 
-    _profileVals[PFID_NETTIME] = profiler_end(v22);
+    _profileVals[PFID_NETTIME] = profiler_end(netStart);
 
     if ( _isNetGame && _levelInfo.State == TLevelInfo::STATE_ABORTED )
         return false;
 
-    uint32_t v23 = profiler_begin();
+    uint32_t markStart = profiler_begin();
 
     for (cellArea &cell : _cells)
     {
@@ -413,7 +413,7 @@ bool NC_STACK_ypaworld::SimulationStep(TUpdateArgs *arg)
     for (NC_STACK_ypabact* &unit : _unitsList)
         unit->MarkSectorsForView();
 
-    _profileVals[PFID_MARKTIME] = profiler_end(v23);
+    _profileVals[PFID_MARKTIME] = profiler_end(markStart);
 
     UpdateGunList(this);
     UpdateVehicleList(this);
@@ -425,7 +425,7 @@ bool NC_STACK_ypaworld::SimulationStep(TUpdateArgs *arg)
 
     if ( !_doNotRender )
     {
-        uint32_t v33 = profiler_begin();
+        uint32_t guiStart = profiler_begin();
 
         RoboMapFollowViewer(this);
         HandleGuiInput(arg->Input);
@@ -435,7 +435,7 @@ bool NC_STACK_ypaworld::SimulationStep(TUpdateArgs *arg)
         RoboMapUpdateLayout(this);
         HandleWorldMouse(arg->Input);
 
-        _profileVals[PFID_GUITIME] = profiler_end(v33);
+        _profileVals[PFID_GUITIME] = profiler_end(guiStart);
     }
 
     if ( _doEnergyRecalc )
@@ -449,7 +449,7 @@ bool NC_STACK_ypaworld::SimulationStep(TUpdateArgs *arg)
 
     _ownerOldCellUserUnit = _userUnit->_pSector->owner;
 
-    uint32_t v37 = profiler_begin();
+    uint32_t updateStart = profiler_begin();
     uint64_t simStart = System::PerfStats::Now();
     
     // Do user commands before any unit state can be changed
@@ -470,11 +470,11 @@ bool NC_STACK_ypaworld::SimulationStep(TUpdateArgs *arg)
     }
 
     System::Perf.AddTime(System::PerfStats::SEC_SIM, System::PerfStats::Now() - simStart);
-    _profileVals[PFID_UPDATETIME] = profiler_end(v37);
+    _profileVals[PFID_UPDATETIME] = profiler_end(updateStart);
 
     UpdateViewerPosition(this);
 
-    uint32_t v41 = profiler_begin();
+    uint32_t flushStart = profiler_begin();
 
     if ( _isNetGame )
     {
@@ -491,17 +491,17 @@ bool NC_STACK_ypaworld::SimulationStep(TUpdateArgs *arg)
         if ( _netFlushTimer <= 0 )
         {
 
-            uint32_t v44 = _netDriver->FlushBroadcastBuffer();
+            uint32_t sentSize = _netDriver->FlushBroadcastBuffer();
 
-            _GameShell->netsend_count += v44;
+            _GameShell->netsend_count += sentSize;
 
-            if ( !_GameShell->net_packet_min || v44 < _GameShell->net_packet_min )
-                _GameShell->net_packet_min = v44;
+            if ( !_GameShell->net_packet_min || sentSize < _GameShell->net_packet_min )
+                _GameShell->net_packet_min = sentSize;
 
-            if ( v44 > _GameShell->net_packet_max )
-                _GameShell->net_packet_max = v44;
+            if ( sentSize > _GameShell->net_packet_max )
+                _GameShell->net_packet_max = sentSize;
 
-            if ( v44 )
+            if ( sentSize )
                 _GameShell->net_packet_cnt++;
 
             if ( SPEED_DOWN_NET )
@@ -510,7 +510,7 @@ bool NC_STACK_ypaworld::SimulationStep(TUpdateArgs *arg)
                 _netFlushTimer = _GameShell->flush_time_norm;
         }
     }
-    _profileVals[PFID_NETTIME] += profiler_end(v41);
+    _profileVals[PFID_NETTIME] += profiler_end(flushStart);
 
     if ( _userUnit )
     {
@@ -528,10 +528,10 @@ bool NC_STACK_ypaworld::SimulationStep(TUpdateArgs *arg)
                 
     VoiceMessageUpdate(); // update sound messages
 
-    const mat3x3 &v57 = SFXEngine::SFXe.EndSoundFrame();
-    TF::TForm3D *v58 = TF::Engine.GetViewPoint();
+    const mat3x3 &shake = SFXEngine::SFXe.EndSoundFrame();
+    TF::TForm3D *viewPoint = TF::Engine.GetViewPoint();
 
-    v58->SclRot = v57 * v58->SclRot;
+    viewPoint->SclRot = shake * viewPoint->SclRot;
 
     if ( _replayRecorder->do_record )
         recorder_write_frame();
@@ -540,7 +540,7 @@ bool NC_STACK_ypaworld::SimulationStep(TUpdateArgs *arg)
 
     FFeedback_Update(); // Do vibrate joystick
 
-    _profileVals[PFID_FRAMETIME] = profiler_end(v92);
+    _profileVals[PFID_FRAMETIME] = profiler_end(frameStart);
 
     if ( !_doNotRender )
     {
@@ -691,7 +691,7 @@ void NC_STACK_ypaworld::RenderFrame(TUpdateArgs *arg, float stepFraction)
 
     if ( !_doNotRender )
     {
-        uint32_t v62 = profiler_begin();
+        uint32_t renderStart = profiler_begin();
 
         GFX::Engine.BeginFrame();
 
@@ -712,7 +712,7 @@ void NC_STACK_ypaworld::RenderFrame(TUpdateArgs *arg, float stepFraction)
 
         GFX::Engine.EndFrame();
 
-        _profileVals[PFID_RENDERTIME] = profiler_end(v62);
+        _profileVals[PFID_RENDERTIME] = profiler_end(renderStart);
         _profileVals[PFID_FRAMETIME] += _profileVals[PFID_RENDERTIME];
     }
 
@@ -723,73 +723,73 @@ void NC_STACK_ypaworld::RenderFrame(TUpdateArgs *arg, float stepFraction)
     ProfileCalcValues();
 }
 
-void GetNetGemProtoIds(NC_STACK_ypaworld *yw, TMapGem *gemProt, int *a3, int *a4)
+void GetNetGemProtoIds(NC_STACK_ypaworld *yw, TMapGem *gemProt, int *vhclProtoId, int *buildProtoId)
 {
     switch ( yw->_GameShell->netPlayerOwner )
     {
     case 1:
-        *a3 = gemProt->NwVprotoNum1;
-        *a4 = gemProt->NwBprotoNum1;
+        *vhclProtoId = gemProt->NwVprotoNum1;
+        *buildProtoId = gemProt->NwBprotoNum1;
         break;
 
     case 6:
-        *a3 = gemProt->NwVprotoNum2;
-        *a4 = gemProt->NwBprotoNum2;
+        *vhclProtoId = gemProt->NwVprotoNum2;
+        *buildProtoId = gemProt->NwBprotoNum2;
         break;
 
     case 3:
-        *a3 = gemProt->NwVprotoNum3;
-        *a4 = gemProt->NwBprotoNum3;
+        *vhclProtoId = gemProt->NwVprotoNum3;
+        *buildProtoId = gemProt->NwBprotoNum3;
         break;
 
     case 4:
-        *a3 = gemProt->NwVprotoNum4;
-        *a4 = gemProt->NwBprotoNum4;
+        *vhclProtoId = gemProt->NwVprotoNum4;
+        *buildProtoId = gemProt->NwBprotoNum4;
         break;
 
     default:
-        *a3 = 0;
-        *a4 = 0;
+        *vhclProtoId = 0;
+        *buildProtoId = 0;
         break;
     }
 }
 
-void ActivateNetWunderstein(NC_STACK_ypaworld *yw, cellArea *cell, int a3)
+void ActivateNetWunderstein(NC_STACK_ypaworld *yw, cellArea *cell, int gemId)
 {
-    TMapGem &gem = yw->_techUpgrades[a3];
+    TMapGem &gem = yw->_techUpgrades[gemId];
 
-    int a3a, a4;
-    GetNetGemProtoIds(yw, &gem, &a3a, &a4);
+    int vhclId, buildId;
+    GetNetGemProtoIds(yw, &gem, &vhclId, &buildId);
 
-    yw->_upgradeId = a3;
+    yw->_upgradeId = gemId;
     yw->_upgradeTimeStamp = yw->_timeStamp;
-    yw->_upgradeVehicleId = a3a;
+    yw->_upgradeVehicleId = vhclId;
     yw->_upgradeWeaponId = 0;
-    yw->_upgradeBuildId = a4;
+    yw->_upgradeBuildId = buildId;
 
-    if ( a3a )
+    if ( vhclId )
     {
-        yw->_vhclProtos[a3a].disable_enable_bitmask = 0;
-        yw->_vhclProtos[a3a].disable_enable_bitmask |= 1 << yw->_GameShell->netPlayerOwner;
+        yw->_vhclProtos[vhclId].disable_enable_bitmask = 0;
+        yw->_vhclProtos[vhclId].disable_enable_bitmask |= 1 << yw->_GameShell->netPlayerOwner;
     }
 
-    if ( a4 )
+    if ( buildId )
     {
-        yw->_buildProtos[a4].EnableMask = 0;
-        yw->_buildProtos[a4].EnableMask |= 1 << yw->_GameShell->netPlayerOwner;
+        yw->_buildProtos[buildId].EnableMask = 0;
+        yw->_buildProtos[buildId].EnableMask |= 1 << yw->_GameShell->netPlayerOwner;
     }
 
-    TInfoMessage v14;
-    v14.txt = Locale::Text::Feedback(Locale::FEEDBACK_TECHUP);
-    v14.unit = 0;
-    v14.Priority = 48;
+    TInfoMessage msg;
+    msg.txt = Locale::Text::Feedback(Locale::FEEDBACK_TECHUP);
+    msg.unit = 0;
+    msg.Priority = 48;
 
     if ( gem.Type )
-        v14.MsgID = World::Log::GetUpgradeLogID(gem.Type);
+        msg.MsgID = World::Log::GetUpgradeLogID(gem.Type);
     else
-        v14.MsgID = 0;
+        msg.MsgID = 0;
 
-    yw->ShowMessage(&v14);
+    yw->ShowMessage(&msg);
 
     if ( yw->_isNetGame && yw->_netExclusiveGem )
     {
@@ -797,7 +797,7 @@ void ActivateNetWunderstein(NC_STACK_ypaworld *yw, cellArea *cell, int a3)
         upMsg.msgID = UAMSG_UPGRADE;
         upMsg.owner = yw->_GameShell->netPlayerOwner;
         upMsg.enable = 1;
-        upMsg.upgradeID = a3;
+        upMsg.upgradeID = gemId;
 
         yw->NetBroadcastMessage(&upMsg, sizeof(upMsg), true);
     }
@@ -805,30 +805,30 @@ void ActivateNetWunderstein(NC_STACK_ypaworld *yw, cellArea *cell, int a3)
     cell->PurposeType = cellArea::PT_TECHDEACTIVE;
 }
 
-void RevokeTechUpgrade(NC_STACK_ypaworld *yw, cellArea *cell, int a3)
+void RevokeTechUpgrade(NC_STACK_ypaworld *yw, cellArea *cell, int gemId)
 {
-    TMapGem &gem = yw->_techUpgrades[a3];
+    TMapGem &gem = yw->_techUpgrades[gemId];
 
-    int a3a;
-    int a4;
+    int vhclId;
+    int buildId;
 
-    GetNetGemProtoIds(yw, &gem, &a3a, &a4);
+    GetNetGemProtoIds(yw, &gem, &vhclId, &buildId);
 
-    if ( a3a )
-        yw->_vhclProtos[a3a].disable_enable_bitmask = 0;
+    if ( vhclId )
+        yw->_vhclProtos[vhclId].disable_enable_bitmask = 0;
 
-    if ( a4 )
-        yw->_buildProtos[a4].EnableMask = 0;
+    if ( buildId )
+        yw->_buildProtos[buildId].EnableMask = 0;
 
-    std::string v13 = Locale::Text::Feedback(Locale::FEEDBACK_TECHDOWN) + gem.MsgDefault;
+    std::string msgText = Locale::Text::Feedback(Locale::FEEDBACK_TECHDOWN) + gem.MsgDefault;
 
-    TInfoMessage arg159;
-    arg159.unit = 0;
-    arg159.Priority = 80;
-    arg159.txt = v13;
-    arg159.MsgID = 29;
+    TInfoMessage msg;
+    msg.unit = 0;
+    msg.Priority = 80;
+    msg.txt = msgText;
+    msg.MsgID = 29;
 
-    yw->ShowMessage(&arg159);
+    yw->ShowMessage(&msg);
 
     if ( yw->_isNetGame )
     {
@@ -836,7 +836,7 @@ void RevokeTechUpgrade(NC_STACK_ypaworld *yw, cellArea *cell, int a3)
         upMsg.msgID = UAMSG_UPGRADE;
         upMsg.owner = yw->_GameShell->netPlayerOwner;
         upMsg.enable = 0;
-        upMsg.upgradeID = a3;
+        upMsg.upgradeID = gemId;
 
         yw->NetBroadcastMessage(&upMsg, sizeof(upMsg), true);
     }
@@ -875,17 +875,17 @@ void NC_STACK_ypaworld::yw_ActivateWunderstein(cellArea *cell, int gemid)
         Common::Env.SetPrefix("rsrc", tmp);
     }
 
-    TInfoMessage arg159;
-    arg159.unit = NULL;
-    arg159.Priority = 48;
-    arg159.txt = Locale::Text::Feedback(Locale::FEEDBACK_TECHUP);
+    TInfoMessage msg;
+    msg.unit = NULL;
+    msg.Priority = 48;
+    msg.txt = Locale::Text::Feedback(Locale::FEEDBACK_TECHUP);
 
     if ( gem.Type )
-        arg159.MsgID = World::Log::GetUpgradeLogID(gem.Type);
+        msg.MsgID = World::Log::GetUpgradeLogID(gem.Type);
     else
-        arg159.MsgID = 0;
+        msg.MsgID = 0;
 
-    ShowMessage(&arg159);
+    ShowMessage(&msg);
 
     cell->PurposeType = cellArea::PT_TECHDEACTIVE;
 }
@@ -896,7 +896,7 @@ void SpawnBuildingExplosions(NC_STACK_ypaworld *yw, const cellArea &cell, int bl
   
     if ( dist.x + dist.y <= (yw->_renderSectors - 1) / 2 )
     {
-        const TLego &v10 = yw->_legoArray[  yw->GetLegoBld(&cell, bldX, bldY) ];
+        const TLego &lego = yw->_legoArray[  yw->GetLegoBld(&cell, bldX, bldY) ];
 
         vec3d ttt = World::SectorIDToCenterPos3( cell.CellId );
         ttt.y = cell.height;
@@ -907,45 +907,45 @@ void SpawnBuildingExplosions(NC_STACK_ypaworld *yw, const cellArea &cell, int bl
             ttt.z += (bldY - 1) * 300.0;
         }
         
-        for (const TLego::ExFX &fx : v10.Explosions)
+        for (const TLego::ExFX &fx : lego.Explosions)
         {
             if ( fx.Index >= yw->_fxLimit )
                 break;
 
-            TUnitSpawn arg146;
-            arg146.vehicle_id = fx.ObjectID;
-            arg146.pos = fx.Position + ttt;
+            TUnitSpawn spawn;
+            spawn.vehicle_id = fx.ObjectID;
+            spawn.pos = fx.Position + ttt;
 
-            NC_STACK_ypabact *boom = yw->CreateVehicle(&arg146);
+            NC_STACK_ypabact *boom = yw->CreateVehicle(&spawn);
 
             if ( boom )
             {
                 boom->_owner = 0;
 
-                setState_msg arg78;
-                arg78.newStatus = BACT_STATUS_DEAD;
-                arg78.setFlags = BACT_STFLAG_DEATH1;
-                arg78.unsetFlags = 0;
-                boom->SetState(&arg78);
+                setState_msg deadState;
+                deadState.newStatus = BACT_STATUS_DEAD;
+                deadState.setFlags = BACT_STFLAG_DEATH1;
+                deadState.unsetFlags = 0;
+                boom->SetState(&deadState);
 
                 yw->AddToUnitsList(boom);
 
-                TImpulse arg83;
-                arg83.pos = arg146.pos;
-                arg83.energ = 40000;
-                arg83.dir.x = fx.Position.x;
-                arg83.dir.y = -150.0;
-                arg83.dir.z = fx.Position.z;
+                TImpulse impulse;
+                impulse.pos = spawn.pos;
+                impulse.energ = 40000;
+                impulse.dir.x = fx.Position.x;
+                impulse.dir.y = -150.0;
+                impulse.dir.z = fx.Position.z;
 
-                float tmp = arg83.dir.length();
+                float tmp = impulse.dir.length();
 
                 if ( tmp > 0.1 )
-                    arg83.dir /= tmp;
+                    impulse.dir /= tmp;
 
-                arg83.force = 30.0;
-                arg83.mass = 50.0;
+                impulse.force = 30.0;
+                impulse.mass = 50.0;
 
-                boom->ApplyImpulse(&arg83);
+                boom->ApplyImpulse(&impulse);
             }
         }
     }
@@ -963,12 +963,12 @@ void WarnPowerStationAttacked(NC_STACK_ypaworld *yw, const cellArea &cell, TSect
                 {
                     yw->_msgTimestampPSUnderAtk = yw->_timeStamp;
 
-                    TInfoMessage arg159;
-                    arg159.unit = NULL;
-                    arg159.Priority = 77;
-                    arg159.MsgID = 33;
+                    TInfoMessage msg;
+                    msg.unit = NULL;
+                    msg.Priority = 77;
+                    msg.MsgID = 33;
 
-                    yw->ShowMessage(&arg159);
+                    yw->ShowMessage(&msg);
                 }
             }
         }
@@ -984,29 +984,29 @@ void NC_STACK_ypaworld::DamageSectorBuilding(TSectorDamage *arg)
 
     if ( cell.IsGamePlaySector() && cell.PurposeType != cellArea::PT_CONSTRUCTING )
     {
-        int v8 = (int)(arg->pos.x / 150.0) % 8;
+        int tile = (int)(arg->pos.x / 150.0) % 8;
 
-        int v10;
+        int col;
 
-        if ( v8 < 3 )
-            v10 = 1;
-        else if ( v8 < 5)
-            v10 = 2;
+        if ( tile < 3 )
+            col = 1;
+        else if ( tile < 5)
+            col = 2;
         else
-            v10 = 3;
+            col = 3;
 
-        v8 = (int)(-arg->pos.z / 150.0) % 8;
+        tile = (int)(-arg->pos.z / 150.0) % 8;
 
-        int v14;
+        int row;
 
-        if ( v8 < 3 )
-            v14 = 1;
-        else if ( v8 < 5)
-            v14 = 2;
+        if ( tile < 3 )
+            row = 1;
+        else if ( tile < 5)
+            row = 2;
         else
-            v14 = 3;
+            row = 3;
 
-        if ( v10 && v14 )
+        if ( col && row )
         {
             int bldY;
             int bldX;
@@ -1018,42 +1018,42 @@ void NC_STACK_ypaworld::DamageSectorBuilding(TSectorDamage *arg)
             }
             else
             {
-                bldX = v10 - 1;
-                bldY = 2 - (v14 - 1);
+                bldX = col - 1;
+                bldY = 2 - (row - 1);
             }
 
-            int v16 = cell.buildings_health.At(bldX, bldY);
+            int oldHealth = cell.buildings_health.At(bldX, bldY);
 
-            int v34 = v16 - arg->energy * (100 - _legoArray[  GetLegoBld(&cell, bldX, bldY)  ].Shield ) / 100 / 400;
+            int newHealth = oldHealth - arg->energy * (100 - _legoArray[  GetLegoBld(&cell, bldX, bldY)  ].Shield ) / 100 / 400;
 
-            if ( v34 < 0 )
-                v34 = 0;
-            else if ( v34 > 255 )
-                v34 = 255;
+            if ( newHealth < 0 )
+                newHealth = 0;
+            else if ( newHealth > 255 )
+                newHealth = 255;
 
-            int v18 = _buildHealthModelId[v16];
-            int v36 = _buildHealthModelId[v34];
+            int oldModel = _buildHealthModelId[oldHealth];
+            int newModel = _buildHealthModelId[newHealth];
 
-            if ( v18 > v36 )
+            if ( oldModel > newModel )
             {
-                while ( v18 > v36 )
+                while ( oldModel > newModel )
                 {
                     SpawnBuildingExplosions(this, cell, bldX, bldY);
 
-                    v18--;
+                    oldModel--;
                 }
             }
-            else if ( v18 < v36 )
+            else if ( oldModel < newModel )
             {
-                while ( v18 < v36 )
+                while ( oldModel < newModel )
                 {
                     SpawnBuildingExplosions(this, cell, bldX, bldY);
 
-                    v18++;
+                    oldModel++;
                 }
             }
 
-            cell.buildings_health.At(bldX, bldY) = v34;
+            cell.buildings_health.At(bldX, bldY) = newHealth;
 
             WarnPowerStationAttacked(this, cell, arg);
 
@@ -1075,12 +1075,12 @@ void NC_STACK_ypaworld::DamageSectorBuilding(TSectorDamage *arg)
             {
                 if ( _isNetGame )
                 {
-                    int v27 = 0;
+                    int totalHealth = 0;
 
                     for (auto hlth : cell.buildings_health)
-                        v27 += hlth;
+                        totalHealth += hlth;
 
-                    if ( !v27 )
+                    if ( !totalHealth )
                         RevokeTechUpgrade(this, &cell, cell.PurposeIndex);
                 }
             }
@@ -1118,12 +1118,12 @@ void NC_STACK_ypaworld::SetViewerUnit(NC_STACK_ypabact *bact)
 
 void NC_STACK_ypaworld::AddToUnitsList(NC_STACK_ypabact *bact)
 {
-    newMaster_msg arg73;
+    newMaster_msg masterMsg;
 
-    arg73.bact = NULL;
-    arg73.list = &_unitsList;
+    masterMsg.bact = NULL;
+    masterMsg.list = &_unitsList;
 
-    bact->SetNewMaster(&arg73);
+    bact->SetNewMaster(&masterMsg);
 }
 
 
@@ -1145,38 +1145,38 @@ void NC_STACK_ypaworld::IntersectRay(TRayIntersection *arg)
     int dzz = (-pos_zz + 150) / 300;
 
     int elems = 0;
-    TSectorCollision a6[4];
+    TSectorCollision collisions[4];
 
     if ( dx == dxx && dz == dzz )
     {
         elems = 1;
-        a6[0] = GetSectorCollision(dx, dz, dx, dz, arg->flags);
+        collisions[0] = GetSectorCollision(dx, dz, dx, dz, arg->flags);
     }
     else if ( dx == dxx || dz == dzz )
     {
         elems = 2;
-        a6[0] = GetSectorCollision(dx, dz, dx,  dz,  arg->flags);
-        a6[1] = GetSectorCollision(dx, dz, dxx, dzz, arg->flags);
+        collisions[0] = GetSectorCollision(dx, dz, dx,  dz,  arg->flags);
+        collisions[1] = GetSectorCollision(dx, dz, dxx, dzz, arg->flags);
     }
     else
     {
         elems = 4;
-        a6[0] = GetSectorCollision(dx, dz, dx,  dz,  arg->flags);
-        a6[1] = GetSectorCollision(dx, dz, dx,  dzz, arg->flags);
-        a6[2] = GetSectorCollision(dx, dz, dxx, dz,  arg->flags);
-        a6[3] = GetSectorCollision(dx, dz, dxx, dzz, arg->flags);
+        collisions[0] = GetSectorCollision(dx, dz, dx,  dz,  arg->flags);
+        collisions[1] = GetSectorCollision(dx, dz, dx,  dzz, arg->flags);
+        collisions[2] = GetSectorCollision(dx, dz, dxx, dz,  arg->flags);
+        collisions[3] = GetSectorCollision(dx, dz, dxx, dzz, arg->flags);
     }
 
     for (int i = 0; i < elems; i++)
     {
-        if ( a6[i].CollisionType )
+        if ( collisions[i].CollisionType )
         {
-            if ( a6[i].CollisionType != 1)
-                FitFillerCollisionHeights(a6[i]);
+            if ( collisions[i].CollisionType != 1)
+                FitFillerCollisionHeights(collisions[i]);
 
-            arg->stPos = stpos - a6[i].pos;
+            arg->stPos = stpos - collisions[i].pos;
 
-            IntersectRaySkeleton(arg, a6[i]);
+            IntersectRaySkeleton(arg, collisions[i]);
 
             if ( arg->isect )
                 break;
@@ -1198,67 +1198,67 @@ void NC_STACK_ypaworld::FindSphereCollisions(TSphereCollisionQuery *arg)
     int xxpr = (pos.x + arg->radius + 150) / 300;
     int zzpr = (-(pos.z + arg->radius) + 150) / 300;
 
-    TSectorCollision a6;
+    TSectorCollision collision;
 
     for (int i = 0; i < 9; i++)
     {
-        a6.CollisionType = 0;
+        collision.CollisionType = 0;
 
         switch ( i )
         {
         case 0:
-            a6 = GetSectorCollision(dxx, dzz, dxx, dzz, arg->flags);
+            collision = GetSectorCollision(dxx, dzz, dxx, dzz, arg->flags);
             break;
 
         case 1:
             if ( dxx != xxmr )
-                a6 = GetSectorCollision(dxx, dzz, xxmr, dzz, arg->flags);
+                collision = GetSectorCollision(dxx, dzz, xxmr, dzz, arg->flags);
             break;
 
         case 2:
             if ( dxx != xxpr )
-                a6 = GetSectorCollision(dxx, dzz, xxpr, dzz, arg->flags);
+                collision = GetSectorCollision(dxx, dzz, xxpr, dzz, arg->flags);
             break;
 
         case 3:
             if ( dzz != zzmr )
-                a6 = GetSectorCollision(dxx, dzz, dxx, zzmr, arg->flags);
+                collision = GetSectorCollision(dxx, dzz, dxx, zzmr, arg->flags);
             break;
 
         case 4:
             if ( dzz != zzpr )
-                a6 = GetSectorCollision(dxx, dzz, dxx, zzpr, arg->flags);
+                collision = GetSectorCollision(dxx, dzz, dxx, zzpr, arg->flags);
             break;
 
         case 5:
             if ( dxx != xxmr && dzz != zzmr )
-                a6 = GetSectorCollision(dxx, dzz, xxmr, zzmr, arg->flags);
+                collision = GetSectorCollision(dxx, dzz, xxmr, zzmr, arg->flags);
             break;
 
         case 6:
             if ( dxx != xxpr && dzz != zzmr )
-                a6 = GetSectorCollision(dxx, dzz, xxpr, zzmr, arg->flags);
+                collision = GetSectorCollision(dxx, dzz, xxpr, zzmr, arg->flags);
             break;
 
         case 7:
             if ( dxx != xxpr && dzz != zzpr )
-                a6 = GetSectorCollision(dxx, dzz, xxpr, zzpr, arg->flags);
+                collision = GetSectorCollision(dxx, dzz, xxpr, zzpr, arg->flags);
             break;
 
         case 8:
             if ( dxx != xxmr && dzz != zzpr )
-                a6 = GetSectorCollision(dxx, dzz, xxmr, zzpr, arg->flags);
+                collision = GetSectorCollision(dxx, dzz, xxmr, zzpr, arg->flags);
             break;
         }
 
-        if ( a6.CollisionType )
+        if ( collision.CollisionType )
         {
-            if ( a6.CollisionType != 1 )
-                FitFillerCollisionHeights(a6);
+            if ( collision.CollisionType != 1 )
+                FitFillerCollisionHeights(collision);
 
-            arg->pos = pos - a6.pos;
+            arg->pos = pos - collision.pos;
 
-            CollideSphereWithSkeleton(arg, a6);
+            CollideSphereWithSkeleton(arg, collision);
         }
     }
 }
@@ -1320,13 +1320,13 @@ void NC_STACK_ypaworld::MoveToDeadCache(NC_STACK_ypabact *bacto)
 
     bacto->SetNewMaster(&cache);
 
-    TUnitPlacement v6;
-    v6.pos.x = 600.0;
-    v6.pos.y = -50000.0;
-    v6.pos.z = -600.0;
-    v6.flags = 2;
+    TUnitPlacement placement;
+    placement.pos.x = 600.0;
+    placement.pos.y = -50000.0;
+    placement.pos.z = -600.0;
+    placement.flags = 2;
 
-    bacto->SetPosition(&v6);
+    bacto->SetPosition(&placement);
 
     bacto->_status_flg |= BACT_STFLAG_NORENDER;
 }
@@ -1510,16 +1510,16 @@ NC_STACK_ypabact * NC_STACK_ypaworld::CreateVehicle(TUnitSpawn *vhcl_id)
 
         bacto->SetParameters(vhcl.initParams);
 
-        TUnitPlacement arg80;
-        arg80.pos = vhcl_id->pos;
-        arg80.flags = 0;
-        bacto->SetPosition(&arg80);
+        TUnitPlacement placement;
+        placement.pos = vhcl_id->pos;
+        placement.flags = 0;
+        bacto->SetPosition(&placement);
 
-        setState_msg arg119;
-        arg119.newStatus = BACT_STATUS_NORMAL;
-        arg119.setFlags = 0;
-        arg119.unsetFlags = 0;
-        bacto->SetStateInternal(&arg119);
+        setState_msg stateMsg;
+        stateMsg.newStatus = BACT_STATUS_NORMAL;
+        stateMsg.setFlags = 0;
+        stateMsg.unsetFlags = 0;
+        bacto->SetStateInternal(&stateMsg);
     }
 
     return bacto;
@@ -1630,66 +1630,66 @@ NC_STACK_ypamissile * NC_STACK_ypaworld::CreateWeapon(TUnitSpawn *arg)
 
     for (size_t i = 0; i < wproto.sndFXes.size(); i++)
     {
-        TSoundSource *v25 = &wobj->_soundcarrier.Sounds[i];
+        TSoundSource *snd = &wobj->_soundcarrier.Sounds[i];
 
-        v25->Volume = wproto.sndFXes[i].volume;
-        v25->Pitch = wproto.sndFXes[i].pitch;
+        snd->Volume = wproto.sndFXes[i].volume;
+        snd->Pitch = wproto.sndFXes[i].pitch;
 
         if ( i == 0 )
-            v25->SetLoop(true);
+            snd->SetLoop(true);
 
         if ( wproto.sndFXes[i].MainSample.Sample )
-            v25->PSample = wproto.sndFXes[i].MainSample.Sample->GetSampleData();
+            snd->PSample = wproto.sndFXes[i].MainSample.Sample->GetSampleData();
         else
-            v25->PSample = 0;
+            snd->PSample = 0;
 
         if ( wproto.sndFXes[i].sndPrm.slot )
         {
-            v25->SetPFx(true);
-            v25->PPFx = &wproto.sndFXes[i].sndPrm;
+            snd->SetPFx(true);
+            snd->PPFx = &wproto.sndFXes[i].sndPrm;
         }
         else
         {
-            v25->SetPFx(false);
+            snd->SetPFx(false);
         }
 
         if ( wproto.sndFXes[i].sndPrm_shk.slot )
         {
-            v25->SetShk(true);
-            v25->PShkFx = &wproto.sndFXes[i].sndPrm_shk;
+            snd->SetShk(true);
+            snd->PShkFx = &wproto.sndFXes[i].sndPrm_shk;
         }
         else
         {
-            v25->SetShk(false);
+            snd->SetShk(false);
         }
 
         if ( !wproto.sndFXes[i].extS.empty() )
         {
-            v25->SetFragmented(true);
-            v25->PFragments = &wproto.sndFXes[i].extS;
+            snd->SetFragmented(true);
+            snd->PFragments = &wproto.sndFXes[i].extS;
         }
         else
         {
-            v25->SetFragmented(false);
+            snd->SetFragmented(false);
         }
     }
 
     wobj->SetParameters(wproto.initParams);
 
-    TUnitPlacement arg80;
+    TUnitPlacement placement;
 
-    arg80.pos = arg->pos;
-    arg80.flags = 1;
+    placement.pos = arg->pos;
+    placement.flags = 1;
 
-    wobj->SetPosition(&arg80);
+    wobj->SetPosition(&placement);
 
-    setState_msg arg119;
+    setState_msg stateMsg;
 
-    arg119.setFlags = 0;
-    arg119.unsetFlags = 0;
-    arg119.newStatus = BACT_STATUS_NORMAL;
+    stateMsg.setFlags = 0;
+    stateMsg.unsetFlags = 0;
+    stateMsg.newStatus = BACT_STATUS_NORMAL;
 
-    wobj->SetStateInternal(&arg119);
+    wobj->SetStateInternal(&stateMsg);
 
     return wobj;
 }
@@ -1756,75 +1756,75 @@ void NC_STACK_ypaworld::IntersectLongRay(TRayIntersection *arg)
 
     vec3d stpos = arg->stPos;
 
-    int v33 = (stpos.x + 150.0) / 75.0 * 16384.0;
-    int v34 = (stpos.z - 150.0) / 75.0 * 16384.0;
+    int fixX = (stpos.x + 150.0) / 75.0 * 16384.0;
+    int fixZ = (stpos.z - 150.0) / 75.0 * 16384.0;
 
-    float v36 = fabs(arg->vect.x);
-    float v39 = fabs(arg->vect.z);
+    float absDx = fabs(arg->vect.x);
+    float absDz = fabs(arg->vect.z);
 
-    int v31;
-    int v32;
-    float v37;
+    int stepZ;
+    int stepX;
+    float remaining;
 
-    if ( v36 != 0.0 || v39 != 0.0 )
+    if ( absDx != 0.0 || absDz != 0.0 )
     {
-        if ( v36 <= v39 )
+        if ( absDx <= absDz )
         {
-            v32 = (v36 / v39 * 16384.0);
+            stepX = (absDx / absDz * 16384.0);
 
             if ( arg->vect.x < 0.0 )
-                v32 = -v32;
+                stepX = -stepX;
 
             if ( arg->vect.z >= 0.0 )
-                v31 = 16384;
+                stepZ = 16384;
             else
-                v31 = -16384;
+                stepZ = -16384;
 
-            v37 = v39;
+            remaining = absDz;
         }
         else
         {
             if ( arg->vect.x >= 0.0 )
-                v32 = 16384;
+                stepX = 16384;
             else
-                v32 = -16384;
+                stepX = -16384;
 
-            v31 = (v39 / v36 * 16384.0);
+            stepZ = (absDz / absDx * 16384.0);
 
             if ( arg->vect.z < 0.0 )
-                v31 = -v31;
+                stepZ = -stepZ;
 
-            v37 = v36;
+            remaining = absDx;
         }
     }
     else
     {
-        v31 = 0;
-        v37 = 0.0;
-        v32 = 0;
+        stepZ = 0;
+        remaining = 0.0;
+        stepX = 0;
     }
 
-    int a2a = v33 >> 16;
-    int a3a = -v34 >> 16;
+    int startSecX = fixX >> 16;
+    int startSecY = -fixZ >> 16;
 
-    TSectorCollision a6;
-    int v10, v11;
+    TSectorCollision collision;
+    int secX, secY;
 
     do // Don't like this :E
     {
-        v10 = v33 >> 16;
-        v11 = -v34 >> 16;
+        secX = fixX >> 16;
+        secY = -fixZ >> 16;
 
-        a6 = GetSectorCollision(a2a, a3a, v10, v11, arg->flags);
+        collision = GetSectorCollision(startSecX, startSecY, secX, secY, arg->flags);
 
-        if ( a6.CollisionType )
+        if ( collision.CollisionType )
         {
-            if ( a6.CollisionType != 1 )
-                FitFillerCollisionHeights(a6);
+            if ( collision.CollisionType != 1 )
+                FitFillerCollisionHeights(collision);
 
-            arg->stPos = stpos - a6.pos;
+            arg->stPos = stpos - collision.pos;
 
-            IntersectRaySkeleton(arg, a6);
+            IntersectRaySkeleton(arg, collision);
 
             if ( arg->isect )
                 return;
@@ -1832,30 +1832,30 @@ void NC_STACK_ypaworld::IntersectLongRay(TRayIntersection *arg)
 
         do // Don't like this :E
         {
-            v37 -= 75.0;
-            v33 += v32;
-            v34 += v31;
+            remaining -= 75.0;
+            fixX += stepX;
+            fixZ += stepZ;
         }
-        while ( v33 >> 16 == v10 && -v34 >> 16 == v11 && v37 > 0.0 );
+        while ( fixX >> 16 == secX && -fixZ >> 16 == secY && remaining > 0.0 );
 
     }
-    while( v37 > 0.0 );
+    while( remaining > 0.0 );
 
-    int v24 = ((int)((arg->vect.x + stpos.x + 150.0) / 75.0 * 16384.0)) >> 16;
-    int v27 = ((int)((arg->vect.z + stpos.z - 150.0) / 75.0 * 16384.0)) >> 16;
+    int endSecX = ((int)((arg->vect.x + stpos.x + 150.0) / 75.0 * 16384.0)) >> 16;
+    int endSecZ = ((int)((arg->vect.z + stpos.z - 150.0) / 75.0 * 16384.0)) >> 16;
 
-    if ( v24 != v10 || -v27 != v11 )
+    if ( endSecX != secX || -endSecZ != secY )
     {
-        a6 = GetSectorCollision(a2a, a3a, v24, -v27, arg->flags);
+        collision = GetSectorCollision(startSecX, startSecY, endSecX, -endSecZ, arg->flags);
 
-        if ( a6.CollisionType )
+        if ( collision.CollisionType )
         {
-            if ( a6.CollisionType != 1 )
-                FitFillerCollisionHeights(a6);
+            if ( collision.CollisionType != 1 )
+                FitFillerCollisionHeights(collision);
 
-            arg->stPos = stpos - a6.pos;
+            arg->stPos = stpos - collision.pos;
 
-            IntersectRaySkeleton(arg, a6);
+            IntersectRaySkeleton(arg, collision);
         }
     }
 }
@@ -1865,83 +1865,83 @@ void NC_STACK_ypaworld::FindUnitOnRay(TUnitRayQuery *arg)
 {
     arg->hitUnit = NULL;
 
-    int v6 = arg->pos.x / 300.0 * 16384.0;
-    int v7 = arg->pos.z / 300.0 * 16384.0;
+    int fixX = arg->pos.x / 300.0 * 16384.0;
+    int fixZ = arg->pos.z / 300.0 * 16384.0;
 
-    float v47 = fabs(arg->vect.x);
-    float v46 = fabs(arg->vect.z);
+    float absDx = fabs(arg->vect.x);
+    float absDz = fabs(arg->vect.z);
 
     arg->distance = arg->vect.length();
 
-    int v27, v28, v35;
+    int stepX, stepZ, remaining;
 
-    if ( v47 != 0.0 || v46 != 0.0 )
+    if ( absDx != 0.0 || absDz != 0.0 )
     {
-        if ( v47 <= v46 )
+        if ( absDx <= absDz )
         {
-            v27 = (v47 * 16384.0 / v46);
+            stepX = (absDx * 16384.0 / absDz);
 
             if ( arg->vect.x < 0.0 )
-                v27 = -v27;
+                stepX = -stepX;
 
             if ( arg->vect.z >= 0.0 )
-                v28 = 16384;
+                stepZ = 16384;
             else
-                v28 = -16384;
+                stepZ = -16384;
 
-            v35 = v46;
+            remaining = absDz;
         }
         else
         {
             if ( arg->vect.x >= 0.0 )
-                v27 = 16384;
+                stepX = 16384;
             else
-                v27 = -16384;
+                stepX = -16384;
 
-            v28 = (v46 * 16384.0 / v47);
+            stepZ = (absDz * 16384.0 / absDx);
 
             if ( arg->vect.z < 0.0 )
-                v28 = -v28;
+                stepZ = -stepZ;
 
-            v35 = v47;
+            remaining = absDx;
         }
     }
     else
     {
-        v28 = 0;
-        v35 = 0;
-        v27 = 0;
+        stepZ = 0;
+        remaining = 0;
+        stepX = 0;
     }
 
     // TODO(bug): No check for a zero-length ray.
-    vec3d v41 = arg->vect / arg->distance;
+    vec3d dir = arg->vect / arg->distance;
 
-    while ( v35 >= 0 )
+    while ( remaining >= 0 )
     {
-        int v12 = -v7 >> 16;
-        int v29 = v6 >> 16;
+        int secY = -fixZ >> 16;
+        int secX = fixX >> 16;
 
-        if ( IsSector( {v29, v12} ) )
+        if ( IsSector( {secX, secY} ) )
         {
-            for ( NC_STACK_ypabact* &sect_bacts : _cells(v29, v12).unitsList )
+            for ( NC_STACK_ypabact* &sect_bacts : _cells(secX, secY).unitsList )
             {
                 if ( sect_bacts != arg->unit && sect_bacts->_status != BACT_STATUS_DEAD )
                 {
                     if ( !(arg->unit == _userUnit && _playerInHSGun) || sect_bacts != _userRobo )
                     {
-                        vec3d v36 = sect_bacts->_position - arg->pos;
-                        vec3d v16 = v41 * v36;
+                        vec3d toUnit = sect_bacts->_position - arg->pos;
+                        vec3d cross = dir * toUnit;
 
-                        if ( v16.length() < sect_bacts->_radius )
+                        if ( cross.length() < sect_bacts->_radius )
                         {
-                            float v30 = v36.length();
+                            float dist = toUnit.length();
 
-                            if ( v41.dot(v36) / v30 > 0.0 )
+                            if ( dir.dot(toUnit) / dist > 0.0 )
                             {
-                                if ( arg->distance > v30 - sect_bacts->_radius )
+                                if ( arg->distance > dist - sect_bacts->_radius )
                                 {
                                     arg->hitUnit = sect_bacts;
-                                    arg->distance = v30 - sect_bacts->_radius;
+                                    arg->distance = dist - sect_bacts->_radius;
                                 }
                             }
                         }
@@ -1955,11 +1955,11 @@ void NC_STACK_ypaworld::FindUnitOnRay(TUnitRayQuery *arg)
 
         do
         {
-            v6 += v27;
-            v7 += v28;
-            v35 -= 300;
+            fixX += stepX;
+            fixZ += stepZ;
+            remaining -= 300;
         }
-        while ( (v6 >> 16) == v29 && (-v7 >> 16) == v12 && v35 >= 0 );
+        while ( (fixX >> 16) == secX && (-fixZ >> 16) == secY && remaining >= 0 );
     }
 }
 
@@ -2112,7 +2112,7 @@ void NC_STACK_ypaworld::SetHudVisor(THudVisor *arg)
 
 void UserData::ReloadAllInputs()
 {
-    int v10 = inpListActiveElement;
+    int savedActive = inpListActiveElement;
 
     for (int i = 0; i <= 48; i++)
         Input::Engine.SetHotKey(i, "nop");
@@ -2123,7 +2123,7 @@ void UserData::ReloadAllInputs()
         p_YW->ReloadInput(i);
     }
 
-    inpListActiveElement = v10;
+    inpListActiveElement = savedActive;
 }
 
 
@@ -2218,9 +2218,9 @@ bool NC_STACK_ypaworld::InitGameShell(UserData *usr)
 
     usr->ReloadAllInputs();
 
-    TRemoteStartInfo v67;
+    TRemoteStartInfo remoteStart;
 
-    if (!_netDriver->GetRemoteStart(&v67) )
+    if (!_netDriver->GetRemoteStart(&remoteStart) )
     {
         ypa_log_out("Error while remote start check\n");
         return  false;
@@ -2230,11 +2230,11 @@ bool NC_STACK_ypaworld::InitGameShell(UserData *usr)
     // uninitialised buffer. It also never sets isClient and isHoster together,
     // so the isHoster branch below can't run and a remote-started host never
     // enters remote mode.
-    if ( v67.isClient )
+    if ( remoteStart.isClient )
     {
-        _GameShell->netPlayerName = v67.callSIGN;
+        _GameShell->netPlayerName = remoteStart.callSIGN;
 
-        if ( v67.isHoster )
+        if ( remoteStart.isHoster )
             _GameShell->isHost = true;
         else
             _GameShell->isHost = false;
@@ -2325,14 +2325,14 @@ void TMapRegionsNet::UnloadImages()
 
 void LoadGameShellBkgImages(NC_STACK_ypaworld *yw, int mode)
 {
-    int v37 = 1;
+    int loadOk = 1;
 
     if ( yw->_globalMapRegions.NumSets )
     {
         std::string oldRsrc = Common::Env.SetPrefix("rsrc", "levels:");
 
-        int v38 = 0;
-        int v39 = 65535;
+        int bestSet = 0;
+        int bestDiff = 65535;
         for (int i = 0; i < yw->_globalMapRegions.NumSets; i++)
         {
 
@@ -2341,10 +2341,10 @@ void LoadGameShellBkgImages(NC_STACK_ypaworld *yw, int mode)
 
             int sq = sqrt(xx * xx + yy * yy);
 
-            if (sq < v39)
+            if (sq < bestDiff)
             {
-                v38 = i;
-                v39 = sq;
+                bestSet = i;
+                bestDiff = sq;
             }
         }
 
@@ -2370,20 +2370,20 @@ void LoadGameShellBkgImages(NC_STACK_ypaworld *yw, int mode)
         case ENVMODE_ABOUT:
         case ENVMODE_SELPLAYER:
         case ENVMODE_HELP:
-            menu_map  = yw->_globalMapRegions.menu_map[v38].PicName;
-            rollover_map = yw->_globalMapRegions.settings_map[v38].PicName;
+            menu_map  = yw->_globalMapRegions.menu_map[bestSet].PicName;
+            rollover_map = yw->_globalMapRegions.settings_map[bestSet].PicName;
             break;
         case ENVMODE_TUTORIAL:
-            menu_map  = yw->_globalMapRegions.tut_background_map[v38].PicName;
-            mask_map = yw->_globalMapRegions.tut_mask_map[v38].PicName;
-            rollover_map = yw->_globalMapRegions.tut_rollover_map[v38].PicName;
+            menu_map  = yw->_globalMapRegions.tut_background_map[bestSet].PicName;
+            mask_map = yw->_globalMapRegions.tut_mask_map[bestSet].PicName;
+            rollover_map = yw->_globalMapRegions.tut_rollover_map[bestSet].PicName;
             break;
         case ENVMODE_SINGLEPLAY:
-            menu_map  = yw->_globalMapRegions.background_map[v38].PicName;
-            rollover_map = yw->_globalMapRegions.rollover_map[v38].PicName;
-            finished_map = yw->_globalMapRegions.finished_map[v38].PicName;
-            mask_map = yw->_globalMapRegions.mask_map[v38].PicName;
-            enabled_map = yw->_globalMapRegions.enabled_map[v38].PicName;
+            menu_map  = yw->_globalMapRegions.background_map[bestSet].PicName;
+            rollover_map = yw->_globalMapRegions.rollover_map[bestSet].PicName;
+            finished_map = yw->_globalMapRegions.finished_map[bestSet].PicName;
+            mask_map = yw->_globalMapRegions.mask_map[bestSet].PicName;
+            enabled_map = yw->_globalMapRegions.enabled_map[bestSet].PicName;
             break;
         default:
             break;
@@ -2397,7 +2397,7 @@ void LoadGameShellBkgImages(NC_STACK_ypaworld *yw, int mode)
             if ( !ilbm_menu_map )
             {
                 ypa_log_out("world.ini: Could not load %s\n", menu_map.c_str());
-                v37 = 0;
+                loadOk = 0;
             }
         }
 
@@ -2409,7 +2409,7 @@ void LoadGameShellBkgImages(NC_STACK_ypaworld *yw, int mode)
             if ( !ilbm_rollover_map )
             {
                 ypa_log_out("world.ini: Could not load %s\n", rollover_map.c_str());
-                v37 = 0;
+                loadOk = 0;
             }
         }
 
@@ -2421,7 +2421,7 @@ void LoadGameShellBkgImages(NC_STACK_ypaworld *yw, int mode)
             if ( !ilbm_finished_map )
             {
                 ypa_log_out("world.ini: Could not load %s\n", finished_map.c_str());
-                v37 = 0;
+                loadOk = 0;
             }
         }
 
@@ -2433,7 +2433,7 @@ void LoadGameShellBkgImages(NC_STACK_ypaworld *yw, int mode)
             if ( !ilbm_enabled_map )
             {
                 ypa_log_out("world.ini: Could not load %s\n", enabled_map.c_str());
-                v37 = 0;
+                loadOk = 0;
             }
         }
         if ( !mask_map.empty() )
@@ -2442,13 +2442,13 @@ void LoadGameShellBkgImages(NC_STACK_ypaworld *yw, int mode)
             if ( !ilbm_mask_map )
             {
                 ypa_log_out("world.ini: Could not load %s\n", mask_map.c_str());
-                v37 = 0;
+                loadOk = 0;
             }
         }
 
         Common::Env.SetPrefix("rsrc", oldRsrc);
 
-        if ( !v37 )
+        if ( !loadOk )
         {
             if ( ilbm_menu_map )
             {
@@ -2556,11 +2556,11 @@ void NC_STACK_ypaworld::GameShellInitBkgMode(int mode)
 
         _tipOfDayId = loadTOD(this, "tod.def");
 
-        int v6 = _tipOfDayId + 1;
+        int nextTipId = _tipOfDayId + 1;
 
-        if ( (v6 + 2490) > 2512 )
-            v6 = 0;
-        writeTOD(this, "tod.def", v6);
+        if ( (nextTipId + 2490) > 2512 )
+            nextTipId = 0;
+        writeTOD(this, "tod.def", nextTipId);
     }
 }
 
@@ -2584,7 +2584,7 @@ bool NC_STACK_ypaworld::CreateTitleControls(){
         return false;
     }
 
-    int v70 = 0;
+    int allAdded = 0;
     NC_STACK_button::WidgetDesc btn_64arg;
 
     btn_64arg.tileset_down = 19;
@@ -2682,7 +2682,7 @@ bool NC_STACK_ypaworld::CreateTitleControls(){
                                 btn_64arg.button_id = UIWidgets::MAIN_MENU_WIDGET_IDS::BTN_QUIT;
 
                                 if ( _GameShell->titel_button->Add(&btn_64arg) )
-                                    v70 = 1;
+                                    allAdded = 1;
                             }
                         }
                     }
@@ -2691,26 +2691,26 @@ bool NC_STACK_ypaworld::CreateTitleControls(){
         }
     }
 
-    if ( !v70 )
+    if ( !allAdded )
     {
         ypa_log_out("Unable to add button to Titel\n");
         return false;
     }
 
-    NC_STACK_button::WidgetState v228;
+    NC_STACK_button::WidgetState btnState;
 
     if ( _GameShell->lang_dlls.size() <= 1 )
     {
-        v228.state = 0;
-        v228.butID = UIWidgets::MAIN_MENU_WIDGET_IDS::BTN_LANGUAGE;
-        _GameShell->titel_button->Disable(&v228);
+        btnState.state = 0;
+        btnState.butID = UIWidgets::MAIN_MENU_WIDGET_IDS::BTN_LANGUAGE;
+        _GameShell->titel_button->Disable(&btnState);
     }
 
     _GameShell->titel_button->HideScreen();
     return true;
 }
 bool NC_STACK_ypaworld::CreateSubBarControls(){
-    int v70 = 0;
+    int allAdded = 0;
     NC_STACK_button::WidgetDesc btn_64arg;
     subBarButtonWidth = _screenSize.x / 4 - 20;
 
@@ -2726,7 +2726,7 @@ bool NC_STACK_ypaworld::CreateSubBarControls(){
         return false;
     }
 
-    v70 = 0;
+    allAdded = 0;
 
     btn_64arg.tileset_down = 19;
     btn_64arg.tileset_disabled = 30;
@@ -2798,35 +2798,35 @@ bool NC_STACK_ypaworld::CreateSubBarControls(){
 
                         if ( _GameShell->sub_bar_button->Add(&btn_64arg) )
                         {
-                            v70 = 1;
+                            allAdded = 1;
                         }
                     }
                 }
             }
         }
     }
-    if ( !v70 )
+    if ( !allAdded )
     {
         ypa_log_out("Unable to add button to sub-bar\n");
         return false;
     }
-    NC_STACK_button::WidgetState v228;
+    NC_STACK_button::WidgetState btnState;
     if ( _GameShell->sgmSaveExist != 1 )
     {
-        v228.butID = 1015;
-        v228.state = 0;
-        _GameShell->sub_bar_button->Disable(&v228);
+        btnState.butID = 1015;
+        btnState.state = 0;
+        _GameShell->sub_bar_button->Disable(&btnState);
     }
 
-    v228.state = 0;
-    v228.butID = 1014;
-    _GameShell->sub_bar_button->Disable(&v228);
+    btnState.state = 0;
+    btnState.butID = 1014;
+    _GameShell->sub_bar_button->Disable(&btnState);
 
-    v228.butID = 1013;
-    _GameShell->sub_bar_button->Disable(&v228);
+    btnState.butID = 1013;
+    _GameShell->sub_bar_button->Disable(&btnState);
 
-    v228.butID = 1011;
-    _GameShell->sub_bar_button->Disable(&v228);
+    btnState.butID = 1011;
+    _GameShell->sub_bar_button->Disable(&btnState);
 
     _GameShell->sub_bar_button->HideScreen();
     return true;
@@ -2906,13 +2906,13 @@ bool NC_STACK_ypaworld::CreateConfirmControls()
             }
         }
     }
-    NC_STACK_button::WidgetState v228;
-    v228.state = 0;
-    v228.butID = 1300;
-    _GameShell->confirm_button->Disable(&v228);
+    NC_STACK_button::WidgetState btnState;
+    btnState.state = 0;
+    btnState.butID = 1300;
+    _GameShell->confirm_button->Disable(&btnState);
 
-    v228.butID = 1301;
-    _GameShell->confirm_button->Disable(&v228);
+    btnState.butID = 1301;
+    _GameShell->confirm_button->Disable(&btnState);
 
     _GameShell->confirm_button->HideScreen();
     return true;
@@ -2956,10 +2956,10 @@ bool NC_STACK_ypaworld::CreateInputControls()
         ypa_log_out("Unable to create Input-Button\n");
         return false;
     }
-    int v70 = 0;
+    int allAdded = 0;
     NC_STACK_button::WidgetDesc btn_64arg;
 
-    v70 = 0;
+    allAdded = 0;
     btn_64arg.tileset_down = 16;
     btn_64arg.tileset_up = 16;
     btn_64arg.tileset_disabled = 16;
@@ -3178,7 +3178,7 @@ bool NC_STACK_ypaworld::CreateInputControls()
 
                                                             if ( _GameShell->button_input_button->Add(&btn_64arg) )
                                                             {
-                                                                v70 = 1;
+                                                                allAdded = 1;
                                                             }
                                                         }
                                                     }
@@ -3194,7 +3194,7 @@ bool NC_STACK_ypaworld::CreateInputControls()
             }
         }
     }
-    if ( !v70 )
+    if ( !allAdded )
     {
         ypa_log_out("Unable to add input-button\n");
         return false;
@@ -3208,8 +3208,8 @@ bool NC_STACK_ypaworld::CreateVideoControls()
     int menuWidth = _screenSize.x * 0.7;
     int posLeftPaddingX = (_screenSize.x - menuWidth) / 2;
     
-    int v261 = 0;
-    int v3 = 0;
+    int devIndex = 0;
+    int curDevIndex = 0;
 
     const std::vector<GFX::TGFXDeviceInfo> &devices = GFX::Engine.GetDevices();
     
@@ -3224,14 +3224,14 @@ bool NC_STACK_ypaworld::CreateVideoControls()
             else
                 _GameShell->win3d_name = dev.name;
 
-            v3 = v261;
+            curDevIndex = devIndex;
             break;
         }
-        v261++;
+        devIndex++;
     }
 
-    int v294 = menuWidth - 3 * buttonsSpace - _fontVBScrollW;
-    int v94 = (menuWidth - 3 * buttonsSpace - _fontVBScrollW) * 0.6;
+    int rowWidth = menuWidth - 3 * buttonsSpace - _fontVBScrollW;
+    int devListWidth = (menuWidth - 3 * buttonsSpace - _fontVBScrollW) * 0.6;
 
     GuiList::tInit args;
     args = GuiList::tInit();
@@ -3239,11 +3239,11 @@ bool NC_STACK_ypaworld::CreateVideoControls()
     args.numEntries = devices.size();
     args.shownEntries = 4;
     args.firstShownEntry = 0;
-    args.selectedEntry = v3;
+    args.selectedEntry = curDevIndex;
     args.maxShownEntries = 4;
     args.withIcon = false;
     args.entryHeight = _fontH;
-    args.entryWidth = v94;
+    args.entryWidth = devListWidth;
     args.enabled = true;
     args.vborder = _fontBorderH;
     args.instantInput = true;
@@ -3267,16 +3267,16 @@ bool NC_STACK_ypaworld::CreateVideoControls()
         return false;
     }
 
-    int v98 = v294 * 0.4;
-    int v99 = posLeftPaddingX + buttonsSpace + v98;
+    int labelWidth = rowWidth * 0.4;
+    int devListX = posLeftPaddingX + buttonsSpace + labelWidth;
 
-    _GameShell->d3d_listvw.x = v99;
+    _GameShell->d3d_listvw.x = devListX;
     _GameShell->d3d_listvw.y = 7 * vertMenuSpace + 7 * _fontH + scaledFontHeight;
 
-    int v70 = 0;
+    int allAdded = 0;
     NC_STACK_button::WidgetDesc btn_64arg;
 
-    v70 = 0;
+    allAdded = 0;
 
     btn_64arg.tileset_down = 16;
     btn_64arg.tileset_up = 16;
@@ -3334,7 +3334,7 @@ bool NC_STACK_ypaworld::CreateVideoControls()
                             btn_64arg.button_type = NC_STACK_button::TYPE_CAPTION;
                             btn_64arg.xpos = 0;
                             btn_64arg.ypos = 2 * (3 * (vertMenuSpace + _fontH));
-                            btn_64arg.width = v294 * 0.4;
+                            btn_64arg.width = rowWidth * 0.4;
                             btn_64arg.caption = Locale::Text::Dialogs(Locale::DLG_S_SEL3D);
                             btn_64arg.caption2.clear();
                             btn_64arg.downCode = 0;
@@ -3348,7 +3348,7 @@ bool NC_STACK_ypaworld::CreateVideoControls()
 
                             if ( _GameShell->video_button->Add(&btn_64arg) )
                             {
-                                btn_64arg.width = v294 * 0.6;
+                                btn_64arg.width = rowWidth * 0.6;
                                 btn_64arg.tileset_down = 19;
                                 btn_64arg.tileset_disabled = 30;
                                 btn_64arg.button_type = NC_STACK_button::TYPE_CHECKBX;
@@ -3357,7 +3357,7 @@ bool NC_STACK_ypaworld::CreateVideoControls()
                                 btn_64arg.tileset_up = 18;
                                 btn_64arg.caption2.clear();
                                 btn_64arg.pressedCode = 0;
-                                btn_64arg.xpos = buttonsSpace + v294 * 0.4;
+                                btn_64arg.xpos = buttonsSpace + rowWidth * 0.4;
                                 btn_64arg.flags = NC_STACK_button::FLAG_BORDER | NC_STACK_button::FLAG_CENTER | NC_STACK_button::FLAG_TEXT;
                                 btn_64arg.caption = _GameShell->win3d_name;
                                 btn_64arg.button_id = 1172;
@@ -3367,7 +3367,7 @@ bool NC_STACK_ypaworld::CreateVideoControls()
 
                                 if ( _GameShell->video_button->Add(&btn_64arg) )
                                 {
-                                    int v117 = videoMenuRowWidth - 6 * buttonsSpace - 2 * checkBoxWidth;
+                                    int captionsWidth = videoMenuRowWidth - 6 * buttonsSpace - 2 * checkBoxWidth;
 
                                     btn_64arg.tileset_down = 19;
                                     btn_64arg.button_type = NC_STACK_button::TYPE_CHECKBX;
@@ -3386,14 +3386,14 @@ bool NC_STACK_ypaworld::CreateVideoControls()
 
                                     if ( _GameShell->video_button->Add(&btn_64arg) )
                                     {
-                                        int v120 = v117 / 2;
+                                        int captionWidth = captionsWidth / 2;
 
                                         btn_64arg.tileset_down = 16;
                                         btn_64arg.tileset_up = 16;
                                         btn_64arg.tileset_disabled = 16;
                                         btn_64arg.xpos = checkBoxWidth + buttonsSpace;
                                         btn_64arg.button_type = NC_STACK_button::TYPE_CAPTION;
-                                        btn_64arg.width = v120;
+                                        btn_64arg.width = captionWidth;
                                         btn_64arg.caption = Locale::Text::Dialogs(Locale::DLG_S_FARVIEW);
                                         btn_64arg.caption2.clear();
                                         btn_64arg.downCode = 0;
@@ -3416,7 +3416,7 @@ bool NC_STACK_ypaworld::CreateVideoControls()
                                             btn_64arg.upCode = 1107;
                                             btn_64arg.button_type = NC_STACK_button::TYPE_CHECKBX;
                                             btn_64arg.downCode = 1106;
-                                            btn_64arg.xpos = 3 * buttonsSpace + checkBoxWidth + v120;
+                                            btn_64arg.xpos = 3 * buttonsSpace + checkBoxWidth + captionWidth;
                                             btn_64arg.pressedCode = 0;
                                             btn_64arg.flags = 0;
                                             btn_64arg.button_id = 1160;
@@ -3426,8 +3426,8 @@ bool NC_STACK_ypaworld::CreateVideoControls()
                                                 btn_64arg.tileset_down = 16;
                                                 btn_64arg.tileset_up = 16;
                                                 btn_64arg.tileset_disabled = 16;
-                                                btn_64arg.width = v120;
-                                                btn_64arg.xpos = 4 * buttonsSpace + v120 + 2 * checkBoxWidth;
+                                                btn_64arg.width = captionWidth;
+                                                btn_64arg.xpos = 4 * buttonsSpace + captionWidth + 2 * checkBoxWidth;
                                                 btn_64arg.button_type = NC_STACK_button::TYPE_CAPTION;
                                                 btn_64arg.caption = Locale::Text::Dialogs(Locale::DLG_S_SKY);
                                                 btn_64arg.caption2.clear();
@@ -3459,7 +3459,7 @@ bool NC_STACK_ypaworld::CreateVideoControls()
                                                         btn_64arg.tileset_down = 16;
                                                         btn_64arg.tileset_up = 16;
                                                         btn_64arg.tileset_disabled = 16;
-                                                        btn_64arg.width = v120;
+                                                        btn_64arg.width = captionWidth;
                                                         btn_64arg.xpos = checkBoxWidth + buttonsSpace;
                                                         btn_64arg.button_type = NC_STACK_button::TYPE_CAPTION;
                                                         btn_64arg.caption = Locale::Text::Dialogs(Locale::DLG_S_SWMOUSE);
@@ -3484,7 +3484,7 @@ bool NC_STACK_ypaworld::CreateVideoControls()
                                                             btn_64arg.caption2 = "g";
                                                             btn_64arg.upCode = 1131;
                                                             btn_64arg.button_id = 1166;
-                                                            btn_64arg.xpos = 3 * buttonsSpace + checkBoxWidth + v120;
+                                                            btn_64arg.xpos = 3 * buttonsSpace + checkBoxWidth + captionWidth;
 
                                                             if ( _GameShell->video_button->Add(&btn_64arg) )
                                                             {
@@ -3492,8 +3492,8 @@ bool NC_STACK_ypaworld::CreateVideoControls()
                                                                 btn_64arg.tileset_up = 16;
                                                                 btn_64arg.tileset_disabled = 16;
                                                                 btn_64arg.button_type = NC_STACK_button::TYPE_CAPTION;
-                                                                btn_64arg.xpos = 4 * buttonsSpace + v120 + 2 * checkBoxWidth;
-                                                                btn_64arg.width = v120;
+                                                                btn_64arg.xpos = 4 * buttonsSpace + captionWidth + 2 * checkBoxWidth;
+                                                                btn_64arg.width = captionWidth;
                                                                 btn_64arg.caption = Locale::Text::Advanced(Locale::ADV_WINDOWEDMODE);
                                                                 btn_64arg.flags = NC_STACK_button::FLAG_TEXT;
                                                                 btn_64arg.caption2.clear();
@@ -3507,7 +3507,7 @@ bool NC_STACK_ypaworld::CreateVideoControls()
                                                                     btn_64arg.button_type = NC_STACK_button::TYPE_CAPTION;
                                                                     btn_64arg.xpos = checkBoxWidth + buttonsSpace;
                                                                     btn_64arg.ypos = 9 * (vertMenuSpace + _fontH);
-                                                                    btn_64arg.width = v120;
+                                                                    btn_64arg.width = captionWidth;
                                                                     btn_64arg.caption = Locale::Text::Advanced(Locale::ADV_USE16BIT);
                                                                     btn_64arg.flags = NC_STACK_button::FLAG_TEXT;
                                                                     btn_64arg.caption2.clear();
@@ -3538,8 +3538,8 @@ bool NC_STACK_ypaworld::CreateVideoControls()
                                                                             btn_64arg.tileset_up = 16;
                                                                             btn_64arg.tileset_disabled = 16;
                                                                             btn_64arg.button_type = NC_STACK_button::TYPE_CAPTION;
-                                                                            btn_64arg.xpos = v120 + 2 * checkBoxWidth + 4 * buttonsSpace;
-                                                                            btn_64arg.width = v120;
+                                                                            btn_64arg.xpos = captionWidth + 2 * checkBoxWidth + 4 * buttonsSpace;
+                                                                            btn_64arg.width = captionWidth;
                                                                             btn_64arg.caption = Locale::Text::Dialogs(Locale::DLG_S_ENCDAUD);
                                                                             btn_64arg.caption2.clear();
                                                                             btn_64arg.downCode = 0;
@@ -3562,7 +3562,7 @@ bool NC_STACK_ypaworld::CreateVideoControls()
                                                                                 btn_64arg.caption2 = "g";
                                                                                 btn_64arg.upCode = 1129;
                                                                                 btn_64arg.button_id = 1164;
-                                                                                btn_64arg.xpos = 3 * buttonsSpace + checkBoxWidth + v120;
+                                                                                btn_64arg.xpos = 3 * buttonsSpace + checkBoxWidth + captionWidth;
 
                                                                                 if ( _GameShell->video_button->Add(&btn_64arg) )
                                                                                 {
@@ -3588,7 +3588,7 @@ bool NC_STACK_ypaworld::CreateVideoControls()
                                                                                         btn_64arg.tileset_disabled = 16;
                                                                                         btn_64arg.button_type = NC_STACK_button::TYPE_CAPTION;
                                                                                         btn_64arg.xpos = checkBoxWidth + buttonsSpace;
-                                                                                        btn_64arg.width = v120 - checkBoxWidth;
+                                                                                        btn_64arg.width = captionWidth - checkBoxWidth;
                                                                                         btn_64arg.caption = Locale::Text::Dialogs(Locale::DLG_S_ENMYINDIC);
                                                                                         btn_64arg.caption2.clear();
                                                                                         btn_64arg.downCode = 0;
@@ -3603,8 +3603,8 @@ bool NC_STACK_ypaworld::CreateVideoControls()
                                                                                             btn_64arg.tileset_up = 16;
                                                                                             btn_64arg.tileset_disabled = 16;
                                                                                             btn_64arg.button_type = NC_STACK_button::TYPE_CAPTION;
-                                                                                            btn_64arg.xpos = v120 + 2 * checkBoxWidth + 4 * buttonsSpace;
-                                                                                            btn_64arg.width = v120;
+                                                                                            btn_64arg.xpos = captionWidth + 2 * checkBoxWidth + 4 * buttonsSpace;
+                                                                                            btn_64arg.width = captionWidth;
                                                                                             btn_64arg.caption = Locale::Text::Dialogs(Locale::DLG_S_INVERT);
                                                                                             btn_64arg.caption2.clear();
                                                                                             btn_64arg.downCode = 0;
@@ -3624,7 +3624,7 @@ bool NC_STACK_ypaworld::CreateVideoControls()
                                                                                                 btn_64arg.caption2 = "g";
                                                                                                 btn_64arg.tileset_disabled = 30;
                                                                                                 btn_64arg.button_id = 1151;
-                                                                                                btn_64arg.xpos = 3 * buttonsSpace + checkBoxWidth + v120;
+                                                                                                btn_64arg.xpos = 3 * buttonsSpace + checkBoxWidth + captionWidth;
                                                                                                 btn_64arg.downCode = 1112;
                                                                                                 btn_64arg.button_type = NC_STACK_button::TYPE_CHECKBX;
                                                                                                 btn_64arg.upCode = 1111;
@@ -3648,11 +3648,11 @@ bool NC_STACK_ypaworld::CreateVideoControls()
 
                                                                                                     if ( _GameShell->video_button->Add(&btn_64arg) )
                                                                                                     {
-                                                                                                        NC_STACK_button::Slider v225;
+                                                                                                        NC_STACK_button::Slider slider;
 
-                                                                                                        v225.value = 8;
-                                                                                                        v225.max = 16;
-                                                                                                        v225.min = 0;
+                                                                                                        slider.value = 8;
+                                                                                                        slider.max = 16;
+                                                                                                        slider.min = 0;
 
                                                                                                         btn_64arg.caption2.clear();
                                                                                                         btn_64arg.tileset_down = 18;
@@ -3665,7 +3665,7 @@ bool NC_STACK_ypaworld::CreateVideoControls()
                                                                                                         btn_64arg.caption = " ";
                                                                                                         btn_64arg.downCode = 1108;
                                                                                                         btn_64arg.flags = 0;
-                                                                                                        btn_64arg.slider = &v225;
+                                                                                                        btn_64arg.slider = &slider;
                                                                                                         btn_64arg.upCode = 1109;
                                                                                                         btn_64arg.width = (videoMenuRowWidth - 5 * buttonsSpace) * 0.55;
 
@@ -3703,9 +3703,9 @@ bool NC_STACK_ypaworld::CreateVideoControls()
                                                                                                                 {
                                                                                                                     btn_64arg.width = (videoMenuRowWidth - 5 * buttonsSpace) * 0.55;
 
-                                                                                                                    v225.min = 1;
-                                                                                                                    v225.max = 127;
-                                                                                                                    v225.value = 100;
+                                                                                                                    slider.min = 1;
+                                                                                                                    slider.max = 127;
+                                                                                                                    slider.value = 100;
 
                                                                                                                     btn_64arg.tileset_disabled = 30;
                                                                                                                     btn_64arg.tileset_down = 18;
@@ -3717,7 +3717,7 @@ bool NC_STACK_ypaworld::CreateVideoControls()
                                                                                                                     btn_64arg.caption = " ";
                                                                                                                     btn_64arg.downCode = 1115;
                                                                                                                     btn_64arg.upCode = 1117;
-                                                                                                                    btn_64arg.slider = &v225;
+                                                                                                                    btn_64arg.slider = &slider;
                                                                                                                     btn_64arg.pressedCode = 1116;
                                                                                                                     btn_64arg.flags = 0;
 
@@ -3754,9 +3754,9 @@ bool NC_STACK_ypaworld::CreateVideoControls()
                                                                                                                             if ( _GameShell->video_button->Add(&btn_64arg) )
                                                                                                                             {
                                                                                                                                 btn_64arg.width = (videoMenuRowWidth - 5 * buttonsSpace) * 0.55;
-                                                                                                                                v225.min = 1;
-                                                                                                                                v225.max = 127;
-                                                                                                                                v225.value = 100;
+                                                                                                                                slider.min = 1;
+                                                                                                                                slider.max = 127;
+                                                                                                                                slider.value = 100;
 
                                                                                                                                 btn_64arg.tileset_down = 18;
                                                                                                                                 btn_64arg.tileset_up = 18;
@@ -3768,7 +3768,7 @@ bool NC_STACK_ypaworld::CreateVideoControls()
                                                                                                                                 btn_64arg.xpos = buttonsSpace + (videoMenuRowWidth - 5 * buttonsSpace) * 0.3;
                                                                                                                                 btn_64arg.caption = " ";
                                                                                                                                 btn_64arg.pressedCode = 1119;
-                                                                                                                                btn_64arg.slider = &v225;
+                                                                                                                                btn_64arg.slider = &slider;
                                                                                                                                 btn_64arg.flags = 0;
                                                                                                                                 btn_64arg.button_id = 1154;
 
@@ -3834,7 +3834,7 @@ bool NC_STACK_ypaworld::CreateVideoControls()
 
                                                                                                                                                 if ( _GameShell->video_button->Add(&btn_64arg) )
                                                                                                                                                 {
-                                                                                                                                                    v70 = 1;
+                                                                                                                                                    allAdded = 1;
                                                                                                                                                 }
                                                                                                                                             }
                                                                                                                                         }
@@ -3870,9 +3870,9 @@ bool NC_STACK_ypaworld::CreateVideoControls()
         }
     }
     // Vertical sync, a row the port adds below the original options
-    if ( v70 )
+    if ( allAdded )
     {
-        v70 = 0;
+        allAdded = 0;
 
         btn_64arg.width = checkBoxWidth;
         btn_64arg.tileset_down = 19;
@@ -3906,21 +3906,21 @@ bool NC_STACK_ypaworld::CreateVideoControls()
             btn_64arg.button_id = 2;
 
             if ( _GameShell->video_button->Add(&btn_64arg) )
-                v70 = 1;
+                allAdded = 1;
         }
     }
 
-    if ( !v70 )
+    if ( !allAdded )
     {
         ypa_log_out("Unable to add video-button\n");
         return false;
     }
 
-    NC_STACK_button::WidgetState v229;
-    v229.butID = 1151;
-    v229.state = ((_GameShell->soundFlags & World::SF_INVERTLR) == 0) + 1;
+    NC_STACK_button::WidgetState btnState;
+    btnState.butID = 1151;
+    btnState.state = ((_GameShell->soundFlags & World::SF_INVERTLR) == 0) + 1;
 
-    _GameShell->video_button->SetState(&v229);
+    _GameShell->video_button->SetState(&btnState);
 
 
     _GameShell->video_button->HideScreen();
@@ -3972,15 +3972,15 @@ bool NC_STACK_ypaworld::CreateDiskControls()
 
     _GameShell->userNameDirCursor = _GameShell->userNameDir.size();
 
-    std::string v223 = _GameShell->userNameDir;
+    std::string nameCaption = _GameShell->userNameDir;
 
     if ( _GameShell->diskScreenMode )
-        v223 += "h";
+        nameCaption += "h";
 
-    int v70 = 0;
+    int allAdded = 0;
     NC_STACK_button::WidgetDesc btn_64arg;
 
-    v70 = 0;
+    allAdded = 0;
 
     btn_64arg.tileset_down = 16;
     btn_64arg.tileset_up = 16;
@@ -4037,7 +4037,7 @@ bool NC_STACK_ypaworld::CreateDiskControls()
                     btn_64arg.downCode = 0;
                     btn_64arg.upCode = 0;
                     btn_64arg.pressedCode = 0;
-                    btn_64arg.caption = v223.c_str();
+                    btn_64arg.caption = nameCaption.c_str();
                     btn_64arg.flags = NC_STACK_button::FLAG_BORDER | NC_STACK_button::FLAG_CENTER | NC_STACK_button::FLAG_TEXT;
                     btn_64arg.button_id = 1100;
                     btn_64arg.ypos = 6 * buttonsSpace + 14 * _fontH;
@@ -4120,7 +4120,7 @@ bool NC_STACK_ypaworld::CreateDiskControls()
 
                                                 if ( _GameShell->disk_button->Add(&btn_64arg) )
                                                 {
-                                                    v70 = 1;
+                                                    allAdded = 1;
                                                 }
                                             }
                                         }
@@ -4134,7 +4134,7 @@ bool NC_STACK_ypaworld::CreateDiskControls()
         }
     }
     
-    if ( !v70 )
+    if ( !allAdded )
     {
         ypa_log_out("Unable to add button to disk-buttonobject\n");
         return false;
@@ -4142,10 +4142,10 @@ bool NC_STACK_ypaworld::CreateDiskControls()
 
 
     _GameShell->disk_button->HideScreen();
-    NC_STACK_button::WidgetState v228;
-    v228.state = 0;
-    v228.butID = 1105;
-    _GameShell->disk_button->Disable(&v228);
+    NC_STACK_button::WidgetState btnState;
+    btnState.state = 0;
+    btnState.butID = 1105;
+    _GameShell->disk_button->Disable(&btnState);
     return true;
 }
 bool NC_STACK_ypaworld::CreateLocaleControls()
@@ -4191,10 +4191,10 @@ bool NC_STACK_ypaworld::CreateLocaleControls()
     _GameShell->local_listvw.x = posLeftPaddingX;
     _GameShell->local_listvw.y = 4 * (vertMenuSpace + _fontH) + scaledFontHeight;
 
-    int v70 = 0;
+    int allAdded = 0;
     NC_STACK_button::WidgetDesc btn_64arg;
 
-    v70 = 0;
+    allAdded = 0;
     btn_64arg.tileset_down = 16;
     btn_64arg.tileset_up = 16;
     btn_64arg.button_type = NC_STACK_button::TYPE_CAPTION;
@@ -4285,14 +4285,14 @@ bool NC_STACK_ypaworld::CreateLocaleControls()
                             btn_64arg.button_id = 1251;
 
                             if ( _GameShell->locale_button->Add(&btn_64arg) )
-                                v70 = 1;
+                                allAdded = 1;
                         }
                     }
                 }
             }
         }
     }
-    if ( !v70 )
+    if ( !allAdded )
     {
         ypa_log_out("Unable to add locale-button\n");
         return false;
@@ -4313,9 +4313,9 @@ bool NC_STACK_ypaworld::CreateAboutControls(){
         ypa_log_out("Unable to create sound-buttonobject\n");
         return false;
     }
-    int v70 = 0;
+    int allAdded = 0;
     NC_STACK_button::WidgetDesc btn_64arg;
-    v70 = 0;
+    allAdded = 0;
     btn_64arg.tileset_down = 16;
     btn_64arg.tileset_up = 16;
     btn_64arg.tileset_disabled = 16;
@@ -4411,7 +4411,7 @@ bool NC_STACK_ypaworld::CreateAboutControls(){
 
                                                                 if ( _GameShell->about_button->Add(&btn_64arg) )
                                                                 {
-                                                                    v70 = 1;
+                                                                    allAdded = 1;
                                                                 }
                                                             }
                                                         }
@@ -4428,7 +4428,7 @@ bool NC_STACK_ypaworld::CreateAboutControls(){
             }
         }
     }
-    if ( !v70 )
+    if ( !allAdded )
     {
         ypa_log_out("Unable to add about-button\n");
         return false;
@@ -4481,7 +4481,7 @@ bool NC_STACK_ypaworld::CreateNetworkControls()
     _GameShell->network_listvw.x = posLeftPaddingX;
     _GameShell->network_listvw.y = _GameShell->netListY;
 
-    int v70 = 0;
+    int allAdded = 0;
     NC_STACK_button::WidgetDesc btn_64arg;
 
     btn_64arg.tileset_down = 17;
@@ -4503,7 +4503,7 @@ bool NC_STACK_ypaworld::CreateNetworkControls()
     btn_64arg.txt_b = _iniColors[60].b;
 
 
-    v70 = 0;
+    allAdded = 0;
 
     if ( _GameShell->network_button->Add(&btn_64arg) )
     {
@@ -4525,9 +4525,9 @@ bool NC_STACK_ypaworld::CreateNetworkControls()
 
         if ( _GameShell->network_button->Add(&btn_64arg) )
         {
-            int v284 = ((netMenuWidth - 3 * buttonsSpace) * 0.25 - 3 * buttonsSpace) * 0.25;
+            int raceSlotWidth = ((netMenuWidth - 3 * buttonsSpace) * 0.25 - 3 * buttonsSpace) * 0.25;
 
-            TileMap *v198 = GFX::Engine.GetTileset(8);
+            TileMap *raceTiles = GFX::Engine.GetTileset(8);
 
             btn_64arg.tileset_down = 16;
             btn_64arg.tileset_up = 16;
@@ -4552,7 +4552,7 @@ bool NC_STACK_ypaworld::CreateNetworkControls()
                 btn_64arg.tileset_disabled = 30;
                 btn_64arg.button_type = 4;
                 btn_64arg.xpos += btn_64arg.width + 2 * buttonsSpace;
-                btn_64arg.width = v198->map[65].w;
+                btn_64arg.width = raceTiles->map[65].w;
                 btn_64arg.caption = "A";
                 btn_64arg.caption2 = "B";
                 btn_64arg.button_id = 1206;
@@ -4565,7 +4565,7 @@ bool NC_STACK_ypaworld::CreateNetworkControls()
                     btn_64arg.caption2 = "D";
                     btn_64arg.downCode = 1205;
                     btn_64arg.button_id = 1207;
-                    btn_64arg.xpos += v284 + buttonsSpace;
+                    btn_64arg.xpos += raceSlotWidth + buttonsSpace;
 
                     if ( _GameShell->network_button->Add(&btn_64arg) )
                     {
@@ -4573,7 +4573,7 @@ bool NC_STACK_ypaworld::CreateNetworkControls()
                         btn_64arg.caption2 = "F";
                         btn_64arg.downCode = 1206;
                         btn_64arg.button_id = 1208;
-                        btn_64arg.xpos += v284 + buttonsSpace;
+                        btn_64arg.xpos += raceSlotWidth + buttonsSpace;
 
                         if ( _GameShell->network_button->Add(&btn_64arg) )
                         {
@@ -4581,7 +4581,7 @@ bool NC_STACK_ypaworld::CreateNetworkControls()
                             btn_64arg.caption2 = "H";
                             btn_64arg.downCode = 1207;
                             btn_64arg.button_id = 1209;
-                            btn_64arg.xpos += v284 + buttonsSpace;
+                            btn_64arg.xpos += raceSlotWidth + buttonsSpace;
 
                             if ( _GameShell->network_button->Add(&btn_64arg) )
                             {
@@ -4589,7 +4589,7 @@ bool NC_STACK_ypaworld::CreateNetworkControls()
                                 btn_64arg.tileset_up = 18;
                                 btn_64arg.tileset_disabled = 30;
                                 btn_64arg.button_type = NC_STACK_button::TYPE_BUTTON;
-                                btn_64arg.xpos += v284 + 2 * buttonsSpace;
+                                btn_64arg.xpos += raceSlotWidth + 2 * buttonsSpace;
                                 btn_64arg.width = menuListWidth - btn_64arg.xpos;
                                 btn_64arg.caption = Locale::Text::Netdlg(Locale::NETDLG_BACK);
                                 btn_64arg.caption2.clear();
@@ -4693,21 +4693,21 @@ bool NC_STACK_ypaworld::CreateNetworkControls()
 
                                                             if ( _GameShell->network_button->Add(&btn_64arg) )
                                                             {
-                                                                int v204;
+                                                                int raceColWidth;
 
                                                                 if ( _screenSize.x < 512 )
-                                                                    v204 = 6 * checkBoxWidth;
+                                                                    raceColWidth = 6 * checkBoxWidth;
                                                                 else
-                                                                    v204 = 4 * checkBoxWidth;
+                                                                    raceColWidth = 4 * checkBoxWidth;
 
                                                                 btn_64arg.tileset_down = 16;
                                                                 btn_64arg.tileset_up = 16;
                                                                 btn_64arg.tileset_disabled = 16;
                                                                 btn_64arg.button_type = NC_STACK_button::TYPE_CAPTION;
-                                                                btn_64arg.xpos = v204 + checkBoxWidth;
+                                                                btn_64arg.xpos = raceColWidth + checkBoxWidth;
                                                                 btn_64arg.ypos = 4 * (_fontH + buttonsSpace);
                                                                 btn_64arg.caption = " ";
-                                                                btn_64arg.width = menuListWidth - v204 - checkBoxWidth;
+                                                                btn_64arg.width = menuListWidth - raceColWidth - checkBoxWidth;
                                                                 btn_64arg.flags = NC_STACK_button::FLAG_TEXT;
                                                                 btn_64arg.caption2.clear();
                                                                 btn_64arg.downCode = 0;
@@ -4740,7 +4740,7 @@ bool NC_STACK_ypaworld::CreateNetworkControls()
                                                                                 btn_64arg.tileset_disabled = 8;
                                                                                 btn_64arg.button_type = NC_STACK_button::TYPE_CAPTION;
                                                                                 btn_64arg.xpos = 0;
-                                                                                btn_64arg.width = v204;
+                                                                                btn_64arg.width = raceColWidth;
                                                                                 btn_64arg.caption2.clear();
                                                                                 btn_64arg.downCode = 0;
                                                                                 btn_64arg.upCode = 0;
@@ -4851,7 +4851,7 @@ bool NC_STACK_ypaworld::CreateNetworkControls()
                                                                                                                 btn_64arg.txt_b = _iniColors[60].b;
 
                                                                                                                 if ( _GameShell->network_button->Add(&btn_64arg) )
-                                                                                                                    v70 = 1;
+                                                                                                                    allAdded = 1;
                                                                                                             }
                                                                                                         }
                                                                                                     }
@@ -4879,36 +4879,36 @@ bool NC_STACK_ypaworld::CreateNetworkControls()
             }
         }
     }
-    if ( !v70 )
+    if ( !allAdded )
     {
         ypa_log_out("Unable to add network-button\n");
         return false;
     }
-    NC_STACK_button::WidgetState v228;
-    v228.butID = 1210;
-    v228.state = 0;
-    _GameShell->network_button->Disable(&v228);
+    NC_STACK_button::WidgetState btnState;
+    btnState.butID = 1210;
+    btnState.state = 0;
+    _GameShell->network_button->Disable(&btnState);
 
-    v228.butID = 1211;
-    _GameShell->network_button->Disable(&v228);
+    btnState.butID = 1211;
+    _GameShell->network_button->Disable(&btnState);
 
-    v228.butID = 1212;
-    _GameShell->network_button->Disable(&v228);
+    btnState.butID = 1212;
+    _GameShell->network_button->Disable(&btnState);
 
-    v228.butID = 1213;
-    _GameShell->network_button->Disable(&v228);
+    btnState.butID = 1213;
+    _GameShell->network_button->Disable(&btnState);
 
-    v228.butID = 1214;
-    _GameShell->network_button->Disable(&v228);
+    btnState.butID = 1214;
+    _GameShell->network_button->Disable(&btnState);
 
-    v228.butID = 1215;
-    _GameShell->network_button->Disable(&v228);
+    btnState.butID = 1215;
+    _GameShell->network_button->Disable(&btnState);
 
-    v228.butID = 1216;
-    _GameShell->network_button->Disable(&v228);
+    btnState.butID = 1216;
+    _GameShell->network_button->Disable(&btnState);
 
-    v228.butID = 1217;
-    _GameShell->network_button->Disable(&v228);
+    btnState.butID = 1217;
+    _GameShell->network_button->Disable(&btnState);
 
     _GameShell->network_button->HideScreen();
     return true;
@@ -4951,13 +4951,13 @@ bool NC_STACK_ypaworld::OpenGameShell()
         return false;
     }
 
-    GFX::TCursorParams v233;
+    GFX::TCursorParams cursor;
 
     if (_mousePointers[0])
-        v233.bitm = _mousePointers[0]->GetBitmap();
-    v233.pointer_id = 1;
+        cursor.bitm = _mousePointers[0]->GetBitmap();
+    cursor.pointer_id = 1;
 
-    GFX::Engine.SetCursor(v233.pointer_id, 0);
+    GFX::Engine.SetCursor(cursor.pointer_id, 0);
 
     
 
@@ -5252,14 +5252,14 @@ void NC_STACK_ypaworld::ShowGameShellPage()
 
         if ( _GameShell->GameIsOver )
         {
-            NC_STACK_button::WidgetState v231;
-            v231.state = 0;
-            v231.butID = 1014;
+            NC_STACK_button::WidgetState btnState;
+            btnState.state = 0;
+            btnState.butID = 1014;
 
-            _GameShell->sub_bar_button->Disable(&v231);
+            _GameShell->sub_bar_button->Disable(&btnState);
 
-            v231.butID = 1013;
-            _GameShell->sub_bar_button->Disable(&v231);
+            btnState.butID = 1013;
+            _GameShell->sub_bar_button->Disable(&btnState);
         }
         break;
     case ENVMODE_NETPLAY:
@@ -5334,8 +5334,8 @@ void draw_tooltip(NC_STACK_ypaworld *yw)
 {
     if ( yw->_mouseGrabbed || (yw->_toolTipId && !yw->_mouseCursorHidden) )
     {
-        int v15 = -(yw->_fontH + yw->_downScreenBorder + yw->_fontH / 4);
-        std::string v2;
+        int textY = -(yw->_fontH + yw->_downScreenBorder + yw->_fontH / 4);
+        std::string hotkeyText;
         
         if ( yw->_toolTipHotKeyId != -1 )
         {
@@ -5345,8 +5345,8 @@ void draw_tooltip(NC_STACK_ypaworld *yw)
             {
                 if ( yw->_GameShell && !Input::Engine.KeyTitle.at(keycode).empty())
                 {
-                    v2 = fmt::sprintf("[%s]", Input::Engine.KeyTitle.at(keycode));
-                    v15 = -(yw->_downScreenBorder + 2 * yw->_fontH + yw->_fontH / 4);
+                    hotkeyText = fmt::sprintf("[%s]", Input::Engine.KeyTitle.at(keycode));
+                    textY = -(yw->_downScreenBorder + 2 * yw->_fontH + yw->_fontH / 4);
                 }
             }
         }
@@ -5356,13 +5356,13 @@ void draw_tooltip(NC_STACK_ypaworld *yw)
 
         FontUA::select_tileset(&buf, 15);
         FontUA::set_xpos(&buf, 0);
-        FontUA::set_ypos(&buf, v15);
+        FontUA::set_ypos(&buf, textY);
 
-        if ( !v2.empty() )
+        if ( !hotkeyText.empty() )
         {
             FontUA::set_txtColor(&buf, yw->_iniColors[61].r, yw->_iniColors[61].g, yw->_iniColors[61].b);
 
-            FontUA::FormateCenteredSkipableItem(yw->_guiTiles[15], &buf, v2.c_str(), yw->_screenSize.x);
+            FontUA::FormateCenteredSkipableItem(yw->_guiTiles[15], &buf, hotkeyText.c_str(), yw->_screenSize.x);
 
             FontUA::next_line(&buf);
         }
@@ -5462,8 +5462,8 @@ void NC_STACK_ypaworld::ProcessGameShell()
 
     if ( !_helpURL.empty() )
     {
-        const std::string v22 = _helpURL;
-        OpenHelpURL(&v22);
+        const std::string helpLink = _helpURL;
+        OpenHelpURL(&helpLink);
 
         _helpURL.clear();
     }
@@ -5485,7 +5485,7 @@ void NC_STACK_ypaworld::ShowMessage(TInfoMessage *arg)
 
     if ( !arg->txt.empty() )
     {
-        TInfoLogMsg *v6;
+        TInfoLogMsg *entry;
 
         if ( info_log.last_msg_prio >= 5 )
         {
@@ -5507,7 +5507,7 @@ void NC_STACK_ypaworld::ShowMessage(TInfoMessage *arg)
             if ( info_log.numEntries > 64 )
                 info_log.numEntries = 64;
 
-            v6 = &info_log.msgs[info_log.msg_count];
+            entry = &info_log.msgs[info_log.msg_count];
 
             info_log.last_msg_idx = info_log.msg_count;
         }
@@ -5518,7 +5518,7 @@ void NC_STACK_ypaworld::ShowMessage(TInfoMessage *arg)
             // show stale rows.
             info_log.msg_count = info_log.last_msg_idx;
 
-            v6 = &info_log.msgs[info_log.last_msg_idx];
+            entry = &info_log.msgs[info_log.last_msg_idx];
         }
 
         info_log.last_msg_duration = 5000;
@@ -5526,24 +5526,24 @@ void NC_STACK_ypaworld::ShowMessage(TInfoMessage *arg)
         info_log.last_msg_prio = arg->Priority;
 
         if ( arg->unit )
-            v6->id = arg->unit->_gid;
+            entry->id = arg->unit->_gid;
         else
-            v6->id = 0;
+            entry->id = 0;
 
-        v6->displayTime = 7000;
-        v6->timestamp = _timeStamp;
+        entry->displayTime = 7000;
+        entry->timestamp = _timeStamp;
 
-        const char *v5 = arg->txt.c_str();
+        const char *src = arg->txt.c_str();
 
-        int v10 = 0;
+        int len = 0;
 
-        while ( *v5 )
+        while ( *src )
         {
-            if ( *v5 == '\n' )
+            if ( *src == '\n' )
             {
-                v6->txt[v10] = 0;
+                entry->txt[len] = 0;
 
-                v10 = 0;
+                len = 0;
 
                 info_log.msg_count++;
 
@@ -5566,26 +5566,26 @@ void NC_STACK_ypaworld::ShowMessage(TInfoMessage *arg)
                 info_log.last_msg_duration += 5000;
                 info_log.last_msg_lines++;
 
-                v6 = &info_log.msgs[ info_log.msg_count ];
+                entry = &info_log.msgs[ info_log.msg_count ];
 
                 if ( arg->unit )
-                    v6->id = arg->unit->_gid;
+                    entry->id = arg->unit->_gid;
                 else
-                    v6->id = 0;
+                    entry->id = 0;
 
-                v6->displayTime = 7000;
-                v6->timestamp = 0;
+                entry->displayTime = 7000;
+                entry->timestamp = 0;
             }
-            else if ( v10 < 125 )
+            else if ( len < 125 )
             {
-                v6->txt[v10] = *v5;
-                v10++;
+                entry->txt[len] = *src;
+                len++;
             }
 
-            v5++;
+            src++;
         }
 
-        v6->txt[v10] = 0;
+        entry->txt[len] = 0;
 
         info_log.firstShownEntries = info_log.numEntries - info_log.shownEntries;
 
@@ -5672,15 +5672,15 @@ size_t NC_STACK_ypaworld::StartReplay(const std::string &fname)
 
     while ( repl->mfile.parse() != IFFile::IFF_ERR_EOC )
     {
-        const IFFile::Context &v13 = repl->mfile.GetCurrentChunk();
+        const IFFile::Context &chunk = repl->mfile.GetCurrentChunk();
 
-        if ( v13.Is(TAG_SINF) )
+        if ( chunk.Is(TAG_SINF) )
         {
             repl->seqn = repl->mfile.readU16L();
             repl->level_id = repl->mfile.readU16L();
             repl->mfile.parse();
         }
-        else if ( v13.Is(TAG_FORM, TAG_FRAM) )
+        else if ( chunk.Is(TAG_FORM, TAG_FRAM) )
         {
             repl->frame_count++;
             repl->mfile.skipChunk();
@@ -5694,11 +5694,11 @@ size_t NC_STACK_ypaworld::StartReplay(const std::string &fname)
     
     repl->mfile.close();
 
-    TLevelLoadRequest arg161;
-    arg161.mode = 1;
-    arg161.lvlID = repl->level_id;
+    TLevelLoadRequest loadReq;
+    loadReq.mode = 1;
+    loadReq.lvlID = repl->level_id;
 
-    if ( !CreateLevel(&arg161) )
+    if ( !CreateLevel(&loadReq) )
         return 0;
 
     if ( !recorder_create_camera() )
@@ -5719,15 +5719,15 @@ size_t NC_STACK_ypaworld::StartReplay(const std::string &fname)
         return 0;
     }
 
-    TReplayControl arg165;
+    TReplayControl ctrl;
 
-    arg165.command = 2;
-    arg165.frame = 0;
-    ControlReplay(&arg165);
+    ctrl.command = 2;
+    ctrl.frame = 0;
+    ControlReplay(&ctrl);
 
-    arg165.command = 20;
-    arg165.frame = 0;
-    ControlReplay(&arg165);
+    ctrl.command = 20;
+    ctrl.frame = 0;
+    ControlReplay(&ctrl);
 
     return 1;
 }
@@ -5736,7 +5736,7 @@ size_t NC_STACK_ypaworld::StartReplay(const std::string &fname)
 void NC_STACK_ypaworld::PlayReplayFrame(TUpdateArgs *arg)
 {
     TGameRecorder *repl = _replayPlayer;
-    uint32_t v33 = profiler_begin();
+    uint32_t frameStart = profiler_begin();
 
     _framesElapsed++;
     _updateMessage.user_action = World::DOACTION_0;
@@ -5764,9 +5764,9 @@ void NC_STACK_ypaworld::PlayReplayFrame(TUpdateArgs *arg)
 
     CameraPrepareRender(repl, _userUnit, arg->Input);
 
-    vec3d a3a = _userUnit->_fly_dir * _userUnit->_fly_dir_length;
+    vec3d velocity = _userUnit->_fly_dir * _userUnit->_fly_dir_length;
 
-    SFXEngine::SFXe.BeginSoundFrame(arg->DTime, _userUnit->_position, a3a, _userUnit->_rotation);
+    SFXEngine::SFXe.BeginSoundFrame(arg->DTime, _userUnit->_position, velocity, _userUnit->_rotation);
 
     for ( NC_STACK_ypabact* &bct : _userUnit->_kidList )
     {
@@ -5781,12 +5781,12 @@ void NC_STACK_ypaworld::PlayReplayFrame(TUpdateArgs *arg)
         SFXEngine::SFXe.UpdateSoundCarrier(&bct->_soundcarrier);
     }
 
-    const mat3x3 &v25 = SFXEngine::SFXe.EndSoundFrame();
-    TF::TForm3D *v26 = TF::Engine.GetViewPoint();
+    const mat3x3 &shake = SFXEngine::SFXe.EndSoundFrame();
+    TF::TForm3D *viewPoint = TF::Engine.GetViewPoint();
 
-    v26->SclRot = v25 * v26->SclRot;
+    viewPoint->SclRot = shake * viewPoint->SclRot;
 
-    uint32_t v28 = profiler_begin();
+    uint32_t renderStart = profiler_begin();
 
     RenderGame(arg, 0);
 
@@ -5795,11 +5795,11 @@ void NC_STACK_ypaworld::PlayReplayFrame(TUpdateArgs *arg)
 
     GFX::Engine.EndFrame();
 
-    _profileVals[PFID_UPDATETIME] = profiler_end(v28);
+    _profileVals[PFID_UPDATETIME] = profiler_end(renderStart);
 
     HandleSnapshotKeys(this, arg->Input);
 
-    _profileVals[PFID_FRAMETIME] = profiler_end(v33);
+    _profileVals[PFID_FRAMETIME] = profiler_end(frameStart);
     _profileVals[PFID_POLYGONS] = _polysDraw;
 
     ProfileCalcValues();
@@ -5895,45 +5895,45 @@ void NC_STACK_ypaworld::UpdateGameShell()
     {
         _GameShell->disk_listvw.PosOnSelected(_GameShell->diskListActiveElement - 1);
 
-        NC_STACK_button::WidgetState v18;
-        v18.state = 1;
-        v18.butID = 1101;
-        _GameShell->disk_button->Enable(&v18);
+        NC_STACK_button::WidgetState diskBtnState;
+        diskBtnState.state = 1;
+        diskBtnState.butID = 1101;
+        _GameShell->disk_button->Enable(&diskBtnState);
 
-        v18.butID = 1102;
-        _GameShell->disk_button->Enable(&v18);
+        diskBtnState.butID = 1102;
+        _GameShell->disk_button->Enable(&diskBtnState);
 
-        v18.butID = 1103;
-        _GameShell->disk_button->Enable(&v18);
+        diskBtnState.butID = 1103;
+        _GameShell->disk_button->Enable(&diskBtnState);
     }
     else
     {
-        NC_STACK_button::WidgetState v18;
-        v18.state = 1;
-        v18.butID = 1101;
-        _GameShell->disk_button->Disable(&v18);
+        NC_STACK_button::WidgetState diskBtnState;
+        diskBtnState.state = 1;
+        diskBtnState.butID = 1101;
+        _GameShell->disk_button->Disable(&diskBtnState);
 
-        v18.butID = 1102;
-        _GameShell->disk_button->Disable(&v18);
+        diskBtnState.butID = 1102;
+        _GameShell->disk_button->Disable(&diskBtnState);
 
-        v18.butID = 1103;
-        _GameShell->disk_button->Disable(&v18);
+        diskBtnState.butID = 1103;
+        _GameShell->disk_button->Disable(&diskBtnState);
     }
 
-    NC_STACK_button::WidgetState v16;
-    v16.butID = 1151;
-    v16.state = ((_GameShell->soundFlags & World::SF_INVERTLR) == 0) + 1;
+    NC_STACK_button::WidgetState videoBtnState;
+    videoBtnState.butID = 1151;
+    videoBtnState.state = ((_GameShell->soundFlags & World::SF_INVERTLR) == 0) + 1;
 
-    _GameShell->video_button->SetState(&v16);
+    _GameShell->video_button->SetState(&videoBtnState);
 
 
-    v16.butID = 1150;
-    v16.state = ((_GameShell->GFXFlags & World::GFX_FLAG_16BITTEXTURE) == 0) + 1;
-    _GameShell->video_button->SetState(&v16);
+    videoBtnState.butID = 1150;
+    videoBtnState.state = ((_GameShell->GFXFlags & World::GFX_FLAG_16BITTEXTURE) == 0) + 1;
+    _GameShell->video_button->SetState(&videoBtnState);
 
-    v16.state = ((_GameShell->soundFlags & World::SF_CDSOUND) == 0) + 1;
-    v16.butID = 1164;
-    _GameShell->video_button->SetState(&v16);
+    videoBtnState.state = ((_GameShell->soundFlags & World::SF_CDSOUND) == 0) + 1;
+    videoBtnState.butID = 1164;
+    _GameShell->video_button->SetState(&videoBtnState);
 
     NC_STACK_button::Slider *tmp = _GameShell->video_button->GetSliderData(1152);
     tmp->value = _GameShell->soundVolume;
@@ -5945,69 +5945,69 @@ void NC_STACK_ypaworld::UpdateGameShell()
 
     _GameShell->video_button->Refresh(1154);
 
-    v16.butID = 1163;
-    v16.state = (_GameShell->enemyIndicator == 0) + 1;
-    _GameShell->video_button->SetState(&v16);
+    videoBtnState.butID = 1163;
+    videoBtnState.state = (_GameShell->enemyIndicator == 0) + 1;
+    _GameShell->video_button->SetState(&videoBtnState);
 
-    v16.butID = 1157;
-    v16.state = ((_GameShell->GFXFlags & World::GFX_FLAG_FARVIEW) == 0) + 1;
-    _GameShell->video_button->SetState(&v16);
+    videoBtnState.butID = 1157;
+    videoBtnState.state = ((_GameShell->GFXFlags & World::GFX_FLAG_FARVIEW) == 0) + 1;
+    _GameShell->video_button->SetState(&videoBtnState);
 
-    v16.state = ((_GameShell->GFXFlags & World::GFX_FLAG_SKYRENDER) == 0) + 1;
-    v16.butID = 1160;
-    _GameShell->video_button->SetState(&v16);
+    videoBtnState.state = ((_GameShell->GFXFlags & World::GFX_FLAG_SKYRENDER) == 0) + 1;
+    videoBtnState.butID = 1160;
+    _GameShell->video_button->SetState(&videoBtnState);
 
-    v16.butID = 1165;
-    v16.state = ((_GameShell->GFXFlags & World::GFX_FLAG_SOFTMOUSE) == 0) + 1;
-    _GameShell->video_button->SetState(&v16);
+    videoBtnState.butID = 1165;
+    videoBtnState.state = ((_GameShell->GFXFlags & World::GFX_FLAG_SOFTMOUSE) == 0) + 1;
+    _GameShell->video_button->SetState(&videoBtnState);
 
-    v16.butID = 1166;
-    v16.state = (!_GameShell->IsWindowedFlag()) + 1;
-    _GameShell->video_button->SetState(&v16);
+    videoBtnState.butID = 1166;
+    videoBtnState.state = (!_GameShell->IsWindowedFlag()) + 1;
+    _GameShell->video_button->SetState(&videoBtnState);
 
-    v16.butID = 1173;
-    v16.state = (!_GameShell->IsVsyncFlag()) + 1;
-    _GameShell->video_button->SetState(&v16);
+    videoBtnState.butID = 1173;
+    videoBtnState.state = (!_GameShell->IsVsyncFlag()) + 1;
+    _GameShell->video_button->SetState(&videoBtnState);
 
     tmp = _GameShell->video_button->GetSliderData(1159);
     tmp->value = _GameShell->fxnumber;
 
     _GameShell->video_button->Refresh(1159);
 
-    NC_STACK_button::WidgetState v9;
-    v9.butID = 1050;
-    v9.state = ((_GameShell->p_YW->_preferences & World::PREF_JOYDISABLE) != 0) + 1;
+    NC_STACK_button::WidgetState inputBtnState;
+    inputBtnState.butID = 1050;
+    inputBtnState.state = ((_GameShell->p_YW->_preferences & World::PREF_JOYDISABLE) != 0) + 1;
 
-    _GameShell->button_input_button->SetState(&v9);
+    _GameShell->button_input_button->SetState(&inputBtnState);
 
-    v9.butID = 1061;
-    v9.state = (_GameShell->altJoystickEnabled == false) + 1;
-    _GameShell->button_input_button->SetState(&v9);
+    inputBtnState.butID = 1061;
+    inputBtnState.state = (_GameShell->altJoystickEnabled == false) + 1;
+    _GameShell->button_input_button->SetState(&inputBtnState);
 
-    v9.butID = 1055;
-    v9.state = ((_GameShell->p_YW->_preferences & World::PREF_FFDISABLE) != 0) + 1;
-    _GameShell->button_input_button->SetState(&v9);
+    inputBtnState.butID = 1055;
+    inputBtnState.state = ((_GameShell->p_YW->_preferences & World::PREF_FFDISABLE) != 0) + 1;
+    _GameShell->button_input_button->SetState(&inputBtnState);
 
     if ( _GameShell->inpListActiveElement )
     {
-        int v7 = _GameShell->inpListActiveElement - 1;
-        int v8 = _GameShell->input_listview.maxShownEntries + _GameShell->input_listview.firstShownEntries;
+        int selIndex = _GameShell->inpListActiveElement - 1;
+        int shownEnd = _GameShell->input_listview.maxShownEntries + _GameShell->input_listview.firstShownEntries;
 
-        if ( v7 >= _GameShell->input_listview.firstShownEntries && v7 < v8 )
+        if ( selIndex >= _GameShell->input_listview.firstShownEntries && selIndex < shownEnd )
         {
-            if ( v8 > _GameShell->input_listview.numEntries )
+            if ( shownEnd > _GameShell->input_listview.numEntries )
                 _GameShell->input_listview.firstShownEntries = _GameShell->input_listview.numEntries - _GameShell->input_listview.maxShownEntries;
 
             if ( _GameShell->input_listview.firstShownEntries < 0 )
                 _GameShell->input_listview.firstShownEntries = 0;
         }
-        else if ( _GameShell->input_listview.numEntries - v7 <= _GameShell->input_listview.maxShownEntries )
+        else if ( _GameShell->input_listview.numEntries - selIndex <= _GameShell->input_listview.maxShownEntries )
         {
             _GameShell->input_listview.firstShownEntries = _GameShell->input_listview.numEntries - _GameShell->input_listview.maxShownEntries;
         }
         else
         {
-            _GameShell->input_listview.firstShownEntries = v7;
+            _GameShell->input_listview.firstShownEntries = selIndex;
         }
     }
 }
@@ -6594,22 +6594,22 @@ size_t NC_STACK_ypaworld::ReloadLanguage()
         return 0;
     }
 
-    int v6;
+    int wasOpen;
 
     if ( _GameShell->HasInited )
     {
         CloseGameShell();
-        v6 = 1;
+        wasOpen = 1;
     }
     else
     {
-        v6 = 0;
+        wasOpen = 0;
     }
 
     if ( !LoadLanguage(*_GameShell->default_lang_dll) )
         ypa_log_out("Warning: SETLANGUAGE failed\n");
 
-    if ( v6 && !OpenGameShell() )
+    if ( wasOpen && !OpenGameShell() )
     {
         ypa_log_out("Unable to open GameShell\n");
         return 0;
@@ -6652,10 +6652,10 @@ void NC_STACK_ypaworld::HandleRoboDestroyed(TRoboDestroyed *arg)
     {
         for (int j = 0; j < _mapSize.x; j++)
         {
-            cellArea &v9 = _cells(j, i);
+            cellArea &cell = _cells(j, i);
 
-            if ( v9.owner == arg->bact->_owner )
-                CellSetOwner(&v9, arg->killerOwner);
+            if ( cell.owner == arg->bact->_owner )
+                CellSetOwner(&cell, arg->killerOwner);
         }
     }
 
@@ -6669,17 +6669,17 @@ void NC_STACK_ypaworld::HandleRoboDestroyed(TRoboDestroyed *arg)
     {
         for (int j = 0; j < _mapSize.x; j++)
         {
-            cellArea &v15 = _cells(j, i);
+            cellArea &cell = _cells(j, i);
 
-            if ( v15.PurposeType == cellArea::PT_TECHUPGRADE && v15.owner == _userRobo->_owner )
+            if ( cell.PurposeType == cellArea::PT_TECHUPGRADE && cell.owner == _userRobo->_owner )
             {
 
                 if ( _isNetGame )
-                    ActivateNetWunderstein(this, &v15, v15.PurposeIndex);
+                    ActivateNetWunderstein(this, &cell, cell.PurposeIndex);
                 else
-                    yw_ActivateWunderstein(&v15, v15.PurposeIndex);
+                    yw_ActivateWunderstein(&cell, cell.PurposeIndex);
                 
-                HistoryEventAdd( World::History::Upgrade(j, i, v15.owner, _techUpgrades[ _upgradeId ].Type, _upgradeVehicleId, _upgradeWeaponId, _upgradeBuildId) );
+                HistoryEventAdd( World::History::Upgrade(j, i, cell.owner, _techUpgrades[ _upgradeId ].Type, _upgradeVehicleId, _upgradeWeaponId, _upgradeBuildId) );
             }
 
         }
@@ -6769,27 +6769,27 @@ int HasLevelFinSave(int lvlID, const char *userName)
 // Advanced Create Level
 size_t NC_STACK_ypaworld::AdvancedCreateLevel(TLevelLoadRequest *arg)
 {
-    int v6;
+    int loaded;
 
     if ( _globalMapRegions.MapRegions[ arg->lvlID ].Status == TMapRegionInfo::STATUS_COMPLETED && HasLevelFinSave(arg->lvlID, _GameShell->UserName.c_str()) )
     {
         std::string savename = fmt::sprintf("save:%s/%d.fin", _GameShell->UserName, arg->lvlID);
-        v6 = LoadGame(savename);
+        loaded = LoadGame(savename);
 
-        if ( !v6 )
+        if ( !loaded )
             ypa_log_out("Warning: in YWM_ADVANCEDCREATELEVEL: YWM_LOADGAME of %s failed!\n", savename.c_str());
 
         _userRobo->_energy = _userRobo->_energy_max;
     }
     else
     {
-        v6 = CreateLevel(arg);
+        loaded = CreateLevel(arg);
 
-        if ( !v6 )
+        if ( !loaded )
             ypa_log_out("Warning: in YWM_ADVANCEDCREATELEVEL: YWM_CREATELEVEL %d failed!\n", arg->lvlID);
     }
 
-    if ( v6 )
+    if ( loaded )
     {
         if ( !SaveGame(fmt::sprintf("save:%s/%d.rst", _GameShell->UserName, _levelInfo.LevelID)) )
             ypa_log_out("Warning: could not create restart file for level %d, user %s.\n", _levelInfo.LevelID, _GameShell->UserName.c_str());
@@ -6798,7 +6798,7 @@ size_t NC_STACK_ypaworld::AdvancedCreateLevel(TLevelLoadRequest *arg)
     _lvlPrimevalTypeMap = _lvlTypeMap;
     _lvlPrimevalOwnMap = _lvlOwnMap;
 
-    return v6;
+    return loaded;
 }
 
 

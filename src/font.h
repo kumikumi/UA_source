@@ -100,7 +100,7 @@ void FormateClippedText(TileMap *, CmdStream *curpos, const std::string &str, in
 void FormateCenteredSkipableItem(TileMap *, CmdStream *in, const std::string &str, int width);
 void TextRelWidthItem(TileMap *, CmdStream *pos, const std::string &txt, int wdth, int arg);
 
-void FormateColumnItem(NC_STACK_ypaworld *yw, CmdStream *cmdbuf, int num, ColumnItem *a4);
+void FormateColumnItem(NC_STACK_ypaworld *yw, CmdStream *cmdbuf, int num, ColumnItem *items);
 void FormateTextAlignedClippedString(NC_STACK_ypaworld *yw, CmdStream *cmdbuf, ColumnItem *arg);
 void FormateAlignedClippedString(NC_STACK_ypaworld *yw, CmdStream *cmdbuf, ColumnItem *arg);
 }

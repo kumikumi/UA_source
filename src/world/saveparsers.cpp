@@ -397,13 +397,13 @@ bool SaveRoboParser::IsScope(ScriptParser::Parser &parser, const std::string &wo
     if ( StriCmp(word, "begin_robo") )
         return false;
 
-    TUnitSpawn v5;
-    v5.pos.x = 600;
-    v5.pos.z = -600.0;
-    v5.pos.y = 0;
-    v5.vehicle_id = parser.stoi(opt);
+    TUnitSpawn spawn;
+    spawn.pos.x = 600;
+    spawn.pos.z = -600.0;
+    spawn.pos.y = 0;
+    spawn.vehicle_id = parser.stoi(opt);
 
-    _r = dynamic_cast<NC_STACK_yparobo *> ( _o.CreateVehicle(&v5) );
+    _r = dynamic_cast<NC_STACK_yparobo *> ( _o.CreateVehicle(&spawn) );
 
     if ( !_r )
         return false;
@@ -436,13 +436,13 @@ bool SaveSquadParser::IsScope(ScriptParser::Parser &parser, const std::string &w
 {
     if ( !StriCmp(word, "begin_commander") )
     {
-        TUnitSpawn v5;
-        v5.pos.x = 600.0;
-        v5.pos.z = -600.0;
-        v5.pos.y = 0;
-        v5.vehicle_id = parser.stoi(opt);
+        TUnitSpawn spawn;
+        spawn.pos.x = 600.0;
+        spawn.pos.z = -600.0;
+        spawn.pos.y = 0;
+        spawn.vehicle_id = parser.stoi(opt);
 
-        _c = _o.CreateVehicle(&v5);
+        _c = _o.CreateVehicle(&spawn);
 
         if ( !_c )
             return false;
@@ -452,13 +452,13 @@ bool SaveSquadParser::IsScope(ScriptParser::Parser &parser, const std::string &w
     }
     else if ( !StriCmp(word, "begin_slave") )
     {
-        TUnitSpawn v5;
-        v5.pos.x = 600.0;
-        v5.pos.z = -600.0;
-        v5.pos.y = 0;
-        v5.vehicle_id = parser.stoi(opt);
+        TUnitSpawn spawn;
+        spawn.pos.x = 600.0;
+        spawn.pos.z = -600.0;
+        spawn.pos.y = 0;
+        spawn.vehicle_id = parser.stoi(opt);
 
-        _c = _o.CreateVehicle(&v5);
+        _c = _o.CreateVehicle(&spawn);
 
         if ( !_c )
             return false;
@@ -630,14 +630,14 @@ bool SaveBuildingMapParser::IsScope(ScriptParser::Parser &parser, const std::str
                 
                 if (blg > 0 && cell.owner != 0)
                 {
-                    TBuildingPlacement arg148;
-                    arg148.flags = 1;
-                    arg148.owner = cell.owner;
-                    arg148.blg_ID = blg;
-                    arg148.instant = 1;
-                    arg148.CellId = cell.CellId;
+                    TBuildingPlacement placement;
+                    placement.flags = 1;
+                    placement.owner = cell.owner;
+                    placement.blg_ID = blg;
+                    placement.instant = 1;
+                    placement.CellId = cell.CellId;
 
-                    _o.CreateBuilding(&arg148);
+                    _o.CreateBuilding(&placement);
                 }
             }
         }

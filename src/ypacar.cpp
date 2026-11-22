@@ -86,130 +86,130 @@ size_t NC_STACK_ypacar::SetParameters(IDVList &stak)
 
 void NC_STACK_ypacar::DoKamikaze()
 {
-    float v53;
+    float blastRadius;
 
     if ( _carBlast >= 10000 )
-        v53 = log(10000.0 / _carBlast) * -428.5714285714286;
+        blastRadius = log(10000.0 / _carBlast) * -428.5714285714286;
     else
-        v53 = 1.0;
+        blastRadius = 1.0;
 
-    int v3 = (v53 / 300.0);
+    int radiusSteps = (blastRadius / 300.0);
 
-    for (int i = 0; i < v3; i++)
+    for (int i = 0; i < radiusSteps; i++)
     {
-        float v4 = sqrt( POW2(i) + POW2(v3) );
+        float rowSteps = sqrt( POW2(i) + POW2(radiusSteps) );
 
-        for (int j = 0; j <= v4; j++)
+        for (int j = 0; j <= rowSteps; j++)
         {
-            TSectorDamage arg120;
-            arg120.energy = exp( sqrt( POW2(i) + POW2(j) ) * (World::CVSectorLength * -2.8) / World::CVSectorLength ) * _carBlast;
-            arg120.pos = vec3d(i, 0, j) * 300.0 + _position.X0Z();
-            arg120.unit = this;
+            TSectorDamage sectorDamage;
+            sectorDamage.energy = exp( sqrt( POW2(i) + POW2(j) ) * (World::CVSectorLength * -2.8) / World::CVSectorLength ) * _carBlast;
+            sectorDamage.pos = vec3d(i, 0, j) * 300.0 + _position.X0Z();
+            sectorDamage.unit = this;
 
-            if ( arg120.pos.x > World::CVSectorLength  &&  arg120.pos.x < _wrldSize.x - World::CVSectorLength  &&  arg120.pos.z < -World::CVSectorLength  &&  arg120.pos.z > _wrldSize.y + World::CVSectorLength )
-                ChangeSectorEnergy(&arg120);
+            if ( sectorDamage.pos.x > World::CVSectorLength  &&  sectorDamage.pos.x < _wrldSize.x - World::CVSectorLength  &&  sectorDamage.pos.z < -World::CVSectorLength  &&  sectorDamage.pos.z > _wrldSize.y + World::CVSectorLength )
+                ChangeSectorEnergy(&sectorDamage);
 
             if ( i )
             {
-                arg120.pos.x = _position.x - i * 300.0;
-                arg120.pos.z = _position.z + j * 300.0;
+                sectorDamage.pos.x = _position.x - i * 300.0;
+                sectorDamage.pos.z = _position.z + j * 300.0;
 
-                if ( arg120.pos.x > World::CVSectorLength )
+                if ( sectorDamage.pos.x > World::CVSectorLength )
                 {
-                    if ( arg120.pos.x < _wrldSize.x - World::CVSectorLength && arg120.pos.z < -World::CVSectorLength && arg120.pos.z > _wrldSize.y + World::CVSectorLength )
-                        ChangeSectorEnergy(&arg120);
+                    if ( sectorDamage.pos.x < _wrldSize.x - World::CVSectorLength && sectorDamage.pos.z < -World::CVSectorLength && sectorDamage.pos.z > _wrldSize.y + World::CVSectorLength )
+                        ChangeSectorEnergy(&sectorDamage);
                 }
             }
 
             if ( j )
             {
-                arg120.pos.x = _position.x + i * 300.0;
-                arg120.pos.z = _position.z - j * 300.0;
+                sectorDamage.pos.x = _position.x + i * 300.0;
+                sectorDamage.pos.z = _position.z - j * 300.0;
 
-                if ( arg120.pos.x > World::CVSectorLength )
+                if ( sectorDamage.pos.x > World::CVSectorLength )
                 {
-                    if ( arg120.pos.x < _wrldSize.x - World::CVSectorLength  &&  arg120.pos.z < -World::CVSectorLength  &&  arg120.pos.z > _wrldSize.y + World::CVSectorLength )
-                        ChangeSectorEnergy(&arg120);
+                    if ( sectorDamage.pos.x < _wrldSize.x - World::CVSectorLength  &&  sectorDamage.pos.z < -World::CVSectorLength  &&  sectorDamage.pos.z > _wrldSize.y + World::CVSectorLength )
+                        ChangeSectorEnergy(&sectorDamage);
                 }
             }
 
             if ( i && j )
             {
-                arg120.pos.x = _position.x - i * 300.0;
-                arg120.pos.z = _position.z - j * 300.0;
+                sectorDamage.pos.x = _position.x - i * 300.0;
+                sectorDamage.pos.z = _position.z - j * 300.0;
 
-                if ( arg120.pos.x > World::CVSectorLength )
+                if ( sectorDamage.pos.x > World::CVSectorLength )
                 {
-                    if ( arg120.pos.x < _wrldSize.x - World::CVSectorLength  &&  arg120.pos.z < -World::CVSectorLength  &&  arg120.pos.z > _wrldSize.y + World::CVSectorLength )
-                        ChangeSectorEnergy(&arg120);
+                    if ( sectorDamage.pos.x < _wrldSize.x - World::CVSectorLength  &&  sectorDamage.pos.z < -World::CVSectorLength  &&  sectorDamage.pos.z > _wrldSize.y + World::CVSectorLength )
+                        ChangeSectorEnergy(&sectorDamage);
                 }
             }
         }
     }
 
-    int v13 = v53 / World::CVSectorLength;
+    int radiusSectors = blastRadius / World::CVSectorLength;
 
-    for (int i = 0; i < v13; i++)
+    for (int i = 0; i < radiusSectors; i++)
     {
-        int v59 = sqrt( POW2( i ) + POW2( v13 ) );
+        int rowSectors = sqrt( POW2( i ) + POW2( radiusSectors ) );
 
-        for (int j = 0; j <= v59; j++ )
+        for (int j = 0; j <= rowSectors; j++ )
         {
             Common::Point pt = _cellId + Common::Point(i, j);
 
             if ( _world->IsGamePlaySector(pt) )
             {
-                for ( NC_STACK_ypabact* &v19 : _world->SectorAt(pt).unitsList )
+                for ( NC_STACK_ypabact* &unit : _world->SectorAt(pt).unitsList )
                 {
-                    int v63 = 0;
+                    int netSent = 0;
 
-                    if ( v19 != this )
+                    if ( unit != this )
                     {
-                        if ( v19->_bact_type != BACT_TYPES_MISSLE )
+                        if ( unit->_bact_type != BACT_TYPES_MISSLE )
                         {
-                            vec3d tmp = _position - v19->_position;
+                            vec3d tmp = _position - unit->_position;
 
-                            int v26 = exp(tmp.length() * -2.8 / World::CVSectorLength) * _carBlast;
-                            int v67 = ((1.0 - (float)v19->_shield * 0.01) * (float)v26);
+                            int damage = exp(tmp.length() * -2.8 / World::CVSectorLength) * _carBlast;
+                            int realDamage = ((1.0 - (float)unit->_shield * 0.01) * (float)damage);
 
-                            v19->_energy -= v67;
+                            unit->_energy -= realDamage;
 
                             if ( _world->_isNetGame )
                             {
-                                v63 = 1;
+                                netSent = 1;
 
                                 uamessage_vhclEnergy veMsg;
                                 veMsg.msgID = UAMSG_VHCLENERGY;
                                 veMsg.tstamp = _world->_timeStamp;
-                                veMsg.owner = v19->_owner;
-                                veMsg.id = v19->_gid;
-                                veMsg.energy = -v67;
+                                veMsg.owner = unit->_owner;
+                                veMsg.id = unit->_gid;
+                                veMsg.energy = -realDamage;
 
                                 _world->NetBroadcastMessage(&veMsg, sizeof(veMsg), true);
                             }
                         }
 
-                        if ( v19->_energy <= 0 || v19->_bact_type == BACT_TYPES_MISSLE )
+                        if ( unit->_energy <= 0 || unit->_bact_type == BACT_TYPES_MISSLE )
                         {
-                            setState_msg arg78;
-                            arg78.setFlags = 0;
-                            arg78.unsetFlags = 0;
-                            arg78.newStatus = BACT_STATUS_DEAD;
+                            setState_msg stateMsg;
+                            stateMsg.setFlags = 0;
+                            stateMsg.unsetFlags = 0;
+                            stateMsg.newStatus = BACT_STATUS_DEAD;
 
-                            if ( v19->_bact_type == BACT_TYPES_MISSLE )
-                                v19->SetState(&arg78);
+                            if ( unit->_bact_type == BACT_TYPES_MISSLE )
+                                unit->SetState(&stateMsg);
                             else
-                                v19->SetStateInternal(&arg78);
+                                unit->SetStateInternal(&stateMsg);
 
-                            if ( v19->_bact_type == BACT_TYPES_ROBO )
+                            if ( unit->_bact_type == BACT_TYPES_ROBO )
                             {
-                                if ( !v63 )
+                                if ( !netSent )
                                 {
-                                    TRoboDestroyed arg177;
-                                    arg177.bact = v19;
-                                    arg177.killerOwner = _owner;
+                                    TRoboDestroyed roboDestroyed;
+                                    roboDestroyed.bact = unit;
+                                    roboDestroyed.killerOwner = _owner;
 
-                                    _world->HandleRoboDestroyed(&arg177);
+                                    _world->HandleRoboDestroyed(&roboDestroyed);
                                 }
                             }
                         }
@@ -274,12 +274,12 @@ void NC_STACK_ypacar::DoKamikaze()
     _status_flg &= ~BACT_STFLAG_LAND;
     _bact_type = BACT_TYPES_FLYER;
 
-    setState_msg arg78;
-    arg78.newStatus = BACT_STATUS_DEAD;
-    arg78.setFlags = 0;
-    arg78.unsetFlags = 0;
+    setState_msg stateMsg;
+    stateMsg.newStatus = BACT_STATUS_DEAD;
+    stateMsg.setFlags = 0;
+    stateMsg.unsetFlags = 0;
 
-    SetState(&arg78);
+    SetState(&stateMsg);
 
     _bact_type = BACT_TYPES_CAR;
     _energy = -10;
@@ -289,11 +289,11 @@ void NC_STACK_ypacar::User_layer(update_msg *arg)
 {
     _airconst = _airconst_static;
 
-    int a4 = getBACT_bactCollisions();
+    int bactCollisions = getBACT_bactCollisions();
 
     _old_pos = _position;
 
-    float v78 = arg->frameTime / 1000.0;
+    float dtime = arg->frameTime / 1000.0;
     vec3d oldPos = _rotation.AxisZ();
 
     if (_status == BACT_STATUS_DEAD)
@@ -304,12 +304,12 @@ void NC_STACK_ypacar::User_layer(update_msg *arg)
         {
             if ( ! (_status_flg & BACT_STFLAG_FIRE) )
             {
-                setState_msg arg78;
-                arg78.newStatus = BACT_STATUS_NORMAL;
-                arg78.unsetFlags = 0;
-                arg78.setFlags = 0;
+                setState_msg stateMsg;
+                stateMsg.newStatus = BACT_STATUS_NORMAL;
+                stateMsg.unsetFlags = 0;
+                stateMsg.setFlags = 0;
 
-                SetState(&arg78);
+                SetState(&stateMsg);
             }
         }
         else
@@ -318,12 +318,12 @@ void NC_STACK_ypacar::User_layer(update_msg *arg)
             {
                 if ( !(_status_flg & BACT_STFLAG_FIRE) )
                 {
-                    setState_msg arg78;
-                    arg78.newStatus = BACT_STATUS_IDLE;
-                    arg78.unsetFlags = 0;
-                    arg78.setFlags = 0;
+                    setState_msg stateMsg;
+                    stateMsg.newStatus = BACT_STATUS_IDLE;
+                    stateMsg.unsetFlags = 0;
+                    stateMsg.setFlags = 0;
 
-                    SetState(&arg78);
+                    SetState(&stateMsg);
                 }
 
                 _status = BACT_STATUS_NORMAL;
@@ -337,12 +337,12 @@ void NC_STACK_ypacar::User_layer(update_msg *arg)
                 }
                 else
                 {
-                    setState_msg arg78;
-                    arg78.newStatus = BACT_STATUS_IDLE;
-                    arg78.unsetFlags = 0;
-                    arg78.setFlags = 0;
+                    setState_msg stateMsg;
+                    stateMsg.newStatus = BACT_STATUS_IDLE;
+                    stateMsg.unsetFlags = 0;
+                    stateMsg.setFlags = 0;
 
-                    SetState(&arg78);
+                    SetState(&stateMsg);
                 }
             }
         }
@@ -351,8 +351,8 @@ void NC_STACK_ypacar::User_layer(update_msg *arg)
         {
             if ( _fly_dir_length != 0.0 )
             {
-                float v63 = fabs(_fly_dir_length);
-                float angle = -arg->inpt->Sliders[3] * _maxrot * v78 * (sqrt(v63) * 0.2);
+                float speed = fabs(_fly_dir_length);
+                float angle = -arg->inpt->Sliders[3] * _maxrot * dtime * (sqrt(speed) * 0.2);
 
                 _rotation = mat3x3::RotateY(angle) * _rotation;
             }
@@ -362,41 +362,41 @@ void NC_STACK_ypacar::User_layer(update_msg *arg)
         {
             if ( fabs(_fly_dir.y) > 0.1 )
             {
-                float v74 = 1.0 - (v78 * 4.0);
+                float damping = 1.0 - (dtime * 4.0);
 
-                if ( v74 < 0.1 )
-                    v74 = 0.1;
+                if ( damping < 0.1 )
+                    damping = 0.1;
 
-                _fly_dir_length *= v74;
+                _fly_dir_length *= damping;
             }
         }
 
-        float v76 = arg->inpt->Sliders[4];
-        float v65 = fabs(arg->inpt->Sliders[4]);
+        float throttle = arg->inpt->Sliders[4];
+        float throttleAbs = fabs(arg->inpt->Sliders[4]);
 
-        if ( v76 < -1.0 )
-            v76 = -1.0;
-        else if ( v76 > 1.0)
-            v76 = 1.0;
+        if ( throttle < -1.0 )
+            throttle = -1.0;
+        else if ( throttle > 1.0)
+            throttle = 1.0;
 
-        _thraction += _force * (v78 * 0.75) * v76;
+        _thraction += _force * (dtime * 0.75) * throttle;
 
-        float v69;
+        float maxThrust;
         if ( arg->inpt->Buttons.Is(31) )
-            v69 = _force * v65;
+            maxThrust = _force * throttleAbs;
         else
-            v69 = _force;
+            maxThrust = _force;
 
-        if ( _thraction > v69 )
-            _thraction = v69;
+        if ( _thraction > maxThrust )
+            _thraction = maxThrust;
 
-        if ( _thraction < -v69 )
-            _thraction = -v69;
+        if ( _thraction < -maxThrust )
+            _thraction = -maxThrust;
 
-        if ( fabs(v76) > 0.001 )
+        if ( fabs(throttle) > 0.001 )
             _status_flg |= BACT_STFLAG_MOVE;
 
-        _gun_angle_user += v78 * arg->inpt->Sliders[5];
+        _gun_angle_user += dtime * arg->inpt->Sliders[5];
 
         if ( _gun_angle_user < -0.3 )
             _gun_angle_user = -0.3;
@@ -404,21 +404,21 @@ void NC_STACK_ypacar::User_layer(update_msg *arg)
         if ( _gun_angle_user > 0.8 )
             _gun_angle_user = 0.8;
 
-        TMissileLaunch arg79;
-        arg79.tgType = BACT_TGT_TYPE_DRCT;
-        arg79.tgt_pos = _rotation.AxisZ();
+        TMissileLaunch launch;
+        launch.tgType = BACT_TGT_TYPE_DRCT;
+        launch.tgt_pos = _rotation.AxisZ();
 
         float corW, corH;
         GFX::Engine.getAspectCorrection(corW, corH, true);
 
-        TAimQuery arg106;
-        arg106.flags = 5;
-        arg106.aim_dir = _rotation.AxisZ() - vec3d::OY(_gun_angle_user * corH);
+        TAimQuery aimQuery;
+        aimQuery.flags = 5;
+        aimQuery.aim_dir = _rotation.AxisZ() - vec3d::OY(_gun_angle_user * corH);
 
-        if ( UserTargeting(&arg106) )
+        if ( UserTargeting(&aimQuery) )
         {
-            arg79.tgType = BACT_TGT_TYPE_UNIT;
-            arg79.target.pbact = arg106.ret_bact;
+            launch.tgType = BACT_TGT_TYPE_UNIT;
+            launch.target.pbact = aimQuery.ret_bact;
         }
 
         if ( arg->inpt->Buttons.IsAny({0, 1}) )
@@ -429,21 +429,21 @@ void NC_STACK_ypacar::User_layer(update_msg *arg)
             }
             else
             {
-                arg79.weapon = _weapon;
-                arg79.direction = _rotation.AxisZ() - _rotation.AxisY() * _gun_angle_user * corH;
-                arg79.g_time = _clock;
+                launch.weapon = _weapon;
+                launch.direction = _rotation.AxisZ() - _rotation.AxisY() * _gun_angle_user * corH;
+                launch.g_time = _clock;
 
                 if ( _clock % 2 )
-                    arg79.start_point.x = -_fire_pos.x;
+                    launch.start_point.x = -_fire_pos.x;
                 else
-                    arg79.start_point.x = _fire_pos.x;
+                    launch.start_point.x = _fire_pos.x;
 
-                arg79.start_point.y = _fire_pos.y;
-                arg79.start_point.z = _fire_pos.z;
+                launch.start_point.y = _fire_pos.y;
+                launch.start_point.z = _fire_pos.z;
 
-                arg79.flags = (arg->inpt->Buttons.Is(1) ? 1 : 0) | 2;
+                launch.flags = (arg->inpt->Buttons.Is(1) ? 1 : 0) | 2;
 
-                LaunchMissile(&arg79);
+                LaunchMissile(&launch);
             }
         }
 
@@ -453,12 +453,12 @@ void NC_STACK_ypacar::User_layer(update_msg *arg)
             {
                 if ( !arg->inpt->Buttons.Is(2) )
                 {
-                    setState_msg arg78;
-                    arg78.setFlags = 0;
-                    arg78.newStatus = BACT_STATUS_NOPE;
-                    arg78.unsetFlags = BACT_STFLAG_FIRE;
+                    setState_msg stateMsg;
+                    stateMsg.setFlags = 0;
+                    stateMsg.newStatus = BACT_STATUS_NOPE;
+                    stateMsg.unsetFlags = BACT_STFLAG_FIRE;
 
-                    SetState(&arg78);
+                    SetState(&stateMsg);
                 }
             }
 
@@ -466,26 +466,26 @@ void NC_STACK_ypacar::User_layer(update_msg *arg)
             {
                 if ( !(_status_flg & BACT_STFLAG_FIRE) )
                 {
-                    setState_msg arg78;
-                    arg78.setFlags = BACT_STFLAG_FIRE;
-                    arg78.unsetFlags = 0;
-                    arg78.newStatus = BACT_STATUS_NOPE;
+                    setState_msg stateMsg;
+                    stateMsg.setFlags = BACT_STFLAG_FIRE;
+                    stateMsg.unsetFlags = 0;
+                    stateMsg.newStatus = BACT_STATUS_NOPE;
 
-                    SetState(&arg78);
+                    SetState(&stateMsg);
                 }
 
-                TMinigunShot arg105;
-                arg105.dir = _rotation.AxisZ() - _rotation.AxisY() * _gun_angle_user * corH;
-                arg105.period = v78;
-                arg105.gTime = _clock;
+                TMinigunShot mgShot;
+                mgShot.dir = _rotation.AxisZ() - _rotation.AxisY() * _gun_angle_user * corH;
+                mgShot.period = dtime;
+                mgShot.gTime = _clock;
 
-                FireMinigun(&arg105);
+                FireMinigun(&mgShot);
             }
         }
 
         if ( _status_flg & BACT_STFLAG_LAND )
         {
-            move_msg arg74;
+            move_msg moveMsg;
 
             if ( arg->inpt->Buttons.Is(3) )
             {
@@ -493,12 +493,12 @@ void NC_STACK_ypacar::User_layer(update_msg *arg)
 
                 if ( fabs(_fly_dir_length) >= 4.0 )
                 {
-                    float v75 = 1.0 - v78 * 4.0;
+                    float brakeDamping = 1.0 - dtime * 4.0;
 
-                    if ( v75 < 0.1 )
-                        v75 = 0.1;
+                    if ( brakeDamping < 0.1 )
+                        brakeDamping = 0.1;
 
-                    _fly_dir_length *= v75 * 0.1;
+                    _fly_dir_length *= brakeDamping * 0.1;
                 }
                 else
                 {
@@ -506,37 +506,37 @@ void NC_STACK_ypacar::User_layer(update_msg *arg)
                     _fly_dir_length = 0;
                 }
 
-                arg74.flag = 2;
+                moveMsg.flag = 2;
             }
             else
             {
-                arg74.flag = 0;
+                moveMsg.flag = 0;
             }
 
             // TODO(bug): Overwrites the flag set just above, so the handbrake flag 2
             // never reaches Move. The tank version doesn't do this. Could be in the
             // original too.
-            arg74.flag = 0;
-            arg74.period = v78;
+            moveMsg.flag = 0;
+            moveMsg.period = dtime;
 
             if ( _status_flg & BACT_STFLAG_MOVE )
-                Move(&arg74);
+                Move(&moveMsg);
 
-            if ( a4 && CollisionWithBact(arg->frameTime) )
+            if ( bactCollisions && CollisionWithBact(arg->frameTime) )
             {
-                AlignVehicleUser(v78, oldPos);
+                AlignVehicleUser(dtime, oldPos);
             }
             else
             {
-                TRayIntersection arg136;
+                TRayIntersection moveRay;
 
-                arg136.stPos = _old_pos;
-                arg136.vect = _position - _old_pos;
-                arg136.flags = 0;
+                moveRay.stPos = _old_pos;
+                moveRay.vect = _position - _old_pos;
+                moveRay.flags = 0;
 
-                _world->IntersectRay(&arg136);
+                _world->IntersectRay(&moveRay);
 
-                if ( arg136.isect )
+                if ( moveRay.isect )
                 {
 
                     _position = _old_pos;
@@ -546,41 +546,41 @@ void NC_STACK_ypacar::User_layer(update_msg *arg)
                 }
                 else
                 {
-                    AlignVehicleUser(v78, oldPos);
+                    AlignVehicleUser(dtime, oldPos);
                 }
             }
         }
         else
         {
-            TCrashLandStep arg86;
-            arg86.flags = 1;
-            arg86.frameTime = arg->frameTime;
+            TCrashLandStep crashStep;
+            crashStep.flags = 1;
+            crashStep.frameTime = arg->frameTime;
 
-            CrashOrLand(&arg86);
+            CrashOrLand(&crashStep);
         }
     }
 }
 
 int NC_STACK_ypacar::AlignVehicleAI(float dtime, vec3d *pNormal)
 {
-    float v5;
+    float groundOffset;
 
     if ( getBACT_viewer() )
-        v5 = _viewer_overeof;
+        groundOffset = _viewer_overeof;
     else
-        v5 = _overeof;
+        groundOffset = _overeof;
 
-    TRayIntersection arg136;
-    arg136.stPos = _rotation.AxisY() * v5 + _position - vec3d::OY(50.0);
-    arg136.vect = vec3d::OY( _overeof + 110.0 );
-    arg136.flags = 0;
+    TRayIntersection ray;
+    ray.stPos = _rotation.AxisY() * groundOffset + _position - vec3d::OY(50.0);
+    ray.vect = vec3d::OY( _overeof + 110.0 );
+    ray.flags = 0;
 
-    _world->IntersectRay(&arg136);
+    _world->IntersectRay(&ray);
 
-    if ( !arg136.isect )
+    if ( !ray.isect )
         return ALIGN_NONE;
 
-    vec3d normal = arg136.skel->polygons[ arg136.polyID ].Normal();
+    vec3d normal = ray.skel->polygons[ ray.polyID ].Normal();
 
     if ( normal.y < 0.6 )
     {
@@ -593,19 +593,19 @@ int NC_STACK_ypacar::AlignVehicleAI(float dtime, vec3d *pNormal)
 
     if ( vaxis.normalise() > 0.0 )
     {
-        float v56 = clp_acos( _rotation.AxisY().dot( normal ) );
-        float v45 = _maxrot * 2.0 * dtime;
+        float angle = clp_acos( _rotation.AxisY().dot( normal ) );
+        float maxAngle = _maxrot * 2.0 * dtime;
 
-        if ( v56 > v45 )
-            v56 = v45;
+        if ( angle > maxAngle )
+            angle = maxAngle;
 
-        if ( fabs(v56) < 0.01 )
-            v56 = 0.0;
+        if ( fabs(angle) < 0.01 )
+            angle = 0.0;
 
-        _rotation *= mat3x3::AxisAngle(vaxis, v56);
+        _rotation *= mat3x3::AxisAngle(vaxis, angle);
     }
 
-    _position = arg136.isectPos - _rotation.AxisY() * v5;
+    _position = ray.isectPos - _rotation.AxisY() * groundOffset;
 
     return ALIGN_DONE;
 }
@@ -615,42 +615,42 @@ vec3d NC_STACK_ypacar::CarTip(float dtime, const vec3d &oldDir, vec3d rot)
     vec2d tmp = _rotation.AxisZ().XZ();
     vec2d varg = oldDir.XZ();
 
-    float v73;
+    float pitchScale;
 
     if ( getBACT_viewer() )
-        v73 = -0.5;
+        pitchScale = -0.5;
     else
-        v73 = -0.2;
+        pitchScale = -0.2;
 
-    float v78 = _thraction - _airconst * _fly_dir_length;
+    float netForce = _thraction - _airconst * _fly_dir_length;
 
-    if ( fabs(v78) > 0.1 )
+    if ( fabs(netForce) > 0.1 )
     {
-        float v8 = v73 * v78 / _force;
+        float pitchAngle = pitchScale * netForce / _force;
 
-        rot = mat3x3::AxisAngle(_rotation.AxisX(), v8).Transform(rot);
+        rot = mat3x3::AxisAngle(_rotation.AxisX(), pitchAngle).Transform(rot);
     }
     
     if (dtime != 0.0)
     {
         float tmpsq = tmp.length();
-        float v76 = 0.0;        
+        float cosTurn = 0.0;        
         
         if (isnormal(tmpsq)) // Not NULL, NAN, INF
-            v76 = tmp.dot( varg ) / tmpsq;
+            cosTurn = tmp.dot( varg ) / tmpsq;
 
         tmpsq = varg.length();
         if (isnormal(tmpsq)) // Not NULL, NAN, INF
-            v76 /= tmpsq;
+            cosTurn /= tmpsq;
     
-        float v77 = clp_acos(v76) * (fabs(_fly_dir_length) * 0.002 / dtime);
+        float rollAngle = clp_acos(cosTurn) * (fabs(_fly_dir_length) * 0.002 / dtime);
 
-        if ( v77 > 0.001 )
+        if ( rollAngle > 0.001 )
         {
             if ( tmp.cross(varg) < 0.0 )
-                v77 = -v77;
+                rollAngle = -rollAngle;
 
-            rot = mat3x3::AxisAngle(_rotation.AxisZ(), v77).Transform(rot);
+            rot = mat3x3::AxisAngle(_rotation.AxisZ(), rollAngle).Transform(rot);
         }
     }
     
@@ -659,24 +659,24 @@ vec3d NC_STACK_ypacar::CarTip(float dtime, const vec3d &oldDir, vec3d rot)
 
 int NC_STACK_ypacar::AlignVehicleUser(float dtime, const vec3d &oldDir)
 {
-    float v162 = 1.73;
-    float v166 = 1.7;
-    int v158 = 0;
-    int v160 = 0;
-    int v161 = 0;
+    float rayStartScale = 1.73;
+    float rayLenScale = 1.7;
+    int rightMissed = 0;
+    int trailMissed = 0;
+    int leftMissed = 0;
 
     bool isViewer = getBACT_viewer();
-    int v149 = getBACT_inputting();
+    int isInputting = getBACT_inputting();
 
-    float v5;
+    float groundOffset;
 
     if ( isViewer )
-        v5 = _viewer_overeof;
+        groundOffset = _viewer_overeof;
     else
-        v5 = _overeof;
+        groundOffset = _overeof;
 
     vec3d t1, t2, t3;
-    float v167;
+    float moveSign;
 
     if ( _fly_dir_length < 0.0 )
     {
@@ -686,7 +686,7 @@ int NC_STACK_ypacar::AlignVehicleUser(float dtime, const vec3d &oldDir)
 
         t3 = _position + (-_rotation.AxisX() - _rotation.AxisZ()) * _viewer_radius * 0.7071;
 
-        v167 = -1.0;
+        moveSign = -1.0;
     }
     else
     {
@@ -696,44 +696,44 @@ int NC_STACK_ypacar::AlignVehicleUser(float dtime, const vec3d &oldDir)
 
         t3 = _position + (-_rotation.AxisX() + _rotation.AxisZ()) * _viewer_radius * 0.7071;
 
-        v167 = 1.0;
+        moveSign = 1.0;
     }
 
     t1 += vec3d::OY(_viewer_overeof);
     t2 += vec3d::OY(_viewer_overeof);
     t3 += vec3d::OY(_viewer_overeof);
 
-    TRayIntersection arg136, arg136_1, arg136_2;
+    TRayIntersection rightRay, trailRay, leftRay;
 
-    arg136.stPos = _position - vec3d::OY(v162 * _viewer_radius);
-    arg136.vect = (t1 - arg136.stPos) * v166;
-    arg136.flags = 0;
+    rightRay.stPos = _position - vec3d::OY(rayStartScale * _viewer_radius);
+    rightRay.vect = (t1 - rightRay.stPos) * rayLenScale;
+    rightRay.flags = 0;
 
-    arg136_1.stPos = _position - vec3d::OY(v162 * _viewer_radius);
-    arg136_1.vect = (t2 - arg136_1.stPos) * v166;
-    arg136_1.flags = 0;
+    trailRay.stPos = _position - vec3d::OY(rayStartScale * _viewer_radius);
+    trailRay.vect = (t2 - trailRay.stPos) * rayLenScale;
+    trailRay.flags = 0;
 
-    arg136_2.stPos = _position - vec3d::OY(v162 * _viewer_radius);
-    arg136_2.vect = (t3 - arg136_2.stPos) * v166;
-    arg136_2.flags = 0;
+    leftRay.stPos = _position - vec3d::OY(rayStartScale * _viewer_radius);
+    leftRay.vect = (t3 - leftRay.stPos) * rayLenScale;
+    leftRay.flags = 0;
 
-    _world->IntersectRay(&arg136);
+    _world->IntersectRay(&rightRay);
 
-    if ( arg136.isect )
+    if ( rightRay.isect )
     {
-        UAskeleton::Polygon *v48 = &arg136.skel->polygons[ arg136.polyID ];
+        UAskeleton::Polygon *poly = &rightRay.skel->polygons[ rightRay.polyID ];
 
-        if ( fabs(v48->B) < 0.6 )
+        if ( fabs(poly->B) < 0.6 )
         {
-            float v176 = _rotation.AxisZ().dot( v48->Normal() ) * v167;
+            float wallDot = _rotation.AxisZ().dot( poly->Normal() ) * moveSign;
 
-            if ( v176 <= 0.0 )
+            if ( wallDot <= 0.0 )
             {
                 _thraction = 0;
             }
             else
             {
-                if ( v176 >= 0.82 )
+                if ( wallDot >= 0.82 )
                 {
                     _thraction = 0;
                     _fly_dir_length = 0;
@@ -741,24 +741,24 @@ int NC_STACK_ypacar::AlignVehicleUser(float dtime, const vec3d &oldDir)
                 }
                 else
                 {
-                    _position.x = _old_pos.x - v48->A * 10.0;
-                    _position.z = _old_pos.z - v48->C * 10.0;
+                    _position.x = _old_pos.x - poly->A * 10.0;
+                    _position.z = _old_pos.z - poly->C * 10.0;
                 }
 
                 if ( _fly_dir_length > 2.333333333333334 )
                 {
                     SFXEngine::SFXe.startSound(&_soundcarrier, 5);
 
-                    if ( v149 )
+                    if ( isInputting )
                     {
-                        TFFeedbackEffect arg180;
+                        TFFeedbackEffect ffEffect;
 
-                        arg180.pos_x = arg136.isectPos.x;
-                        arg180.pos_z = arg136.isectPos.z;
-                        arg180.effects_type = 5;
-                        arg180.strength = 1.0;
+                        ffEffect.pos_x = rightRay.isectPos.x;
+                        ffEffect.pos_z = rightRay.isectPos.z;
+                        ffEffect.effects_type = 5;
+                        ffEffect.strength = 1.0;
 
-                        _world->FFeedback_Play(&arg180);
+                        _world->FFeedback_Play(&ffEffect);
                     }
                 }
             }
@@ -767,31 +767,31 @@ int NC_STACK_ypacar::AlignVehicleUser(float dtime, const vec3d &oldDir)
     }
     else
     {
-        if ( !v149 )
+        if ( !isInputting )
             return 2;
 
-        arg136.isectPos = _position + arg136.vect - vec3d::OY(v162 * _viewer_radius);
+        rightRay.isectPos = _position + rightRay.vect - vec3d::OY(rayStartScale * _viewer_radius);
 
-        v158 = 1;
+        rightMissed = 1;
     }
 
-    _world->IntersectRay(&arg136_1);
+    _world->IntersectRay(&trailRay);
 
-    if ( arg136_1.isect )
+    if ( trailRay.isect )
     {
-        UAskeleton::Polygon *v54 = &arg136_1.skel->polygons[ arg136_1.polyID ];
+        UAskeleton::Polygon *poly = &trailRay.skel->polygons[ trailRay.polyID ];
 
-        if ( fabs(v54->B) < 0.6 )
+        if ( fabs(poly->B) < 0.6 )
         {
-            float v182 = _rotation.AxisZ().dot( v54->Normal() ) * v167;
+            float wallDot = _rotation.AxisZ().dot( poly->Normal() ) * moveSign;
 
-            if ( v182 <= 0.0 )
+            if ( wallDot <= 0.0 )
             {
                 _thraction = 0;
             }
             else
             {
-                if ( v182 >= 0.82 )
+                if ( wallDot >= 0.82 )
                 {
                     _fly_dir_length = 0;
                     _position = _old_pos;
@@ -799,23 +799,23 @@ int NC_STACK_ypacar::AlignVehicleUser(float dtime, const vec3d &oldDir)
                 }
                 else
                 {
-                    _position.x = _old_pos.x - v54->A * 10.0;
-                    _position.z = _old_pos.z - v54->C * 10.0;
+                    _position.x = _old_pos.x - poly->A * 10.0;
+                    _position.z = _old_pos.z - poly->C * 10.0;
                 }
 
                 if ( _fly_dir_length > 2.333333333333334 )
                 {
                     SFXEngine::SFXe.startSound(&_soundcarrier, 5);
 
-                    if ( v149 )
+                    if ( isInputting )
                     {
-                        TFFeedbackEffect arg180;
-                        arg180.strength = 1.0;
-                        arg180.pos_x = arg136_1.isectPos.x;
-                        arg180.pos_z = arg136_1.isectPos.z;
-                        arg180.effects_type = 5;
+                        TFFeedbackEffect ffEffect;
+                        ffEffect.strength = 1.0;
+                        ffEffect.pos_x = trailRay.isectPos.x;
+                        ffEffect.pos_z = trailRay.isectPos.z;
+                        ffEffect.effects_type = 5;
 
-                        _world->FFeedback_Play(&arg180);
+                        _world->FFeedback_Play(&ffEffect);
                     }
                 }
             }
@@ -825,21 +825,21 @@ int NC_STACK_ypacar::AlignVehicleUser(float dtime, const vec3d &oldDir)
     }
     else
     {
-        if ( !v149 )
+        if ( !isInputting )
             return 1;
 
-        arg136_1.isectPos = _position + arg136_1.vect - vec3d::OY(v162 * _viewer_radius);
+        trailRay.isectPos = _position + trailRay.vect - vec3d::OY(rayStartScale * _viewer_radius);
 
-        v160 = 1;
+        trailMissed = 1;
     }
 
-    _world->IntersectRay(&arg136_2);
+    _world->IntersectRay(&leftRay);
 
-    if ( arg136_2.isect )
+    if ( leftRay.isect )
     {
-        UAskeleton::Polygon *v54 = &arg136_2.skel->polygons[ arg136_2.polyID ];
+        UAskeleton::Polygon *poly = &leftRay.skel->polygons[ leftRay.polyID ];
 
-        if ( fabs(v54->B) < 0.6 )
+        if ( fabs(poly->B) < 0.6 )
         {
             _position += _fly_dir * _fly_dir_length * dtime * 6.0;
 
@@ -849,15 +849,15 @@ int NC_STACK_ypacar::AlignVehicleUser(float dtime, const vec3d &oldDir)
             {
                 SFXEngine::SFXe.startSound(&_soundcarrier, 5);
 
-                if ( v149 )
+                if ( isInputting )
                 {
-                    TFFeedbackEffect arg180;
-                    arg180.strength = 1.0;
-                    arg180.pos_x = arg136_2.isectPos.x;
-                    arg180.pos_z = arg136_2.isectPos.z;
-                    arg180.effects_type = 5;
+                    TFFeedbackEffect ffEffect;
+                    ffEffect.strength = 1.0;
+                    ffEffect.pos_x = leftRay.isectPos.x;
+                    ffEffect.pos_z = leftRay.isectPos.z;
+                    ffEffect.effects_type = 5;
 
-                    _world->FFeedback_Play(&arg180);
+                    _world->FFeedback_Play(&ffEffect);
                 }
             }
             return 3;
@@ -865,41 +865,41 @@ int NC_STACK_ypacar::AlignVehicleUser(float dtime, const vec3d &oldDir)
     }
     else
     {
-        arg136_2.isectPos = _position + arg136_2.vect - vec3d::OY(v162 * _viewer_radius);
+        leftRay.isectPos = _position + leftRay.vect - vec3d::OY(rayStartScale * _viewer_radius);
 
-        v161 = 1;
+        leftMissed = 1;
     }
 
     if ( isViewer )
     {
-        if ( v167 > 0.0 )
+        if ( moveSign > 0.0 )
         {
-            TRayIntersection arg136_3;
-            arg136_3.stPos = _position;
+            TRayIntersection frontRay;
+            frontRay.stPos = _position;
 
-            arg136_3.vect = _rotation.AxisZ() * _viewer_radius;
+            frontRay.vect = _rotation.AxisZ() * _viewer_radius;
 
-            arg136_3.flags = 0;
+            frontRay.flags = 0;
 
-            _world->IntersectRay(&arg136_3);
+            _world->IntersectRay(&frontRay);
 
-            if ( arg136_3.isect )
+            if ( frontRay.isect )
             {
-                if ( arg136_3.skel->polygons[ arg136_3.polyID ].B < 0.6 )
+                if ( frontRay.skel->polygons[ frontRay.polyID ].B < 0.6 )
                 {
                     if ( _fly_dir_length > 2.333333333333334 )
                     {
                         SFXEngine::SFXe.startSound(&_soundcarrier, 5);
 
-                        if ( v149 )
+                        if ( isInputting )
                         {
-                            TFFeedbackEffect arg180;
-                            arg180.strength = 1.0;
-                            arg180.pos_x = arg136_3.isectPos.x;
-                            arg180.pos_z = arg136_3.isectPos.z;
-                            arg180.effects_type = 5;
+                            TFFeedbackEffect ffEffect;
+                            ffEffect.strength = 1.0;
+                            ffEffect.pos_x = frontRay.isectPos.x;
+                            ffEffect.pos_z = frontRay.isectPos.z;
+                            ffEffect.effects_type = 5;
 
-                            _world->FFeedback_Play(&arg180);
+                            _world->FFeedback_Play(&ffEffect);
                         }
                     }
 
@@ -911,38 +911,38 @@ int NC_STACK_ypacar::AlignVehicleUser(float dtime, const vec3d &oldDir)
         }
     }
 
-    if ( arg136_1.isect && arg136.isect && arg136_2.isect )
+    if ( trailRay.isect && rightRay.isect && leftRay.isect )
     {
-        vec3d tmp = arg136.isectPos - arg136_2.isectPos;
-        vec3d tmp2 = arg136_1.isectPos - arg136_2.isectPos;
+        vec3d tmp = rightRay.isectPos - leftRay.isectPos;
+        vec3d tmp2 = trailRay.isectPos - leftRay.isectPos;
 
         vec3d tmp3 = tmp * tmp2;
 
-        float v157 = tmp3.length() * v167;
-        if ( v157 != 0.0 )
-            tmp3 /= v157;
+        float normalLen = tmp3.length() * moveSign;
+        if ( normalLen != 0.0 )
+            tmp3 /= normalLen;
         else
             tmp3 = vec3d::OY(1.0);
 
         if ( tmp3.y < -0.1 )
             tmp3 = -tmp3;
 
-        int v151 = getTANK_tip();
+        int tipEnabled = getTANK_tip();
 
-        if ( v151 )
+        if ( tipEnabled )
             tmp3 = CarTip(dtime, oldDir, tmp3);
 
 
-        float v72 = fabs(_fly_dir_length);
+        float speed = fabs(_fly_dir_length);
 
         vec3d vaxis = _rotation.AxisY() * tmp3;
 
-        float v173;
+        float minAngle;
 
-        if ( v72 >= 0.5 )
-            v173 = 0.007;
+        if ( speed >= 0.5 )
+            minAngle = 0.007;
         else
-            v173 = 0.01;
+            minAngle = 0.01;
 
         if ( vaxis.normalise() > 0.0 )
         {
@@ -952,35 +952,35 @@ int NC_STACK_ypacar::AlignVehicleUser(float dtime, const vec3d &oldDir)
             if ( angle > maxrot )
                 angle = maxrot;
 
-            if ( fabs(angle) > v173 )
+            if ( fabs(angle) > minAngle )
                 _rotation *= mat3x3::AxisAngle(vaxis, angle);
         }
     }
 
-    if ( !arg136.isect && !arg136_1.isect && !arg136_2.isect )
+    if ( !rightRay.isect && !trailRay.isect && !leftRay.isect )
     {
         _status_flg &= ~BACT_STFLAG_LAND;
         return 0;
     }
 
-    if ( !v158 && !v160 && !v161 )
+    if ( !rightMissed && !trailMissed && !leftMissed )
     {
-        _position.y = (arg136.isectPos.y + arg136_1.isectPos.y + arg136_2.isectPos.y) * 0.33333334 - v5;
+        _position.y = (rightRay.isectPos.y + trailRay.isectPos.y + leftRay.isectPos.y) * 0.33333334 - groundOffset;
         return 0;
     }
 
-    float v90 = _viewer_overeof * v166 * 0.8;
+    float probeHalfLen = _viewer_overeof * rayLenScale * 0.8;
 
-    TRayIntersection arg136_4;
-    arg136_4.stPos = _position - vec3d::OY(v90);
-    arg136_4.vect = vec3d::OY(v90 * 2.0);
-    arg136_4.flags = 0;
+    TRayIntersection downRay;
+    downRay.stPos = _position - vec3d::OY(probeHalfLen);
+    downRay.vect = vec3d::OY(probeHalfLen * 2.0);
+    downRay.flags = 0;
 
-    _world->IntersectRay(&arg136_4);
+    _world->IntersectRay(&downRay);
 
-    if ( arg136_4.isect && (!arg136_4.isect || arg136_4.skel->polygons[ arg136_4.polyID ].B >= 0.6) )
+    if ( downRay.isect && (!downRay.isect || downRay.skel->polygons[ downRay.polyID ].B >= 0.6) )
     {
-        _position.y = arg136_4.isectPos.y - v5;
+        _position.y = downRay.isectPos.y - groundOffset;
         return 0;
     }
 
@@ -988,14 +988,14 @@ int NC_STACK_ypacar::AlignVehicleUser(float dtime, const vec3d &oldDir)
 
     _status_flg &= ~BACT_STFLAG_LAND;
 
-    if ( v158 )
-        tf += _rotation.AxisZ() * v167 - _rotation.AxisX();
+    if ( rightMissed )
+        tf += _rotation.AxisZ() * moveSign - _rotation.AxisX();
 
-    if ( v160 )
-        tf += _rotation.AxisZ() * v167 + _rotation.AxisX();
+    if ( trailMissed )
+        tf += _rotation.AxisZ() * moveSign + _rotation.AxisX();
 
-    if ( v161 )
-        tf -= _rotation.AxisZ() * v167;
+    if ( leftMissed )
+        tf -= _rotation.AxisZ() * moveSign;
 
     _position += tf * (dtime * 400.0);
 

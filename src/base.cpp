@@ -134,10 +134,10 @@ int NC_STACK_base::ReadIFFTagADES(IFFile *mfile)
 {
     while ( 1 )
     {
-        int v5 = mfile->parse();
-        if ( v5 == -2 )
+        int iffRes = mfile->parse();
+        if ( iffRes == -2 )
             break;
-        if ( v5 )
+        if ( iffRes )
             return 0;
 
         const IFFile::Context &chunk = mfile->GetCurrentChunk();
@@ -164,10 +164,10 @@ int NC_STACK_base::ReadIFFTagKIDS(IFFile *mfile)
 
     while ( 1 )
     {
-        int v5 = mfile->parse();
-        if ( v5 == -2 )
+        int iffRes = mfile->parse();
+        if ( iffRes == -2 )
             break;
-        if ( v5 )
+        if ( iffRes )
             return 0;
 
         const IFFile::Context &chunk = mfile->GetCurrentChunk();
@@ -614,7 +614,7 @@ size_t NC_STACK_base::Render(baseRender_msg *arg, Instance * inst, bool doCopy /
 
 size_t NC_STACK_base::RenderImmediately(baseRender_msg *arg, Instance * inst)
 {
-    int v12 = 0;
+    int rendered = 0;
 
     if ( _skeleton )
     {
@@ -684,7 +684,7 @@ size_t NC_STACK_base::RenderImmediately(baseRender_msg *arg, Instance * inst)
         for (NC_STACK_base *kd : _KIDS)
         {
             if ( kd->RenderImmediately(arg) )
-                v12 = 1;
+                rendered = 1;
         }
     }
     else
@@ -692,11 +692,11 @@ size_t NC_STACK_base::RenderImmediately(baseRender_msg *arg, Instance * inst)
         for (NC_STACK_base::Instance *kd : inst->KidsOpts)
         {
             if ( kd->Bas->RenderImmediately(arg, kd) )
-                v12 = 1;
+                rendered = 1;
         }
     }
 
-    return v12;
+    return rendered;
 }
 
 

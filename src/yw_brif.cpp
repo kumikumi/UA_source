@@ -29,30 +29,30 @@ void BriefStartMapScaling(NC_STACK_ypaworld *yw, TInputState *inpt, TBriefengScr
     brf->MapBlitStart.right = brf->MapBlitStart.left;
     brf->MapBlitStart.bottom = brf->MapBlitStart.top;
 
-    float v17, v16;
+    float aspectX, aspectY;
 
     if ( yw->_mapSize.x == yw->_mapSize.y )
     {
-        v17 = 1.0;
-        v16 = 1.0;
+        aspectX = 1.0;
+        aspectY = 1.0;
     }
     else if (yw->_mapSize.x < yw->_mapSize.y)
     {
-        v16 = 1.0;
-        v17 = (float)yw->_mapSize.x / (float)yw->_mapSize.y;
+        aspectY = 1.0;
+        aspectX = (float)yw->_mapSize.x / (float)yw->_mapSize.y;
     }
     else if (yw->_mapSize.x > yw->_mapSize.y)
     {
-        v17 = 1.0;
-        v16 = (float)yw->_mapSize.y / (float)yw->_mapSize.x;
+        aspectX = 1.0;
+        aspectY = (float)yw->_mapSize.y / (float)yw->_mapSize.x;
     }
 
     brf->MapBlitParams.srcRect = Common::FRect(-1.0, -1.0, 1.0, 1.0);
 
-    brf->MapBlitEnd.left = -0.4515625 - v17 * 0.4828125;
-    brf->MapBlitEnd.top = -0.325 - v16 * 0.6083333333333334;
-    brf->MapBlitEnd.right = brf->MapBlitEnd.left + v17 * 0.965625;
-    brf->MapBlitEnd.bottom = brf->MapBlitEnd.top + v16 * 1.216666666666667;
+    brf->MapBlitEnd.left = -0.4515625 - aspectX * 0.4828125;
+    brf->MapBlitEnd.top = -0.325 - aspectY * 0.6083333333333334;
+    brf->MapBlitEnd.right = brf->MapBlitEnd.left + aspectX * 0.965625;
+    brf->MapBlitEnd.bottom = brf->MapBlitEnd.top + aspectY * 1.216666666666667;
     brf->MapBlitParams.dstRect = brf->MapBlitStart;
     brf->TextTime = 0;
     brf->PreTextTime = brf->CurrTime;
@@ -60,27 +60,27 @@ void BriefStartMapScaling(NC_STACK_ypaworld *yw, TInputState *inpt, TBriefengScr
 
 void BriefUpdateMapScaling(NC_STACK_ypaworld *yw, TInputState *inpt, TBriefengScreen *brf)
 {
-    int v5 = brf->CurrTime - brf->StartTime;
+    int elapsed = brf->CurrTime - brf->StartTime;
 
-    if ( v5 >= 600 )
+    if ( elapsed >= 600 )
     {
         brf->MapBlitParams.dstRect = brf->MapBlitEnd;
         brf->Stage = TBriefengScreen::STAGE_SCALEEND;
 
-        GFX::TCursorParams v4;
+        GFX::TCursorParams cursor;
         if (yw->_mousePointers[5])
-            v4.bitm = yw->_mousePointers[5]->GetBitmap();
-        v4.pointer_id = 6;
+            cursor.bitm = yw->_mousePointers[5]->GetBitmap();
+        cursor.pointer_id = 6;
 
-        GFX::Engine.SetCursor(v4.pointer_id, 0);
+        GFX::Engine.SetCursor(cursor.pointer_id, 0);
     }
     else
     {
-        float v3 = v5 * 0.0016666667;
-        brf->MapBlitParams.dstRect.left = (brf->MapBlitEnd.left - brf->MapBlitStart.left) * v3 + brf->MapBlitStart.left;
-        brf->MapBlitParams.dstRect.top = (brf->MapBlitEnd.top - brf->MapBlitStart.top) * v3 + brf->MapBlitStart.top;
-        brf->MapBlitParams.dstRect.right = (brf->MapBlitEnd.right - brf->MapBlitStart.right) * v3 + brf->MapBlitStart.right;
-        brf->MapBlitParams.dstRect.bottom = (brf->MapBlitEnd.bottom - brf->MapBlitStart.bottom) * v3 + brf->MapBlitStart.bottom;
+        float progress = elapsed * 0.0016666667;
+        brf->MapBlitParams.dstRect.left = (brf->MapBlitEnd.left - brf->MapBlitStart.left) * progress + brf->MapBlitStart.left;
+        brf->MapBlitParams.dstRect.top = (brf->MapBlitEnd.top - brf->MapBlitStart.top) * progress + brf->MapBlitStart.top;
+        brf->MapBlitParams.dstRect.right = (brf->MapBlitEnd.right - brf->MapBlitStart.right) * progress + brf->MapBlitStart.right;
+        brf->MapBlitParams.dstRect.bottom = (brf->MapBlitEnd.bottom - brf->MapBlitStart.bottom) * progress + brf->MapBlitStart.bottom;
     }
 }
 
@@ -185,12 +185,12 @@ void BriefLoadLevelSet(NC_STACK_ypaworld *yw, TInputState *inpt, TBriefengScreen
     {
         brf->Stage = TBriefengScreen::STAGE_PLAYER_ST;
 
-        GFX::TCursorParams v6;
+        GFX::TCursorParams cursor;
         if (yw->_mousePointers[0])
-            v6.bitm = yw->_mousePointers[0]->GetBitmap();
-        v6.pointer_id = 1;
+            cursor.bitm = yw->_mousePointers[0]->GetBitmap();
+        cursor.pointer_id = 1;
 
-        GFX::Engine.SetCursor(v6.pointer_id, 0);
+        GFX::Engine.SetCursor(cursor.pointer_id, 0);
     }
     else
     {
@@ -288,9 +288,9 @@ void yw_BriefUpdateKeySectors(NC_STACK_ypaworld *yw, TInputState *inpt, TBriefen
                     {
                         vec2d ps = World::SectorIDToCenterPos2( ks.CellId );
 
-                        uint8_t v12 = yw->_lvlTypeMap(ks.CellId);
+                        uint8_t secType = yw->_lvlTypeMap(ks.CellId);
 
-                        yw->BriefingSetObject( TBriefObject( TBriefObject::TYPE_SECTOR, v12, ps.x, ps.y, 26, 146, 25, 
+                        yw->BriefingSetObject( TBriefObject( TBriefObject::TYPE_SECTOR, secType, ps.x, ps.y, 26, 146, 25, 
                                                             Locale::Text::Brief(Locale::BRIEF_KEYSECT)),
                                                brf->AddObjectsFlag);
                     }
@@ -348,9 +348,9 @@ void BriefUpdateTechUpgrades(NC_STACK_ypaworld *yw, TInputState *inpt, TBriefeng
 
         vec2d ps = World::SectorIDToCenterPos2( pGem->CellId );
         
-        int v13 = yw->_buildProtos[pGem->BuildingID].SecType;
+        int secType = yw->_buildProtos[pGem->BuildingID].SecType;
 
-        yw->BriefingSetObject( TBriefObject( TBriefObject::TYPE_SECTOR, v13, ps.x, ps.y, 26, 144, 25, 
+        yw->BriefingSetObject( TBriefObject( TBriefObject::TYPE_SECTOR, secType, ps.x, ps.y, 26, 144, 25, 
                                             Locale::Text::Brief(Locale::BRIEF_TECH2) ),  
                                brf->AddObjectsFlag);
     }
@@ -377,16 +377,16 @@ void BriefSetupEnemyHostStations(NC_STACK_ypaworld *yw, TInputState *inpt, TBrie
 
 void BriefUpdateEnemyHostStations(NC_STACK_ypaworld *yw, TInputState *inpt, TBriefengScreen *brf)
 {
-    int v5 = (brf->CurrTime - brf->StartTime) / 2500;
+    int elmID = (brf->CurrTime - brf->StartTime) / 2500;
 
-    if ( v5 >= brf->ElementsCount )
+    if ( elmID >= brf->ElementsCount )
     {
         brf->Stage = TBriefengScreen::STAGE_ENMHS_END;
     }
-    else if ( v5 != brf->ActiveElementID )
+    else if ( elmID != brf->ActiveElementID )
     {
-        int v6 = v5;
-        brf->ActiveElementID = v5;
+        int remaining = elmID;
+        brf->ActiveElementID = elmID;
 
         MapRobo *robo = &brf->Desc.Robos[1];
 
@@ -396,10 +396,10 @@ void BriefUpdateEnemyHostStations(NC_STACK_ypaworld *yw, TInputState *inpt, TBri
 
             if (robo->MbStatus != 1)
             {
-                if (v6 == 0)
+                if (remaining == 0)
                     break;
 
-                v6--;
+                remaining--;
             }
         }
 
@@ -430,15 +430,15 @@ void BriefSetupEnemyForces(NC_STACK_ypaworld *yw, TInputState *inpt, TBriefengSc
 
 void BriefUpdateEnemyForces(NC_STACK_ypaworld *yw, TInputState *inpt, TBriefengScreen *brf)
 {
-    int v5 = (brf->CurrTime - brf->StartTime) / 2500;
-    if ( v5 >= brf->ElementsCount )
+    int elmID = (brf->CurrTime - brf->StartTime) / 2500;
+    if ( elmID >= brf->ElementsCount )
     {
         brf->Stage = TBriefengScreen::STAGE_ENMFRC_END;
     }
-    else if ( v5 != brf->ActiveElementID )
+    else if ( elmID != brf->ActiveElementID )
     {
-        brf->ActiveElementID = v5;
-        int v6 = v5;
+        brf->ActiveElementID = elmID;
+        int remaining = elmID;
 
         const MapSquad *squad = NULL;
 
@@ -448,9 +448,9 @@ void BriefUpdateEnemyForces(NC_STACK_ypaworld *yw, TInputState *inpt, TBriefengS
 
             if ( it.Owner != brf->Desc.PlayerOwner && it.MbStatus != 1)
             {
-                if ( v6 == 0 )
+                if ( remaining == 0 )
                     break;
-                v6--;
+                remaining--;
             }
         }
 
@@ -487,15 +487,15 @@ void BriefSetupFriendlyForces(NC_STACK_ypaworld *yw, TInputState *inpt, TBriefen
 
 void BriefUpdateFriendlyForces(NC_STACK_ypaworld *yw, TInputState *inpt, TBriefengScreen *brf)
 {
-    int v5 = (brf->CurrTime - brf->StartTime) / 2500;
-    if ( v5 >= brf->ElementsCount )
+    int elmID = (brf->CurrTime - brf->StartTime) / 2500;
+    if ( elmID >= brf->ElementsCount )
     {
         brf->Stage = TBriefengScreen::STAGE_BUDDY_END;
     }
-    else if ( v5 != brf->ActiveElementID )
+    else if ( elmID != brf->ActiveElementID )
     {
-        int v6 = v5;
-        brf->ActiveElementID = v5;
+        int remaining = elmID;
+        brf->ActiveElementID = elmID;
 
         const MapSquad *squad = NULL;
 
@@ -505,10 +505,10 @@ void BriefUpdateFriendlyForces(NC_STACK_ypaworld *yw, TInputState *inpt, TBriefe
 
             if ( it.Owner == brf->Desc.PlayerOwner && it.MbStatus != 1)
             {
-                if ( v6 == 0 )
+                if ( remaining == 0 )
                     break;
 
-                v6--;
+                remaining--;
             }
         }
 
@@ -573,9 +573,9 @@ void BriefUpdateGates(NC_STACK_ypaworld *yw, TInputState *inpt, TBriefengScreen 
         
         vec2d ps = World::SectorIDToCenterPos2( pGate->CellId );
 
-        int v13 = yw->_buildProtos[ pGate->ClosedBldID ].SecType;
+        int secType = yw->_buildProtos[ pGate->ClosedBldID ].SecType;
 
-        yw->BriefingSetObject( TBriefObject( TBriefObject::TYPE_SECTOR, v13, ps.x, ps.y, 26, 145, 25, 
+        yw->BriefingSetObject( TBriefObject( TBriefObject::TYPE_SECTOR, secType, ps.x, ps.y, 26, 145, 25, 
                                             Locale::Text::Brief(Locale::BRIEF_GATE2) ),  
                                brf->AddObjectsFlag);
     }
@@ -583,7 +583,7 @@ void BriefUpdateGates(NC_STACK_ypaworld *yw, TInputState *inpt, TBriefengScreen 
 
 void BriefSelectObjectUnderCursor(NC_STACK_ypaworld *yw, TInputState *inpt, TBriefengScreen *brf)
 {
-    int v20 = -1;
+    int hoverID = -1;
 
     if ( !inpt->ClickInf.selected_btn )
     {
@@ -594,19 +594,19 @@ void BriefSelectObjectUnderCursor(NC_STACK_ypaworld *yw, TInputState *inpt, TBri
         {
             TBriefObject &obj = brf->Objects[i];
 
-            float v13 = obj.Pos.x / yw->_mapLength.x * brf->MapBlitEnd.Width() + brf->MapBlitEnd.left;
-            float v15 = (v13 + 1.0) * 0.5;
+            float ndcX = obj.Pos.x / yw->_mapLength.x * brf->MapBlitEnd.Width() + brf->MapBlitEnd.left;
+            float objX = (ndcX + 1.0) * 0.5;
 
-            float v14 = -obj.Pos.y / yw->_mapLength.y * brf->MapBlitEnd.Height() + brf->MapBlitEnd.top;
-            float v23 = 0.5 * (v14 + 1.0);
+            float ndcY = -obj.Pos.y / yw->_mapLength.y * brf->MapBlitEnd.Height() + brf->MapBlitEnd.top;
+            float objY = 0.5 * (ndcY + 1.0);
 
-            if ( v15 + -0.025 < mx && v15 + 0.025 > mx && v23 + -0.025 < my && v23 + 0.025 > my )
-                v20 = i;
+            if ( objX + -0.025 < mx && objX + 0.025 > mx && objY + -0.025 < my && objY + 0.025 > my )
+                hoverID = i;
         }
 
-        if ( v20 == -1 || v20 == brf->SelectedObjID )
+        if ( hoverID == -1 || hoverID == brf->SelectedObjID )
         {
-            if ( v20 != brf->SelectedObjID && brf->SelectedObjID != -1 )
+            if ( hoverID != brf->SelectedObjID && brf->SelectedObjID != -1 )
             {
                 brf->ViewingObject = TBriefObject();
                 brf->SelectedObjID = -1;
@@ -614,8 +614,8 @@ void BriefSelectObjectUnderCursor(NC_STACK_ypaworld *yw, TInputState *inpt, TBri
         }
         else
         {
-            brf->SelectedObjID = v20;
-            yw->BriefingSetObject( brf->Objects[v20], false);
+            brf->SelectedObjID = hoverID;
+            yw->BriefingSetObject( brf->Objects[hoverID], false);
         }
     }
 }
@@ -634,14 +634,14 @@ void FormatBriefingText(NC_STACK_ypaworld *yw, TBriefengScreen *brf)
             numLines++;
         }
 
-        int v34 = brf->CurrTime - brf->TextTime;
-        int v33 = 100 * v34;
+        int lineTime = brf->CurrTime - brf->TextTime;
+        int scaledTime = 100 * lineTime;
 
         briefingTextList.numEntries = numLines;
 
         briefingTextList.ItemsPreLayout(yw, &briefingTextList.itemBlock, 16, "   ");
 
-        int v37 = 0;
+        int lineIdx = 0;
 
         pos = 0;
 
@@ -665,39 +665,39 @@ void FormatBriefingText(NC_STACK_ypaworld *yw, TBriefengScreen *brf)
                 pos++;
             }
 
-            int v12 = 0;
+            int percent = 0;
 
-            if ( v34 >= 500 )
+            if ( lineTime >= 500 )
             {
-                v12 = 100;
+                percent = 100;
             }
             else
             {
-                v12 = v33 / 500;
+                percent = scaledTime / 500;
 
-                if ( v12 < 0 )
+                if ( percent < 0 )
                 {
-                    v12 = 0;
+                    percent = 0;
                 }
-                else if ( v12 > 100 )
+                else if ( percent > 100 )
                 {
-                    v12 = 100;
+                    percent = 100;
                 }
             }
 
-            v33 -= 50000;
-            v34 -= 500;
+            scaledTime -= 50000;
+            lineTime -= 500;
 
-            if ( briefingTextList.firstShownEntries <= v37 && briefingTextList.firstShownEntries + briefingTextList.shownEntries > v37	&& v12 > 0 )
+            if ( briefingTextList.firstShownEntries <= lineIdx && briefingTextList.firstShownEntries + briefingTextList.shownEntries > lineIdx	&& percent > 0 )
             {
                 FontUA::set_txtColor(&briefingTextList.itemBlock, yw->_iniColors[63].r, yw->_iniColors[63].g, yw->_iniColors[63].b);
 
-                FontUA::TextRelWidthItem(yw->_guiTiles[16], &briefingTextList.itemBlock, line.c_str(), v12, 4);
+                FontUA::TextRelWidthItem(yw->_guiTiles[16], &briefingTextList.itemBlock, line.c_str(), percent, 4);
 
                 FontUA::next_line(&briefingTextList.itemBlock);
             }
 
-            v37++;
+            lineIdx++;
 
             if ( endline )
             {
@@ -708,31 +708,31 @@ void FormatBriefingText(NC_STACK_ypaworld *yw, TBriefengScreen *brf)
     }
     else
     {
-        int v20 = brf->CurrTime - brf->PreTextTime;
+        int elapsed = brf->CurrTime - brf->PreTextTime;
 
-        const std::string v21 = Locale::Text::Advanced(Locale::ADV_LOADINGOBJ);
+        const std::string loadingText = Locale::Text::Advanced(Locale::ADV_LOADINGOBJ);
 
-        int v24;
+        int percent;
 
-        if ( v20 >= 600 )
-            v24 = 100;
+        if ( elapsed >= 600 )
+            percent = 100;
         else
         {
-            v24 = 100 * v20 / 600;
+            percent = 100 * elapsed / 600;
 
-            if ( v24 < 0 )
-                v24 = 0;
-            else if ( v24 > 100 )
-                v24 = 100;
+            if ( percent < 0 )
+                percent = 0;
+            else if ( percent > 100 )
+                percent = 100;
         }
 
-        if ( v24 > 0 )
+        if ( percent > 0 )
         {
             briefingTextList.ItemsPreLayout(yw, &briefingTextList.itemBlock, 16, "   ");
 
             FontUA::set_txtColor(&briefingTextList.itemBlock, yw->_iniColors[63].r, yw->_iniColors[63].g, yw->_iniColors[63].b);
 
-            FontUA::TextRelWidthItem(yw->_guiTiles[16], &briefingTextList.itemBlock, v21, v24, 4);
+            FontUA::TextRelWidthItem(yw->_guiTiles[16], &briefingTextList.itemBlock, loadingText, percent, 4);
 
             briefingTextList.ItemsPostLayout(yw, &briefingTextList.itemBlock, 16, "   ");
         }
@@ -746,35 +746,35 @@ void BriefDrawObjectMarkers(NC_STACK_ypaworld *yw, TBriefengScreen *brf)
     CmdStream cmdStream;
     cmdStream.reserve(1024);
 
-    int v39 = -1;
+    int curTileSet = -1;
 
     for ( TBriefObject &obj : brf->Objects)
     {
-        int v29 = 1;
+        int visible = 1;
 
         if ( brf->ViewingObject && brf->ViewingObject == obj )
         {
             if ( (brf->CurrTime / 200) & 1 )
             {
-                v29 = 0;
+                visible = 0;
             }
         }
 
-        if ( v29 )
+        if ( visible )
         {
-            if ( v39 != obj.TileSet)
+            if ( curTileSet != obj.TileSet)
             {
-                v39 = obj.TileSet;
+                curTileSet = obj.TileSet;
                 FontUA::select_tileset(&cmdStream, obj.TileSet);
             }
 
-            int v38 = yw->_guiTiles[(int)obj.TileSet]->h / 2;
+            int halfSize = yw->_guiTiles[(int)obj.TileSet]->h / 2;
 
-            float v15 = brf->MapBlitEnd.Width() * (obj.Pos.x / yw->_mapLength.x) + brf->MapBlitEnd.left;
-            float v14 = brf->MapBlitEnd.Height() * (-obj.Pos.y / yw->_mapLength.y) + brf->MapBlitEnd.top;
+            float x = brf->MapBlitEnd.Width() * (obj.Pos.x / yw->_mapLength.x) + brf->MapBlitEnd.left;
+            float y = brf->MapBlitEnd.Height() * (-obj.Pos.y / yw->_mapLength.y) + brf->MapBlitEnd.top;
 
-            FontUA::set_center_xpos(&cmdStream, (v15 * (yw->_screenSize.x / 2)) - v38);
-            FontUA::set_center_ypos(&cmdStream, (v14 * (yw->_screenSize.y / 2)) - v38);
+            FontUA::set_center_xpos(&cmdStream, (x * (yw->_screenSize.x / 2)) - halfSize);
+            FontUA::set_center_ypos(&cmdStream, (y * (yw->_screenSize.y / 2)) - halfSize);
 
             FontUA::store_u8(&cmdStream, obj.TileID);
         }
@@ -790,79 +790,79 @@ void BriefDrawLevelTitle(NC_STACK_ypaworld *yw)
     int w = yw->_screenSize.x / 2;
     int h = yw->_screenSize.y / 2;
 
-    int v34 = w * 0.03125;
-    int v35 = w * -0.934375;
-    int v37 = h * -0.9333333333333333;
+    int xRight = w * 0.03125;
+    int xLeft = w * -0.934375;
+    int yTop = h * -0.9333333333333333;
 
     CmdStream buf;
     buf.reserve(260);
 
     FontUA::select_tileset(&buf, 16);
-    FontUA::set_center_xpos(&buf, v35);
-    FontUA::set_center_ypos(&buf, 4 + v37);
+    FontUA::set_center_xpos(&buf, xLeft);
+    FontUA::set_center_ypos(&buf, 4 + yTop);
     FontUA::set_txtColor(&buf, yw->_iniColors[66].r, yw->_iniColors[66].g, yw->_iniColors[66].b);
 
-    const std::string v7 = yw->GetLevelName(yw->_levelInfo);
+    const std::string levelName = yw->GetLevelName(yw->_levelInfo);
 
-    FontUA::FormateCenteredSkipableItem(yw->_guiTiles[16], &buf, v7, v34 - v35);
+    FontUA::FormateCenteredSkipableItem(yw->_guiTiles[16], &buf, levelName, xRight - xLeft);
     FontUA::set_end(&buf);
 
     GFX::Engine.ProcessDrawSeq(buf);
 }
 
-void BriefDrawViewedObjectCaption(NC_STACK_ypaworld *yw, TBriefengScreen *brf, TInputState *inpt, int obj_id, char a4)
+void BriefDrawViewedObjectCaption(NC_STACK_ypaworld *yw, TBriefengScreen *brf, TInputState *inpt, int obj_id, char drawFlags)
 {
     if ( brf->ViewingObject.ObjType )
     {
-        int v8 = brf->CurrTime - brf->ViewingObjectStartTime;
-        float v26 = -brf->ViewingObject.Pos.y / yw->_mapLength.y;
-        float v27 = brf->ViewingObject.Pos.x / yw->_mapLength.x;
+        int elapsed = brf->CurrTime - brf->ViewingObjectStartTime;
+        float relY = -brf->ViewingObject.Pos.y / yw->_mapLength.y;
+        float relX = brf->ViewingObject.Pos.x / yw->_mapLength.x;
 
-        if ( v8 > 50 )
+        if ( elapsed > 50 )
         {
-            if ( a4 & 1 )
+            if ( drawFlags & 1 )
             {
-                Common::FLine v20;
-                Common::FLine v21;
+                Common::FLine horizLine;
+                Common::FLine vertLine;
 
-                v21.x1 = brf->MapBlitEnd.Width() * v27 + brf->MapBlitEnd.left;
-                v21.x2 = v21.x1;
-                v21.y1 = brf->MapBlitEnd.Height() * v26 + brf->MapBlitEnd.top;
-                v21.y2 = brf->ViewingObjectRect.bottom;
+                vertLine.x1 = brf->MapBlitEnd.Width() * relX + brf->MapBlitEnd.left;
+                vertLine.x2 = vertLine.x1;
+                vertLine.y1 = brf->MapBlitEnd.Height() * relY + brf->MapBlitEnd.top;
+                vertLine.y2 = brf->ViewingObjectRect.bottom;
 
-                v20.y1 = v21.y2;
-                v20.y2 = v21.y2;
+                horizLine.y1 = vertLine.y2;
+                horizLine.y2 = vertLine.y2;
 
                 if ( obj_id >= 3 )
                 {
-                    v20.x1 = v21.x1;
-                    v20.x2 = brf->ViewingObjectRect.right;
+                    horizLine.x1 = vertLine.x1;
+                    horizLine.x2 = brf->ViewingObjectRect.right;
                 }
                 else
                 {
-                    v20.x1 = brf->ViewingObjectRect.left;
-                    v20.x2 = v21.x1;
+                    horizLine.x1 = brf->ViewingObjectRect.left;
+                    horizLine.x2 = vertLine.x1;
                 }
 
                 GFX::Engine.SetPen(GFX::Engine.Color(0, 160, 160));
-                GFX::Engine.DrawLineNormalized(v20);
+                GFX::Engine.DrawLineNormalized(horizLine);
 
                 GFX::Engine.SetPen(GFX::Engine.Color(0, 64, 64));
-                GFX::Engine.DrawLineNormalized(v21);
+                GFX::Engine.DrawLineNormalized(vertLine);
             }
         }
 
-        if ( v8 > 50 && !brf->ViewingObject.Title.empty() )
+        if ( elapsed > 50 && !brf->ViewingObject.Title.empty() )
         {
-            if ( a4 & 2 )
+            if ( drawFlags & 2 )
             {
-                int v11 = v8 - 50;
-                int v13;
+                int titleTime = elapsed - 50;
+                int percent;
 
-                if ( v11 >= 500 )
-                    v13 = 100;
+                if ( titleTime >= 500 )
+                    percent = 100;
                 else
-                    v13 = 100 * v11 / 500;
+                    percent = 100 * titleTime / 500;
 
                 int xpos = ((brf->ViewingObjectRect.left + brf->ViewingObjectRect.right) / 2.0) * (yw->_screenSize.x / 2);
                 int ypos = ((yw->_screenSize.y / 2) * brf->ViewingObjectRect.bottom - yw->_guiTiles[16]->h + -1.0);
@@ -875,7 +875,7 @@ void BriefDrawViewedObjectCaption(NC_STACK_ypaworld *yw, TBriefengScreen *brf, T
                 FontUA::set_center_ypos(&cmdbuf, ypos);
                 FontUA::set_txtColor(&cmdbuf, yw->_iniColors[66].r, yw->_iniColors[66].g, yw->_iniColors[66].b);
 
-                FontUA::TextRelWidthItem(yw->_guiTiles[16], &cmdbuf, brf->ViewingObject.Title.c_str(), v13, 16);
+                FontUA::TextRelWidthItem(yw->_guiTiles[16], &cmdbuf, brf->ViewingObject.Title.c_str(), percent, 16);
 
                 FontUA::set_end(&cmdbuf);
 
@@ -1045,14 +1045,14 @@ void UpdateBriefingScreen(NC_STACK_ypaworld *yw, UserData *usr, TInputState *inp
 
         if ( brf->BriefingMapImg )
         {
-            GFX::TBitmapBlitParams a4;
+            GFX::TBitmapBlitParams backgroundBlit;
 
-            a4.pbitm = brf->BriefingMapImg->GetBitmap();
+            backgroundBlit.pbitm = brf->BriefingMapImg->GetBitmap();
 
-            a4.srcRect = Common::FRect(-1.0, -1.0, 1.0, 1.0);
-            a4.dstRect = Common::FRect(-1.0, -1.0, 1.0, 1.0);
+            backgroundBlit.srcRect = Common::FRect(-1.0, -1.0, 1.0, 1.0);
+            backgroundBlit.dstRect = Common::FRect(-1.0, -1.0, 1.0, 1.0);
 
-            GFX::Engine.DrawClippedBitmapNormalized(&a4);
+            GFX::Engine.DrawClippedBitmapNormalized(&backgroundBlit);
         }
 
         GFX::Engine.DrawClippedBitmapNormalized(&brf->MapBlitParams);
@@ -1106,26 +1106,26 @@ void DebriefStartMapScaling(NC_STACK_ypaworld *yw, TInputState *struc, TBriefeng
 
     brf->MapBlitParams.pbitm = brf->MbmapImg->GetBitmap();
 
-    float v21, v22;
+    float aspectX, aspectY;
 
     if ( yw->_mapSize.x > yw->_mapSize.y )
     {
-        v21 = 1.0;
-        v22 = (float)yw->_mapSize.y / (float)yw->_mapSize.x;
+        aspectX = 1.0;
+        aspectY = (float)yw->_mapSize.y / (float)yw->_mapSize.x;
     }
     else if ( yw->_mapSize.y > yw->_mapSize.x )
     {
-        v22 = 1.0;
-        v21 = (float)yw->_mapSize.x / (float)yw->_mapSize.y;
+        aspectY = 1.0;
+        aspectX = (float)yw->_mapSize.x / (float)yw->_mapSize.y;
     }
     else
     {
-        v21 = 1.0;
-        v22 = 1.0;
+        aspectX = 1.0;
+        aspectY = 1.0;
     }
 
-    float v19 = 1.0 / (float)yw->_mapSize.y;
-    float v20 = 1.0 / (float)yw->_mapSize.x;
+    float halfSectorH = 1.0 / (float)yw->_mapSize.y;
+    float halfSectorW = 1.0 / (float)yw->_mapSize.x;
 
     Common::Point tmp;
     if ( brf->ZoomFromGate )
@@ -1137,19 +1137,19 @@ void DebriefStartMapScaling(NC_STACK_ypaworld *yw, TInputState *struc, TBriefeng
         tmp = {yw->_mapSize.x / 2, yw->_mapSize.y / 2};
     }
 
-    float v11 = 2.0 * ((float)tmp.y / (float)yw->_mapSize.y) - 1.0;
-    float v12 = 2.0 * ((float)tmp.x / (float)yw->_mapSize.x) - 1.0;
+    float centerY = 2.0 * ((float)tmp.y / (float)yw->_mapSize.y) - 1.0;
+    float centerX = 2.0 * ((float)tmp.x / (float)yw->_mapSize.x) - 1.0;
 
-    brf->MapBlitStart.left = v12 - v20;
-    brf->MapBlitStart.top = v11 - v19;
-    brf->MapBlitStart.right = v20 + v12;
-    brf->MapBlitStart.bottom = v11 + v19;
+    brf->MapBlitStart.left = centerX - halfSectorW;
+    brf->MapBlitStart.top = centerY - halfSectorH;
+    brf->MapBlitStart.right = halfSectorW + centerX;
+    brf->MapBlitStart.bottom = centerY + halfSectorH;
     ClampRectToUnit(&brf->MapBlitStart);
 
-    brf->MapBlitEnd.left = -0.4515625 - v21 * 0.4828125;
-    brf->MapBlitEnd.top = -0.325 - v22 * 0.6083333333333334;
-    brf->MapBlitEnd.right = brf->MapBlitEnd.left + v21 * 0.965625;
-    brf->MapBlitEnd.bottom = brf->MapBlitEnd.top + v22 * 1.216666666666667;
+    brf->MapBlitEnd.left = -0.4515625 - aspectX * 0.4828125;
+    brf->MapBlitEnd.top = -0.325 - aspectY * 0.6083333333333334;
+    brf->MapBlitEnd.right = brf->MapBlitEnd.left + aspectX * 0.965625;
+    brf->MapBlitEnd.bottom = brf->MapBlitEnd.top + aspectY * 1.216666666666667;
     ClampRectToUnit(&brf->MapBlitEnd);
 
     brf->MapBlitParams.srcRect = brf->MapBlitStart;
@@ -1161,9 +1161,9 @@ void DebriefStartMapScaling(NC_STACK_ypaworld *yw, TInputState *struc, TBriefeng
 
 void DebriefUpdateMapScaling(NC_STACK_ypaworld *yw, TInputState *struc, TBriefengScreen *brf)
 {
-    int v4 = brf->CurrTime - brf->StartTime;
+    int elapsed = brf->CurrTime - brf->StartTime;
 
-    if ( v4 >= 600 )
+    if ( elapsed >= 600 )
     {
         brf->MapBlitParams.srcRect = Common::FRect(-1.0, -1.0, 1.0, 1.0);
         brf->MapBlitParams.dstRect = brf->MapBlitEnd;
@@ -1171,11 +1171,11 @@ void DebriefUpdateMapScaling(NC_STACK_ypaworld *yw, TInputState *struc, TBriefen
     }
     else
     {
-        float v3 = v4 / 600.0;
-        brf->MapBlitParams.srcRect.left = brf->MapBlitStart.left + (-1.0 - brf->MapBlitStart.left) * v3;
-        brf->MapBlitParams.srcRect.top = brf->MapBlitStart.top + (-1.0 - brf->MapBlitStart.top) * v3;
-        brf->MapBlitParams.srcRect.right = brf->MapBlitStart.right + (1.0 - brf->MapBlitStart.right) * v3;
-        brf->MapBlitParams.srcRect.bottom = brf->MapBlitStart.bottom + (1.0 - brf->MapBlitStart.bottom) * v3;
+        float progress = elapsed / 600.0;
+        brf->MapBlitParams.srcRect.left = brf->MapBlitStart.left + (-1.0 - brf->MapBlitStart.left) * progress;
+        brf->MapBlitParams.srcRect.top = brf->MapBlitStart.top + (-1.0 - brf->MapBlitStart.top) * progress;
+        brf->MapBlitParams.srcRect.right = brf->MapBlitStart.right + (1.0 - brf->MapBlitStart.right) * progress;
+        brf->MapBlitParams.srcRect.bottom = brf->MapBlitStart.bottom + (1.0 - brf->MapBlitStart.bottom) * progress;
         brf->MapBlitParams.dstRect = brf->MapBlitEnd;
     }
 }
@@ -1217,23 +1217,23 @@ void yw_DebriefConqSector(NC_STACK_ypaworld *yw, TBriefengScreen *brf, World::Hi
         {
             if ( brf->VectorGfx[3] )
             {
-                float v20 = brf->MapBlitEnd.Width() / (float)yw->_mapSize.x;
-                float v21 = brf->MapBlitEnd.Height() / (float)yw->_mapSize.y;
+                float sectorW = brf->MapBlitEnd.Width() / (float)yw->_mapSize.x;
+                float sectorH = brf->MapBlitEnd.Height() / (float)yw->_mapSize.y;
 
-                float a3a = (float)arg->secX * v20 + brf->MapBlitEnd.left + v20 * 0.5;
-                float a4a = (float)arg->secY * v21 + brf->MapBlitEnd.top + v21 * 0.5;
+                float posX = (float)arg->secX * sectorW + brf->MapBlitEnd.left + sectorW * 0.5;
+                float posY = (float)arg->secY * sectorH + brf->MapBlitEnd.top + sectorH * 0.5;
 
-                float v19 = 1.0 - (float )dtime / 30000.0;
+                float sizeFactor = 1.0 - (float )dtime / 30000.0;
 
-                if ( v19 > 1.0 )
-                    v19 = 1.0;
-                else if ( v19 < 0.0)
-                    v19 = 0.0;
+                if ( sizeFactor > 1.0 )
+                    sizeFactor = 1.0;
+                else if ( sizeFactor < 0.0)
+                    sizeFactor = 0.0;
 
-                float a9 = v20 * v19;
-                float a10 = v21 * v19;
+                float scaleX = sectorW * sizeFactor;
+                float scaleY = sectorH * sizeFactor;
 
-                yw_RenderVector2D(yw, brf->VectorGfx[3]->GetSkelet(), a3a, a4a, 1.0, 0.0, 0.0, 1.0, a9, a10,  yw->GetColor(arg->owner), NULL, NULL);
+                yw_RenderVector2D(yw, brf->VectorGfx[3]->GetSkelet(), posX, posY, 1.0, 0.0, 0.0, 1.0, scaleX, scaleY,  yw->GetColor(arg->owner), NULL, NULL);
             }
         }
     }
@@ -1256,32 +1256,32 @@ void yw_DebriefVhclKill(NC_STACK_ypaworld *yw, TBriefengScreen *brf, World::Hist
     {
         if ( brf->VectorGfx[1] )
         {
-            float v12 = brf->MapBlitEnd.Width();
-            float v13 = brf->MapBlitEnd.Height();
+            float mapW = brf->MapBlitEnd.Width();
+            float mapH = brf->MapBlitEnd.Height();
 
-            float a3a = v12 * (arg->posX / 256.0) + brf->MapBlitEnd.left;
-            float a4a = v13 * (arg->posY / 256.0) + brf->MapBlitEnd.top;
+            float posX = mapW * (arg->posX / 256.0) + brf->MapBlitEnd.left;
+            float posY = mapH * (arg->posY / 256.0) + brf->MapBlitEnd.top;
 
-            float v25;
+            float sizeFactor;
 
             if ( dtime >= 30000 )
             {
-                v25 = 0.1;
+                sizeFactor = 0.1;
             }
             else
             {
-                v25 = 1.0 - dtime / 30000.0;
+                sizeFactor = 1.0 - dtime / 30000.0;
 
-                if ( v25 < 0.1 )
-                    v25 = 0.1;
-                else if ( v25 > 1.0 )
-                    v25 = 1.0;
+                if ( sizeFactor < 0.1 )
+                    sizeFactor = 0.1;
+                else if ( sizeFactor > 1.0 )
+                    sizeFactor = 1.0;
             }
 
-            float a9 = ((v12 / (float)yw->_mapSize.x) / 2.0) * v25;
-            float a10 = ((v13 / (float)yw->_mapSize.y) / 2.0) * v25;
+            float scaleX = ((mapW / (float)yw->_mapSize.x) / 2.0) * sizeFactor;
+            float scaleY = ((mapH / (float)yw->_mapSize.y) / 2.0) * sizeFactor;
 
-            yw_RenderVector2D(yw, brf->VectorGfx[1]->GetSkelet(), a3a, a4a, 1.0, 0.0, 0.0, 1.0, a9, a10, yw->GetColor(own), NULL, NULL);
+            yw_RenderVector2D(yw, brf->VectorGfx[1]->GetSkelet(), posX, posY, 1.0, 0.0, 0.0, 1.0, scaleX, scaleY, yw->GetColor(own), NULL, NULL);
         }
     }
 }
@@ -1293,23 +1293,23 @@ void yw_DebriefVhclCreate(NC_STACK_ypaworld *yw, TBriefengScreen *brf, World::Hi
     {
         if ( brf->VectorGfx[1] )
         {
-            float v13 = brf->MapBlitEnd.Width();
-            float v14 = brf->MapBlitEnd.Height();
+            float mapW = brf->MapBlitEnd.Width();
+            float mapH = brf->MapBlitEnd.Height();
 
-            float a3a = v13 * (arg->posX / 256.0) + brf->MapBlitEnd.left;
-            float a4a = v14 * (arg->posY / 256.0) + brf->MapBlitEnd.top;
+            float posX = mapW * (arg->posX / 256.0) + brf->MapBlitEnd.left;
+            float posY = mapH * (arg->posY / 256.0) + brf->MapBlitEnd.top;
 
-            float v22 = dtime / 45000.0;
+            float sizeFactor = dtime / 45000.0;
 
-            if ( v22 > 1.0 )
-                v22 = 1.0;
-            else if ( v22 < 0.0 )
-                v22 = 0.0;
+            if ( sizeFactor > 1.0 )
+                sizeFactor = 1.0;
+            else if ( sizeFactor < 0.0 )
+                sizeFactor = 0.0;
 
-            float a9 = ((v13 / (float)yw->_mapSize.x) / 8.0) * v22;
-            float a10 = ((v14 / (float)yw->_mapSize.y) / 8.0) * v22;
+            float scaleX = ((mapW / (float)yw->_mapSize.x) / 8.0) * sizeFactor;
+            float scaleY = ((mapH / (float)yw->_mapSize.y) / 8.0) * sizeFactor;
 
-            yw_RenderVector2D(yw, brf->VectorGfx[1]->GetSkelet(), a3a, a4a, 1.0, 0.0, 0.0, 1.0, a9, a10, yw->GetColor(arg->owner), NULL, NULL);
+            yw_RenderVector2D(yw, brf->VectorGfx[1]->GetSkelet(), posX, posY, 1.0, 0.0, 0.0, 1.0, scaleX, scaleY, yw->GetColor(arg->owner), NULL, NULL);
         }
     }
 }
@@ -1334,17 +1334,17 @@ void yw_DebriefAddTechUpgrade(NC_STACK_ypaworld *yw, TBriefengScreen *brf, World
 
 void yw_DebriefRenderSectorsOwners(NC_STACK_ypaworld *yw, TBriefengScreen *brf)
 {
-    float v3 = brf->MapBlitEnd.Width() / (float)yw->_mapSize.x;
-    float v4 = brf->MapBlitEnd.Height() / (float)yw->_mapSize.y;
+    float sectorW = brf->MapBlitEnd.Width() / (float)yw->_mapSize.x;
+    float sectorH = brf->MapBlitEnd.Height() / (float)yw->_mapSize.y;
 
-    float v19 = v3 / 10.0;
-    float v16 = v4 / 10.0;
+    float crossHalfW = sectorW / 10.0;
+    float crossHalfH = sectorH / 10.0;
 
-    float v21 = brf->MapBlitEnd.top + v4 * 0.5;
+    float centerY = brf->MapBlitEnd.top + sectorH * 0.5;
 
     for (int yy = 0; yy < yw->_mapSize.y; yy++)
     {
-        float v23 = brf->MapBlitEnd.left + v3 * 0.5;
+        float centerX = brf->MapBlitEnd.left + sectorW * 0.5;
         
         uint8_t *ownmap = brf->OwnMap.Line(yy);
 
@@ -1356,59 +1356,59 @@ void yw_DebriefRenderSectorsOwners(NC_STACK_ypaworld *yw, TBriefengScreen *brf)
             {
                 if ( yw->IsGamePlaySector( {xx, yy} ) )
                 {
-                    Common::FLine arg198;
-                    Common::FLine arg198_1;
+                    Common::FLine hLine;
+                    Common::FLine vLine;
 
-                    arg198.x1 = v23 - v19;
-                    arg198.y1 = v21;
-                    arg198.x2 = v19 + v23;
-                    arg198.y2 = v21;
+                    hLine.x1 = centerX - crossHalfW;
+                    hLine.y1 = centerY;
+                    hLine.x2 = crossHalfW + centerX;
+                    hLine.y2 = centerY;
 
-                    arg198_1.x1 = v23;
-                    arg198_1.y1 = v21 - v16;
-                    arg198_1.x2 = v23;
-                    arg198_1.y2 = v21 + v16;
+                    vLine.x1 = centerX;
+                    vLine.y1 = centerY - crossHalfH;
+                    vLine.x2 = centerX;
+                    vLine.y2 = centerY + crossHalfH;
 
                     GFX::Engine.SetPen( yw->GetColor(owner) );
-                    GFX::Engine.DrawLineNormalized(arg198);
-                    GFX::Engine.DrawLineNormalized(arg198_1);
+                    GFX::Engine.DrawLineNormalized(hLine);
+                    GFX::Engine.DrawLineNormalized(vLine);
                 }
             }
 
-            v23 += v3;
+            centerX += sectorW;
             ownmap++;
         }
 
-        v21 += v4;
+        centerY += sectorH;
     }
 }
 
 
 void DebriefDrawLevelTitle(NC_STACK_ypaworld *yw, TBriefengScreen *brf)
 {
-    int v14 = (yw->_screenSize.x / 2) * -0.934375;
-    int v13 = (yw->_screenSize.x / 2) * 0.03125;
-    int v16 = (yw->_screenSize.y / 2) * -0.9333333333333333;
+    int xLeft = (yw->_screenSize.x / 2) * -0.934375;
+    int xRight = (yw->_screenSize.x / 2) * 0.03125;
+    int yTop = (yw->_screenSize.y / 2) * -0.9333333333333333;
 
-    const std::string v7 = yw->GetLevelName(yw->_levelInfo);
+    const std::string levelName = yw->GetLevelName(yw->_levelInfo);
 
     CmdStream cmdBuff;
     cmdBuff.reserve(264);
 
     FontUA::select_tileset(&cmdBuff, 16);
-    FontUA::set_center_xpos(&cmdBuff, v14);
-    FontUA::set_center_ypos(&cmdBuff, v16);
+    FontUA::set_center_xpos(&cmdBuff, xLeft);
+    FontUA::set_center_ypos(&cmdBuff, yTop);
 
     FontUA::set_txtColor(&cmdBuff, yw->_iniColors[66].r, yw->_iniColors[66].g, yw->_iniColors[66].b);
 
-    FontUA::FormateCenteredSkipableItem(yw->_guiTiles[16], &cmdBuff, v7, v13 - v14);
+    FontUA::FormateCenteredSkipableItem(yw->_guiTiles[16], &cmdBuff, levelName, xRight - xLeft);
 
     FontUA::set_end(&cmdBuff);
 
     GFX::Engine.ProcessDrawSeq(cmdBuff);
 }
 
-void yw_DebriefKillsTitleLine(NC_STACK_ypaworld *yw, TBriefengScreen *brf, CmdStream *in, int a4)
+void yw_DebriefKillsTitleLine(NC_STACK_ypaworld *yw, TBriefengScreen *brf, CmdStream *in, int tableWidth)
 {
     FontUA::set_txtColor(in, yw->_iniColors[67].r, yw->_iniColors[67].g, yw->_iniColors[67].b);
     FontUA::ColumnItem elms[3];
@@ -1417,20 +1417,20 @@ void yw_DebriefKillsTitleLine(NC_STACK_ypaworld *yw, TBriefengScreen *brf, CmdSt
     elms[0].spaceChar = 32;
     elms[0].prefixChar = 0;
     elms[0].postfixChar = 0;
-    elms[0].width = a4 * 0.4;
+    elms[0].width = tableWidth * 0.4;
     elms[0].flags = 36;
     elms[0].fontID = 15;
 
     elms[1].txt = Locale::Text::Advanced(Locale::ADV_KILLSBYPLAYER);
     elms[1].fontID = 15;
-    elms[1].width = a4 * 0.3;
+    elms[1].width = tableWidth * 0.3;
     elms[1].spaceChar = 32;
     elms[1].flags = 36;
     elms[1].prefixChar = 0;
     elms[1].postfixChar = 0;
 
     elms[2].txt = Locale::Text::Advanced(Locale::ADV_KILLSALL);
-    elms[2].width = a4 * 0.3;
+    elms[2].width = tableWidth * 0.3;
     elms[2].fontID = 15;
     elms[2].spaceChar = 32;
     elms[2].flags = 36;
@@ -1440,36 +1440,36 @@ void yw_DebriefKillsTitleLine(NC_STACK_ypaworld *yw, TBriefengScreen *brf, CmdSt
     FormateColumnItem(yw, in, 3, elms);
 }
 
-int CompareDebriefStatusDesc(const void *a1, const void *a2)
+int CompareDebriefStatusDesc(const void *lhs, const void *rhs)
 {
-    return ((debrif_t1 *)a2)->status - ((debrif_t1 *)a1)->status;
+    return ((debrif_t1 *)rhs)->status - ((debrif_t1 *)lhs)->status;
 }
 
-void yw_DebriefKillsScore(NC_STACK_ypaworld *yw, TBriefengScreen *brf, CmdStream *in, int a4)
+void yw_DebriefKillsScore(NC_STACK_ypaworld *yw, TBriefengScreen *brf, CmdStream *in, int tableWidth)
 {
-    int a2 = 0;
+    int count = 0;
 
-    debrif_t1 v28[8];
+    debrif_t1 entries[8];
 
     for (int i = 0; i < 8; i++)
     {
         if ( (1 << i) & yw->_levelInfo.OwnerMask )
         {
-            v28[a2].owner = i;
-            v28[a2].status = brf->StatsIngame[i].DestroyedUnits;
-            a2++;
+            entries[count].owner = i;
+            entries[count].status = brf->StatsIngame[i].DestroyedUnits;
+            count++;
         }
     }
 
-    qsort(v28, a2, sizeof(debrif_t1), CompareDebriefStatusDesc);
+    qsort(entries, count, sizeof(debrif_t1), CompareDebriefStatusDesc);
 
 
-    for (int i = 0; i < a2; i++)
+    for (int i = 0; i < count; i++)
     {
         int clr_id;
         std::string who;
 
-        switch ( v28[i].owner )
+        switch ( entries[i].owner )
         {
         case 1:
             who = Locale::Text::Advanced(Locale::ADV_RESIST);
@@ -1514,13 +1514,13 @@ void yw_DebriefKillsScore(NC_STACK_ypaworld *yw, TBriefengScreen *brf, CmdStream
         elms[0].txt = who;
         elms[0].spaceChar = 32;
         elms[0].fontID = 15;
-        elms[0].width = a4 * 0.4;
+        elms[0].width = tableWidth * 0.4;
         elms[0].prefixChar = 0;
         elms[0].postfixChar = 0;
         elms[0].flags = 36;
 
-        if ( yw->_gameWasNetGame || v28[i].owner == yw->_playerOwner )
-            elms[1].txt = fmt::sprintf("%d", brf->StatsIngame[ v28[i].owner ].DestroyedByUser);
+        if ( yw->_gameWasNetGame || entries[i].owner == yw->_playerOwner )
+            elms[1].txt = fmt::sprintf("%d", brf->StatsIngame[ entries[i].owner ].DestroyedByUser);
         else
             elms[1].txt = "-";
         elms[1].spaceChar = 32;
@@ -1528,10 +1528,10 @@ void yw_DebriefKillsScore(NC_STACK_ypaworld *yw, TBriefengScreen *brf, CmdStream
         elms[1].prefixChar = 0;
         elms[1].postfixChar = 0;
         elms[1].flags = 36;
-        elms[1].width = a4 * 0.3;
+        elms[1].width = tableWidth * 0.3;
 
-        elms[2].txt = fmt::sprintf("%d", brf->StatsIngame[ v28[i].owner ].DestroyedUnits);
-        elms[2].width = a4 * 0.3;
+        elms[2].txt = fmt::sprintf("%d", brf->StatsIngame[ entries[i].owner ].DestroyedUnits);
+        elms[2].width = tableWidth * 0.3;
         elms[2].fontID = 15;
         elms[2].spaceChar = 32;
         elms[2].flags = 36;
@@ -1544,14 +1544,14 @@ void yw_DebriefKillsScore(NC_STACK_ypaworld *yw, TBriefengScreen *brf, CmdStream
     }
 }
 
-void yw_DebriefMPlayScoreTitle(NC_STACK_ypaworld *yw, CmdStream *in, int a4)
+void yw_DebriefMPlayScoreTitle(NC_STACK_ypaworld *yw, CmdStream *in, int tableWidth)
 {
     FontUA::set_txtColor(in, yw->_iniColors[67].r, yw->_iniColors[67].g, yw->_iniColors[67].b);
 
     FontUA::ColumnItem elm;
 
     elm.txt = Locale::Text::Advanced(Locale::ADV_SCORE);
-    elm.width = a4;
+    elm.width = tableWidth;
     elm.spaceChar = 32;
     elm.fontID = 15;
     elm.prefixChar = 0;
@@ -1561,35 +1561,35 @@ void yw_DebriefMPlayScoreTitle(NC_STACK_ypaworld *yw, CmdStream *in, int a4)
     FormateColumnItem(yw, in, 1, &elm);
 }
 
-void yw_DebriefMPlayScore(NC_STACK_ypaworld *yw, TBriefengScreen *brf, CmdStream *in, int a4)
+void yw_DebriefMPlayScore(NC_STACK_ypaworld *yw, TBriefengScreen *brf, CmdStream *in, int tableWidth)
 {
     if ( yw->_gameWasNetGame )
     {
-        yw_DebriefMPlayScoreTitle(yw, in, a4);
+        yw_DebriefMPlayScoreTitle(yw, in, tableWidth);
 
         FontUA::next_line(in);
 
-        debrif_t1 v32[8];
-        int a2 = 0;
+        debrif_t1 entries[8];
+        int count = 0;
 
         for (int i = 0; i < 8; i++)
         {
             if ( (1 << i) & yw->_levelInfo.OwnerMask )
             {
-                v32[a2].owner = i;
-                v32[a2].status = brf->StatsIngame[i].Score;
-                a2++;
+                entries[count].owner = i;
+                entries[count].status = brf->StatsIngame[i].Score;
+                count++;
             }
         }
 
-        qsort(v32, a2, sizeof(debrif_t1), CompareDebriefStatusDesc);
+        qsort(entries, count, sizeof(debrif_t1), CompareDebriefStatusDesc);
 
-        for (int i = 0; i < a2; i++)
+        for (int i = 0; i < count; i++)
         {
             int clr_id;
             std::string who;
 
-            switch ( v32[i].owner )
+            switch ( entries[i].owner )
             {
             case 1:
                 who = Locale::Text::Advanced(Locale::ADV_RESIST);
@@ -1629,25 +1629,25 @@ void yw_DebriefMPlayScore(NC_STACK_ypaworld *yw, TBriefengScreen *brf, CmdStream
 
             FontUA::set_txtColor(in, yw->_iniColors[clr_id].r, yw->_iniColors[clr_id].g, yw->_iniColors[clr_id].b);
 
-            FontUA::ColumnItem a4a[2];
+            FontUA::ColumnItem columns[2];
 
-            a4a[0].txt = who;
-            a4a[0].spaceChar = 32;
-            a4a[0].fontID = 15;
-            a4a[0].prefixChar = 0;
-            a4a[0].postfixChar = 0;
-            a4a[0].flags = 36;
-            a4a[0].width = a4 * 0.5;
+            columns[0].txt = who;
+            columns[0].spaceChar = 32;
+            columns[0].fontID = 15;
+            columns[0].prefixChar = 0;
+            columns[0].postfixChar = 0;
+            columns[0].flags = 36;
+            columns[0].width = tableWidth * 0.5;
 
-            a4a[1].txt = fmt::sprintf("%d", brf->StatsIngame[ v32[i].owner ].Score);
-            a4a[1].width = a4 * 0.5;
-            a4a[1].fontID = 15;
-            a4a[1].spaceChar = 32;
-            a4a[1].flags = 36;
-            a4a[1].prefixChar = 0;
-            a4a[1].postfixChar = 0;
+            columns[1].txt = fmt::sprintf("%d", brf->StatsIngame[ entries[i].owner ].Score);
+            columns[1].width = tableWidth * 0.5;
+            columns[1].fontID = 15;
+            columns[1].spaceChar = 32;
+            columns[1].flags = 36;
+            columns[1].prefixChar = 0;
+            columns[1].postfixChar = 0;
 
-            FormateColumnItem(yw, in, 2, a4a);
+            FormateColumnItem(yw, in, 2, columns);
 
             FontUA::next_line(in);
         }
@@ -1656,124 +1656,124 @@ void yw_DebriefMPlayScore(NC_STACK_ypaworld *yw, TBriefengScreen *brf, CmdStream
     {
         FontUA::set_txtColor(in, yw->_iniColors[67].r, yw->_iniColors[67].g, yw->_iniColors[67].b);
 
-        FontUA::ColumnItem v35[2];
+        FontUA::ColumnItem columns[2];
 
-        v35[0].txt = Locale::Text::Advanced(Locale::ADV_SCOREMISSION);
-        v35[0].spaceChar = 32;
-        v35[0].prefixChar = 0;
-        v35[0].postfixChar = 0;
-        v35[0].width = a4 * 0.7;
-        v35[0].fontID = 15;
-        v35[0].flags = 36;
+        columns[0].txt = Locale::Text::Advanced(Locale::ADV_SCOREMISSION);
+        columns[0].spaceChar = 32;
+        columns[0].prefixChar = 0;
+        columns[0].postfixChar = 0;
+        columns[0].width = tableWidth * 0.7;
+        columns[0].fontID = 15;
+        columns[0].flags = 36;
 
-        v35[1].txt = fmt::sprintf("%d", brf->StatsIngame[yw->_playerOwner].Score);
-        v35[1].fontID = 15;
-        v35[1].spaceChar = 32;
-        v35[1].prefixChar = 0;
-        v35[1].width = a4 * 0.3;
-        v35[1].postfixChar = 0;
-        v35[1].flags = 36;
+        columns[1].txt = fmt::sprintf("%d", brf->StatsIngame[yw->_playerOwner].Score);
+        columns[1].fontID = 15;
+        columns[1].spaceChar = 32;
+        columns[1].prefixChar = 0;
+        columns[1].width = tableWidth * 0.3;
+        columns[1].postfixChar = 0;
+        columns[1].flags = 36;
 
-        FormateColumnItem(yw, in, 2, v35);
+        FormateColumnItem(yw, in, 2, columns);
 
         FontUA::next_line(in);
 
-        v35[0].txt = Locale::Text::Advanced(Locale::ADV_SCOREOVERALL);
-        v35[0].flags = 36;
-        v35[0].spaceChar = 32;
-        v35[0].width = a4 * 0.7;
-        v35[0].prefixChar = 0;
-        v35[0].postfixChar = 0;
-        v35[0].fontID = 15;
+        columns[0].txt = Locale::Text::Advanced(Locale::ADV_SCOREOVERALL);
+        columns[0].flags = 36;
+        columns[0].spaceChar = 32;
+        columns[0].width = tableWidth * 0.7;
+        columns[0].prefixChar = 0;
+        columns[0].postfixChar = 0;
+        columns[0].fontID = 15;
 
         
 
-        v35[1].txt = fmt::sprintf("%d", brf->StatsIngame[yw->_playerOwner].Score + brf->StatsGlobal[yw->_playerOwner].Score);
-        v35[1].fontID = 15;
-        v35[1].spaceChar = 32;
-        v35[1].postfixChar = 0;
-        v35[1].width = a4 * 0.3;
-        v35[1].prefixChar = 0;
-        v35[1].flags = 36;
+        columns[1].txt = fmt::sprintf("%d", brf->StatsIngame[yw->_playerOwner].Score + brf->StatsGlobal[yw->_playerOwner].Score);
+        columns[1].fontID = 15;
+        columns[1].spaceChar = 32;
+        columns[1].postfixChar = 0;
+        columns[1].width = tableWidth * 0.3;
+        columns[1].prefixChar = 0;
+        columns[1].flags = 36;
 
-        FormateColumnItem(yw, in, 2, v35);
+        FormateColumnItem(yw, in, 2, columns);
 
         FontUA::next_line(in);
     }
 }
 
-void yw_DebriefRenderTime(NC_STACK_ypaworld *yw, TBriefengScreen *brf, CmdStream *in, int a4)
+void yw_DebriefRenderTime(NC_STACK_ypaworld *yw, TBriefengScreen *brf, CmdStream *in, int tableWidth)
 {
     FontUA::set_txtColor(in, yw->_iniColors[67].r, yw->_iniColors[67].g, yw->_iniColors[67].b);
 
     if ( yw->_gameWasNetGame )
     {
-        FontUA::ColumnItem v30[2];
-        v30[0].txt = Locale::Text::Advanced(Locale::ADV_PLAYTIME);
-        v30[0].spaceChar = 32;
-        v30[0].prefixChar = 0;
-        v30[0].postfixChar = 0;
-        v30[0].width = a4 * 0.7;
-        v30[0].flags = 36;
-        v30[0].fontID = 15;
+        FontUA::ColumnItem columns[2];
+        columns[0].txt = Locale::Text::Advanced(Locale::ADV_PLAYTIME);
+        columns[0].spaceChar = 32;
+        columns[0].prefixChar = 0;
+        columns[0].postfixChar = 0;
+        columns[0].width = tableWidth * 0.7;
+        columns[0].flags = 36;
+        columns[0].fontID = 15;
 
-        int v12 = brf->LastFrameTimeStamp / 1024;
+        int seconds = brf->LastFrameTimeStamp / 1024;
 
-        v30[1].txt = fmt::sprintf("%02d:%02d:%02d", v12 / 60 / 60, v12 / 60 % 60, v12 % 60);
-        v30[1].fontID = 15;
-        v30[1].spaceChar = 32;
-        v30[1].prefixChar = 0;
-        v30[1].postfixChar = 0;
-        v30[1].flags = 36;
-        v30[1].width = a4 * 0.3;
+        columns[1].txt = fmt::sprintf("%02d:%02d:%02d", seconds / 60 / 60, seconds / 60 % 60, seconds % 60);
+        columns[1].fontID = 15;
+        columns[1].spaceChar = 32;
+        columns[1].prefixChar = 0;
+        columns[1].postfixChar = 0;
+        columns[1].flags = 36;
+        columns[1].width = tableWidth * 0.3;
 
-        FormateColumnItem(yw, in, 2, v30);
+        FormateColumnItem(yw, in, 2, columns);
     }
     else
     {
 
-        FontUA::ColumnItem a4a[2];
-        a4a[0].txt = Locale::Text::Advanced(Locale::ADV_MISSIONTIME);
-        a4a[0].spaceChar = 32;
-        a4a[0].prefixChar = 0;
-        a4a[0].postfixChar = 0;
-        a4a[0].width = a4 * 0.7;
-        a4a[0].flags = 36;
-        a4a[0].fontID = 15;
+        FontUA::ColumnItem columns[2];
+        columns[0].txt = Locale::Text::Advanced(Locale::ADV_MISSIONTIME);
+        columns[0].spaceChar = 32;
+        columns[0].prefixChar = 0;
+        columns[0].postfixChar = 0;
+        columns[0].width = tableWidth * 0.7;
+        columns[0].flags = 36;
+        columns[0].fontID = 15;
 
-        int v19 = brf->LastFrameTimeStamp / 1024;
+        int seconds = brf->LastFrameTimeStamp / 1024;
 
-        a4a[1].txt = fmt::sprintf("%02d:%02d:%02d", v19 / 60 / 60, v19 / 60 % 60, v19 % 60);
-        a4a[1].width = a4 * 0.3;
-        a4a[1].fontID = 15;
-        a4a[1].spaceChar = 32;
-        a4a[1].prefixChar = 0;
-        a4a[1].postfixChar = 0;
-        a4a[1].flags = 36;
+        columns[1].txt = fmt::sprintf("%02d:%02d:%02d", seconds / 60 / 60, seconds / 60 % 60, seconds % 60);
+        columns[1].width = tableWidth * 0.3;
+        columns[1].fontID = 15;
+        columns[1].spaceChar = 32;
+        columns[1].prefixChar = 0;
+        columns[1].postfixChar = 0;
+        columns[1].flags = 36;
 
-        FormateColumnItem(yw, in, 2, a4a);
+        FormateColumnItem(yw, in, 2, columns);
 
         FontUA::next_line(in);
 
-        a4a[0].txt = Locale::Text::Advanced(Locale::ADV_OVERALLTIME);
-        a4a[0].flags = 36;
-        a4a[0].spaceChar = 32;
-        a4a[0].width = a4 * 0.7;
-        a4a[0].prefixChar = 0;
-        a4a[0].postfixChar = 0;
-        a4a[0].fontID = 15;
+        columns[0].txt = Locale::Text::Advanced(Locale::ADV_OVERALLTIME);
+        columns[0].flags = 36;
+        columns[0].spaceChar = 32;
+        columns[0].width = tableWidth * 0.7;
+        columns[0].prefixChar = 0;
+        columns[0].postfixChar = 0;
+        columns[0].fontID = 15;
 
-        v19 = (brf->LastFrameTimeStamp + brf->StatsGlobal[yw->_playerOwner].ElapsedTime) / 1024;
+        seconds = (brf->LastFrameTimeStamp + brf->StatsGlobal[yw->_playerOwner].ElapsedTime) / 1024;
 
-        a4a[1].txt = fmt::sprintf("%02d:%02d:%02d", v19 / 60 / 60, v19 / 60 % 60, v19 % 60);
-        a4a[1].fontID = 15;
-        a4a[1].spaceChar = 32;
-        a4a[1].width = a4 * 0.3;
-        a4a[1].prefixChar = 0;
-        a4a[1].postfixChar = 0;
-        a4a[1].flags = 36;
+        columns[1].txt = fmt::sprintf("%02d:%02d:%02d", seconds / 60 / 60, seconds / 60 % 60, seconds % 60);
+        columns[1].fontID = 15;
+        columns[1].spaceChar = 32;
+        columns[1].width = tableWidth * 0.3;
+        columns[1].prefixChar = 0;
+        columns[1].postfixChar = 0;
+        columns[1].flags = 36;
 
-        FormateColumnItem(yw, in, 2, a4a);
+        FormateColumnItem(yw, in, 2, columns);
     }
 
     FontUA::next_line(in);
@@ -1785,24 +1785,24 @@ void yw_DebriefScoreTable(NC_STACK_ypaworld *yw, TBriefengScreen *brf, CmdStream
     FontUA::set_center_xpos(in, ((yw->_screenSize.x / 2) * 0.15) );
     FontUA::set_center_ypos(in, ((yw->_screenSize.y / 2) * -0.821) );
 
-    int v14 = (yw->_screenSize.x / 2) * 0.796875;
+    int tableWidth = (yw->_screenSize.x / 2) * 0.796875;
 
-    yw_DebriefKillsTitleLine(yw, brf, in, v14);
-
-    FontUA::next_line(in);
-
-    yw_DebriefKillsScore(yw, brf, in, v14);
+    yw_DebriefKillsTitleLine(yw, brf, in, tableWidth);
 
     FontUA::next_line(in);
 
-    yw_DebriefMPlayScore(yw, brf, in, v14);
+    yw_DebriefKillsScore(yw, brf, in, tableWidth);
 
     FontUA::next_line(in);
 
-    yw_DebriefRenderTime(yw, brf, in, v14);
+    yw_DebriefMPlayScore(yw, brf, in, tableWidth);
+
+    FontUA::next_line(in);
+
+    yw_DebriefRenderTime(yw, brf, in, tableWidth);
 }
 
-void yw_DebriefTechUpgradeLine(NC_STACK_ypaworld *yw, TBriefengScreen *brf, const World::History::Upgrade &upg, CmdStream *in, int a5)
+void yw_DebriefTechUpgradeLine(NC_STACK_ypaworld *yw, TBriefengScreen *brf, const World::History::Upgrade &upg, CmdStream *in, int lineWidth)
 {
     int lastWeapon = upg.lastWeapon;
     int lastVhcl   = upg.lastVhcl;
@@ -1847,20 +1847,20 @@ void yw_DebriefTechUpgradeLine(NC_STACK_ypaworld *yw, TBriefengScreen *brf, cons
     if ( lastWeapon && lastWeapon < (int32_t)yw->_weaponProtos.size() )
         wpn = &yw->_weaponProtos.at(lastWeapon);
 
-    std::string v13 = " ";
-    std::string v14 = " ";
-    std::string v33 = " ";
+    std::string typeText = " ";
+    std::string detailText = " ";
+    std::string nameText = " ";
 
     if ( vhcl )
     {
-        v33 = yw->GetVehicleName(*vhcl);
+        nameText = yw->GetVehicleName(*vhcl);
     }
     else if ( bld )
     {
         if ( yw->_gameWasNetGame )
-            v33 = yw->GetBuildingName(*bld, true);
+            nameText = yw->GetBuildingName(*bld, true);
         else
-            v33 = yw->GetBuildingName(*bld, false);
+            nameText = yw->GetBuildingName(*bld, false);
     }
 
     switch ( upg.upgradeType )
@@ -1870,12 +1870,12 @@ void yw_DebriefTechUpgradeLine(NC_STACK_ypaworld *yw, TBriefengScreen *brf, cons
         {
             if ( vhcl )
             {
-                v13 = Locale::Text::Advanced(Locale::ADV_WEAPONUPG);
+                typeText = Locale::Text::Advanced(Locale::ADV_WEAPONUPG);
 
                 if ( vhcl->num_weapons > 1 )
-                    v14 = fmt::sprintf("(%d x%d)", wpn->energy / 100, vhcl->num_weapons);
+                    detailText = fmt::sprintf("(%d x%d)", wpn->energy / 100, vhcl->num_weapons);
                 else
-                    v14 = fmt::sprintf("(%d)", wpn->energy / 100);
+                    detailText = fmt::sprintf("(%d)", wpn->energy / 100);
             }
         }
         break;
@@ -1883,30 +1883,30 @@ void yw_DebriefTechUpgradeLine(NC_STACK_ypaworld *yw, TBriefengScreen *brf, cons
     case World::UPGRADE_ARMOR:
         if ( vhcl )
         {
-            v13 = Locale::Text::Advanced(Locale::ADV_ARMORUPG);
+            typeText = Locale::Text::Advanced(Locale::ADV_ARMORUPG);
 
-            v14 = fmt::sprintf("(%d%%)", vhcl->shield);
+            detailText = fmt::sprintf("(%d%%)", vhcl->shield);
         }
         break;
 
     case World::UPGRADE_VEHICLE:
         if ( vhcl )
         {
-            v13 = Locale::Text::Advanced(Locale::ADV_NEWVEHICLE);
+            typeText = Locale::Text::Advanced(Locale::ADV_NEWVEHICLE);
         }
         break;
 
     case World::UPGRADE_BUILDING:
         if ( bld )
         {
-            v13 = Locale::Text::Advanced(Locale::ADV_NEWBUILDING);
+            typeText = Locale::Text::Advanced(Locale::ADV_NEWBUILDING);
         }
         break;
 
     case World::UPGRADE_RADARE:
         if ( vhcl )
         {
-            v13 = Locale::Text::Advanced(Locale::ADV_RADARUPG);
+            typeText = Locale::Text::Advanced(Locale::ADV_RADARUPG);
         }
         break;
 
@@ -1916,17 +1916,17 @@ void yw_DebriefTechUpgradeLine(NC_STACK_ypaworld *yw, TBriefengScreen *brf, cons
             if ( bld )
             {
                 if ( yw->_gameWasNetGame )
-                    v14 = yw->GetBuildingName(*bld, true);
+                    detailText = yw->GetBuildingName(*bld, true);
                 else
-                    v14 = yw->GetBuildingName(*bld, false);
+                    detailText = yw->GetBuildingName(*bld, false);
 
-                v13 = Locale::Text::Advanced(Locale::ADV_COMBINEDUPG);
+                typeText = Locale::Text::Advanced(Locale::ADV_COMBINEDUPG);
             }
         }
         break;
 
     case World::UPGRADE_GENERIC:
-        v13 = Locale::Text::Advanced(Locale::ADV_GENERICUPG);
+        typeText = Locale::Text::Advanced(Locale::ADV_GENERICUPG);
         break;
 
     default:
@@ -1935,12 +1935,12 @@ void yw_DebriefTechUpgradeLine(NC_STACK_ypaworld *yw, TBriefengScreen *brf, cons
 
     FontUA::ColumnItem elm[3];
 
-    elm[0].txt = v13;
+    elm[0].txt = typeText;
     elm[0].spaceChar = 32;
     elm[0].flags = 36;
     elm[0].prefixChar = 0;
     elm[0].postfixChar = 0;
-    elm[0].width = a5 * 0.48;
+    elm[0].width = lineWidth * 0.48;
     elm[0].fontID = 15;
 
     elm[1].flags = 36;
@@ -1948,16 +1948,16 @@ void yw_DebriefTechUpgradeLine(NC_STACK_ypaworld *yw, TBriefengScreen *brf, cons
     elm[1].spaceChar = 32;
     elm[1].prefixChar = 0;
     elm[1].postfixChar = 0;
-    elm[1].txt = v33;
-    elm[1].width = a5 * 0.3;
+    elm[1].txt = nameText;
+    elm[1].width = lineWidth * 0.3;
 
     elm[2].flags = 36;
     elm[2].fontID = 15;
     elm[2].spaceChar = 32;
     elm[2].prefixChar = 0;
     elm[2].postfixChar = 0;
-    elm[2].width = a5 * 0.22;
-    elm[2].txt = v14;
+    elm[2].width = lineWidth * 0.22;
+    elm[2].txt = detailText;
 
     FontUA::FormateColumnItem(yw, in, 3, elm);
 
@@ -1994,7 +1994,7 @@ void yw_DebriefRunDebrief(NC_STACK_ypaworld *yw, TInputState *struc, TBriefengSc
 
     GFX::Engine.ProcessDrawSeq(cmdbuf);
 
-    int v26 = 0;
+    int moreHistory = 0;
     
     
 
@@ -2025,7 +2025,7 @@ void yw_DebriefRunDebrief(NC_STACK_ypaworld *yw, TInputState *struc, TBriefengSc
 
                     if ( lastFrameTimeStamp >= dtime )
                     {
-                        v26 = 1;
+                        moreHistory = 1;
                         readLoop = false;
                     }
                 }
@@ -2076,7 +2076,7 @@ void yw_DebriefRunDebrief(NC_STACK_ypaworld *yw, TInputState *struc, TBriefengSc
             }
         }
 
-        if ( !v26 )
+        if ( !moreHistory )
         {
             brf->Stage = TBriefengScreen::STAGE_PLAYER_END;
             if ( yw->_gameWasNetGame )
@@ -2118,13 +2118,13 @@ void yw_debriefUpdate(NC_STACK_ypaworld *yw, TInputState *inpt)
     {
         if ( brf->BriefingMapImg )
         {
-            GFX::TBitmapBlitParams arg204;
-            arg204.pbitm = brf->BriefingMapImg->GetBitmap();
+            GFX::TBitmapBlitParams backgroundBlit;
+            backgroundBlit.pbitm = brf->BriefingMapImg->GetBitmap();
 
-            arg204.srcRect = Common::FRect(-1.0, -1.0, 1.0, 1.0);
-            arg204.dstRect = Common::FRect(-1.0, -1.0, 1.0, 1.0);
+            backgroundBlit.srcRect = Common::FRect(-1.0, -1.0, 1.0, 1.0);
+            backgroundBlit.dstRect = Common::FRect(-1.0, -1.0, 1.0, 1.0);
 
-            GFX::Engine.DrawClippedBitmapNormalized(&arg204);
+            GFX::Engine.DrawClippedBitmapNormalized(&backgroundBlit);
         }
 
         GFX::Engine.DrawClippedBitmapNormalized(&brf->MapBlitParams);

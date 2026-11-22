@@ -377,8 +377,8 @@ protected:
     void FFDOMissileFire(int state);
     void FFDOGrenadeFire(int state);
     void FFDOBombFire(int state);
-    void FFDOCollision(int state, float a2, float a3, float a4);
-    void FFDOShake(int state, float a2, float a3, float a4, float a5);
+    void FFDOCollision(int state, float force, float dirX, float dirY);
+    void FFDOShake(int state, float power, float duration, float dirX, float dirY);
     
 public:
     static INPEngine Instance;

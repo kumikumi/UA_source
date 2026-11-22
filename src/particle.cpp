@@ -564,20 +564,20 @@ size_t NC_STACK_particle::Emit(TObjectRenderParams *arg, InstanceOpts * uopts)
     
     if (opts->Time >= 0)
     {
-        vec3d v44 = arg->OwnerTForm->CalcSclRot.Transform( _magnifyStart + _magnifyDelta * opts->Age );
+        vec3d baseDir = arg->OwnerTForm->CalcSclRot.Transform( _magnifyStart + _magnifyDelta * opts->Age );
 
-        vec3d v45 = arg->OwnerTForm->TForm * ( arg->sklt->POO[_pointID] );
+        vec3d emitPos = arg->OwnerTForm->TForm * ( arg->sklt->POO[_pointID] );
 
         float timeDelta = 0.0;
         float delta = _genPause * 0.001;
         while ( opts->Time >= 0 )
         {
-            vec3d v12 = v44 + RandVec();
-            v12 *= (_startSpeed / v12.length());
+            vec3d velocity = baseDir + RandVec();
+            velocity *= (_startSpeed / velocity.length());
             
-            vec3d pos = v45 + v12 * timeDelta;
+            vec3d pos = emitPos + velocity * timeDelta;
             
-            ypaworld->ParticleSystem().AddParticle(this, pos, v12, opts->Time);
+            ypaworld->ParticleSystem().AddParticle(this, pos, velocity, opts->Time);
             
             timeDelta += delta;
             opts->Time -= _genPause;

@@ -125,23 +125,23 @@ int NC_STACK_area::LoadAreaParams(IFFile *mfile)
 
 int NC_STACK_area::LoadAreaBitmaps(IFFile *mfile)
 {
-    int v8 = _polflags & AREA_POL_FLAG_TEXUTRED;
+    int mapFlags = _polflags & AREA_POL_FLAG_TEXUTRED;
 
     if ( (_polflags & AREA_POL_FLAG_TRACYMAPPED) == AREA_POL_FLAG_TRACYMAPPED )
-        v8 |= AREA_POL_FLAG_TRACYMAPPED;
+        mapFlags |= AREA_POL_FLAG_TRACYMAPPED;
 
     NC_STACK_bitmap *objt = dynamic_cast<NC_STACK_bitmap *>( LoadObjectFromIFF(mfile) );
     if ( objt )
     {
-        if (v8 == AREA_POL_FLAG_TEXUTRED )
+        if (mapFlags == AREA_POL_FLAG_TEXUTRED )
         {
             setAREA_bitm(objt);
         }
-        else if ( v8 == AREA_POL_FLAG_TRACYMAPPED )
+        else if ( mapFlags == AREA_POL_FLAG_TRACYMAPPED )
         {
             setAREA_tracybitm(objt);
         }
-        else if ( v8 == (AREA_POL_FLAG_TRACYMAPPED | AREA_POL_FLAG_TEXUTRED) )
+        else if ( mapFlags == (AREA_POL_FLAG_TRACYMAPPED | AREA_POL_FLAG_TEXUTRED) )
         {
             if ( _texImg )
             {
@@ -538,13 +538,13 @@ int NC_STACK_area::getAREA_colorVal()
 
 int NC_STACK_area::getAREA_map()
 {
-    int v9 = _polflags & (AREA_POL_FLAG_MAPBIT1 | AREA_POL_FLAG_MAPBIT2);
+    int mapMode = _polflags & (AREA_POL_FLAG_MAPBIT1 | AREA_POL_FLAG_MAPBIT2);
 
-    if ( v9 == AREA_POL_FLAG_NONMAPPED )
+    if ( mapMode == AREA_POL_FLAG_NONMAPPED )
         return 0;
-    else if ( v9 == AREA_POL_FLAG_LINEARMAPPED )
+    else if ( mapMode == AREA_POL_FLAG_LINEARMAPPED )
         return 1;
-    else if ( v9 == AREA_POL_FLAG_DEPTHMAPPED )
+    else if ( mapMode == AREA_POL_FLAG_DEPTHMAPPED )
         return 2;
 
     return 0;
@@ -552,9 +552,9 @@ int NC_STACK_area::getAREA_map()
 
 int NC_STACK_area::getAREA_tex()
 {
-    int v6 = _polflags & AREA_POL_FLAG_TEXBIT;
+    int texMode = _polflags & AREA_POL_FLAG_TEXBIT;
 
-    if ( v6 == AREA_POL_FLAG_TEXUTRED )
+    if ( texMode == AREA_POL_FLAG_TEXUTRED )
         return 1;
 
     return 0;
@@ -562,41 +562,41 @@ int NC_STACK_area::getAREA_tex()
 
 int NC_STACK_area::getAREA_shade()
 {
-    int v4 = _polflags & (AREA_POL_FLAG_SHADEBIT1 | AREA_POL_FLAG_SHADEBIT2);
+    int shadeMode = _polflags & (AREA_POL_FLAG_SHADEBIT1 | AREA_POL_FLAG_SHADEBIT2);
 
-    if ( v4 == AREA_POL_FLAG_NOSHADE )
+    if ( shadeMode == AREA_POL_FLAG_NOSHADE )
         return 0;
-    else if ( v4 == AREA_POL_FLAG_FLATSHADE )
+    else if ( shadeMode == AREA_POL_FLAG_FLATSHADE )
         return 1;
-    else if ( v4 == AREA_POL_FLAG_LINESHADE )
+    else if ( shadeMode == AREA_POL_FLAG_LINESHADE )
         return 2;
-    else if ( v4 == AREA_POL_FLAG_GRADIENTSHADE )
+    else if ( shadeMode == AREA_POL_FLAG_GRADIENTSHADE )
         return 3;
     return 0;
 }
 
 int NC_STACK_area::getAREA_tracy()
 {
-    int v5 = _polflags & (AREA_POL_FLAG_TRACYBIT1 | AREA_POL_FLAG_TRACYBIT2);
+    int tracyMode = _polflags & (AREA_POL_FLAG_TRACYBIT1 | AREA_POL_FLAG_TRACYBIT2);
 
-    if ( v5 == AREA_POL_FLAG_NOTRACY )
+    if ( tracyMode == AREA_POL_FLAG_NOTRACY )
         return 0;
-    else if ( v5 == AREA_POL_FLAG_CLEARTRACY )
+    else if ( tracyMode == AREA_POL_FLAG_CLEARTRACY )
         return 1;
-    else if ( v5 == AREA_POL_FLAG_FLATTRACY )
+    else if ( tracyMode == AREA_POL_FLAG_FLATTRACY )
         return 2;
-    else if ( v5 == AREA_POL_FLAG_TRACYMAPPED )
+    else if ( tracyMode == AREA_POL_FLAG_TRACYMAPPED )
         return 3;
     return 0;
 }
 
 int NC_STACK_area::getAREA_tracymode()
 {
-    int v10 = _polflags & AREA_POL_FLAG_TRACYBIT3;
+    int tracyLight = _polflags & AREA_POL_FLAG_TRACYBIT3;
 
-    if ( v10 == AREA_POL_FLAG_DARK )
+    if ( tracyLight == AREA_POL_FLAG_DARK )
         return 0;
-    else if ( v10 == AREA_POL_FLAG_LIGHT )
+    else if ( tracyLight == AREA_POL_FLAG_LIGHT )
         return 1;
 
     return 0;
