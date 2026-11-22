@@ -306,7 +306,7 @@ int ProcessGameplayFrame(int32_t frameTicks, bool timeFrozen)
     return 1;
 }
 
-std::string sub_4107A0(uint32_t a1)
+std::string PickReplayFile(uint32_t a1)
 {
     if ( userdata.snaps.empty() )
         return std::string();
@@ -329,13 +329,13 @@ std::string sub_4107A0(uint32_t a1)
     return userdata.snaps[v2];
 }
 
-int sb_0x411324__sub2__sub0(base_64arg *arg)
+int RunReplay(base_64arg *arg)
 {
     if ( (userdata.p_YW->_replayPlayer->field_74 - 3) <= userdata.p_YW->_replayPlayer->frame_id  &&  dword_513630 )
     {
         ypaworld->ypaworld_func164();
 
-        if ( !ypaworld->ypaworld_func162( sub_4107A0(arg->TimeStamp) ) )
+        if ( !ypaworld->ypaworld_func162( PickReplayFile(arg->TimeStamp) ) )
         {
             GameScreenMode = GAME_SCREEN_MODE_MENU;
 
@@ -399,7 +399,7 @@ int sb_0x411324__sub2__sub0(base_64arg *arg)
 
 int ProcessReplayFrame()
 {
-    if ( !sb_0x411324__sub2__sub0(&world_update_arg) )
+    if ( !RunReplay(&world_update_arg) )
     {
         ypaworld->ypaworld_func164();
 
@@ -523,7 +523,7 @@ int ProcessMenuFrame()
     }
     else if ( userdata.envAction.action == EnvAction::ACTION_REPLAY )
     {
-        std::string repname = sub_4107A0(world_update_arg.TimeStamp);
+        std::string repname = PickReplayFile(world_update_arg.TimeStamp);
         if ( repname.empty() )
         {
             userdata.lastInputEvent = world_update_arg.TimeStamp;
@@ -683,7 +683,7 @@ void deinit_globl_engines()
     ypa_log_out("Nucleus shutdown:\n");
 }
 
-int WinMain__sub0__sub0()
+int InitEngines()
 {
     ypaworld = 0;
     GameScreenMode = GAME_SCREEN_MODE_UNKNOWN;
@@ -821,7 +821,7 @@ void ReadSnapsDir()
     }
 }
 
-void sub_4113E8()
+void ShutdownGame()
 {
     if ( ypaworld )
     {
@@ -843,7 +843,7 @@ void sub_4113E8()
     deinit_globl_engines();
 }
 
-int WinMain__sub0__sub1()
+int InitWorldAndShell()
 {
     buildDate = "Jul 09 1998  23:52:47";
 //    strcpy(buildDate, __DATE__);
@@ -936,16 +936,16 @@ void HandleMods()
     World::AllowMods(true);
 }
 
-int WinMain__sub0()
+int InitGame()
 {
-    if ( WinMain__sub0__sub0() )
+    if ( InitEngines() )
     {
         std::vector<std::string> &cmdl = System::GetCmdLineArray();
         int32_t i = System::FindCmdLineArg("-env");
         if (i >= 0 && i + 1 < (int32_t)cmdl.size())
             Common::Env.SetPrefix("env", cmdl[i + 1]);
 
-        if ( WinMain__sub0__sub1() )
+        if ( InitWorldAndShell() )
             return 1;
         deinit_globl_engines();
     }
@@ -978,7 +978,7 @@ int main(int argc, char *argv[])
     
     Gui::UA::Init();
 
-    if ( !WinMain__sub0() )
+    if ( !InitGame() )
         return 0;
 
     System::IniConf::ReadFromNucleusIni();
@@ -1075,7 +1075,7 @@ int main(int argc, char *argv[])
     
     ypaworld->DeleteNewGuiElements();
     
-    sub_4113E8();
+    ShutdownGame();
     Gui::UA::Deinit();
     
     System::Deinit();
