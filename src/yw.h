@@ -1933,7 +1933,7 @@ public:
     virtual void ypaworld_func163(base_64arg *arg);
     virtual void ypaworld_func164();
     virtual void ypaworld_func165(yw_arg165 *arg);
-    virtual size_t ypaworld_func166(const std::string &langname);
+    virtual size_t LoadLanguage(const std::string &langname);
     virtual void UpdateGameShell();
     virtual size_t ypaworld_func168(NC_STACK_ypabact *pbact);
     virtual size_t LoadGame(const std::string &saveFile);
@@ -2085,7 +2085,7 @@ public:
     bool InitBriefing(int lvlid);
     void FreeBriefing();
     void FreeBriefDataSet();
-    int ypaworld_func158__sub4__sub1__sub3__sub0();
+    int CreateBriefingTextList();
     void yw_ActivateWunderstein(cellArea *cell, int a3);
     void yw_InitTechUpgradeBuildings();
     

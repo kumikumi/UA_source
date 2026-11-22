@@ -175,7 +175,7 @@ size_t NC_STACK_ypaworld::Init(IDVList &stak)
     yw_setInitScriptLoc(this);
 
     Locale::Text::SetLangDefault();
-    ypaworld_func166("language"); // Load lang strings
+    LoadLanguage("language"); // Load lang strings
 
 //		if ( !make_CD_CHECK(1, 1, v10, v9) )
 //		{
@@ -4887,7 +4887,7 @@ bool NC_STACK_ypaworld::OpenGameShell()
 
     if ( _GameShell->default_lang_dll )
     {
-        if ( ! ypaworld_func166(*_GameShell->default_lang_dll) )
+        if ( ! LoadLanguage(*_GameShell->default_lang_dll) )
             ypa_log_out("Warning: Catalogue not found\n");
     }
     else
@@ -5780,7 +5780,7 @@ void NC_STACK_ypaworld::ypaworld_func165(yw_arg165 *arg)
     }
 }
 
-size_t NC_STACK_ypaworld::ypaworld_func166(const std::string &langname)
+size_t NC_STACK_ypaworld::LoadLanguage(const std::string &langname)
 {
     Locale::Text::SetLangDefault();
     
@@ -6526,7 +6526,7 @@ size_t NC_STACK_ypaworld::ReloadLanguage()
         v6 = 0;
     }
 
-    if ( !ypaworld_func166(*_GameShell->default_lang_dll) )
+    if ( !LoadLanguage(*_GameShell->default_lang_dll) )
         ypa_log_out("Warning: SETLANGUAGE failed\n");
 
     if ( v6 && !OpenGameShell() )

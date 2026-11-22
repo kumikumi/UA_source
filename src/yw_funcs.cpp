@@ -1514,7 +1514,7 @@ void NC_STACK_ypaworld::DrawMapRegions()
 }
 
 
-int NC_STACK_ypaworld::ypaworld_func158__sub4__sub1__sub3__sub0()
+int NC_STACK_ypaworld::CreateBriefingTextList()
 {
     int lft = _screenSize.x * 0.575;
     int rght = _screenSize.x * 0.9734375;
@@ -1557,7 +1557,7 @@ bool NC_STACK_ypaworld::InitBriefing(int lvlid)
 
     SFXEngine::SFXe.StopMusicTrack();
 
-    if ( !ypaworld_func158__sub4__sub1__sub3__sub0() )
+    if ( !CreateBriefingTextList() )
         return false;
 
     GFX::Engine.display_func271(NULL);
