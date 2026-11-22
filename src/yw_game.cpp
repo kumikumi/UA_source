@@ -1875,15 +1875,14 @@ void NC_STACK_ypaworld::RenderGame(TUpdateArgs *bs64, int drawGui)
 
     int span = _renderSectors - 1;
 
-    // TODO(bug): Clears only indices 0..span-1, but the loop below writes up to span
-    // and RenderFillers reads up to _renderSectors. After the view drops
-    // from 9 to 5 sectors, stale entries and their p_cell are still used.
-    for (int j = 0; j < span; j++)
+    // Clear the whole grid: RenderFillers reads one row and column past the
+    // visible sectors, and a smaller view would otherwise reuse old entries.
+    for (auto &row : rendering_sectors)
     {
-        for (int i = 0; i < span; i++)
+        for (TRenderingSector &sct : row)
         {
-            rendering_sectors[j][i].dword4 = 0;
-            rendering_sectors[j][i].dword8 = 0;
+            sct.dword4 = 0;
+            sct.dword8 = 0;
         }
     }
 

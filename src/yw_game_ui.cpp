@@ -5407,8 +5407,9 @@ void SquadManagerUpdateRows(NC_STACK_ypaworld *yw)
 
 bool NC_STACK_ypaworld::SquadManagerIsDragValid()
 {
-    // TODO(bug): No bounds check. If squads die during a drag, _cmdrsRemap
-    // shrinks and this reads past its end.
+    if ( squadron_manager.dragCmdrIdx < 0 || (size_t)squadron_manager.dragCmdrIdx >= _cmdrsRemap.size() )
+        return false;
+
     NC_STACK_ypabact *bct = _cmdrsRemap[squadron_manager.dragCmdrIdx];
     if ( !bct )
         return false;

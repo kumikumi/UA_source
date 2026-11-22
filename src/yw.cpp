@@ -1379,9 +1379,7 @@ size_t NC_STACK_ypaworld::IsNearViewer(NC_STACK_ypabact *bact)
 
 NC_STACK_ypabact * NC_STACK_ypaworld::CreateVehicle(TUnitSpawn *vhcl_id)
 {
-    // TODO(bug): Should be >=. vehicle_id NUM_VHCL_PROTO passes and indexes one past
-    // the end of _vhclProtos.
-    if ( vhcl_id->vehicle_id > NUM_VHCL_PROTO )
+    if ( vhcl_id->vehicle_id >= _vhclProtos.size() )
         return NULL;
 
     World::TVhclProto &vhcl = _vhclProtos[vhcl_id->vehicle_id];
@@ -1530,9 +1528,7 @@ NC_STACK_ypabact * NC_STACK_ypaworld::CreateVehicle(TUnitSpawn *vhcl_id)
 
 NC_STACK_ypamissile * NC_STACK_ypaworld::CreateWeapon(TUnitSpawn *arg)
 {
-    // TODO(bug): Should be >=. vehicle_id == size() passes, and .at() then throws
-    // instead of the function returning NULL.
-    if ( arg->vehicle_id > _weaponProtos.size() )
+    if ( arg->vehicle_id >= _weaponProtos.size() )
         return NULL;
 
     World::TWeapProto &wproto = _weaponProtos.at(arg->vehicle_id);

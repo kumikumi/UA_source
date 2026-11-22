@@ -1826,11 +1826,8 @@ void yw_DebriefTechUpgradeLine(NC_STACK_ypaworld *yw, TBriefengScreen *brf, cons
             return;
     }
 
-    if ( lastWeapon == 0 && lastVhcl != 0 )
+    if ( lastWeapon == 0 && lastVhcl != 0 && lastVhcl < (int32_t)yw->_vhclProtos.size() )
     {
-        // TODO(bug): Reads _vhclProtos[lastVhcl] before the bounds check below. lastVhcl
-        // comes from a uint16_t in the history data, so a bad value reads out
-        // of range.
         lastWeapon = yw->_vhclProtos[ lastVhcl ].weapon;
 
         if ( lastWeapon == -1 )
