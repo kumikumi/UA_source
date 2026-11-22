@@ -127,7 +127,7 @@ int yw_MBLoadSet(NC_STACK_ypaworld *yw, int setID)
         {
             if ( kid_id == 0 )
             {
-                if ( !sub_44A12C(yw, bs) )
+                if ( !SetupVehicleModels(yw, bs) )
                 {
                     delete fil;
                     return 0;
@@ -155,7 +155,7 @@ int yw_MBLoadSet(NC_STACK_ypaworld *yw, int setID)
             }
             else if ( kid_id == 2 )
             {
-                if ( !sub_44A97C(yw, bs) )
+                if ( !SetupFillerModels(yw, bs) )
                 {
                     delete fil;
                     return 0;
@@ -620,7 +620,7 @@ void BriefSelectObjectUnderCursor(NC_STACK_ypaworld *yw, TInputState *inpt, TBri
     }
 }
 
-void sub_4ED434(NC_STACK_ypaworld *yw, TBriefengScreen *brf)
+void FormatBriefingText(NC_STACK_ypaworld *yw, TBriefengScreen *brf)
 {
     stru_5C91D0.itemBlock.clear();
 
@@ -891,7 +891,7 @@ void UpdateBriefingScreen(NC_STACK_ypaworld *yw, UserData *usr, TInputState *inp
 
     if ( yw->_briefScreen.Stage == TBriefengScreen::STAGE_MOVIE )
     {
-        yw->sub_4491A0(yw->_briefScreen.MovieStr);
+        yw->PlayGameMovie(yw->_briefScreen.MovieStr);
         brf->Stage = TBriefengScreen::STAGE_LOADED;
     }
     else
@@ -1039,7 +1039,7 @@ void UpdateBriefingScreen(NC_STACK_ypaworld *yw, UserData *usr, TInputState *inp
         stru_5C91D0.InputHandle(yw, inpt);
         stru_5C91D0.Formate(yw);
 
-        sub_4ED434(yw, brf);
+        FormatBriefingText(yw, brf);
 
         BriefSelectObjectUnderCursor(yw, inpt, brf);
 
@@ -1076,7 +1076,7 @@ void UpdateBriefingScreen(NC_STACK_ypaworld *yw, UserData *usr, TInputState *inp
 // Debrif
 
 
-void sub_449310(Common::FRect *rect)
+void ClampRectToUnit(Common::FRect *rect)
 {
     if ( rect->left > 1.0 )
         rect->left = 1.0;
@@ -1144,13 +1144,13 @@ void DebriefStartMapScaling(NC_STACK_ypaworld *yw, TInputState *struc, TBriefeng
     brf->MapBlitStart.top = v11 - v19;
     brf->MapBlitStart.right = v20 + v12;
     brf->MapBlitStart.bottom = v11 + v19;
-    sub_449310(&brf->MapBlitStart);
+    ClampRectToUnit(&brf->MapBlitStart);
 
     brf->MapBlitEnd.left = -0.4515625 - v21 * 0.4828125;
     brf->MapBlitEnd.top = -0.325 - v22 * 0.6083333333333334;
     brf->MapBlitEnd.right = brf->MapBlitEnd.left + v21 * 0.965625;
     brf->MapBlitEnd.bottom = brf->MapBlitEnd.top + v22 * 1.216666666666667;
-    sub_449310(&brf->MapBlitEnd);
+    ClampRectToUnit(&brf->MapBlitEnd);
 
     brf->MapBlitParams.float4 = brf->MapBlitStart;
     brf->MapBlitParams.float14 = brf->MapBlitEnd;
@@ -1440,7 +1440,7 @@ void yw_DebriefKillsTitleLine(NC_STACK_ypaworld *yw, TBriefengScreen *brf, CmdSt
     FormateColumnItem(yw, in, 3, elms);
 }
 
-int sub_4EF2A8(const void *a1, const void *a2)
+int CompareDebriefStatusDesc(const void *a1, const void *a2)
 {
     return ((debrif_t1 *)a2)->status - ((debrif_t1 *)a1)->status;
 }
@@ -1461,7 +1461,7 @@ void yw_DebriefKillsScore(NC_STACK_ypaworld *yw, TBriefengScreen *brf, CmdStream
         }
     }
 
-    qsort(v28, a2, sizeof(debrif_t1), sub_4EF2A8);
+    qsort(v28, a2, sizeof(debrif_t1), CompareDebriefStatusDesc);
 
 
     for (int i = 0; i < a2; i++)
@@ -1582,7 +1582,7 @@ void yw_DebriefMPlayScore(NC_STACK_ypaworld *yw, TBriefengScreen *brf, CmdStream
             }
         }
 
-        qsort(v32, a2, sizeof(debrif_t1), sub_4EF2A8);
+        qsort(v32, a2, sizeof(debrif_t1), CompareDebriefStatusDesc);
 
         for (int i = 0; i < a2; i++)
         {

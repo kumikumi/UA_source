@@ -77,9 +77,9 @@ void log_netlog(const char *format, ...)
 }
 
 
-void sub_412038(const char *msg)
+void LogStartupError(const char *msg)
 {
-    ypa_log_out("sub_412038: %s", msg);
+    ypa_log_out("LogStartupError: %s", msg);
 }
 
 

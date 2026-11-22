@@ -719,7 +719,7 @@ void NC_STACK_ypaworld::RenderFrame(base_64arg *arg, float stepFraction)
     ProfileCalcValues();
 }
 
-void sub_47C1EC(NC_STACK_ypaworld *yw, TMapGem *gemProt, int *a3, int *a4)
+void GetNetGemProtoIds(NC_STACK_ypaworld *yw, TMapGem *gemProt, int *a3, int *a4)
 {
     switch ( yw->_GameShell->netPlayerOwner )
     {
@@ -750,12 +750,12 @@ void sub_47C1EC(NC_STACK_ypaworld *yw, TMapGem *gemProt, int *a3, int *a4)
     }
 }
 
-void sub_47C29C(NC_STACK_ypaworld *yw, cellArea *cell, int a3)
+void ActivateNetWunderstein(NC_STACK_ypaworld *yw, cellArea *cell, int a3)
 {
     TMapGem &gem = yw->_techUpgrades[a3];
 
     int a3a, a4;
-    sub_47C1EC(yw, &gem, &a3a, &a4);
+    GetNetGemProtoIds(yw, &gem, &a3a, &a4);
 
     yw->_upgradeId = a3;
     yw->_upgradeTimeStamp = yw->_timeStamp;
@@ -808,7 +808,7 @@ void ypaworld_func129__sub1(NC_STACK_ypaworld *yw, cellArea *cell, int a3)
     int a3a;
     int a4;
 
-    sub_47C1EC(yw, &gem, &a3a, &a4);
+    GetNetGemProtoIds(yw, &gem, &a3a, &a4);
 
     if ( a3a )
         yw->_vhclProtos[a3a].disable_enable_bitmask = 0;
@@ -1060,7 +1060,7 @@ void NC_STACK_ypaworld::ypaworld_func129(yw_arg129 *arg)
                 if ( _userRobo && _userRobo->_owner == cell.owner )
                 {
                     if ( _isNetGame )
-                        sub_47C29C(this, &cell, cell.PurposeIndex);
+                        ActivateNetWunderstein(this, &cell, cell.PurposeIndex);
                     else
                         yw_ActivateWunderstein(&cell, cell.PurposeIndex);                  
 
@@ -2080,7 +2080,7 @@ void NC_STACK_ypaworld::DeleteLevel()
 
     ProtosFreeSounds();
 
-    sb_0x44ac24(this);
+    FreeSetData(this);
 
     _powerStations.clear();
     _energyAccumMap.Clear();
@@ -2105,7 +2105,7 @@ void NC_STACK_ypaworld::ypaworld_func153(bact_hudi *arg)
     _guiVisor = *arg;
 }
 
-void UserData::sub_46D2B4()
+void UserData::ReloadAllInputs()
 {
     int v10 = inpListActiveElement;
 
@@ -2211,7 +2211,7 @@ bool NC_STACK_ypaworld::InitGameShell(UserData *usr)
     usr->InputConfig[World::INPUT_BIND_SET_COMM]    = UserData::TInputConf(World::INPUT_BIND_TYPE_HOTKEY, 45, Input::KC_NONE);
     usr->InputConfig[World::INPUT_BIND_ANALYZER]    = UserData::TInputConf(World::INPUT_BIND_TYPE_HOTKEY, 46, Input::KC_NONE);
 
-    usr->sub_46D2B4();
+    usr->ReloadAllInputs();
 
     windp_arg87 v67;
 
@@ -2314,7 +2314,7 @@ void TMapRegionsNet::UnloadImages()
 }
 
 
-void sb_0x4e75e8__sub1(NC_STACK_ypaworld *yw, int mode)
+void LoadGameShellBkgImages(NC_STACK_ypaworld *yw, int mode)
 {
     int v37 = 1;
 
@@ -2476,7 +2476,7 @@ void sb_0x4e75e8__sub1(NC_STACK_ypaworld *yw, int mode)
     }
 }
 
-void sb_0x4e75e8__sub0(NC_STACK_ypaworld *yw)
+void CalcMapRegionRects(NC_STACK_ypaworld *yw)
 {
     std::array<Common::Rect, 256> regions;
 
@@ -2536,14 +2536,14 @@ void sb_0x4e75e8__sub0(NC_STACK_ypaworld *yw)
 
 void NC_STACK_ypaworld::GameShellInitBkgMode(int mode)
 {
-    sb_0x4e75e8__sub1(this, mode);
+    LoadGameShellBkgImages(this, mode);
     if ( mode == ENVMODE_TUTORIAL || mode == ENVMODE_SINGLEPLAY )
     {
         _firstContactFaction = 0;
         _briefScreen.Stage = TBriefengScreen::STAGE_NONE;
         _globalMapRegions.SelectedRegion = 0;
 
-        sb_0x4e75e8__sub0(this);
+        CalcMapRegionRects(this);
 
         _tipOfDayId = loadTOD(this, "tod.def");
 
@@ -5069,7 +5069,7 @@ void NC_STACK_ypaworld::CloseGameShell()
             }
         }
 
-        sb_0x44ac24(this);
+        FreeSetData(this);
 
         _GameShell->HasInited = false;
     }
@@ -5380,7 +5380,7 @@ void draw_tooltip(NC_STACK_ypaworld *yw)
 }
 
 //Make screenshot
-void sub_4476AC(NC_STACK_ypaworld *yw)
+void TakeScreenshot(NC_STACK_ypaworld *yw)
 {
     GFX::Engine.SaveScreenshot(fmt::sprintf("env:snaps/f_%04d", yw->_screenShotCount));
     
@@ -5443,8 +5443,8 @@ void NC_STACK_ypaworld::ProcessGameShell()
     GFX::Engine.EndFrame();
 
     
-    if ( sub_449678(_GameShell->Input, Input::KC_NUMMUL) )
-        sub_4476AC(this);
+    if ( IsCheatKeyHit(_GameShell->Input, Input::KC_NUMMUL) )
+        TakeScreenshot(this);
 
     if ( _GameShell->netSelMode == UserData::NETSCREEN_INSESSION )
     {
@@ -6669,7 +6669,7 @@ void NC_STACK_ypaworld::ypaworld_func177(yw_arg177 *arg)
             {
 
                 if ( _isNetGame )
-                    sub_47C29C(this, &v15, v15.PurposeIndex);
+                    ActivateNetWunderstein(this, &v15, v15.PurposeIndex);
                 else
                     yw_ActivateWunderstein(&v15, v15.PurposeIndex);
                 

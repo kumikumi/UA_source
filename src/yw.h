@@ -754,8 +754,8 @@ public:
 public:
     void clear();
 
-    void sb_0x46ca74();
-    void sb_0x46cdf8();
+    void SaveProfile();
+    void CreateNewProfile();
     void ApplyOptions();
     void ShowSaveLoadMenu();
     void ShowInputSettings();
@@ -764,9 +764,9 @@ public:
     void InputPageCancel();
     void InputConfCancel();
     void CancelOptions();
-    void sub_46C914();
-    void sub_46C748();
-    void sub_46B0E0();
+    void LoadProfile();
+    void DeleteProfile();
+    void ApplySelectedLanguage();
     void ExitFromLanguageMenu();
 
     void GameShellUiHandleInput();
@@ -782,14 +782,14 @@ public:
     void ypaworld_func151__sub7();
     void yw_FractionInit();
     void yw_netcleanup();
-    void sub_46DC1C();
-    void sub_46D960();
+    void StartNetGame();
+    void HideConfirmDialog();
     void ShowOptionsMenu();
     void GameShellUiOpenNetwork();
     int IsSaveGameOutdated();
     void ShowConfirmDialog(int a2, const std::string &txt1, const std::string &txt2, int a5);
     void ShowMenuMsgBox(int code, const std::string &txt1, const std::string &txt2, bool OkOnly);
-    void sub_46D2B4();
+    void ReloadAllInputs();
     void InputConfCopyToBackup();
     void InputConfigRestoreDefault();
     void  UpdateSelected3DDevFromList();
@@ -2086,14 +2086,14 @@ public:
 
 
 //protected:
-    void sub_4491A0(const std::string &movie_fname);
+    void PlayGameMovie(const std::string &movie_fname);
     bool LoadProtosScript(const std::string &filename);
-    bool sb_0x4e1a88__sub0__sub0(TLevelDescription *mapp, const std::string &fname);
+    bool ParseLevelHeader(TLevelDescription *mapp, const std::string &fname);
     void UpdateCampaignScreen();
     bool InitDebrief();
     void FreeDebrief();
     int ParseDebriefLevelDesc(TLevelDescription *mapproto, const std::string &filename);
-    int sub_4DA41C(TLevelDescription *mapp, const std::string &fname);
+    int ParseLevelDescription(TLevelDescription *mapp, const std::string &fname);
     bool InitBriefing(int lvlid);
     void FreeBriefing();
     void FreeBriefDataSet();
@@ -2114,8 +2114,8 @@ public:
     void listSaveDir(const std::string &saveDir);
     bool InitMapRegionsNet();
     int yw_ParseWorldIni(const std::string &filename);
-    bool sb_0x4e1a88__sub0(const std::string &fname, bool multiplayer);
-    int sb_0x4e1a88(bool multiplayer);
+    bool ScanLevelFile(const std::string &fname, bool multiplayer);
+    int ScanLevelDir(bool multiplayer);
     int yw_ScanLevels();
     int yw_RestoreVehicleData();
     void EnableLevelPasses();
@@ -2194,7 +2194,7 @@ public:
     void HistoryAktKill(NC_STACK_ypabact *bact);
     
     
-    int sub_449678(TInputState *struc, int kkode);
+    int IsCheatKeyHit(TInputState *struc, int kkode);
     
     bool yw_write_units(FSMgr::FileHandle *fil);
     bool yw_write_robo(NC_STACK_yparobo *robo, FSMgr::FileHandle *fil);

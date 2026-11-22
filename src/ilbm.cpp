@@ -131,7 +131,7 @@ size_t NC_STACK_ilbm::SavingIntoIFF(IFFile **pmfile)
     return 0;
 }
 
-void ILBM_BODY_READ__sub0(BMHD_type *bmhd, const std::vector<int8_t> &ilbm_data, ResBitmap *img)
+void DecodeIlbmBody(BMHD_type *bmhd, const std::vector<int8_t> &ilbm_data, ResBitmap *img)
 {
     uint8_t masks[8] = {1, 2, 4, 8, 16, 32, 64, 128};
 
@@ -225,7 +225,7 @@ int ILBM_BODY_READ(IFFile *mfile, BMHD_type *bmhd, ResBitmap *bitm)
 
     mfile->read(buffer.data(), chunk.TAG_SIZE);
 
-    ILBM_BODY_READ__sub0(bmhd, buffer, bitm);
+    DecodeIlbmBody(bmhd, buffer, bitm);
 
     return true;
 }

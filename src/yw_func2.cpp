@@ -31,7 +31,7 @@ extern int buttonsSpace;
 extern int dword_5A50B6;
 extern int dword_5A50B6_h;
 
-void sb_0x4eb94c__sub0(NC_STACK_ypaworld *yw, bool clockwise, int a3, vec3d *pos, baseRender_msg *arg)
+void RenderBriefingVehicle(NC_STACK_ypaworld *yw, bool clockwise, int a3, vec3d *pos, baseRender_msg *arg)
 {
     //brf_obj *brobj = &yw->brief.brf_objs + obj_id; // Only one object
 
@@ -63,7 +63,7 @@ void sb_0x4eb94c__sub0(NC_STACK_ypaworld *yw, bool clockwise, int a3, vec3d *pos
     model_base->Render(arg, yw->_briefScreen.ViewingObject.VP); //Draw vehicle
 }
 
-void sb_0x4eb94c__sub1(NC_STACK_ypaworld *yw, bool clockwise, int rot, vec3d *pos, baseRender_msg *arg)
+void RenderBriefingSector(NC_STACK_ypaworld *yw, bool clockwise, int rot, vec3d *pos, baseRender_msg *arg)
 {
     TSectorDesc *scType = &yw->_secTypeArray[yw->_briefScreen.ViewingObject.ID];
 
@@ -124,7 +124,7 @@ void sb_0x4eb94c__sub1(NC_STACK_ypaworld *yw, bool clockwise, int rot, vec3d *po
     }
 }
 
-void sb_0x4eb94c(NC_STACK_ypaworld *yw, TBriefengScreen *brf, TInputState *struc, int a5)
+void RenderBriefingObject(NC_STACK_ypaworld *yw, TBriefengScreen *brf, TInputState *struc, int a5)
 {
     brf->ObjRenderParams.frameTime = struc->Period;
     brf->ObjRenderParams.globTime = brf->CurrTime;
@@ -178,11 +178,11 @@ void sb_0x4eb94c(NC_STACK_ypaworld *yw, TBriefengScreen *brf, TInputState *struc
 
         if ( brf->ViewingObject.ObjType == TBriefObject::TYPE_SECTOR )
         {
-            sb_0x4eb94c__sub1(yw, true, rot, &pos, &brf->ObjRenderParams);
+            RenderBriefingSector(yw, true, rot, &pos, &brf->ObjRenderParams);
         }
         else if ( brf->ViewingObject.ObjType == TBriefObject::TYPE_VEHICLE )
         {
-            sb_0x4eb94c__sub0(yw, true, rot, &pos, &brf->ObjRenderParams);
+            RenderBriefingVehicle(yw, true, rot, &pos, &brf->ObjRenderParams);
         }
     }
 }
@@ -203,7 +203,7 @@ void ypaworld_func158__DrawVehicle(NC_STACK_ypaworld *yw, TBriefengScreen *brf, 
     {
         int v7 = brf->CurrTime - brf->ViewingObjectStartTime;
         if ( v7 > 50 )
-            sb_0x4eb94c(yw, brf, struc, v7 - 50);
+            RenderBriefingObject(yw, brf, struc, v7 - 50);
     }
     
     GFX::Engine.Rasterize();
@@ -655,7 +655,7 @@ void UserData::GameShellUiOpenNetwork()
 
 
 
-void sb_0x46ca74__sub0(const std::string &a1, const std::string &a2)
+void CopyTextFile(const std::string &a1, const std::string &a2)
 {
     FSMgr::FileHandle *f1 = uaOpenFileAlloc(a1, "r");
     if ( f1 )
@@ -676,14 +676,14 @@ void sb_0x46ca74__sub0(const std::string &a1, const std::string &a2)
     }
 }
 
-void  UserData::sb_0x46ca74()
+void  UserData::SaveProfile()
 {
     std::string oldsave;
 
     if ( diskListActiveElement )
     {
         if ( StriCmp(userNameDir, UserName) )
-            sub_46D0F8(fmt::sprintf("save:%s", userNameDir));
+            DeleteDirContents(fmt::sprintf("save:%s", userNameDir));
     }
     else
     {
@@ -729,7 +729,7 @@ void  UserData::sb_0x46ca74()
                 {
                     std::string v11 = fmt::sprintf("%s/%s", oldsave, tmp);
                     std::string v12 = fmt::sprintf("save:%s/%s", userNameDir, tmp);
-                    sb_0x46ca74__sub0(v11.c_str(), v12.c_str());
+                    CopyTextFile(v11.c_str(), v12.c_str());
                 }
             }
         }
@@ -756,7 +756,7 @@ void  UserData::sb_0x46ca74()
     }
 }
 
-void sb_0x47f810(NC_STACK_ypaworld *yw)
+void ClearProtos(NC_STACK_ypaworld *yw)
 {
     yw->_roboProtos.clear();
     yw->_buildProtos.clear();
@@ -766,7 +766,7 @@ void sb_0x47f810(NC_STACK_ypaworld *yw)
     yw->_vhclProtos.clear();
 }
 
-void sub_44A1FC(NC_STACK_ypaworld *yw)
+void LoadEnabledLevels(NC_STACK_ypaworld *yw)
 {
     int v2 = 0;
 
@@ -804,14 +804,14 @@ void sub_44A1FC(NC_STACK_ypaworld *yw)
     }
 }
 
-void UserData::sb_0x46cdf8()
+void UserData::CreateNewProfile()
 {
     if ( ! p_YW->SaveSettings(this, fmt::sprintf("%s/user.txt", UserName), World::SDF_ALL) )
         ypa_log_out("Warning! Error while saving user data for %s\n", UserName.c_str());
 
     if ( diskListActiveElement )
     {
-        sub_46D0F8(fmt::sprintf("save:%s", userNameDir));
+        DeleteDirContents(fmt::sprintf("save:%s", userNameDir));
     }
     else
     {
@@ -835,7 +835,7 @@ void UserData::sb_0x46cdf8()
 
     p_YW->_levelInfo.Buddies.clear();
 
-    sb_0x47f810(p_YW);
+    ClearProtos(p_YW);
     
     Common::DeleteAndNull(&p_YW->_script);
 
@@ -847,7 +847,7 @@ void UserData::sb_0x46cdf8()
                 mp.Status = TMapRegionInfo::STATUS_DISABLED;
         }
 
-        sub_44A1FC(p_YW);
+        LoadEnabledLevels(p_YW);
 
         p_YW->_maxRoboEnergy = 0;
         p_YW->_maxReloadConst = 0;
@@ -876,7 +876,7 @@ void UserData::sb_0x46cdf8()
     }
 }
 
-void UserData::sub_46D960()
+void UserData::HideConfirmDialog()
 {
     NC_STACK_button::button_66arg v4;
     v4.butID = 1300;
@@ -1101,7 +1101,7 @@ void UserData::ApplyOptions()
 }
 
 
-void UserData::sub_46DC1C()
+void UserData::StartNetGame()
 {
     uamessage_load lvlMsg;
     lvlMsg.msgID = UAMSG_LOAD;
@@ -1492,7 +1492,7 @@ void UserData::ShowInputSettings()
     p_YW->GuiWinOpen( &input_listview );
 }
 
-void sub_4D9550(NC_STACK_ypaworld *yw, int arg)
+void PlayChatVoiceSample(NC_STACK_ypaworld *yw, int arg)
 {
     UserData *usr = yw->_GameShell;
 
@@ -1531,7 +1531,7 @@ void sub_4D9550(NC_STACK_ypaworld *yw, int arg)
     Common::Env.SetPrefix("rsrc", oldRsrc);
 }
 
-void sub_4D0C24(NC_STACK_ypaworld *yw, const std::string &a1, const std::string &a2)
+void AddChatMessage(NC_STACK_ypaworld *yw, const std::string &a1, const std::string &a2)
 {
     UserData *usr = yw->_GameShell;
 
@@ -1608,7 +1608,7 @@ void UserData::ShowLanguageMenu()
     local_listvw.selectedEntry = i;
 }
 
-void sub_4EDCD8(NC_STACK_ypaworld *yw)
+void CancelBriefing(NC_STACK_ypaworld *yw)
 {
     yw->_briefScreen.Stage = TBriefengScreen::STAGE_CANCEL;
 }
@@ -1866,7 +1866,7 @@ void  UserData::UpdateSelected3DDevFromList()
     video_button->SetText(1172, name);
 }
 
-void UserData::sub_46C914()
+void UserData::LoadProfile()
 {
     if ( diskListActiveElement )
     {
@@ -1897,7 +1897,7 @@ printf("%s, %d\n",__FILE__, __LINE__);
     }
 }
 
-void sub_46D0F8(const std::string &path)
+void DeleteDirContents(const std::string &path)
 {
     FSMgr::DirIter dir = uaOpenDir(path);
     if ( dir )
@@ -1912,7 +1912,7 @@ void sub_46D0F8(const std::string &path)
     }
 }
 
-void UserData::sub_46C748()
+void UserData::DeleteProfile()
 {
     if ( diskListActiveElement )
     {
@@ -1938,7 +1938,7 @@ void UserData::sub_46C748()
 
             std::string a1 = fmt::sprintf("save:%s", it->name);
 
-            sub_46D0F8(a1);
+            DeleteDirContents(a1);
 
             uaDeleteDir(a1);
 
@@ -1983,7 +1983,7 @@ void UserData::sub_46C748()
     }
 }
 
-void UserData::sub_46B0E0()
+void UserData::ApplySelectedLanguage()
 {
     Engine::StringList::iterator lang = std::next(lang_dlls.begin(), local_listvw.selectedEntry);
 
@@ -2023,7 +2023,7 @@ void UserData::ExitFromLanguageMenu()
 }
 
 
-int NC_STACK_ypaworld::sub_449678(TInputState *struc, int kkode)
+int NC_STACK_ypaworld::IsCheatKeyHit(TInputState *struc, int kkode)
 {
     return struc->KbdLastHit == kkode && ( (struc->ClickInf.flag & TClickBoxInf::FLAG_RM_HOLD) || _easyCheatKeys );
 }
@@ -2278,28 +2278,28 @@ void UserData::GameShellUiHandleInput()
             break;
 
             case 2:
-                sub_46DC1C();
+                StartNetGame();
                 break;
             case 3:
-                sb_0x46ca74();
+                SaveProfile();
                 break;
             case 4:
-                sub_46D960();
+                HideConfirmDialog();
                 break;
             case 6:
-                sb_0x46cdf8();
+                CreateNewProfile();
                 break;
             default:
                 break;
             }
-            sub_46D960();
+            HideConfirmDialog();
         }
         else if ( r.code == 1351 ) // Cancel
         {
             if ( confirmMode == 3 || confirmMode == 6 )
                 diskScreenMode = 0;
 
-            sub_46D960();
+            HideConfirmDialog();
         }
     }
 
@@ -2309,7 +2309,7 @@ void UserData::GameShellUiHandleInput()
         {
             if ( confirmMode == 3 || confirmMode == 6 )
                 diskScreenMode = 0;
-            sub_46D960();
+            HideConfirmDialog();
         }
         if ( Input->KbdLastHit == Input::KC_RETURN )
         {
@@ -2326,21 +2326,21 @@ void UserData::GameShellUiHandleInput()
             }
             break;
             case 2:
-                sub_46DC1C();
+                StartNetGame();
                 break;
             case 3:
-                sb_0x46ca74();
+                SaveProfile();
                 break;
             case 4:
-                sub_46D960();
+                HideConfirmDialog();
                 break;
             case 6:
-                sb_0x46cdf8();
+                CreateNewProfile();
                 break;
             default:
                 break;
             }
-            sub_46D960();
+            HideConfirmDialog();
         }
     }
 
@@ -2409,7 +2409,7 @@ void UserData::GameShellUiHandleInput()
     {
         if ( p_YW->_levelInfo.State != TLevelInfo::STATE_MENU )
         {
-            sub_4EDCD8(p_YW);
+            CancelBriefing(p_YW);
             if ( p_YW->_preferences & World::PREF_CDMUSICDISABLE )
             {
                 SFXEngine::SFXe.StopMusicTrack();
@@ -2443,7 +2443,7 @@ void UserData::GameShellUiHandleInput()
         case 1013:
             if ( p_YW->_levelInfo.State != TLevelInfo::STATE_MENU )
             {
-                sub_4EDCD8(p_YW);
+                CancelBriefing(p_YW);
                 if ( p_YW->_preferences & World::PREF_CDMUSICDISABLE )
                 {
                     SFXEngine::SFXe.StopMusicTrack();
@@ -2625,7 +2625,7 @@ void UserData::GameShellUiHandleInput()
             }
 
             inputChangedParts = 0;
-            sub_46D2B4();
+            ReloadAllInputs();
             InputConfCopyToBackup();
 
             button_input_button->HideScreen();
@@ -2913,12 +2913,12 @@ void UserData::GameShellUiHandleInput()
                         }
                         else if (userNameDir.size() > 0)
                         {
-                            sb_0x46ca74();
+                            SaveProfile();
                         }
                         break;
 
                     case 2:
-                        sub_46C914();
+                        LoadProfile();
                         break;
 
                     case 3:
@@ -2929,12 +2929,12 @@ void UserData::GameShellUiHandleInput()
                         }
                         else if (userNameDir.size() > 0)
                         {
-                            sb_0x46cdf8();
+                            CreateNewProfile();
                         }
                         break;
 
                     case 4:
-                        sub_46C748();
+                        DeleteProfile();
                         break;
 
                     default:
@@ -3087,11 +3087,11 @@ void UserData::GameShellUiHandleInput()
                 }
                 else
                 {
-                    sb_0x46ca74();
+                    SaveProfile();
                 }
                 break;
             case 2:
-                sub_46C914();
+                LoadProfile();
                 break;
             case 3:
                 if ( diskListActiveElement )
@@ -3101,11 +3101,11 @@ void UserData::GameShellUiHandleInput()
                 }
                 else
                 {
-                    sb_0x46cdf8();
+                    CreateNewProfile();
                 }
                 break;
             case 4:
-                sub_46C748();
+                DeleteProfile();
                 break;
             default:
                 break;
@@ -3248,7 +3248,7 @@ void UserData::GameShellUiHandleInput()
         {
                         printf("Line = %d\n", __LINE__);
 
-            sub_46B0E0();
+            ApplySelectedLanguage();
         }
         else if ( Input->KbdLastHit == Input::KC_ESCAPE )
         {
@@ -3277,7 +3277,7 @@ void UserData::GameShellUiHandleInput()
         }
         else if ( r.code == 1300 )
         {
-            sub_46B0E0();
+            ApplySelectedLanguage();
         }
         else if ( r.code == 1301 )
         {
@@ -3336,7 +3336,7 @@ void UserData::GameShellUiHandleInput()
             switch ( aboutDlgKeyCount )
             {
             case 0:
-                if ( p_YW->sub_449678(Input, Input::KC_A) ) // VK_A
+                if ( p_YW->IsCheatKeyHit(Input, Input::KC_A) ) // VK_A
                 {
                     aboutDlgLastKeyTime = GlobalTime;
                     aboutDlgKeyCount++;
@@ -3349,7 +3349,7 @@ void UserData::GameShellUiHandleInput()
                 break;
 
             case 1:
-                if ( p_YW->sub_449678(Input, Input::KC_M) )
+                if ( p_YW->IsCheatKeyHit(Input, Input::KC_M) )
                 {
                     aboutDlgLastKeyTime = GlobalTime;
                     aboutDlgKeyCount++;
@@ -3362,7 +3362,7 @@ void UserData::GameShellUiHandleInput()
                 break;
 
             case 2:
-                if ( p_YW->sub_449678(Input, Input::KC_O) )
+                if ( p_YW->IsCheatKeyHit(Input, Input::KC_O) )
                 {
                     aboutDlgLastKeyTime = GlobalTime;
                     aboutDlgKeyCount++;
@@ -3375,7 +3375,7 @@ void UserData::GameShellUiHandleInput()
                 break;
 
             case 3:
-                if ( p_YW->sub_449678(Input, Input::KC_K) )
+                if ( p_YW->IsCheatKeyHit(Input, Input::KC_K) )
                 {
                     ShowAbout();
                     SFXEngine::SFXe.startSound(&samples1_info, World::SOUND_ID_SECRET);
@@ -3623,7 +3623,7 @@ void UserData::GameShellUiHandleInput()
                     }
                     else
                     {
-                        sub_46DC1C();
+                        StartNetGame();
                     }
                 }
             }
@@ -3710,14 +3710,14 @@ void UserData::GameShellUiHandleInput()
 
                     p_YW->NetBroadcastMessage(&msgMsg, sizeof(msgMsg), true);
 
-                    sub_4D0C24(p_YW, netPlayerName, msgMsg.message);
+                    AddChatMessage(p_YW, netPlayerName, msgMsg.message);
 
                     netName = "";
                     netNameCurPos = 0;
 
                     int v223 = strtol(msgMsg.message, NULL, 0);
                     if ( v223 > 0 )
-                        sub_4D9550(p_YW, v223);
+                        PlayChatVoiceSample(p_YW, v223);
                 }
             }
             else if ( r.code == 1250 )
@@ -3915,13 +3915,13 @@ void UserData::GameShellUiHandleInput()
 
                         p_YW->NetBroadcastMessage(&msgMsg, sizeof(msgMsg), true);
 
-                        sub_4D0C24(p_YW, netPlayerName, msgMsg.message);
+                        AddChatMessage(p_YW, netPlayerName, msgMsg.message);
                         netName.clear();
                         netNameCurPos = 0;
 
                         int v271 = strtol(msgMsg.message, NULL, 0);
                         if ( v271 > 0 )
-                            sub_4D9550(p_YW, v271);
+                            PlayChatVoiceSample(p_YW, v271);
                     }
                     break;
                 default:

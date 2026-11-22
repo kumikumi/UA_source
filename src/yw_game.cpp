@@ -260,7 +260,7 @@ int NC_STACK_ypaworld::LevelCommonLoader(TLevelDescription *mapp, int levelID, i
 
     Common::Env.SetPrefix("rsrc", "data:");
 
-    if ( sub_4DA41C(mapp, _globalMapRegions.MapRegions[_levelInfo.LevelID].MapDirectory) && mapp->IsOk() )
+    if ( ParseLevelDescription(mapp, _globalMapRegions.MapRegions[_levelInfo.LevelID].MapDirectory) && mapp->IsOk() )
     {       
         Common::DeleteAndNull(&_script);
         
@@ -3617,7 +3617,7 @@ void HandleSnapshotKeys(NC_STACK_ypaworld *yw, TInputState *inpt)
 {
     if ( inpt->KbdLastHit == Input::KC_NUMMUL && (inpt->ClickInf.flag & TClickBoxInf::FLAG_RM_HOLD || yw->_easyCheatKeys) )
     {
-        sub_4476AC(yw);
+        TakeScreenshot(yw);
 
         yw_arg159 info_msg;
         info_msg.txt = "Screenshot saved.";
@@ -4678,7 +4678,7 @@ void NC_STACK_ypaworld::debug_info_draw(TInputState *inpt)
 {
     if ( _showDebugMode == 0)
     {
-        if ( sub_449678(inpt, Input::KC_F9) )
+        if ( IsCheatKeyHit(inpt, Input::KC_F9) )
             _showDebugMode++;
     }
     else
@@ -5132,7 +5132,7 @@ void NC_STACK_ypaworld::debug_info_draw(TInputState *inpt)
         }
         else
         {
-            if ( sub_449678(inpt, Input::KC_F9) )
+            if ( IsCheatKeyHit(inpt, Input::KC_F9) )
                 _showDebugMode++;
         }
     }

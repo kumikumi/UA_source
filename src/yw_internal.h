@@ -27,7 +27,7 @@ int yw_InitNetwork(NC_STACK_ypaworld *yw);
 int loadTOD(NC_STACK_ypaworld *yw, const char *fname);
 int writeTOD(NC_STACK_ypaworld *yw, const char *fname, int tod);
 
-void sb_0x4eb94c(NC_STACK_ypaworld *yw, TBriefengScreen *brf, TInputState *struc, int a5);
+void RenderBriefingObject(NC_STACK_ypaworld *yw, TBriefengScreen *brf, TInputState *struc, int a5);
 void ypaworld_func158__DrawVehicle(NC_STACK_ypaworld *yw, TBriefengScreen *brf, TInputState *struc);
 
 void set_keys_vals(NC_STACK_ypaworld *yw);
@@ -57,17 +57,17 @@ void UpdateBriefingScreen(NC_STACK_ypaworld *yw, UserData *usr, TInputState *inp
 
 NC_STACK_base *load_set_base();
 
-int sub_44A12C(NC_STACK_ypaworld *yw, NC_STACK_base *base);
+int SetupVehicleModels(NC_STACK_ypaworld *yw, NC_STACK_base *base);
 int yw_parse_lego(NC_STACK_ypaworld *yw, FSMgr::FileHandle *fil, NC_STACK_base *base);
 int yw_parse_subSect(NC_STACK_ypaworld *yw, FSMgr::FileHandle *fil);
 int yw_parse_sektor(NC_STACK_ypaworld *yw, FSMgr::FileHandle *fil);
-int sub_44A97C(NC_STACK_ypaworld *yw, NC_STACK_base *base);
+int SetupFillerModels(NC_STACK_ypaworld *yw, NC_STACK_base *base);
 
 NC_STACK_bitmap * sub_44816C(NC_STACK_bitmap *src, const char *name);
 
 void DrawGameShellControls(NC_STACK_ypaworld *yw, UserData *usr);
 
-void sub_46D0F8(const std::string &path);
+void DeleteDirContents(const std::string &path);
 
 
 
@@ -84,7 +84,7 @@ int yw_write_buddies(FSMgr::FileHandle *fil, NC_STACK_ypaworld *yw);
 int yw_write_shell(FSMgr::FileHandle *fil, UserData *usr);
 int yw_write_item_modifers(NC_STACK_ypaworld *yw, FSMgr::FileHandle *fil);
 
-void sb_0x44ac24(NC_STACK_ypaworld *yw);
+void FreeSetData(NC_STACK_ypaworld *yw);
 
 
 
@@ -345,7 +345,7 @@ void yw_RenderVector2D(NC_STACK_ypaworld *yw, UAskeleton::Data *wire, float a3, 
 void yw_debriefUpdate(NC_STACK_ypaworld *yw, TInputState *inpt);
 
 int sub_4C885C();
-void sub_4476AC(NC_STACK_ypaworld *yw);
+void TakeScreenshot(NC_STACK_ypaworld *yw);
 
 int recorder_create_camera(NC_STACK_ypaworld *yw);
 int recorder_go_to_frame(NC_STACK_ypaworld *yw, TGameRecorder *rcrd, int wanted_frame_id);
@@ -354,11 +354,11 @@ void recorder_stoprec(NC_STACK_ypaworld *yw);
 
 void AdvanceReplay(NC_STACK_ypaworld *yw, TGameRecorder *rcrd, int a3);
 
-void sub_4D0C24(NC_STACK_ypaworld *yw, const std::string &a1, const std::string &a2);
+void AddChatMessage(NC_STACK_ypaworld *yw, const std::string &a1, const std::string &a2);
 
 
-void sub_4D9550(NC_STACK_ypaworld *yw, int arg);
-void sub_47C1EC(NC_STACK_ypaworld *yw, TMapGem *gemProt, int *a3, int *a4);
+void PlayChatVoiceSample(NC_STACK_ypaworld *yw, int arg);
+void GetNetGemProtoIds(NC_STACK_ypaworld *yw, TMapGem *gemProt, int *a3, int *a4);
 
 void yw_NetMsgHndlLoop(NC_STACK_ypaworld *yw);
 void yw_NetDrawStats(NC_STACK_ypaworld *yw);

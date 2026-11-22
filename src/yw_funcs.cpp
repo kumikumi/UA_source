@@ -431,7 +431,7 @@ int get_level_numb(const std::string &filename)
 
 
 
-bool NC_STACK_ypaworld::sb_0x4e1a88__sub0__sub0(TLevelDescription *mapp, const std::string &fname)
+bool NC_STACK_ypaworld::ParseLevelHeader(TLevelDescription *mapp, const std::string &fname)
 {
     *mapp = TLevelDescription();
     ScriptParser::HandlersList handlers {
@@ -445,7 +445,7 @@ bool NC_STACK_ypaworld::sb_0x4e1a88__sub0__sub0(TLevelDescription *mapp, const s
 
 
 
-bool NC_STACK_ypaworld::sb_0x4e1a88__sub0(const std::string &fname, bool multiplayer)
+bool NC_STACK_ypaworld::ScanLevelFile(const std::string &fname, bool multiplayer)
 {
     int levelnmb = get_level_numb(fname);
     if ( levelnmb == -1 )
@@ -458,7 +458,7 @@ bool NC_STACK_ypaworld::sb_0x4e1a88__sub0(const std::string &fname, bool multipl
         buf = std::string("levels:single/") + fname;
 
     TLevelDescription mapp;
-    sb_0x4e1a88__sub0__sub0(&mapp, buf);
+    ParseLevelHeader(&mapp, buf);
 
     TMapRegionInfo &minf = _globalMapRegions.MapRegions[levelnmb];
 
@@ -484,7 +484,7 @@ bool NC_STACK_ypaworld::sb_0x4e1a88__sub0(const std::string &fname, bool multipl
     return true;
 }
 
-int NC_STACK_ypaworld::sb_0x4e1a88(bool multiplayer)
+int NC_STACK_ypaworld::ScanLevelDir(bool multiplayer)
 {
     int v10 = 1;
 
@@ -503,7 +503,7 @@ int NC_STACK_ypaworld::sb_0x4e1a88(bool multiplayer)
         {
             if ( strcmp(fsnode->getName().c_str(), ".") && strcmp(fsnode->getName().c_str(), "..") )
             {
-                if ( sb_0x4e1a88__sub0(fsnode->getName(), multiplayer) )
+                if ( ScanLevelFile(fsnode->getName(), multiplayer) )
                 {
                     ypa_log_out("Scanning [%s%s] .. ok.\n", path.c_str(), fsnode->getName().c_str());
                 }
@@ -522,14 +522,14 @@ int NC_STACK_ypaworld::sb_0x4e1a88(bool multiplayer)
 int NC_STACK_ypaworld::yw_ScanLevels()
 {
     int v2 = 1;
-    if ( !sb_0x4e1a88(false) )
+    if ( !ScanLevelDir(false) )
         v2 = 0;
-    if ( !sb_0x4e1a88(true) )
+    if ( !ScanLevelDir(true) )
         v2 = 0;
     return v2;
 }
 
-NC_STACK_base * sub_44AD8C(const std::string &fname)
+NC_STACK_base * LoadBaseFromList(const std::string &fname)
 {
     NC_STACK_base *obj = Nucleus::CInit<NC_STACK_base>();
     if ( obj )
@@ -584,7 +584,7 @@ NC_STACK_base *load_set_base()
             if ( !visproto )
             {
                 ypa_log_out("init: no visproto.base, trying single load.\n");
-                visproto = sub_44AD8C("rsrc:scripts/visproto.lst");
+                visproto = LoadBaseFromList("rsrc:scripts/visproto.lst");
             }
             if ( !visproto )
             {
@@ -597,7 +597,7 @@ NC_STACK_base *load_set_base()
             if ( !lego )
             {
                 ypa_log_out("init: no lego.base, trying single load.\n");
-                lego = sub_44AD8C("rsrc:scripts/set.sdf");
+                lego = LoadBaseFromList("rsrc:scripts/set.sdf");
             }
             if ( !lego )
             {
@@ -610,7 +610,7 @@ NC_STACK_base *load_set_base()
             if ( !slurp )
             {
                 ypa_log_out("init: no slurp.base, trying single load.\n");
-                slurp = sub_44AD8C("rsrc:scripts/slurps.lst");
+                slurp = LoadBaseFromList("rsrc:scripts/slurps.lst");
             }
             if ( !slurp )
             {
@@ -623,7 +623,7 @@ NC_STACK_base *load_set_base()
     return base;
 }
 
-int sub_44A12C(NC_STACK_ypaworld *yw, NC_STACK_base *base)
+int SetupVehicleModels(NC_STACK_ypaworld *yw, NC_STACK_base *base)
 {
     for( NC_STACK_base * kd : base->GetKidList() )
     {
@@ -875,7 +875,7 @@ int yw_parse_sektor(NC_STACK_ypaworld *yw, FSMgr::FileHandle *fil)
     return 1;
 }
 
-int sub_44A97C(NC_STACK_ypaworld *yw, NC_STACK_base *base)
+int SetupFillerModels(NC_STACK_ypaworld *yw, NC_STACK_base *base)
 {
     BaseList &kid_list = base->GetKidList();
     BaseList::iterator it = kid_list.begin();
@@ -1046,7 +1046,7 @@ int NC_STACK_ypaworld::yw_LoadSet(int setID)
         {
             if ( kid_id == 0 )
             {
-                if ( !sub_44A12C(this, bs) )
+                if ( !SetupVehicleModels(this, bs) )
                 {
                     delete fil;
                     return 0;
@@ -1074,7 +1074,7 @@ int NC_STACK_ypaworld::yw_LoadSet(int setID)
             }
             else if ( kid_id == 2 )
             {
-                if ( !sub_44A97C(this, bs) )
+                if ( !SetupFillerModels(this, bs) )
                 {
                     delete fil;
                     return 0;
@@ -1179,7 +1179,7 @@ void NC_STACK_ypaworld::GameShellBlitBkg(NC_STACK_bitmap *bitm)
     GFX::Engine.DrawBitmapNormalized(&a4);
 }
 
-void NC_STACK_ypaworld::sub_4491A0(const std::string &movie_fname)
+void NC_STACK_ypaworld::PlayGameMovie(const std::string &movie_fname)
 {
     std::string buf = correctSeparatorAndExt( Common::Env.ApplyPrefix( movie_fname ) );
 
@@ -1586,7 +1586,7 @@ bool NC_STACK_ypaworld::InitBriefing(int lvlid)
 
     TLevelDescription &mproto = _briefScreen.Desc;
 
-    if ( !sub_4DA41C(&mproto, _globalMapRegions.MapRegions[ lvlid ].MapDirectory) )
+    if ( !ParseLevelDescription(&mproto, _globalMapRegions.MapRegions[ lvlid ].MapDirectory) )
         goto ON_ERR;
 
     if ( !_briefScreen.Desc.IsOk() )
@@ -1944,7 +1944,7 @@ void NC_STACK_ypaworld::UpdateCampaignScreen()
         if ( _levelInfo.State == TLevelInfo::STATE_COMPLETED )
         {
             if ( _levelInfo.MovieWinStr[0] )
-                sub_4491A0(_levelInfo.MovieWinStr);
+                PlayGameMovie(_levelInfo.MovieWinStr);
         }
 
         if ( _levelInfo.State == TLevelInfo::STATE_ABORTED )
@@ -1952,7 +1952,7 @@ void NC_STACK_ypaworld::UpdateCampaignScreen()
             if ( _levelInfo.MovieLoseStr[0] )
             {
                 if ( _playerHSDestroyed )
-                    sub_4491A0(_levelInfo.MovieLoseStr);
+                    PlayGameMovie(_levelInfo.MovieLoseStr);
             }
         }
 
@@ -1965,7 +1965,7 @@ void NC_STACK_ypaworld::UpdateCampaignScreen()
 }
 
 
-int NC_STACK_ypaworld::sub_4DA41C(TLevelDescription *mapp, const std::string &fname)
+int NC_STACK_ypaworld::ParseLevelDescription(TLevelDescription *mapp, const std::string &fname)
 {
     *mapp = TLevelDescription();
     ScriptParser::HandlersList parsers
@@ -1989,7 +1989,7 @@ int NC_STACK_ypaworld::sub_4DA41C(TLevelDescription *mapp, const std::string &fn
 }
 
 
-void sub_4C4284(NC_STACK_ypaworld *yw, GuiList *lstvw, CmdStream *out, const std::string &txt)
+void FormatSelectedListItem(NC_STACK_ypaworld *yw, GuiList *lstvw, CmdStream *out, const std::string &txt)
 {
     FontUA::store_u8(out, 123);
     FontUA::select_tileset(out, 9);
@@ -2008,7 +2008,7 @@ void sub_4C4284(NC_STACK_ypaworld *yw, GuiList *lstvw, CmdStream *out, const std
     FontUA::next_line(out);
 }
 
-void sub_4C41DC(NC_STACK_ypaworld *yw, GuiList *lstvw, CmdStream *out, const std::string &txt)
+void FormatListItem(NC_STACK_ypaworld *yw, GuiList *lstvw, CmdStream *out, const std::string &txt)
 {
     FontUA::store_u8(out, 123);
 
@@ -2046,9 +2046,9 @@ void ypaworld_func158__d3d_list_draw(NC_STACK_ypaworld *yw, UserData *usr)
             name = dev.name;
 
         if ( usr->d3d_listvw.selectedEntry == i )
-            sub_4C4284(yw, &usr->d3d_listvw, &usr->d3d_listvw.itemBlock, name);
+            FormatSelectedListItem(yw, &usr->d3d_listvw, &usr->d3d_listvw.itemBlock, name);
         else
-            sub_4C41DC(yw, &usr->d3d_listvw, &usr->d3d_listvw.itemBlock, name);
+            FormatListItem(yw, &usr->d3d_listvw, &usr->d3d_listvw.itemBlock, name);
     }
 
     
@@ -2059,10 +2059,10 @@ void ypaworld_func158__d3d_list_draw(NC_STACK_ypaworld *yw, UserData *usr)
     GFX::Engine.ProcessDrawSeq(usr->d3d_listvw.cmdCommands, &usr->d3d_listvw.cmdInclude);
 }
 
-void sub_4DDF78(NC_STACK_ypaworld *yw, GuiList *lstvw, CmdStream *pos, int a3)
+void FormatEmptyListItems(NC_STACK_ypaworld *yw, GuiList *lstvw, CmdStream *pos, int a3)
 {
     for ( int i = 0; i < a3; i++ )
-        sub_4C41DC(yw, lstvw, pos, " ");
+        FormatListItem(yw, lstvw, pos, " ");
 }
 
 void ypaworld_func158__network_list_draw(NC_STACK_ypaworld *yw, UserData *usr)
@@ -2434,7 +2434,7 @@ void ypaworld_func158__network_list_draw(NC_STACK_ypaworld *yw, UserData *usr)
         usr->network_listvw.shownEntries = i;
 
     if ( usr->network_listvw.maxShownEntries > usr->network_listvw.shownEntries )
-        sub_4DDF78(yw, &usr->network_listvw, &usr->network_listvw.itemBlock, usr->network_listvw.maxShownEntries - usr->network_listvw.shownEntries);
+        FormatEmptyListItems(yw, &usr->network_listvw, &usr->network_listvw.itemBlock, usr->network_listvw.maxShownEntries - usr->network_listvw.shownEntries);
 
     usr->network_listvw.numEntries = i;
 
@@ -2458,9 +2458,9 @@ void ypaworld_func158__locale_list_draw(NC_STACK_ypaworld *yw, UserData *usr)
         if ( v5 >= usr->local_listvw.firstShownEntries && v5 < usr->local_listvw.shownEntries + usr->local_listvw.firstShownEntries)
         {
             if ( v5 == usr->local_listvw.selectedEntry )
-                sub_4C4284(yw, &usr->local_listvw, &usr->local_listvw.itemBlock, x);
+                FormatSelectedListItem(yw, &usr->local_listvw, &usr->local_listvw.itemBlock, x);
             else
-                sub_4C41DC(yw, &usr->local_listvw, &usr->local_listvw.itemBlock, x);
+                FormatListItem(yw, &usr->local_listvw, &usr->local_listvw.itemBlock, x);
         }
 
         v5++;
@@ -2474,7 +2474,7 @@ void ypaworld_func158__locale_list_draw(NC_STACK_ypaworld *yw, UserData *usr)
     usr->local_listvw.numEntries = usr->local_listvw.shownEntries;
 
     if ( usr->local_listvw.shownEntries < 10 )
-        sub_4DDF78(yw, &usr->local_listvw, &usr->local_listvw.itemBlock, 10 - usr->local_listvw.shownEntries);
+        FormatEmptyListItems(yw, &usr->local_listvw, &usr->local_listvw.itemBlock, 10 - usr->local_listvw.shownEntries);
 
     usr->local_listvw.ItemsPostLayout(yw, &usr->local_listvw.itemBlock, 0, "xyz");
 
@@ -2572,7 +2572,7 @@ void ypaworld_func158__saveload_list_draw(NC_STACK_ypaworld *yw, UserData *usr)
 
         for (int i = 0; i < 10 - v54; i++)
         {
-            sub_4C41DC(yw, &usr->disk_listvw, &usr->disk_listvw.itemBlock, " ");
+            FormatListItem(yw, &usr->disk_listvw, &usr->disk_listvw.itemBlock, " ");
         }
     }
 
@@ -2584,7 +2584,7 @@ void ypaworld_func158__saveload_list_draw(NC_STACK_ypaworld *yw, UserData *usr)
     GFX::Engine.ProcessDrawSeq(usr->disk_listvw.cmdCommands, &usr->disk_listvw.cmdInclude);
 }
 
-void sb_0x4dee74__sub0(UserData *usr, int x1, int y1, int w, int h)
+void DrawConfirmBoxFrame(UserData *usr, int x1, int y1, int w, int h)
 {
     CmdStream buf;
     buf.reserve(300);
@@ -2651,7 +2651,7 @@ void ypaworld_func158__confirm_draw(UserData *usr)
         int v7 = yw->_screenSize.y * 0.3854166666666667;
         int v8 = yw->_screenSize.x * 0.234375;
 
-        sb_0x4dee74__sub0(usr, v8, v7, v6, v4);
+        DrawConfirmBoxFrame(usr, v8, v7, v6, v4);
 
         usr->confirm_button->Draw();
     }
@@ -2736,7 +2736,7 @@ void NC_STACK_ypaworld::FreeGameDataCursors()
     }
 }
 
-void sb_0x44ac24(NC_STACK_ypaworld *yw)
+void FreeSetData(NC_STACK_ypaworld *yw)
 {
     yw->_vhclModels.clear();
 

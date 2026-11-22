@@ -693,7 +693,7 @@ int InitEngines()
 
     if ( !init_classesLists_and_variables() )
     {
-        sub_412038("Couldn't open Nucleus!");
+        LogStartupError("Couldn't open Nucleus!");
         deinit_globl_engines();
         return 0;
     }
@@ -727,20 +727,20 @@ int InitEngines()
 
     if ( !audio_inited )
     {
-        sub_412038("Couldn't open audio engine!");
+        LogStartupError("Couldn't open audio engine!");
         deinit_globl_engines();
         return 0;
     }
 
     if ( !tform_inited )
     {
-        sub_412038("Couldn't open tform engine!");
+        LogStartupError("Couldn't open tform engine!");
         deinit_globl_engines();
         return 0;
     }
     if ( !input_inited )
     {
-        sub_412038("Couldn't open input engine!");
+        LogStartupError("Couldn't open input engine!");
         deinit_globl_engines();
         return 0;
     }

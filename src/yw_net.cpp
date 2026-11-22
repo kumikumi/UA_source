@@ -155,7 +155,7 @@ void yw_CheckCRCs(NC_STACK_ypaworld *yw)
 
             for (int i = 0; i < errmsg; i++)
             {
-                sub_4D0C24(yw, lngstr, strs[i]);
+                AddChatMessage(yw, lngstr, strs[i]);
             }
         }
     }
@@ -2153,7 +2153,7 @@ size_t yw_handleNormMsg(NC_STACK_ypaworld *yw, windp_recvMsg *msg, std::string *
 
             if (nmb > 0)
             {
-                sub_4D9550(yw, nmb);
+                PlayChatVoiceSample(yw, nmb);
             }
             else
             {
@@ -2171,7 +2171,7 @@ size_t yw_handleNormMsg(NC_STACK_ypaworld *yw, windp_recvMsg *msg, std::string *
                 }
                 else
                 {
-                    sub_4D0C24(yw, msg->senderName, msgMsg->message);
+                    AddChatMessage(yw, msg->senderName, msgMsg->message);
                 }
             }
 
@@ -2234,7 +2234,7 @@ size_t yw_handleNormMsg(NC_STACK_ypaworld *yw, windp_recvMsg *msg, std::string *
         cellArea &cl = yw->SectorAt(gemProt.CellId);
 
         int vhcl, bld;
-        sub_47C1EC(yw, &gemProt, &vhcl, &bld);
+        GetNetGemProtoIds(yw, &gemProt, &vhcl, &bld);
 
         if ( vhcl )
             yw->_vhclProtos[vhcl].disable_enable_bitmask = 0;
