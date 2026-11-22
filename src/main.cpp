@@ -348,7 +348,7 @@ int sb_0x411324__sub2__sub0(base_64arg *arg)
         GameScreenMode = GAME_SCREEN_MODE_REPLAY;
     }
 
-    ypaworld->ypaworld_func163(arg);
+    ypaworld->PlayReplayFrame(arg);
 
     yw_arg165 arg165;
     arg165.field_0 = 0;

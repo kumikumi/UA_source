@@ -7,7 +7,7 @@
 class NC_STACK_itimer: public NC_STACK_nucleus
 {
 public:
-    virtual int itimer_func64() {
+    virtual int ElapsedTicks() {
         return 1;
     };
 

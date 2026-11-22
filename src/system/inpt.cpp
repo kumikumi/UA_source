@@ -262,7 +262,7 @@ void INPEngine::QueryInput(TInputState *state)
 int INPEngine::QueryTimer()
 {
     if ( _timer )
-        return _timer->itimer_func64();
+        return _timer->ElapsedTicks();
 
     return 20;
 }

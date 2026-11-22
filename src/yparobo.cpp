@@ -5764,7 +5764,7 @@ int NC_STACK_yparobo::placeMessage(robo_arg134 *arg)
         break;
     }
     
-    _world->ypaworld_func159(&v8);
+    _world->ShowMessage(&v8);
 
     return 1;
 }

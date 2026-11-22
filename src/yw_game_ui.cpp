@@ -276,7 +276,7 @@ void sub_4F68FC(float a3, float a4, float a5, float a6, SDL_Color a7)
 }
 
 
-void sub_4F6980(CmdStream *cur, float a1, float a2, char a3, int a4, int a5)
+void RoboMapDrawIcon(CmdStream *cur, float a1, float a2, char a3, int a4, int a5)
 {
     Common::Point tmp = sub_4F681C( {a1, a2} );
 
@@ -508,7 +508,7 @@ void  sb_0x4f8f64__sub1__sub0(NC_STACK_ypaworld *yw)
     }
 }
 
-void sb_0x4f8f64__sub1(NC_STACK_ypaworld *yw)
+void RoboMapDrawLines(NC_STACK_ypaworld *yw)
 {
     if ( robo_map.field_1E8 & 0x100 )
     {
@@ -672,7 +672,7 @@ void sb_0x4f8f64__sub2__sub0(CmdStream *cur, float a1, float a2, char a3, int a4
 }
 
 
-void sb_0x4f8f64__sub2(NC_STACK_ypaworld *yw, CmdStream *cur)
+void RoboMapDrawSpecialSectors(NC_STACK_ypaworld *yw, CmdStream *cur)
 {
     int a4, v4;
 
@@ -742,7 +742,7 @@ void sb_0x4f8f64__sub2(NC_STACK_ypaworld *yw, CmdStream *cur)
                             else if ( ps.second.EffectivePower <= 256)
                                 v9 = 0x87;
 
-                            sub_4F6980(cur, tmp.x, tmp.y, 0x89, a4, a4);
+                            RoboMapDrawIcon(cur, tmp.x, tmp.y, 0x89, a4, a4);
                             sb_0x4f8f64__sub2__sub0(cur, tmp.x, tmp.y, v9, a4, a4 / 8);
                         }
                     }
@@ -765,7 +765,7 @@ void sb_0x4f8f64__sub2(NC_STACK_ypaworld *yw, CmdStream *cur)
                     if ( v13 )
                     {
                         vec2d tmp = World::SectorIDToCenterPos2( gem.CellId );
-                        sub_4F6980(cur, tmp.x, tmp.y, 0x88, a4, a4);
+                        RoboMapDrawIcon(cur, tmp.x, tmp.y, 0x88, a4, a4);
                     }
                 }
             }
@@ -777,7 +777,7 @@ void sb_0x4f8f64__sub2(NC_STACK_ypaworld *yw, CmdStream *cur)
                     if ( gate.PCell->IsCanSee(yw->_userRobo->_owner) )
                     {
                         vec2d tmp = World::SectorIDToCenterPos2( gate.CellId );
-                        sub_4F6980(cur, tmp.x, tmp.y, 0x93, a4, a4);
+                        RoboMapDrawIcon(cur, tmp.x, tmp.y, 0x93, a4, a4);
                     }
 
                     for ( const TMapKeySector &ks : gate.KeySectors )
@@ -789,7 +789,7 @@ void sb_0x4f8f64__sub2(NC_STACK_ypaworld *yw, CmdStream *cur)
                                 if ( ks.PCell->owner == yw->_userRobo->_owner || yw->_timeStamp / 300 & 1 )
                                 {
                                     vec2d tmp = World::SectorIDToCenterPos2( ks.CellId );
-                                    sub_4F6980(cur, tmp.x, tmp.y, 0x8A, a4, a4);
+                                    RoboMapDrawIcon(cur, tmp.x, tmp.y, 0x8A, a4, a4);
                                 }
                             }
                         }
@@ -802,7 +802,7 @@ void sb_0x4f8f64__sub2(NC_STACK_ypaworld *yw, CmdStream *cur)
                         if ( yw->_timeStamp / 300 & 1 )
                         {
                             vec2d tmp = World::SectorIDToCenterPos2( gate.CellId );
-                            sub_4F6980(cur, tmp.x, tmp.y, 0x94, a4, a4);
+                            RoboMapDrawIcon(cur, tmp.x, tmp.y, 0x94, a4, a4);
                         }
                     }
                 }
@@ -851,7 +851,7 @@ void sb_0x4f8f64__sub2(NC_STACK_ypaworld *yw, CmdStream *cur)
                     if ( v34 )
                     {
                         vec2d tmp = World::SectorIDToCenterPos2( sitem.CellId );
-                        sub_4F6980(cur, tmp.x, tmp.y, v61, a4, a4);
+                        RoboMapDrawIcon(cur, tmp.x, tmp.y, v61, a4, a4);
                     }
 
                     if ( v29 )
@@ -865,7 +865,7 @@ void sb_0x4f8f64__sub2(NC_STACK_ypaworld *yw, CmdStream *cur)
                                     if ( ks.PCell->owner == yw->_userRobo->_owner || yw->_timeStamp / 500 & 1 )
                                     {
                                         vec2d tmp = World::SectorIDToCenterPos2( ks.CellId );
-                                        sub_4F6980(cur, tmp.x, tmp.y, v61, a4, a4);
+                                        RoboMapDrawIcon(cur, tmp.x, tmp.y, v61, a4, a4);
                                     }
                                 }
                             }
@@ -877,7 +877,7 @@ void sb_0x4f8f64__sub2(NC_STACK_ypaworld *yw, CmdStream *cur)
     }
 }
 
-void sub_4F6DFC(NC_STACK_ypaworld *yw, CmdStream *cur, int height, int width, NC_STACK_ypabact *bact, int a6)
+void RoboMapDrawUnit(NC_STACK_ypaworld *yw, CmdStream *cur, int height, int width, NC_STACK_ypabact *bact, int a6)
 {
     if ( bact->_status != BACT_STATUS_DEAD && !bact->IsHiddenFor( yw->GetPlayerOwner() ) )
     {
@@ -947,7 +947,7 @@ void sub_4F6DFC(NC_STACK_ypaworld *yw, CmdStream *cur, int height, int width, NC
             }
         }
 
-        sub_4F6980(cur, bact->_position.x, bact->_position.z, v8, height, width);
+        RoboMapDrawIcon(cur, bact->_position.x, bact->_position.z, v8, height, width);
 
         if ( bact->_bact_type != BACT_TYPES_MISSLE && robo_map.field_1EE > 2 )
         {
@@ -1077,7 +1077,7 @@ void sub_4F6DFC(NC_STACK_ypaworld *yw, CmdStream *cur, int height, int width, NC
                     v19 = 0x80;
                 }
 
-                sub_4F6980(cur, bact->_position.x, bact->_position.z, v19, height, width);
+                RoboMapDrawIcon(cur, bact->_position.x, bact->_position.z, v19, height, width);
             }
         }
     }
@@ -1103,12 +1103,12 @@ void sub_4F7BE8(NC_STACK_ypaworld *yw, CmdStream *cur, NC_STACK_ypabact *bact, i
     {
         FontUA::select_tileset(cur, a2);
 
-        sub_4F6980(cur, bact->_position.x, bact->_position.z, a4, a5, a6);
+        RoboMapDrawIcon(cur, bact->_position.x, bact->_position.z, a4, a5, a6);
 
         for( NC_STACK_ypabact* &kid : bact->_kidList )
         {
             if ( kid->_status != BACT_STATUS_DEAD )
-                sub_4F6980(cur, kid->_position.x, kid->_position.z, a4, a5, a6);
+                RoboMapDrawIcon(cur, kid->_position.x, kid->_position.z, a4, a5, a6);
         }
     }
 }
@@ -1149,7 +1149,7 @@ void sb_0x4f8f64__sub3__sub1(NC_STACK_ypaworld *yw, const std::string &labl, int
     }
 }
 
-void sb_0x4f8f64__sub3(NC_STACK_ypaworld *yw, CmdStream *cur)
+void RoboMapDrawMarkers(NC_STACK_ypaworld *yw, CmdStream *cur)
 {
     int v111;
     int a5;
@@ -1222,7 +1222,7 @@ void sb_0x4f8f64__sub3(NC_STACK_ypaworld *yw, CmdStream *cur)
             {
                 FontUA::select_tileset(cur, v114);
 
-                sub_4F6980(cur, yw->_bactOnMouse->_position.x, yw->_bactOnMouse->_position.z, 0x86, a4, a5);
+                RoboMapDrawIcon(cur, yw->_bactOnMouse->_position.x, yw->_bactOnMouse->_position.z, 0x86, a4, a5);
             }
             else if ( yw->_guiActFlags & 0x10 && yw->_mouseGrabbed == false)
             {
@@ -1230,13 +1230,13 @@ void sb_0x4f8f64__sub3(NC_STACK_ypaworld *yw, CmdStream *cur)
                 {
                     FontUA::select_tileset(cur, v114);
 
-                    sub_4F6980(cur, yw->_cellMouseIsectPos.x, yw->_cellMouseIsectPos.z, 0x88, a4, a5);
+                    RoboMapDrawIcon(cur, yw->_cellMouseIsectPos.x, yw->_cellMouseIsectPos.z, 0x88, a4, a5);
                 }
                 else
                 {
                     FontUA::select_tileset(cur, v110);
 
-                    sub_4F6980(cur, yw->_cellOnMouse->CenterPos.x, yw->_cellOnMouse->CenterPos.z, 66, v111, v111);
+                    RoboMapDrawIcon(cur, yw->_cellOnMouse->CenterPos.x, yw->_cellOnMouse->CenterPos.z, 66, v111, v111);
                 }
             }
         }
@@ -1245,13 +1245,13 @@ void sb_0x4f8f64__sub3(NC_STACK_ypaworld *yw, CmdStream *cur)
     case World::DOACTION_5:
         FontUA::select_tileset(cur, v114);
 
-        sub_4F6980(cur, yw->_bactOnMouse->_position.x, yw->_bactOnMouse->_position.z, 0x85, a4, a5);
+        RoboMapDrawIcon(cur, yw->_bactOnMouse->_position.x, yw->_bactOnMouse->_position.z, 0x85, a4, a5);
         break;
 
     case World::DOACTION_6:
         FontUA::select_tileset(cur, v110);
 
-        sub_4F6980(cur, yw->_cellOnMouse->CenterPos.x, yw->_cellOnMouse->CenterPos.z, 65, v111, v111);
+        RoboMapDrawIcon(cur, yw->_cellOnMouse->CenterPos.x, yw->_cellOnMouse->CenterPos.z, 65, v111, v111);
         break;
 
     case World::DOACTION_8:
@@ -1265,7 +1265,7 @@ void sb_0x4f8f64__sub3(NC_STACK_ypaworld *yw, CmdStream *cur)
 
                     FontUA::select_tileset(cur, 1);
 
-                    sub_4F6980(cur, yw->_bactOnMouse->_position.x, yw->_bactOnMouse->_position.z, v7, v22, v22);
+                    RoboMapDrawIcon(cur, yw->_bactOnMouse->_position.x, yw->_bactOnMouse->_position.z, v7, v22, v22);
                 }
                 else
                 {
@@ -1284,7 +1284,7 @@ void sb_0x4f8f64__sub3(NC_STACK_ypaworld *yw, CmdStream *cur)
     case World::DOACTION_10:
         FontUA::select_tileset(cur, v114);
 
-        sub_4F6980(cur, yw->_cellMouseIsectPos.x, yw->_cellMouseIsectPos.z, 0x88, a4, a5);
+        RoboMapDrawIcon(cur, yw->_cellMouseIsectPos.x, yw->_cellMouseIsectPos.z, 0x88, a4, a5);
         break;
 
     default:
@@ -1297,7 +1297,7 @@ void sb_0x4f8f64__sub3(NC_STACK_ypaworld *yw, CmdStream *cur)
 
         int v44 = yw->_guiTiles[1]->h;
 
-        sub_4F6980(cur, yw->_userRobo->_position.x, yw->_userRobo->_position.z, v99, v44, v44);
+        RoboMapDrawIcon(cur, yw->_userRobo->_position.x, yw->_userRobo->_position.z, v99, v44, v44);
     }
     else
     {
@@ -1317,24 +1317,24 @@ void sb_0x4f8f64__sub3(NC_STACK_ypaworld *yw, CmdStream *cur)
 
                         FontUA::select_tileset(cur, v110);
 
-                        sub_4F6980(cur, tmp.x, tmp.y, 66, v111, v111);
+                        RoboMapDrawIcon(cur, tmp.x, tmp.y, 66, v111, v111);
 
                         FontUA::select_tileset(cur, v114);
 
-                        sub_4F6980(cur, v47->_primTpos.x, v47->_primTpos.z, 0x88, a4, a5);
+                        RoboMapDrawIcon(cur, v47->_primTpos.x, v47->_primTpos.z, 0x88, a4, a5);
                     }
                     else
                     {
                         FontUA::select_tileset(cur, v114);
 
-                        sub_4F6980(cur, v47->_primTpos.x, v47->_primTpos.z, 0x88, a4, a5);
+                        RoboMapDrawIcon(cur, v47->_primTpos.x, v47->_primTpos.z, 0x88, a4, a5);
                     }
                 }
                 else if ( v47->_primTtype == BACT_TGT_TYPE_UNIT )
                 {
                     FontUA::select_tileset(cur, v114);
 
-                    sub_4F6980(cur, v47->_primT.pbact->_position.x, v47->_primT.pbact->_position.z, 0x86, a4, a5);
+                    RoboMapDrawIcon(cur, v47->_primT.pbact->_position.x, v47->_primT.pbact->_position.z, 0x86, a4, a5);
                 }
 
                 if ( v47->_status_flg & BACT_STFLAG_WAYPOINT )
@@ -1352,7 +1352,7 @@ void sb_0x4f8f64__sub3(NC_STACK_ypaworld *yw, CmdStream *cur)
                         {
                             FontUA::select_tileset(cur, v114);
 
-                            sub_4F6980(cur, v47->_waypoints[i].x, v47->_waypoints[i].z, 0x88, a4, a5);
+                            RoboMapDrawIcon(cur, v47->_waypoints[i].x, v47->_waypoints[i].z, 0x88, a4, a5);
                         }
                     }
                 }
@@ -1366,7 +1366,7 @@ void sb_0x4f8f64__sub3(NC_STACK_ypaworld *yw, CmdStream *cur)
         {
             FontUA::select_tileset(cur, v114);
 
-            sub_4F6980(cur, yw->_userUnit->_position.x, yw->_userUnit->_position.z, 0x89, a4, a5);
+            RoboMapDrawIcon(cur, yw->_userUnit->_position.x, yw->_userUnit->_position.z, 0x89, a4, a5);
         }
     }
 
@@ -1376,7 +1376,7 @@ void sb_0x4f8f64__sub3(NC_STACK_ypaworld *yw, CmdStream *cur)
         {
             FontUA::select_tileset(cur, v114);
 
-            sub_4F6980(cur, yw->_lastMsgSender->_position.x, yw->_lastMsgSender->_position.z, 0x8A, a4, a5);
+            RoboMapDrawIcon(cur, yw->_lastMsgSender->_position.x, yw->_lastMsgSender->_position.z, 0x8A, a4, a5);
         }
     }
 
@@ -1399,7 +1399,7 @@ void sb_0x4f8f64__sub3(NC_STACK_ypaworld *yw, CmdStream *cur)
     }
 }
 
-void sb_0x4f8f64__sub0(NC_STACK_ypaworld *yw, CmdStream *cur)
+void RoboMapDrawToolbar(NC_STACK_ypaworld *yw, CmdStream *cur)
 {
     FontUA::select_tileset(cur, 10);
     FontUA::set_center_xpos(cur, robo_map.x + robo_map.field_234 + robo_map.field_244 - (yw->_screenSize.x / 2));
@@ -1507,11 +1507,11 @@ void RoboMapDrawOverlay(NC_STACK_ypaworld *yw)
     // draw this overlay in place of the sectors, so the grid flickered.
     robo_map.overlayCmds.clear();
     
-    sb_0x4f8f64__sub2(yw, &robo_map.overlayCmds);
+    RoboMapDrawSpecialSectors(yw, &robo_map.overlayCmds);
 
     FontUA::select_tileset(&robo_map.overlayCmds, setid);
 
-    sb_0x4f8f64__sub1(yw);
+    RoboMapDrawLines(yw);
 
     for (int v42 = v38; v42 <= vii; v42++)
     {
@@ -1529,7 +1529,7 @@ void RoboMapDrawOverlay(NC_STACK_ypaworld *yw)
                         {
                             FontUA::select_tileset(&robo_map.overlayCmds, 1);
 
-                            sub_4F6DFC(yw, &robo_map.overlayCmds, yw->_guiTiles[1]->h, yw->_guiTiles[1]->map[24].w, bct, 0);
+                            RoboMapDrawUnit(yw, &robo_map.overlayCmds, yw->_guiTiles[1]->h, yw->_guiTiles[1]->map[24].w, bct, 0);
 
                             FontUA::select_tileset(&robo_map.overlayCmds, setid);
 
@@ -1541,13 +1541,13 @@ void RoboMapDrawOverlay(NC_STACK_ypaworld *yw)
 
                             if ( !gn->IsRoboGun() || bct == yw->_userUnit )
                             {
-                                sub_4F6DFC(yw, &robo_map.overlayCmds, height, width, bct, a6);
+                                RoboMapDrawUnit(yw, &robo_map.overlayCmds, height, width, bct, a6);
                                 v41++;
                             }
                         }
                         else
                         {
-                            sub_4F6DFC(yw, &robo_map.overlayCmds, height, width, bct, a6);
+                            RoboMapDrawUnit(yw, &robo_map.overlayCmds, height, width, bct, a6);
                             v41++;
                         }
                     }
@@ -1581,7 +1581,7 @@ void RoboMapDrawOverlay(NC_STACK_ypaworld *yw)
                                 {
                                     if ( bct->_status != BACT_STATUS_CREATE && bct->_status != BACT_STATUS_BEAM && bct->_status != BACT_STATUS_DEAD )
                                     {
-                                        sub_4F6980(&robo_map.overlayCmds, bct->_position.x, bct->_position.z, 0x85, height, width);
+                                        RoboMapDrawIcon(&robo_map.overlayCmds, bct->_position.x, bct->_position.z, 0x85, height, width);
                                         v41++;
                                     }
                                 }
@@ -1592,8 +1592,8 @@ void RoboMapDrawOverlay(NC_STACK_ypaworld *yw)
             }
         }
     }
-    sb_0x4f8f64__sub3(yw, &robo_map.overlayCmds);
-    sb_0x4f8f64__sub0(yw, &robo_map.overlayCmds);
+    RoboMapDrawMarkers(yw, &robo_map.overlayCmds);
+    RoboMapDrawToolbar(yw, &robo_map.overlayCmds);
     FontUA::set_end(&robo_map.overlayCmds);
 
     GFX::Engine.ProcessDrawSeq(robo_map.overlayCmds);
@@ -2931,7 +2931,7 @@ void sb_0x4d7c08__sub0__sub1()
 }
 
 
-void sb_0x4d7c08__sub0(NC_STACK_ypaworld *yw)
+void DrawGameInterface(NC_STACK_ypaworld *yw)
 {
     if ( yw->_userUnit->_bact_type != BACT_TYPES_MISSLE )
     {
@@ -4140,7 +4140,7 @@ void NC_STACK_ypaworld::SituationAnalyzer()
     v38.Priority = 100;
     v38.MsgID = 0;
 
-    ypaworld_func159(&v38);
+    ShowMessage(&v38);
 }
 
 void ypaworld_func64__sub7__sub2__sub0()
@@ -4192,7 +4192,7 @@ void sb_0x4c66f8__sub0(NC_STACK_ypaworld *yw)
         arg159.Priority = 10;
         arg159.MsgID = 39;
 
-        yw->ypaworld_func159(&arg159);
+        yw->ShowMessage(&arg159);
     }
 
     yw->_msgTimestampHSReturn = yw->_timeStamp;
@@ -4232,7 +4232,7 @@ void sb_0x4c66f8(NC_STACK_ypaworld *yw, NC_STACK_ypabact *bact1, NC_STACK_ypabac
                 arg159.Priority = 33;
                 arg159.MsgID = 17;
 
-                yw->ypaworld_func159(&arg159);
+                yw->ShowMessage(&arg159);
             }
 
             yw->_guiDragDefaultMouse = false;
@@ -6495,7 +6495,7 @@ void NC_STACK_ypaworld::ypaworld_func64__sub7__sub6(TInputState *inpt)
                 v18.txt = Locale::Text::Feedback(Locale::FEEDBACK_GAMESAVED);
                 v18.MsgID = 0;
 
-                ypaworld_func159(&v18);
+                ShowMessage(&v18);
             }
 
             _levelInfo.State = TLevelInfo::STATE_PLAYING;
@@ -9544,7 +9544,7 @@ void sb_0x4d7c08__sub0__sub4__sub2__sub0(NC_STACK_ypaworld *yw)
                             {
                                 FontUA::select_tileset(&buf, 1);
 
-                                sub_4F6DFC(yw, &buf, yw->_guiTiles[1]->h, yw->_guiTiles[1]->map[24].w, bact, 0);
+                                RoboMapDrawUnit(yw, &buf, yw->_guiTiles[1]->h, yw->_guiTiles[1]->map[24].w, bact, 0);
 
                                 FontUA::select_tileset(&buf, 61);
 
@@ -9557,14 +9557,14 @@ void sb_0x4d7c08__sub0__sub4__sub2__sub0(NC_STACK_ypaworld *yw)
 
                             if ( (!gun->IsRoboGun() || bact == yw->_userUnit) && !v19 )
                             {
-                                sub_4F6DFC(yw, &buf, 7, 7, bact, 0);
+                                RoboMapDrawUnit(yw, &buf, 7, 7, bact, 0);
 
                                 v38++;
                             }
                         }
                         else if ( !v19 )
                         {
-                            sub_4F6DFC(yw, &buf, 7, 7, bact, 0);
+                            RoboMapDrawUnit(yw, &buf, 7, 7, bact, 0);
 
                             v38++;
                         }

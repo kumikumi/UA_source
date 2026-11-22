@@ -219,7 +219,7 @@ int LuaEvents::Lua_WrldShowMessageID(lua_State *l)
     arg159.unit = NULL;
     arg159.MsgID = msgId;
     
-    wrld->ypaworld_func159(&arg159);
+    wrld->ShowMessage(&arg159);
     return 0;
 }
 

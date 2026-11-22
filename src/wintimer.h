@@ -6,7 +6,7 @@
 class NC_STACK_wintimer: public NC_STACK_itimer
 {
 public:
-    virtual int itimer_func64();
+    virtual int ElapsedTicks();
 
     NC_STACK_wintimer() {};
     virtual ~NC_STACK_wintimer() {};

@@ -1935,11 +1935,11 @@ public:
     virtual bool OpenGameShell();
     virtual void CloseGameShell();
     virtual void ProcessGameShell();
-    virtual void ypaworld_func159(yw_arg159 *arg);
+    virtual void ShowMessage(yw_arg159 *arg);
     virtual void ypaworld_func160(void *arg);
     virtual size_t ypaworld_func161(yw_arg161 *arg);
     virtual size_t ypaworld_func162(const std::string &fname);
-    virtual void ypaworld_func163(base_64arg *arg);
+    virtual void PlayReplayFrame(base_64arg *arg);
     virtual void ypaworld_func164();
     virtual void ypaworld_func165(yw_arg165 *arg);
     virtual size_t LoadLanguage(const std::string &langname);
@@ -1970,7 +1970,7 @@ public:
 
     virtual size_t ypaworld_func183(yw_arg161 *arg);
     virtual void HistoryEventAdd(const World::History::Record &arg);
-    virtual void ypaworld_func185(const void *arg);
+    virtual void OpenHelpURL(const void *arg);
 
     NC_STACK_ypaworld();
     virtual ~NC_STACK_ypaworld() {};

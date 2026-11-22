@@ -354,7 +354,7 @@ bool NC_STACK_ypaworld::SimulationStep(base_64arg *arg)
         arg159.Priority = 128;
         arg159.MsgID = 41;
 
-        ypaworld_func159(&arg159);
+        ShowMessage(&arg159);
     }
 
     UpdateReloadRatios(this);
@@ -579,7 +579,7 @@ bool NC_STACK_ypaworld::SimulationStep(base_64arg *arg)
         const std::string help_link = _helpURL;
         _helpURL.clear();
 
-        ypaworld_func185(&help_link); //launch online help
+        OpenHelpURL(&help_link); //launch online help
     }
 
     return true;
@@ -785,7 +785,7 @@ void sub_47C29C(NC_STACK_ypaworld *yw, cellArea *cell, int a3)
     else
         v14.MsgID = 0;
 
-    yw->ypaworld_func159(&v14);
+    yw->ShowMessage(&v14);
 
     if ( yw->_isNetGame && yw->_netExclusiveGem )
     {
@@ -824,7 +824,7 @@ void ypaworld_func129__sub1(NC_STACK_ypaworld *yw, cellArea *cell, int a3)
     arg159.txt = v13;
     arg159.MsgID = 29;
 
-    yw->ypaworld_func159(&arg159);
+    yw->ShowMessage(&arg159);
 
     if ( yw->_isNetGame )
     {
@@ -881,7 +881,7 @@ void NC_STACK_ypaworld::yw_ActivateWunderstein(cellArea *cell, int gemid)
     else
         arg159.MsgID = 0;
 
-    ypaworld_func159(&arg159);
+    ShowMessage(&arg159);
 
     cell->PurposeType = cellArea::PT_TECHDEACTIVE;
 }
@@ -964,7 +964,7 @@ void ypaworld_func129__sub0(NC_STACK_ypaworld *yw, const cellArea &cell, yw_arg1
                     arg159.Priority = 77;
                     arg159.MsgID = 33;
 
-                    yw->ypaworld_func159(&arg159);
+                    yw->ShowMessage(&arg159);
                 }
             }
         }
@@ -5492,14 +5492,14 @@ void NC_STACK_ypaworld::ProcessGameShell()
     if ( !_helpURL.empty() )
     {
         const std::string v22 = _helpURL;
-        ypaworld_func185(&v22);
+        OpenHelpURL(&v22);
 
         _helpURL.clear();
     }
 }
 
 
-void NC_STACK_ypaworld::ypaworld_func159(yw_arg159 *arg)
+void NC_STACK_ypaworld::ShowMessage(yw_arg159 *arg)
 {
     if ( arg->MsgID )
         VoiceMessagePlayMsg(arg->unit, arg->Priority, arg->MsgID);
@@ -5764,7 +5764,7 @@ size_t NC_STACK_ypaworld::ypaworld_func162(const std::string &fname)
 }
 
 
-void NC_STACK_ypaworld::ypaworld_func163(base_64arg *arg)
+void NC_STACK_ypaworld::PlayReplayFrame(base_64arg *arg)
 {
     TGameRecorder *repl = _replayPlayer;
     uint32_t v33 = profiler_begin();
@@ -6865,9 +6865,9 @@ void NC_STACK_ypaworld::HistoryEventAdd(const World::History::Record &arg)
 }
 
 
-void NC_STACK_ypaworld::ypaworld_func185(const void *arg)
+void NC_STACK_ypaworld::OpenHelpURL(const void *arg)
 {
-    dprintf("MAKE ME %s\n","ypaworld_func185");
+    dprintf("MAKE ME %s\n","OpenHelpURL");
 }
 
 

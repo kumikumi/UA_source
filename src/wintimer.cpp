@@ -4,7 +4,7 @@
 #include "wintimer.h"
 #include "utils.h"
 
-int NC_STACK_wintimer::itimer_func64()
+int NC_STACK_wintimer::ElapsedTicks()
 {
     Uint64 freq = SDL_GetPerformanceFrequency();
     Uint64 cnt = SDL_GetPerformanceCounter();

@@ -840,7 +840,7 @@ void NC_STACK_ypaworld::CellSetNewOwner(cellArea *cell, NC_STACK_ypabact *a5, in
                     v21.Priority = 78;
                     v21.MsgID = 45;
 
-                    ypaworld_func159(&v21);
+                    ShowMessage(&v21);
                 }
             }
             else if ( cell->owner == _userRobo->_owner )
@@ -850,7 +850,7 @@ void NC_STACK_ypaworld::CellSetNewOwner(cellArea *cell, NC_STACK_ypabact *a5, in
                 v24.Priority = 78;
                 v24.MsgID = 67;
 
-                ypaworld_func159(&v24);
+                ShowMessage(&v24);
             }
         }
         else
@@ -868,7 +868,7 @@ void NC_STACK_ypaworld::CellSetNewOwner(cellArea *cell, NC_STACK_ypabact *a5, in
                             v23.Priority = 80;
                             v23.MsgID = 82;
 
-                            ypaworld_func159(&v23);
+                            ShowMessage(&v23);
                         }
                         else if ( _userRobo->_owner == cell->owner )
                         {
@@ -877,7 +877,7 @@ void NC_STACK_ypaworld::CellSetNewOwner(cellArea *cell, NC_STACK_ypabact *a5, in
                             v22.Priority = 80;
                             v22.MsgID = 81;
 
-                            ypaworld_func159(&v22);
+                            ShowMessage(&v22);
                         }
                     }
                 }
@@ -1953,7 +1953,7 @@ void NC_STACK_ypaworld::RenderGame(base_64arg *bs64, int a2)
     {
         System::PerfStats::Timer perf(System::PerfStats::SEC_GUI);
         uint32_t tpm = profiler_begin();
-        sb_0x4d7c08__sub0(this);
+        DrawGameInterface(this);
         _profileVals[PFID_NEWGUITIME] = profiler_end(tpm);
     }
 }
@@ -2369,7 +2369,7 @@ void NC_STACK_ypaworld::BuildingConstructUpdate(int dtime)
                         break;
                     }
 
-                    ypaworld_func159(&arg159);
+                    ShowMessage(&arg159);
                 }
             }
             it = _inBuildProcess.erase(it);
@@ -2608,7 +2608,7 @@ void NC_STACK_ypaworld::sub_4D12D8(int id, int a3)
         arg159.txt = "Cant happen.";
     }
 
-    ypaworld_func159(&arg159);
+    ShowMessage(&arg159);
 }
 
 void NC_STACK_ypaworld::sub_4D1594(int id)
@@ -2649,7 +2649,7 @@ void NC_STACK_ypaworld::sub_4D1594(int id)
         arg159.txt = "Cant happen.";
     }
 
-    ypaworld_func159(&arg159);
+    ShowMessage(&arg159);
 }
 
 void NC_STACK_ypaworld::sub_4D1444(int id)
@@ -2692,7 +2692,7 @@ void NC_STACK_ypaworld::sub_4D1444(int id)
         arg159.txt = "Cant happen.";
     }
 
-    ypaworld_func159(&arg159);
+    ShowMessage(&arg159);
 }
 
 
@@ -2915,7 +2915,7 @@ void UpdateGates(NC_STACK_ypaworld *yw)
                 arg159.txt = Locale::Text::Feedback(Locale::FEEDBACK_GATECLOSE);
                 arg159.MsgID = 24;
 
-                yw->ypaworld_func159(&arg159);
+                yw->ShowMessage(&arg159);
             }
 
             yw->ypaworld_func148(&arg148);
@@ -2947,7 +2947,7 @@ void UpdateGates(NC_STACK_ypaworld *yw)
                     arg159_1.txt = Locale::Text::Feedback(Locale::FEEDBACK_GATEOPEN);
                     arg159_1.MsgID = 23;
 
-                    yw->ypaworld_func159(&arg159_1);
+                    yw->ShowMessage(&arg159_1);
                     yw->_msgTimestampGates = yw->_timeStamp;
                 }
             }
@@ -2961,7 +2961,7 @@ void UpdateGates(NC_STACK_ypaworld *yw)
                     arg159_2.txt = Locale::Text::Feedback(Locale::FEEDBACK_GATEFULL);
                     arg159_2.MsgID = 46;
 
-                    yw->ypaworld_func159(&arg159_2);
+                    yw->ShowMessage(&arg159_2);
                     yw->_msgTimestampGates = yw->_timeStamp;
                 }
             }
@@ -3041,7 +3041,7 @@ void NC_STACK_ypaworld::sub_4D16C4(int id)
         arg159.txt = "Cant happen.";
     }
 
-    ypaworld_func159(&arg159);
+    ShowMessage(&arg159);
 }
 
 void NC_STACK_ypaworld::ypaworld_func64__sub19__sub0(int id)
@@ -3330,7 +3330,7 @@ void CheckEnemySectorEntered(NC_STACK_ypaworld *yw)
                     arg159.txt = Locale::Text::Feedback(Locale::FEEDBACK_ESECTENTER);
                     arg159.MsgID = 22;
 
-                    yw->ypaworld_func159(&arg159);
+                    yw->ShowMessage(&arg159);
                 }
 
                 yw->_msgTimestampEnemySector = yw->_timeStamp;
@@ -3625,7 +3625,7 @@ void HandleSnapshotKeys(NC_STACK_ypaworld *yw, TInputState *inpt)
         info_msg.Priority = 100;
         info_msg.MsgID = 0;
 
-        yw->ypaworld_func159(&info_msg);
+        yw->ShowMessage(&info_msg);
     }
 
 
@@ -3641,7 +3641,7 @@ void HandleSnapshotKeys(NC_STACK_ypaworld *yw, TInputState *inpt)
             info_msg.Priority = 100;
             info_msg.MsgID = 0;
 
-            yw->ypaworld_func159(&info_msg);
+            yw->ShowMessage(&info_msg);
         }
 
         GFX::Engine.SaveScreenshot( fmt::sprintf("env:snaps/s%d_%04d", yw->_screenShotSeqId, yw->_screenShotSeqFrame) );
@@ -3660,7 +3660,7 @@ void HandleSnapshotKeys(NC_STACK_ypaworld *yw, TInputState *inpt)
         info_msg.Priority = 100;
         info_msg.MsgID = 0;
 
-        yw->ypaworld_func159(&info_msg);
+        yw->ShowMessage(&info_msg);
     }
 
     if ( yw->_replayRecorder->do_record )
@@ -3675,7 +3675,7 @@ void HandleSnapshotKeys(NC_STACK_ypaworld *yw, TInputState *inpt)
             info_msg.Priority = 100;
             info_msg.MsgID = 0;
 
-            yw->ypaworld_func159(&info_msg);
+            yw->ShowMessage(&info_msg);
         }
 
     }
@@ -3691,7 +3691,7 @@ void HandleSnapshotKeys(NC_STACK_ypaworld *yw, TInputState *inpt)
             info_msg.Priority = 100;
             info_msg.MsgID = 0;
 
-            yw->ypaworld_func159(&info_msg);
+            yw->ShowMessage(&info_msg);
         }
     }
 }

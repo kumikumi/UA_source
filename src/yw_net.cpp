@@ -2045,7 +2045,7 @@ size_t yw_handleNormMsg(NC_STACK_ypaworld *yw, windp_recvMsg *msg, std::string *
                 arg159.Priority = 10;
                 arg159.MsgID = 91;
                 arg159.unit = 0;
-                yw->ypaworld_func159(&arg159);
+                yw->ShowMessage(&arg159);
 
                 yw->_netEvent.EventType = 1;
                 yw->_netEvent.TimeStamp = yw->_timeStamp;
@@ -2095,7 +2095,7 @@ size_t yw_handleNormMsg(NC_STACK_ypaworld *yw, windp_recvMsg *msg, std::string *
                 case 5:
                     break;
                 }
-                yw->ypaworld_func159(&arg159);
+                yw->ShowMessage(&arg159);
             }
         }
 
@@ -2167,7 +2167,7 @@ size_t yw_handleNormMsg(NC_STACK_ypaworld *yw, windp_recvMsg *msg, std::string *
                     arg159.Priority = 10;
                     arg159.unit = NULL;
 
-                    yw->ypaworld_func159(&arg159);
+                    yw->ShowMessage(&arg159);
                 }
                 else
                 {
@@ -2283,7 +2283,7 @@ size_t yw_handleNormMsg(NC_STACK_ypaworld *yw, windp_recvMsg *msg, std::string *
             arg159.MsgID = 29;
             arg159.unit = NULL;
 
-            yw->ypaworld_func159(&arg159);
+            yw->ShowMessage(&arg159);
 
         }
 
@@ -2921,7 +2921,7 @@ size_t yw_handleNormMsg(NC_STACK_ypaworld *yw, windp_recvMsg *msg, std::string *
             break;
         }
 
-        yw->ypaworld_func159(&arg159);
+        yw->ShowMessage(&arg159);
     }
     break;
 
