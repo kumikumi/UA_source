@@ -1041,13 +1041,13 @@ void NC_STACK_yparobo::wallow(update_msg *arg)
     }
 }
 
-void NC_STACK_yparobo::yparobo_func70__sub2__sub0()
+void NC_STACK_yparobo::UpdateCollisionPointPositions()
 {
     for (World::TRoboColl &rcoll : _roboColls.roboColls)
         rcoll.field_10 = _position + _rotation.Transform( rcoll.coll_pos );
 }
 
-bool NC_STACK_yparobo::yparobo_func70__sub2__sub1()
+bool NC_STACK_yparobo::IsNotUserControlled()
 {
     NC_STACK_ypabact *yw_1b7c = _world->getYW_userVehicle();
 
@@ -1065,7 +1065,7 @@ void NC_STACK_yparobo::AI_doMove(update_msg *arg)
 {
     move_msg arg74;
 
-    yparobo_func70__sub2__sub0();
+    UpdateCollisionPointPositions();
 
     float v49 = arg->frameTime / 1000.0;
 
@@ -1178,7 +1178,7 @@ void NC_STACK_yparobo::AI_doMove(update_msg *arg)
                     !(_roboState & ROBOSTATE_BUILDPOWER) &&
                     !(_roboState & ROBOSTATE_BUILDSAFE) )
             {
-                bool v14 = yparobo_func70__sub2__sub1();
+                bool v14 = IsNotUserControlled();
 
                 if ( v14 && _roboWFlags & 1 )
                 {
@@ -3613,7 +3613,7 @@ void NC_STACK_yparobo::checkDanger()
     }
 }
 
-int NC_STACK_yparobo::yparobo_func70__sub6__sub0(const Common::Point &sc)
+int NC_STACK_yparobo::RateSectorForRadar(const Common::Point &sc)
 {
     cellArea &cell = _world->SectorAt(sc);
 
@@ -3658,7 +3658,7 @@ int NC_STACK_yparobo::yparobo_func70__sub6__sub0(const Common::Point &sc)
     return v14;
 }
 
-int NC_STACK_yparobo::yparobo_func70__sub6__sub1(const Common::Point &sc)
+int NC_STACK_yparobo::RateSectorForRecon(const Common::Point &sc)
 {
     cellArea &cell = _world->SectorAt(sc);
 
@@ -3681,7 +3681,7 @@ int NC_STACK_yparobo::yparobo_func70__sub6__sub1(const Common::Point &sc)
     return v13;
 }
 
-int NC_STACK_yparobo::yparobo_func70__sub6__sub2(const Common::Point &sc)
+int NC_STACK_yparobo::RateSectorForFlak(const Common::Point &sc)
 {
     cellArea &cell = _world->SectorAt(sc);
 
@@ -3723,7 +3723,7 @@ int NC_STACK_yparobo::yparobo_func70__sub6__sub2(const Common::Point &sc)
     return v14;
 }
 
-int NC_STACK_yparobo::yparobo_func70__sub6__sub3(const Common::Point &sc)
+int NC_STACK_yparobo::RateSectorForPowerStation(const Common::Point &sc)
 {
     cellArea &cell = _world->SectorAt(sc);
 
@@ -3777,7 +3777,7 @@ int NC_STACK_yparobo::yparobo_func70__sub6__sub3(const Common::Point &sc)
     return v27;
 }
 
-int32_t NC_STACK_yparobo::yparobo_func70__sub6__sub4(const Common::Point &sc)
+int32_t NC_STACK_yparobo::RateSectorForConquer(const Common::Point &sc)
 {
     cellArea &cell = _world->SectorAt(sc);
     
@@ -3833,7 +3833,7 @@ int32_t NC_STACK_yparobo::yparobo_func70__sub6__sub4(const Common::Point &sc)
     return val;
 }
 
-int NC_STACK_yparobo::yparobo_func70__sub6__sub8()
+int NC_STACK_yparobo::CountOwnFlakSectors()
 {
     int v4 = 0;
 
@@ -3861,7 +3861,7 @@ int NC_STACK_yparobo::yparobo_func70__sub6__sub8()
     return v4;
 }
 
-int NC_STACK_yparobo::yparobo_func70__sub6__sub9()
+int NC_STACK_yparobo::CountOwnRadarSectors()
 {
     int v4 = 0;
 
@@ -3889,7 +3889,7 @@ int NC_STACK_yparobo::yparobo_func70__sub6__sub9()
     return v4;
 }
 
-int NC_STACK_yparobo::yparobo_func70__sub6__sub10()
+int NC_STACK_yparobo::CountOwnedSectors()
 {
     int v4 = 0;
 
@@ -3902,7 +3902,7 @@ int NC_STACK_yparobo::yparobo_func70__sub6__sub10()
     return v4;
 }
 
-int NC_STACK_yparobo::yparobo_func70__sub6__sub11()
+int NC_STACK_yparobo::CountUnseenSectors()
 {
     int v4 = 0;
 
@@ -3915,7 +3915,7 @@ int NC_STACK_yparobo::yparobo_func70__sub6__sub11()
     return v4;
 }
 
-int NC_STACK_yparobo::yparobo_func70__sub6__sub12()
+int NC_STACK_yparobo::IsEnemyRoboNear()
 {
     if (_kidRef)
     {
@@ -3936,7 +3936,7 @@ int NC_STACK_yparobo::yparobo_func70__sub6__sub12()
     return 0;
 }
 
-int NC_STACK_yparobo::yparobo_func70__sub6__sub13()
+int NC_STACK_yparobo::IsEnemyUnitNear()
 {
     for (int i = -2; i <= 2; i++)
     {
@@ -3983,7 +3983,7 @@ float NC_STACK_yparobo::sub_4F4C6C(NC_STACK_ypabact *bact)
     return v8;
 }
 
-int NC_STACK_yparobo::yparobo_func70__sub6__sub5(int *a2, Common::Point *pCellId)
+int NC_STACK_yparobo::FindDefenseTarget(int *a2, Common::Point *pCellId)
 {
     float v32 = -0.5;
 
@@ -4051,7 +4051,7 @@ int NC_STACK_yparobo::yparobo_func70__sub6__sub5(int *a2, Common::Point *pCellId
     return v32;
 }
 
-int NC_STACK_yparobo::yparobo_func70__sub6__sub6(int *a2, Common::Point *pCellId)
+int NC_STACK_yparobo::FindEnemyRoboTarget(int *a2, Common::Point *pCellId)
 {
     float v32 = -0.5;
     int v21 = 0;
@@ -4147,7 +4147,7 @@ int NC_STACK_yparobo::sub_4F4E48(const Common::Point &cellId)
     return v14;
 }
 
-int NC_STACK_yparobo::yparobo_func70__sub6__sub7()
+int NC_STACK_yparobo::RateSectorForRelocation()
 {
     Common::Point pt( _roboPositionCellIndex % _wrldSectors.x, _roboPositionCellIndex / _wrldSectors.x);
 
@@ -4194,7 +4194,7 @@ void NC_STACK_yparobo::AI_checkWorld(update_msg *arg)
 
             if ( _world->IsGamePlaySector(pt) )
             {
-                int v12 = yparobo_func70__sub6__sub4(pt);
+                int v12 = RateSectorForConquer(pt);
                 if ( v12 > _roboConqValue )
                 {
                     arg128.flags = 2;
@@ -4232,7 +4232,7 @@ void NC_STACK_yparobo::AI_checkWorld(update_msg *arg)
             v6 = 0;
     }
 
-    if ( yparobo_func70__sub6__sub13() )
+    if ( IsEnemyUnitNear() )
         v6 = 1;
 
     if ( _roboEpDefense && v6 )
@@ -4240,7 +4240,7 @@ void NC_STACK_yparobo::AI_checkWorld(update_msg *arg)
         Common::Point cellId;
         int v91;
 
-        int v17 = yparobo_func70__sub6__sub5(&v91, &cellId);
+        int v17 = FindDefenseTarget(&v91, &cellId);
         if ( v17 > _roboEnemyValue )
         {
             arg128.flags = 2;
@@ -4272,14 +4272,14 @@ void NC_STACK_yparobo::AI_checkWorld(update_msg *arg)
             v6 = 0;
     }
 
-    if ( yparobo_func70__sub6__sub12() )
+    if ( IsEnemyRoboNear() )
         v6 = 1;
 
     if ( _roboEpRobo && v6 )
     {
         Common::Point cellId;
         int v91;
-        int v22 = yparobo_func70__sub6__sub6(&v91, &cellId);
+        int v22 = FindEnemyRoboTarget(&v91, &cellId);
 
         if ( v22 > _roboDangerValue )
         {
@@ -4329,7 +4329,7 @@ void NC_STACK_yparobo::AI_checkWorld(update_msg *arg)
 
             if ( _world->IsGamePlaySector( {_roboPositionCellIndex % _wrldSectors.x, _roboPositionCellIndex / _wrldSectors.x} ) )
             {
-                int v34 = yparobo_func70__sub6__sub7();
+                int v34 = RateSectorForRelocation();
                 if ( v34 > _roboPositionValue )
                 {
                     _roboPositionValue = v34;
@@ -4387,7 +4387,7 @@ void NC_STACK_yparobo::AI_checkWorld(update_msg *arg)
 
             if ( _world->IsGamePlaySector(pt) )
             {
-                int v46 = yparobo_func70__sub6__sub3(pt);
+                int v46 = RateSectorForPowerStation(pt);
                 if ( v46 > _roboPowerValue )
                 {
                     _roboPowerValue = v46;
@@ -4414,7 +4414,7 @@ void NC_STACK_yparobo::AI_checkWorld(update_msg *arg)
             v6 = 0;
     }
 
-    if ( _roboEpRadar && (yparobo_func70__sub6__sub11() / 64 > yparobo_func70__sub6__sub9()) && v6 )
+    if ( _roboEpRadar && (CountUnseenSectors() / 64 > CountOwnRadarSectors()) && v6 )
     {
         int v48 = (_wrldSectors.y + _wrldSectors.x) / 20 + 1;
 
@@ -4431,7 +4431,7 @@ void NC_STACK_yparobo::AI_checkWorld(update_msg *arg)
 
             if ( _world->IsGamePlaySector(pt) )
             {
-                int v58 = yparobo_func70__sub6__sub0(pt);
+                int v58 = RateSectorForRadar(pt);
 
                 if ( v58 > _roboRadarValue )
                 {
@@ -4466,7 +4466,7 @@ void NC_STACK_yparobo::AI_checkWorld(update_msg *arg)
     else
         v92 = 10;
 
-    if ( _roboEpSafety && (yparobo_func70__sub6__sub10() / v92) >= yparobo_func70__sub6__sub8() && v6 )
+    if ( _roboEpSafety && (CountOwnedSectors() / v92) >= CountOwnFlakSectors() && v6 )
     {
         int v60 = (_wrldSectors.y + _wrldSectors.x) / 20 + 1;
 
@@ -4483,7 +4483,7 @@ void NC_STACK_yparobo::AI_checkWorld(update_msg *arg)
 
             if ( _world->IsGamePlaySector(pt) )
             {
-                int v71 = yparobo_func70__sub6__sub2(pt);
+                int v71 = RateSectorForFlak(pt);
 
                 if ( v71 > _roboSafetyValue )
                 {
@@ -4529,7 +4529,7 @@ void NC_STACK_yparobo::AI_checkWorld(update_msg *arg)
 
             if ( _world->IsGamePlaySector(pt) )
             {
-                int v81 = yparobo_func70__sub6__sub1(pt);
+                int v81 = RateSectorForRecon(pt);
 
                 if ( v81 > _roboExploreValue )
                 {

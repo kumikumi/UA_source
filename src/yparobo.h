@@ -261,22 +261,22 @@ protected:
     void checkDanger();
     size_t checkCollisions(float a2);
     
-    bool yparobo_func70__sub2__sub1();
-    void yparobo_func70__sub2__sub0();
-    int yparobo_func70__sub6__sub0(const Common::Point &sc);
-    int yparobo_func70__sub6__sub2(const Common::Point &sc);
-    int yparobo_func70__sub6__sub1(const Common::Point &sc);
-    int yparobo_func70__sub6__sub7();
-    int yparobo_func70__sub6__sub6(int *a2, Common::Point *pCellId);
-    int yparobo_func70__sub6__sub5(int *a2, Common::Point *pCellId);
-    int yparobo_func70__sub6__sub13();
-    int yparobo_func70__sub6__sub12();
-    int yparobo_func70__sub6__sub3(const Common::Point &sc);
-    int yparobo_func70__sub6__sub4(const Common::Point &sc);
-    int yparobo_func70__sub6__sub8();
-    int yparobo_func70__sub6__sub9();
-    int yparobo_func70__sub6__sub10();
-    int yparobo_func70__sub6__sub11();
+    bool IsNotUserControlled();
+    void UpdateCollisionPointPositions();
+    int RateSectorForRadar(const Common::Point &sc);
+    int RateSectorForFlak(const Common::Point &sc);
+    int RateSectorForRecon(const Common::Point &sc);
+    int RateSectorForRelocation();
+    int FindEnemyRoboTarget(int *a2, Common::Point *pCellId);
+    int FindDefenseTarget(int *a2, Common::Point *pCellId);
+    int IsEnemyUnitNear();
+    int IsEnemyRoboNear();
+    int RateSectorForPowerStation(const Common::Point &sc);
+    int RateSectorForConquer(const Common::Point &sc);
+    int CountOwnFlakSectors();
+    int CountOwnRadarSectors();
+    int CountOwnedSectors();
+    int CountUnseenSectors();
     int sub_4F4E48(const Common::Point &cellId);
     float sub_4F4C6C(NC_STACK_ypabact *bctnd);
     
