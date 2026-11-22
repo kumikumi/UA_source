@@ -21,12 +21,12 @@ extern uint32_t bact_id;
 
 
 ////////////////////////////////////////
-GuiBase *dword_5BAFAC = NULL;
-std::string dword_5BAF98;
+GuiBase *confirmDialogOwner = NULL;
+std::string confirmDialogText;
 
 ////////////////////////////////////////
 
-int dword_5BAF9C;
+int confirmDialogState;
 
 
 
@@ -34,20 +34,20 @@ int dword_5BAF9C;
 /////////////Asking//////////////////
 GuiList lstvw2;
 
-int dword_5BAFA0;
-int dword_5BAFA4;
-int dword_5BAFA8;
+int confirmButtonWidth;
+int confirmButtonGap;
+int confirmDialogMarginX;
 
 
 
 ////////// exit menu/////////
 GuiList exit_menu;
 
-int dword_5C8B78;
-int dword_5C8B7C;
-int dword_5C8B80;
-int dword_5C8B84;
-int dword_5C8B88;
+int exitMenuPendingAction;
+int exitMenuEntryHeight;
+int exitMenuMarginX;
+int exitMenuButtonPadY;
+int exitMenuButtonWidth;
 
 
 
@@ -67,25 +67,25 @@ yw_infolog info_log;
 
 //////////// Map //////////////
 
-int dword_516510;
-int dword_516514;
-int dword_516518;
-int dword_51651C;
+int mapSelStartX;
+int mapSelStartY;
+int mapSelEndX;
+int mapSelEndY;
 
-float flt_5164F4 = 0.0;
-float flt_516504 = 0.0;
-float flt_51650C = 0.0;
+float radarRotM01 = 0.0;
+float radarRotM10 = 0.0;
+float radarRotM11 = 0.0;
 
-float flt_516524;
-float flt_51652C;
-float flt_516528;
-float flt_516530;
+float mapSelWorldMinX;
+float mapSelWorldMaxX;
+float mapSelWorldMinZ;
+float mapSelWorldMaxZ;
 
 tehMap robo_map;
 
 typedef int (*mapFunc)(NC_STACK_ypaworld *yw, int x, int y);
 
-NC_STACK_ypaworld *dword_5BAA60; // For sort func
+NC_STACK_ypaworld *protoSortWorld; // For sort func
 
 
 ///////// up panel ///////////
@@ -111,9 +111,9 @@ void NC_STACK_ypaworld::OpenConfirmDialog(const std::string &a2, GuiBase *lstvw)
     GuiWinOpen(&lstvw2);
     GuiWinToFront(&lstvw2);
 
-    dword_5BAF98 = a2;
-    dword_5BAFAC = lstvw;
-    dword_5BAF9C = 3;
+    confirmDialogText = a2;
+    confirmDialogOwner = lstvw;
+    confirmDialogState = 3;
 }
 
 void NC_STACK_ypaworld::ConfirmOpenHelp(const std::string &a2)
@@ -122,7 +122,7 @@ void NC_STACK_ypaworld::ConfirmOpenHelp(const std::string &a2)
     {
         OpenConfirmDialog( Locale::Text::Advanced(Locale::ADV_RLYHELP) , &exit_menu);
 
-        dword_5C8B78 = 13;
+        exitMenuPendingAction = 13;
 
         _helpURL.clear();
         _helpSavedURL = a2;
@@ -261,8 +261,8 @@ Common::Point RoboMapWorldToScreen(vec2d in)
         float a1a = in.x - robo_map.field_1D8;
         float a2a = in.y - robo_map.field_1DC;
 
-        in.x = robo_map.field_1D8 + robo_map.field_264 * a1a + flt_5164F4 * a2a;
-        in.y = robo_map.field_1DC + flt_516504 * a1a + flt_51650C * a2a;
+        in.x = robo_map.field_1D8 + robo_map.field_264 * a1a + radarRotM01 * a2a;
+        in.y = robo_map.field_1DC + radarRotM10 * a1a + radarRotM11 * a2a;
     }
 
     return Common::Point( robo_map.field_200 + dround(in.x / robo_map.field_1E0) - robo_map.field_1F0
@@ -579,22 +579,22 @@ void RoboMapDrawLines(NC_STACK_ypaworld *yw)
 
             GFX::Engine.SetPen( yw->GetColor(12) );
             
-            GFX::Engine.DrawClippedLineCentered( {dword_516510 - wh,
-                                         dword_516514 - hh,
-                                         dword_516518 - wh,
-                                         dword_516514 - hh} );
-            GFX::Engine.DrawClippedLineCentered( {dword_516518 - wh,
-                                         dword_516514 - hh,
-                                         dword_516518 - wh,
-                                         dword_51651C - hh} );
-            GFX::Engine.DrawClippedLineCentered( {dword_516518 - wh,
-                                         dword_51651C - hh,
-                                         dword_516510 - wh,
-                                         dword_51651C - hh} );
-            GFX::Engine.DrawClippedLineCentered( {dword_516510 - wh,
-                                         dword_51651C - hh,
-                                         dword_516510 - wh,
-                                         dword_516514 - hh} );
+            GFX::Engine.DrawClippedLineCentered( {mapSelStartX - wh,
+                                         mapSelStartY - hh,
+                                         mapSelEndX - wh,
+                                         mapSelStartY - hh} );
+            GFX::Engine.DrawClippedLineCentered( {mapSelEndX - wh,
+                                         mapSelStartY - hh,
+                                         mapSelEndX - wh,
+                                         mapSelEndY - hh} );
+            GFX::Engine.DrawClippedLineCentered( {mapSelEndX - wh,
+                                         mapSelEndY - hh,
+                                         mapSelStartX - wh,
+                                         mapSelEndY - hh} );
+            GFX::Engine.DrawClippedLineCentered( {mapSelStartX - wh,
+                                         mapSelEndY - hh,
+                                         mapSelStartX - wh,
+                                         mapSelStartY - hh} );
         }
     }
 
@@ -1572,10 +1572,10 @@ void RoboMapDrawOverlay(NC_STACK_ypaworld *yw)
                         for ( NC_STACK_ypabact* &bct : cell.unitsList )
                         {
                             if ( bct->_owner == yw->_userRobo->_owner
-                                    && bct->_position.x > flt_516524
-                                    && bct->_position.z > flt_516528
-                                    && bct->_position.x < flt_51652C
-                                    && bct->_position.z < flt_516530 )
+                                    && bct->_position.x > mapSelWorldMinX
+                                    && bct->_position.z > mapSelWorldMinZ
+                                    && bct->_position.x < mapSelWorldMaxX
+                                    && bct->_position.z < mapSelWorldMaxZ )
                             {
                                 if ( bct->_bact_type != BACT_TYPES_MISSLE && bct->_bact_type != BACT_TYPES_ROBO && bct->_bact_type != BACT_TYPES_GUN )
                                 {
@@ -2655,8 +2655,8 @@ void create_info_log(NC_STACK_ypaworld *yw)
 
 void create_exit_menu(NC_STACK_ypaworld *yw)
 {
-    dword_5C8B7C = (yw->_fontH / 2) + yw->_fontH;
-    dword_5C8B84 = yw->_fontH / 4;
+    exitMenuEntryHeight = (yw->_fontH / 2) + yw->_fontH;
+    exitMenuButtonPadY = yw->_fontH / 4;
 
     int tmp = yw->_guiTiles[0]->GetWidth("WWWWWWW");
 
@@ -2670,7 +2670,7 @@ void create_exit_menu(NC_STACK_ypaworld *yw)
     args.maxShownEntries = 5;
     args.minShownEntries = 5;
     args.withIcon = false;
-    args.entryHeight = dword_5C8B7C;
+    args.entryHeight = exitMenuEntryHeight;
     args.entryWidth = (2 * tmp + 16);
     args.enabled = true;
     args.vborder = yw->_fontBorderH;
@@ -2679,15 +2679,15 @@ void create_exit_menu(NC_STACK_ypaworld *yw)
 
     if ( exit_menu.Init(yw, args) )
     {
-        int v5 = yw->_fontH + exit_menu.upperVborder + dword_5C8B84;
+        int v5 = yw->_fontH + exit_menu.upperVborder + exitMenuButtonPadY;
 
-        dword_5C8B80 = 2 * yw->_guiTiles[0]->map[32].w + yw->_fontBorderW;
-        dword_5C8B88 = exit_menu.entryWidth - 2 * dword_5C8B80;
+        exitMenuMarginX = 2 * yw->_guiTiles[0]->map[32].w + yw->_fontBorderW;
+        exitMenuButtonWidth = exit_menu.entryWidth - 2 * exitMenuMarginX;
 
         for (int i = 8; i < 13; i++)
         {
-            exit_menu.buttons[i] = ButtonBox(dword_5C8B80, (i - 8) * dword_5C8B7C + v5,
-                                             dword_5C8B88, yw->_fontH);
+            exit_menu.buttons[i] = ButtonBox(exitMenuMarginX, (i - 8) * exitMenuEntryHeight + v5,
+                                             exitMenuButtonWidth, yw->_fontH);
         }
     }
 }
@@ -2719,21 +2719,21 @@ void CreateConfirmWindow(NC_STACK_ypaworld *yw)
     {
         int v1 = yw->_fontH + lstvw2.upperVborder + 2 * lstvw2.entryHeight;
 
-        dword_5BAFA8 = 2 * yw->_guiTiles[0]->map[32].w + yw->_fontBorderW;
-        dword_5BAFA0 = (lstvw2.entryWidth - 2 * dword_5BAFA8) / 3;
+        confirmDialogMarginX = 2 * yw->_guiTiles[0]->map[32].w + yw->_fontBorderW;
+        confirmButtonWidth = (lstvw2.entryWidth - 2 * confirmDialogMarginX) / 3;
 
         lstvw2.buttons.resize(10);
 
-        lstvw2.buttons[8] = ButtonBox(dword_5BAFA8, v1, dword_5BAFA0, lstvw2.entryHeight);
+        lstvw2.buttons[8] = ButtonBox(confirmDialogMarginX, v1, confirmButtonWidth, lstvw2.entryHeight);
 
-        lstvw2.buttons[9] = ButtonBox(  lstvw2.entryWidth - dword_5BAFA8 - dword_5BAFA0,
+        lstvw2.buttons[9] = ButtonBox(  lstvw2.entryWidth - confirmDialogMarginX - confirmButtonWidth,
                                         v1,
-                                        dword_5BAFA0,
+                                        confirmButtonWidth,
                                         lstvw2.entryHeight);
 
-        dword_5BAFA4 = lstvw2.buttons[9].x - (dword_5BAFA0 + lstvw2.buttons[8].x);
+        confirmButtonGap = lstvw2.buttons[9].x - (confirmButtonWidth + lstvw2.buttons[8].x);
 
-        dword_5BAF9C = 0;
+        confirmDialogState = 0;
     }
 }
 
@@ -2771,7 +2771,7 @@ void SetHudLayout(NC_STACK_ypaworld *yw)
 
 void LoadHud(NC_STACK_ypaworld *yw)
 {
-    const std::array<std::string, 14> off_51825C
+    const std::array<std::string, 14> hudSkeletonFiles
     {
         "wireless/bar.sklt",
         "wireless/compass.sklt",
@@ -2799,7 +2799,7 @@ void LoadHud(NC_STACK_ypaworld *yw)
 
     for (int i = 0; i < 14; i++)
     {
-        wis->sklts[i] = Nucleus::CInit<NC_STACK_sklt>({{NC_STACK_rsrc::RSRC_ATT_NAME, off_51825C.at(i)}});
+        wis->sklts[i] = Nucleus::CInit<NC_STACK_sklt>({{NC_STACK_rsrc::RSRC_ATT_NAME, hudSkeletonFiles.at(i)}});
 
         if ( wis->sklts[i] )
             wis->sklts_intern[i] = wis->sklts[i]->GetSkelet();
@@ -4109,12 +4109,12 @@ NC_STACK_ypabact * GetNextSquadMember(NC_STACK_ypaworld *yw)
 
 int ConfirmDialogGetState()
 {
-    if ( dword_5BAF9C == 3 )
+    if ( confirmDialogState == 3 )
     {
         if ( lstvw2.IsClosed() )
-            dword_5BAF9C = 2;
+            confirmDialogState = 2;
     }
-    return dword_5BAF9C;
+    return confirmDialogState;
 }
 
 void OpenExitMenu(NC_STACK_ypaworld *yw)
@@ -5772,23 +5772,23 @@ void RoboMapUpdateSelectionRect()
 
     int v0 = -(pMapInter.x + robo_map.x + (pMapInter.w / 2));
     int v3 = -(pMapInter.y + robo_map.y + (pMapInter.h / 2));
-    flt_516524 = (float)(v0 + dword_516510) * robo_map.field_1E0 + robo_map.field_1D8;
-    flt_51652C = (float)(v0 + dword_516518) * robo_map.field_1E0 + robo_map.field_1D8;
-    flt_516528 = robo_map.field_1DC - (float)(v3 + dword_516514) * robo_map.field_1E4;
-    flt_516530 = robo_map.field_1DC - (float)(v3 + dword_51651C) * robo_map.field_1E4;
+    mapSelWorldMinX = (float)(v0 + mapSelStartX) * robo_map.field_1E0 + robo_map.field_1D8;
+    mapSelWorldMaxX = (float)(v0 + mapSelEndX) * robo_map.field_1E0 + robo_map.field_1D8;
+    mapSelWorldMinZ = robo_map.field_1DC - (float)(v3 + mapSelStartY) * robo_map.field_1E4;
+    mapSelWorldMaxZ = robo_map.field_1DC - (float)(v3 + mapSelEndY) * robo_map.field_1E4;
 
-    if ( flt_516524 > flt_51652C )
+    if ( mapSelWorldMinX > mapSelWorldMaxX )
     {
-        float v4 = flt_516524;
-        flt_516524 = flt_51652C;
-        flt_51652C = v4;
+        float v4 = mapSelWorldMinX;
+        mapSelWorldMinX = mapSelWorldMaxX;
+        mapSelWorldMaxX = v4;
     }
 
-    if ( flt_516528 > flt_516530 )
+    if ( mapSelWorldMinZ > mapSelWorldMaxZ )
     {
-        float v5 = flt_516528;
-        flt_516528 = flt_516530;
-        flt_516530 = v5;
+        float v5 = mapSelWorldMinZ;
+        mapSelWorldMinZ = mapSelWorldMaxZ;
+        mapSelWorldMaxZ = v5;
     }
 }
 
@@ -5796,10 +5796,10 @@ void RoboMapMakeSquadFromBox(NC_STACK_ypaworld *yw)
 {
     int v8 = 0;
 
-    int v22 = flt_516524 / World::CVSectorLength;
-    int v6 = -flt_516530 / World::CVSectorLength;
-    int v24 = flt_51652C / World::CVSectorLength;
-    int v23 = -flt_516528 / World::CVSectorLength;
+    int v22 = mapSelWorldMinX / World::CVSectorLength;
+    int v6 = -mapSelWorldMaxZ / World::CVSectorLength;
+    int v24 = mapSelWorldMaxX / World::CVSectorLength;
+    int v23 = -mapSelWorldMinZ / World::CVSectorLength;
 
     if ( v22 >= yw->_mapSize.x )
         v22 = yw->_mapSize.x - 1;
@@ -5835,7 +5835,7 @@ void RoboMapMakeSquadFromBox(NC_STACK_ypaworld *yw)
                 {
                     if ( bct->_owner == yw->_userRobo->_owner )
                     {
-                        if ( bct->_position.x > flt_516524 && bct->_position.z > flt_516528 && bct->_position.x < flt_51652C && bct->_position.z < flt_516530 )
+                        if ( bct->_position.x > mapSelWorldMinX && bct->_position.z > mapSelWorldMinZ && bct->_position.x < mapSelWorldMaxX && bct->_position.z < mapSelWorldMaxZ )
                         {
                             if ( bct->_bact_type != BACT_TYPES_MISSLE && bct->_bact_type != BACT_TYPES_GUN )
                             {
@@ -6044,14 +6044,14 @@ void  RoboMap_InputHandle(NC_STACK_ypaworld *yw, TInputState *inpt)
         }
         else if ( robo_map.field_1E8 & 0x200 )
         {
-            dword_516518 = winpt->move.ScreenPos.x;
-            dword_51651C = winpt->move.ScreenPos.y;
+            mapSelEndX = winpt->move.ScreenPos.x;
+            mapSelEndY = winpt->move.ScreenPos.y;
 
             RoboMapUpdateSelectionRect();
 
             if ( !(winpt->flag & TClickBoxInf::FLAG_LM_HOLD) )
             {
-                if ( abs(dword_516518 - dword_516510) <= 5 || abs(dword_51651C - dword_516514) <= 5 )
+                if ( abs(mapSelEndX - mapSelStartX) <= 5 || abs(mapSelEndY - mapSelStartY) <= 5 )
                 {
                     robo_map.field_1E8 &= 0xFFFFFDFF;
                     winpt->flag |= TClickBoxInf::FLAG_LM_DOWN;
@@ -6084,10 +6084,10 @@ void  RoboMap_InputHandle(NC_STACK_ypaworld *yw, TInputState *inpt)
                 if ( winpt->selected_btnID == 17 )
                 {
                     robo_map.field_1E8 |= 0x200;
-                    dword_516510 = winpt->move.ScreenPos.x;
-                    dword_516514 = winpt->move.ScreenPos.y;
-                    dword_516518 = dword_516510;
-                    dword_51651C = dword_516514;
+                    mapSelStartX = winpt->move.ScreenPos.x;
+                    mapSelStartY = winpt->move.ScreenPos.y;
+                    mapSelEndX = mapSelStartX;
+                    mapSelEndY = mapSelStartY;
 
                     RoboMapUpdateSelectionRect();
 
@@ -6348,7 +6348,7 @@ void InfoLogHandleInput(NC_STACK_ypaworld *yw, TInputState *inpt)
 
 GuiBase * GetConfirmDialogOwner()
 {
-    return dword_5BAFAC;
+    return confirmDialogOwner;
 }
 
 void NC_STACK_ypaworld::NetSendExitMsg(uint8_t normExit)
@@ -6391,13 +6391,13 @@ void ExitMenuLayoutButton(NC_STACK_ypaworld *yw, CmdStream *cur, int a4, int a3,
 {
     std::string v5 = a5;
 
-    FontUA::set_yheight(cur, dword_5C8B84);
+    FontUA::set_yheight(cur, exitMenuButtonPadY);
 
     FontUA::store_u8(cur, 123);
     FontUA::store_u8(cur, 32);
     FontUA::store_u8(cur, 32);
 
-    FontUA::op17(cur, dword_5C8B80 + dword_5C8B88);
+    FontUA::op17(cur, exitMenuMarginX + exitMenuButtonWidth);
     FontUA::store_u8(cur, 32);
 
     FontUA::store_u8(cur, 32);
@@ -6430,7 +6430,7 @@ void ExitMenuLayoutButton(NC_STACK_ypaworld *yw, CmdStream *cur, int a4, int a3,
         FontUA::set_flag(cur, 0x10);
     }
 
-    LayoutCenteredTextField(yw->_guiTiles[v11], cur, v5, dword_5C8B88 - 2 * yw->_fontBorderW, 32);
+    LayoutCenteredTextField(yw->_guiTiles[v11], cur, v5, exitMenuButtonWidth - 2 * yw->_fontBorderW, 32);
 
     FontUA::unset_flag(cur, 0x10);
 
@@ -6444,13 +6444,13 @@ void ExitMenuLayoutButton(NC_STACK_ypaworld *yw, CmdStream *cur, int a4, int a3,
 
     FontUA::next_line(cur);
 
-    FontUA::set_yheight(cur, dword_5C8B84);
+    FontUA::set_yheight(cur, exitMenuButtonPadY);
 
     FontUA::store_u8(cur, 123);
     FontUA::store_u8(cur, 32);
     FontUA::store_u8(cur, 32);
 
-    FontUA::op17(cur, dword_5C8B80 + dword_5C8B88);
+    FontUA::op17(cur, exitMenuMarginX + exitMenuButtonWidth);
     FontUA::store_u8(cur, 32);
 
     FontUA::store_u8(cur, 32);
@@ -6525,7 +6525,7 @@ void NC_STACK_ypaworld::ExitMenuHandleInput(TInputState *inpt)
 
         if ( v7 == 1 )
         {
-            switch ( dword_5C8B78 )
+            switch ( exitMenuPendingAction )
             {
             case 8:
                 _levelInfo.State = TLevelInfo::STATE_ABORTED;
@@ -6556,11 +6556,11 @@ void NC_STACK_ypaworld::ExitMenuHandleInput(TInputState *inpt)
                 break;
             }
 
-            dword_5BAF9C = 0;
+            confirmDialogState = 0;
         }
         else if ( v7 == 2 )
         {
-            dword_5BAF9C = 0;
+            confirmDialogState = 0;
         }
     }
 
@@ -6613,7 +6613,7 @@ void NC_STACK_ypaworld::ExitMenuHandleInput(TInputState *inpt)
 
                 if ( winpt->flag & TClickBoxInf::FLAG_BTN_UP )
                 {
-                    dword_5C8B78 = 8;
+                    exitMenuPendingAction = 8;
 
                     if ( ConfirmDialogGetState() != 3 )
                         GuiWinClose( &exit_menu );
@@ -6630,7 +6630,7 @@ void NC_STACK_ypaworld::ExitMenuHandleInput(TInputState *inpt)
 
                     if ( winpt->flag & TClickBoxInf::FLAG_BTN_UP )
                     {
-                        dword_5C8B78 = 9;
+                        exitMenuPendingAction = 9;
 
                         if ( ConfirmDialogGetState() != 3 )
                             GuiWinClose( &exit_menu );
@@ -6648,7 +6648,7 @@ void NC_STACK_ypaworld::ExitMenuHandleInput(TInputState *inpt)
 
                     if ( winpt->flag & TClickBoxInf::FLAG_BTN_UP )
                     {
-                        dword_5C8B78 = 10;
+                        exitMenuPendingAction = 10;
 
                         if ( ConfirmDialogGetState() != 3 )
                             GuiWinClose( &exit_menu );
@@ -6666,7 +6666,7 @@ void NC_STACK_ypaworld::ExitMenuHandleInput(TInputState *inpt)
 
                     if ( winpt->flag & TClickBoxInf::FLAG_BTN_UP )
                     {
-                        dword_5C8B78 = 11;
+                        exitMenuPendingAction = 11;
 
                         if ( ConfirmDialogGetState() != 3 )
                             GuiWinClose( &exit_menu );
@@ -6705,7 +6705,7 @@ void ConfirmDialogLayoutTextLine(NC_STACK_ypaworld *yw, CmdStream *cur, const st
     FontUA::store_u8(cur, 32);
     FontUA::store_u8(cur, 32);
 
-    LayoutCenteredTextField(yw->_guiTiles[0], cur, a2, lstvw2.entryWidth - 2 * dword_5BAFA8, 32);
+    LayoutCenteredTextField(yw->_guiTiles[0], cur, a2, lstvw2.entryWidth - 2 * confirmDialogMarginX, 32);
 
     FontUA::store_u8(cur, 32);
     FontUA::store_u8(cur, 32);
@@ -6736,7 +6736,7 @@ void ConfirmDialogLayoutButtons(NC_STACK_ypaworld *yw, CmdStream *cur, int a3)
 
     FontUA::store_u8(cur, 98);
 
-    LayoutCenteredTextField(yw->_guiTiles[v8], cur, Locale::Text::Common(Locale::CMN_OK), dword_5BAFA0 - 2 * yw->_fontBorderW, 32);
+    LayoutCenteredTextField(yw->_guiTiles[v8], cur, Locale::Text::Common(Locale::CMN_OK), confirmButtonWidth - 2 * yw->_fontBorderW, 32);
 
     FontUA::unset_flag(cur, 0x10);
 
@@ -6744,7 +6744,7 @@ void ConfirmDialogLayoutButtons(NC_STACK_ypaworld *yw, CmdStream *cur, int a3)
 
     FontUA::select_tileset(cur, 0);
 
-    FontUA::op10(cur, dword_5BAFA4);
+    FontUA::op10(cur, confirmButtonGap);
 
     FontUA::store_u8(cur, 32);
 
@@ -6762,7 +6762,7 @@ void ConfirmDialogLayoutButtons(NC_STACK_ypaworld *yw, CmdStream *cur, int a3)
 
     FontUA::store_u8(cur, 98);
 
-    LayoutCenteredTextField(yw->_guiTiles[v8], cur, Locale::Text::Common(Locale::CMN_CANCEL), dword_5BAFA0 - 2 * yw->_fontBorderW, 32);
+    LayoutCenteredTextField(yw->_guiTiles[v8], cur, Locale::Text::Common(Locale::CMN_CANCEL), confirmButtonWidth - 2 * yw->_fontBorderW, 32);
 
     FontUA::unset_flag(cur, 0x10);
 
@@ -6785,7 +6785,7 @@ void NC_STACK_ypaworld::ConfirmDialogLayoutItems(int a2)
 
     FontUA::set_txtColor(&lstvw2.itemBlock, _iniColors[60].r, _iniColors[60].g, _iniColors[60].b);
 
-    ConfirmDialogLayoutTextLine(this, &lstvw2.itemBlock, dword_5BAF98);
+    ConfirmDialogLayoutTextLine(this, &lstvw2.itemBlock, confirmDialogText);
     ConfirmDialogLayoutTextLine(this, &lstvw2.itemBlock, " ");
 
     FontUA::set_txtColor(&lstvw2.itemBlock, _iniColors[68].r, _iniColors[68].g, _iniColors[68].b);
@@ -6812,7 +6812,7 @@ void NC_STACK_ypaworld::ConfirmDialogHandleInput(TInputState *inpt)
         {
             GuiWinClose( &lstvw2 );
 
-            dword_5BAF9C = 1;
+            confirmDialogState = 1;
 
             inpt->KbdLastHit = Input::KC_NONE;
             inpt->KbdLastDown = Input::KC_NONE;
@@ -6822,7 +6822,7 @@ void NC_STACK_ypaworld::ConfirmDialogHandleInput(TInputState *inpt)
         {
             GuiWinClose( &lstvw2 );
 
-            dword_5BAF9C = 2;
+            confirmDialogState = 2;
 
             inpt->KbdLastHit = Input::KC_NONE;
             inpt->KbdLastDown = Input::KC_NONE;
@@ -6847,7 +6847,7 @@ void NC_STACK_ypaworld::ConfirmDialogHandleInput(TInputState *inpt)
                 if ( winpt->flag & TClickBoxInf::FLAG_BTN_UP )
                 {
                     GuiWinClose( &lstvw2 );
-                    dword_5BAF9C = 1;
+                    confirmDialogState = 1;
                 }
             }
             else if ( winpt->selected_btnID == 9 )
@@ -6858,7 +6858,7 @@ void NC_STACK_ypaworld::ConfirmDialogHandleInput(TInputState *inpt)
                 if ( winpt->flag & TClickBoxInf::FLAG_BTN_UP )
                 {
                     GuiWinClose( &lstvw2 );
-                    dword_5BAF9C = 2;
+                    confirmDialogState = 2;
                 }
             }
         }
@@ -7212,8 +7212,8 @@ int CompareVehicleProtos(const void *a1, const void *a2)
     uint8_t aa1 = *(const uint8_t *)a1;
     uint8_t aa2 = *(const uint8_t *)a2;
 
-    const World::TVhclProto &v4 = dword_5BAA60->_vhclProtos[aa1];
-    const World::TVhclProto &v5 = dword_5BAA60->_vhclProtos[aa2];
+    const World::TVhclProto &v4 = protoSortWorld->_vhclProtos[aa1];
+    const World::TVhclProto &v5 = protoSortWorld->_vhclProtos[aa2];
 
     int v7, v8;
 
@@ -7327,7 +7327,7 @@ void UpdateVehicleList(NC_STACK_ypaworld *yw)
 
     bzda.field_8E0 = v3;
 
-    dword_5BAA60 = yw;
+    protoSortWorld = yw;
 
     qsort(bzda.field_2DC, v3, 1, CompareVehicleProtos);
 
@@ -7354,8 +7354,8 @@ int CompareBuildingProtos(const void *a1, const void *a2)
     uint8_t aa1 = *(const uint8_t *)a1;
     uint8_t aa2 = *(const uint8_t *)a2;
 
-    World::TBuildingProto *v3 = &dword_5BAA60->_buildProtos[aa1];
-    World::TBuildingProto *v4 = &dword_5BAA60->_buildProtos[aa2];
+    World::TBuildingProto *v3 = &protoSortWorld->_buildProtos[aa1];
+    World::TBuildingProto *v4 = &protoSortWorld->_buildProtos[aa2];
 
     int v6, v8;
 
@@ -7421,7 +7421,7 @@ void UpdateBuildingList(NC_STACK_ypaworld *yw)
 
     bzda.field_8E4 = v3;
 
-    dword_5BAA60 = yw;
+    protoSortWorld = yw;
 
     qsort(bzda.field_3DC, v3, 1, CompareBuildingProtos);
 
@@ -9616,9 +9616,9 @@ void yw_RenderHUDRadare(NC_STACK_ypaworld *yw)
     }
     robo_map.field_264 = v18;
 
-    flt_5164F4 = -v20;
-    flt_516504 = v20;
-    flt_51650C = v18;
+    radarRotM01 = -v20;
+    radarRotM10 = v20;
+    radarRotM11 = v18;
 
     DrawRadarUnits(yw);
 

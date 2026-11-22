@@ -39,15 +39,15 @@ int SFXEngine::init()
     audio_volume = 0;
     audio_channels = 0;
     audio_num_palfx = 0;
-    dword_546E14 = 0;
+    audio_num_shakefx = 0;
 
     audio_rev_stereo = false;
-    dword_546F0C = 0;
+    palFxCleared = 0;
     currentTime = 0;
-    dword_546F14 = 0;
+    audioRndIndex = 0;
 
     for (int i = 0; i < 64; i++)
-        flt_546F18[i] = 0.0;
+        audioRndTable[i] = 0.0;
 
     musPlayer = NULL;
     musWait = false;
@@ -77,11 +77,11 @@ int SFXEngine::init()
     if ( audio_num_palfx > 8 )
         audio_num_palfx = 8;
 
-    dword_546E14 = 4;
-    dword_546F14 = 0;
+    audio_num_shakefx = 4;
+    audioRndIndex = 0;
 
     for (int i = 0; i < 64; i++)
-        flt_546F18[i] = (float)(16383 - (rand() & 0x7FFF) ) / 16383.0;
+        audioRndTable[i] = (float)(16383 - (rand() & 0x7FFF) ) / 16383.0;
 
     digDriver = new waldev(); //miles_init(audio_channels);
 
@@ -270,7 +270,7 @@ void SFXEngine::StopCarrier(TSndCarrier *carr)
         }
     }
 
-    for (int i = 0; i < dword_546E14; i++)
+    for (int i = 0; i < audio_num_shakefx; i++)
     {
         if ( ShakeFXs[i] && ShakeFXs[i]->PCarrier == carr )
         {
@@ -323,7 +323,7 @@ void SFXEngine::StopSource(TSoundSource *snd)
         }
     }
 
-    for (int i = 0; i < dword_546E14; i++)
+    for (int i = 0; i < audio_num_shakefx; i++)
     {
         if ( ShakeFXs[i] == snd )
         {
@@ -336,12 +336,12 @@ void SFXEngine::StopSource(TSoundSource *snd)
 
 float SFXEngine::audio_rnd()
 {
-    float tmp = flt_546F18[dword_546F14];
+    float tmp = audioRndTable[audioRndIndex];
 
-    dword_546F14++;
+    audioRndIndex++;
 
-    if ( dword_546F14 >= 64 )
-        dword_546F14 = 0;
+    if ( audioRndIndex >= 64 )
+        audioRndIndex = 0;
 
     return tmp;
 }
@@ -538,7 +538,7 @@ void SFXEngine::InsertShakeFX(TSoundSource *smpl)
     int min_i = -1;
     int var_1C = 1000;
 
-    for (int i = 0; i < dword_546E14; i++)
+    for (int i = 0; i < audio_num_shakefx; i++)
     {
         TSoundSource *v5 = ShakeFXs[i];
 
@@ -554,7 +554,7 @@ void SFXEngine::InsertShakeFX(TSoundSource *smpl)
         {
             min_i = i;
             var_1C = 0;
-            i = dword_546E14;
+            i = audio_num_shakefx;
         }
     }
 
@@ -598,7 +598,7 @@ void SFXEngine::SoundCarrierProcessShake(TSndCarrier *smpls, float distance)
 // Insert new sound
 void SFXEngine::UpdateSoundCarrier(TSndCarrier *smpls)
 {
-    float distance = (smpls->Position - stru_547018).length();
+    float distance = (smpls->Position - listenerPos).length();
 
     if ( distance < 6000.0 )
     {
@@ -681,10 +681,10 @@ void SFXEngine::CalcPlayParams(TSoundSource *smpl)
 {
     TSndCarrier *v2 = smpl->PCarrier;
 
-    vec3d v3 = stru_547018 - v2->Position;
+    vec3d v3 = listenerPos - v2->Position;
     float v27 = v3.length();
 
-    vec3d v8 = v2->Vector - stru_547024;
+    vec3d v8 = v2->Vector - listenerVelocity;
     float v20 = v8.length();
 
     float v21 = v27  *  v20;
@@ -705,7 +705,7 @@ void SFXEngine::CalcPlayParams(TSoundSource *smpl)
     else if ( v14 > 44100 )
         v14 = 44100;
 
-    float v31 = stru_547030.AxisX().dot( v3 );
+    float v31 = listenerRotation.AxisX().dot( v3 );
 
     smpl->ResultRate = v14 + v14 * (int)(v19 * v20) / 400;
 
@@ -925,14 +925,14 @@ void SFXEngine::UpdatePaletteEffects()
 
     if ( i )
     {
-        dword_546F0C = 0;
+        palFxCleared = 0;
     }
     else
     {
-        if ( dword_546F0C )
+        if ( palFxCleared )
             return;
 
-        dword_546F0C = 1;
+        palFxCleared = 1;
     }
 
     if ( pwr > 0.0 )
@@ -947,7 +947,7 @@ void SFXEngine::UpdateShake()
 
     int i = 0;
 
-    for (i = 0; i < dword_546E14 && ShakeFXs[i]; i++)
+    for (i = 0; i < audio_num_shakefx && ShakeFXs[i]; i++)
     {
         TSoundSource *v2 = ShakeFXs[i];
 
@@ -1014,9 +1014,9 @@ void SFXEngine::BeginSoundFrame(int a1, const vec3d &a2, const vec3d &a3, const 
 {
     currentTime += a1;
 
-    stru_547018 = a2;
-    stru_547024 = a3;
-    stru_547030 = a4;
+    listenerPos = a2;
+    listenerVelocity = a3;
+    listenerRotation = a4;
 
     soundSources.fill(NULL);
     palFXs.fill(NULL);
@@ -1062,7 +1062,7 @@ void SFXEngine::StopPlayingSounds()
         }
     }
 
-    for (int i = 0; i < dword_546E14; i++)
+    for (int i = 0; i < audio_num_shakefx; i++)
     {
         if ( ShakeFXs[i] )
         {

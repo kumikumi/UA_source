@@ -7,7 +7,7 @@
 #include "history.h"
 
 
-extern uint32_t dword_5A7A80;
+extern uint32_t maxLoadedCommandID;
 extern uint32_t bact_id;
 
 namespace World
@@ -209,8 +209,8 @@ bool SaveBact::SaveBactParser(ScriptParser::Parser &parser, NC_STACK_ypabact *b,
     {
         b->_commandID = (parser.stoi(p2) & 0xFFFFFF);
 
-        if ( dword_5A7A80 < b->_commandID )
-            dword_5A7A80 = b->_commandID;
+        if ( maxLoadedCommandID < b->_commandID )
+            maxLoadedCommandID = b->_commandID;
     }
     else if ( !StriCmp(p1, "aggression") )
     {

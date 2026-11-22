@@ -318,19 +318,19 @@ public:
     int audio_volume;
     int audio_channels;
     int audio_num_palfx;
-    int dword_546E14; // num_shakeFX
+    int audio_num_shakefx; // num_shakeFX
     std::array<TSoundChannel, AUDIO_CHANNELS> snd_channels;
     std::array<TSoundSource *, AUDIO_CHANNELS> soundSources = Common::ArrayInit<TSoundSource *, AUDIO_CHANNELS>(NULL);
     std::array<TSoundSource *, 8> palFXs = Common::ArrayInit<TSoundSource *, 8>(NULL);
     std::array<TSoundSource *, 4> ShakeFXs = Common::ArrayInit<TSoundSource *, 4>(NULL);
     bool audio_rev_stereo;
-    int dword_546F0C;
+    int palFxCleared;
     size_t currentTime;
-    int dword_546F14;
-    float flt_546F18[64];
-    vec3d stru_547018;
-    vec3d stru_547024;
-    mat3x3 stru_547030;
+    int audioRndIndex;
+    float audioRndTable[64];
+    vec3d listenerPos;
+    vec3d listenerVelocity;
+    mat3x3 listenerRotation;
     mat3x3 shakeMatrix;
 
     walmus *musPlayer;

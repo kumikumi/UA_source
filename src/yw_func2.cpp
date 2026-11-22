@@ -20,16 +20,16 @@
 #include "obj3d.h"
 
 extern int vertMenuSpace;
-extern int dword_5A50B2;
-extern int dword_5A50B2_h;
+extern int videoMenuRowWidth;
+extern int menuListWidth;
 extern int word_5A50AE;
 extern int word_5A50BC;
 extern int word_5A50BA;
 extern int word_5A50BE;
 extern int buttonsSpace;
 
-extern int dword_5A50B6;
-extern int dword_5A50B6_h;
+extern int netMenuWidth;
+extern int subBarButtonWidth;
 
 void RenderBriefingVehicle(NC_STACK_ypaworld *yw, bool clockwise, int a3, vec3d *pos, baseRender_msg *arg)
 {
@@ -2146,11 +2146,11 @@ void UserData::GameShellUiHandleInput()
     sub_bar_button->setXYWidth(&v393);
 
     v393.butID = 1019;
-    v393.xpos = p_YW->_screenSize.x - dword_5A50B6_h;
+    v393.xpos = p_YW->_screenSize.x - subBarButtonWidth;
     sub_bar_button->setXYWidth(&v393);
 
     v393.butID = 1011;
-    v393.xpos = buttonsSpace + dword_5A50B6_h;
+    v393.xpos = buttonsSpace + subBarButtonWidth;
     sub_bar_button->setXYWidth(&v393);
 
     sub_bar_button->SetText(1019,  Locale::Text::GlobMap(Locale::GLOBMAP_GOBACK));
@@ -2163,7 +2163,7 @@ void UserData::GameShellUiHandleInput()
             sub_bar_button->Enable(&v410);
 
             v393.butID = 1014;
-            v393.xpos = p_YW->_screenSize.x - dword_5A50B6_h;
+            v393.xpos = p_YW->_screenSize.x - subBarButtonWidth;
             sub_bar_button->setXYWidth(&v393);
 
             v393.butID = 1019;
@@ -4119,12 +4119,12 @@ void UserData::GameShellUiHandleInput()
 
         if ( netSelMode == NETSCREEN_ENTER_NAME || netSelMode == NETSCREEN_ENTER_IP)
         {
-            v393.width = dword_5A50B6;
+            v393.width = netMenuWidth;
             v393.ypos = 3 * (vertMenuSpace + p_YW->_fontH);
         }
         else
         {
-            v393.width = dword_5A50B6 * 0.8;
+            v393.width = netMenuWidth * 0.8;
             v393.ypos = 14 * (vertMenuSpace + p_YW->_fontH);
         }
 

@@ -13,7 +13,7 @@
 #include "loaders.h"
 #include "system/inivals.h"
 
-extern GuiList stru_5C91D0;
+extern GuiList briefingTextList;
 
 
 TileMap * NC_STACK_ypaworld::yw_LoadFont(const std::string &fontname)
@@ -1264,8 +1264,8 @@ void NC_STACK_ypaworld::FreeBriefing()
     _briefScreen.UnloadRes();
     _briefScreen.Stage = TBriefengScreen::STAGE_NONE;
     
-    GuiWinClose(&stru_5C91D0);
-    stru_5C91D0.Free();
+    GuiWinClose(&briefingTextList);
+    briefingTextList.Free();
 }
 
 void NC_STACK_ypaworld::FreeDebrief()
@@ -1521,7 +1521,7 @@ int NC_STACK_ypaworld::CreateBriefingTextList()
 
     int v5 = (bottom - top) / _fontH;
 
-    stru_5C91D0 = GuiList();
+    briefingTextList = GuiList();
 
     GuiList::tInit args;
     args.numEntries = 1;
@@ -1534,13 +1534,13 @@ int NC_STACK_ypaworld::CreateBriefingTextList()
     args.enabled = true;
     args.vborder = _fontBorderH;
 
-    int result = stru_5C91D0.Init(this, args);
+    int result = briefingTextList.Init(this, args);
 
     if ( !result )
         return 0;
 
-    stru_5C91D0.SetRect(this, lft, top);
-    GuiWinOpen( &stru_5C91D0 );
+    briefingTextList.SetRect(this, lft, top);
+    GuiWinOpen( &briefingTextList );
 
     return 1;
 }
@@ -1548,8 +1548,8 @@ int NC_STACK_ypaworld::CreateBriefingTextList()
 // Fits the briefing text list to a new screen size.
 void NC_STACK_ypaworld::RelayoutBriefingTextList()
 {
-    GuiWinClose(&stru_5C91D0);
-    stru_5C91D0.Free();
+    GuiWinClose(&briefingTextList);
+    briefingTextList.Free();
     CreateBriefingTextList();
 }
 
@@ -1681,8 +1681,8 @@ bool NC_STACK_ypaworld::InitBriefing(int lvlid)
     return true;
 
 ON_ERR:
-    GuiWinClose( &stru_5C91D0 );
-    stru_5C91D0.Free();
+    GuiWinClose( &briefingTextList );
+    briefingTextList.Free();
 
     _levelInfo = backup;
 

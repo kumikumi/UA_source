@@ -14,10 +14,10 @@
 
 
 
-int dword_5B1128 = 1;
+int nextCommandID = 1;
 
-robo_t2 stru_5B0628[100];
-int dword_515138[8];
+robo_t2 lastRoboMsgByType[100];
+int lastEnemyHostFoundMsgTime[8];
 
 
 const std::array<Common::Point, 8> NearDxy 
@@ -1414,8 +1414,8 @@ void NC_STACK_yparobo::doUserCommands(update_msg *arg)
                 newbact->SetState(&arg78);
 
                 newbact->_scale_time = newbact->_energy_max * 0.2;
-                newbact->_commandID = dword_5B1128;
-                dword_5B1128++;
+                newbact->_commandID = nextCommandID;
+                nextCommandID++;
 
                 newbact->_owner = _owner;
                 AddSubject(newbact);
@@ -2472,8 +2472,8 @@ NC_STACK_ypabact *NC_STACK_yparobo::AllocForce(robo_loct1 *arg)
         if ( !newUnit )
             return NULL;
 
-        newUnit->_commandID = dword_5B1128;
-        dword_5B1128++;
+        newUnit->_commandID = nextCommandID;
+        nextCommandID++;
 
         newUnit->_owner = _owner;
         newUnit->_host_station = this;
@@ -5223,9 +5223,9 @@ void NC_STACK_yparobo::Renew()
     
     _roboAttackers.fill( robo_t1() );
 
-    _commandID = dword_5B1128;
+    _commandID = nextCommandID;
 
-    dword_5B1128++;
+    nextCommandID++;
 
     setBACT_yourLastSeconds(3000);
 
@@ -5529,7 +5529,7 @@ bool NC_STACK_yparobo::MakeSquad(const std::vector<int> &VhclIDS, vec3d pos, boo
         squad_commander->_status_flg |= BACT_STFLAG_UNUSE;
 
     squad_commander->_owner = _owner;
-    squad_commander->_commandID = dword_5B1128;
+    squad_commander->_commandID = nextCommandID;
     squad_commander->_host_station = this;
     squad_commander->_aggr = 60;
 
@@ -5572,14 +5572,14 @@ bool NC_STACK_yparobo::MakeSquad(const std::vector<int> &VhclIDS, vec3d pos, boo
             next_bact->_status_flg |= BACT_STFLAG_UNUSE;
 
         next_bact->_owner = _owner;
-        next_bact->_commandID = dword_5B1128;
+        next_bact->_commandID = nextCommandID;
         next_bact->_host_station = this;
         next_bact->_aggr = 60;
 
         next_bact->SetState(&arg78);
     }
 
-    dword_5B1128++;
+    nextCommandID++;
 
     AddSubject(squad_commander);  //Add squad commander into robo list
 
@@ -5608,15 +5608,15 @@ int NC_STACK_yparobo::ShouldPlaceMessage(robo_arg134 *arg)
     case 2:
     case 3:
     case 4:
-        if ( arg->field_8 == stru_5B0628[ arg->field_4 ].field_0 && arg->field_C == stru_5B0628[ arg->field_4 ].field_4 )
+        if ( arg->field_8 == lastRoboMsgByType[ arg->field_4 ].field_0 && arg->field_C == lastRoboMsgByType[ arg->field_4 ].field_4 )
             v2 = 0;
         else
             v2 = 1;
         break;
 
     case 6:
-        v2 = (_clock - dword_515138[ arg->field_8 ] > 45000) || dword_515138[ arg->field_8 ] == 0;
-        dword_515138[ arg->field_8 ] = _clock;
+        v2 = (_clock - lastEnemyHostFoundMsgTime[ arg->field_8 ] > 45000) || lastEnemyHostFoundMsgTime[ arg->field_8 ] == 0;
+        lastEnemyHostFoundMsgTime[ arg->field_8 ] = _clock;
         break;
 
     case 7:
@@ -5634,7 +5634,7 @@ int NC_STACK_yparobo::ShouldPlaceMessage(robo_arg134 *arg)
     case 9:
     case 10:
     case 13:
-        if ( arg->field_8 == stru_5B0628[arg->field_4].field_0 )
+        if ( arg->field_8 == lastRoboMsgByType[arg->field_4].field_0 )
             v2 = 0;
         else
             v2 = 1;
@@ -5655,9 +5655,9 @@ int NC_STACK_yparobo::ShouldPlaceMessage(robo_arg134 *arg)
 
     case 18:
     case 40:
-        if ( (_clock - stru_5B0628[ arg->field_4 ].field_10) > arg->field_8 )
+        if ( (_clock - lastRoboMsgByType[ arg->field_4 ].field_10) > arg->field_8 )
         {
-            stru_5B0628[ arg->field_4 ].field_10 = _clock;
+            lastRoboMsgByType[ arg->field_4 ].field_10 = _clock;
             v2 = 1;
         }
         else
@@ -5671,9 +5671,9 @@ int NC_STACK_yparobo::ShouldPlaceMessage(robo_arg134 *arg)
 
     if ( v2 )
     {
-        stru_5B0628[arg->field_4].field_0 = arg->field_8;
-        stru_5B0628[arg->field_4].field_4 = arg->field_C;
-        stru_5B0628[arg->field_4].field_8 = arg->field_10;
+        lastRoboMsgByType[arg->field_4].field_0 = arg->field_8;
+        lastRoboMsgByType[arg->field_4].field_4 = arg->field_C;
+        lastRoboMsgByType[arg->field_4].field_8 = arg->field_10;
     }
 
     return v2;
@@ -5891,10 +5891,10 @@ void NC_STACK_yparobo::setROBO_proto(World::TRoboProto *proto)
             }
 
             gun_obj->_owner = _owner;
-            gun_obj->_commandID = dword_5B1128;
+            gun_obj->_commandID = nextCommandID;
             gun_obj->_host_station = this;
 
-            dword_5B1128++;
+            nextCommandID++;
 
             if ( _world->_isNetGame )
             {
@@ -5951,7 +5951,7 @@ void NC_STACK_yparobo::setROBO_epSafety(int ep)
 
 void NC_STACK_yparobo::setROBO_commCount(int comm)
 {
-    dword_5B1128 = comm;
+    nextCommandID = comm;
 }
 
 void NC_STACK_yparobo::setROBO_battVehicle(int batt)
@@ -6077,7 +6077,7 @@ int NC_STACK_yparobo::getROBO_epSafety()
 
 int NC_STACK_yparobo::getROBO_commCount()
 {
-    return dword_5B1128;
+    return nextCommandID;
 }
 
 int NC_STACK_yparobo::getROBO_battVehicle()

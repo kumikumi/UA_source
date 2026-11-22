@@ -8,7 +8,7 @@
 #include "font.h"
 #include "env.h"
 
-extern GuiList stru_5C91D0;
+extern GuiList briefingTextList;
 
 void BriefStartMapScaling(NC_STACK_ypaworld *yw, TInputState *inpt, TBriefengScreen *brf)
 {
@@ -622,7 +622,7 @@ void BriefSelectObjectUnderCursor(NC_STACK_ypaworld *yw, TInputState *inpt, TBri
 
 void FormatBriefingText(NC_STACK_ypaworld *yw, TBriefengScreen *brf)
 {
-    stru_5C91D0.itemBlock.clear();
+    briefingTextList.itemBlock.clear();
 
     if ( brf->TextTime > 0 )
     {
@@ -637,9 +637,9 @@ void FormatBriefingText(NC_STACK_ypaworld *yw, TBriefengScreen *brf)
         int v34 = brf->CurrTime - brf->TextTime;
         int v33 = 100 * v34;
 
-        stru_5C91D0.numEntries = numLines;
+        briefingTextList.numEntries = numLines;
 
-        stru_5C91D0.ItemsPreLayout(yw, &stru_5C91D0.itemBlock, 16, "   ");
+        briefingTextList.ItemsPreLayout(yw, &briefingTextList.itemBlock, 16, "   ");
 
         int v37 = 0;
 
@@ -688,20 +688,20 @@ void FormatBriefingText(NC_STACK_ypaworld *yw, TBriefengScreen *brf)
             v33 -= 50000;
             v34 -= 500;
 
-            if ( stru_5C91D0.firstShownEntries <= v37 && stru_5C91D0.firstShownEntries + stru_5C91D0.shownEntries > v37	&& v12 > 0 )
+            if ( briefingTextList.firstShownEntries <= v37 && briefingTextList.firstShownEntries + briefingTextList.shownEntries > v37	&& v12 > 0 )
             {
-                FontUA::set_txtColor(&stru_5C91D0.itemBlock, yw->_iniColors[63].r, yw->_iniColors[63].g, yw->_iniColors[63].b);
+                FontUA::set_txtColor(&briefingTextList.itemBlock, yw->_iniColors[63].r, yw->_iniColors[63].g, yw->_iniColors[63].b);
 
-                FontUA::TextRelWidthItem(yw->_guiTiles[16], &stru_5C91D0.itemBlock, line.c_str(), v12, 4);
+                FontUA::TextRelWidthItem(yw->_guiTiles[16], &briefingTextList.itemBlock, line.c_str(), v12, 4);
 
-                FontUA::next_line(&stru_5C91D0.itemBlock);
+                FontUA::next_line(&briefingTextList.itemBlock);
             }
 
             v37++;
 
             if ( endline )
             {
-                stru_5C91D0.ItemsPostLayout(yw, &stru_5C91D0.itemBlock, 16, "   ");
+                briefingTextList.ItemsPostLayout(yw, &briefingTextList.itemBlock, 16, "   ");
                 break;
             }
         }
@@ -728,17 +728,17 @@ void FormatBriefingText(NC_STACK_ypaworld *yw, TBriefengScreen *brf)
 
         if ( v24 > 0 )
         {
-            stru_5C91D0.ItemsPreLayout(yw, &stru_5C91D0.itemBlock, 16, "   ");
+            briefingTextList.ItemsPreLayout(yw, &briefingTextList.itemBlock, 16, "   ");
 
-            FontUA::set_txtColor(&stru_5C91D0.itemBlock, yw->_iniColors[63].r, yw->_iniColors[63].g, yw->_iniColors[63].b);
+            FontUA::set_txtColor(&briefingTextList.itemBlock, yw->_iniColors[63].r, yw->_iniColors[63].g, yw->_iniColors[63].b);
 
-            FontUA::TextRelWidthItem(yw->_guiTiles[16], &stru_5C91D0.itemBlock, v21, v24, 4);
+            FontUA::TextRelWidthItem(yw->_guiTiles[16], &briefingTextList.itemBlock, v21, v24, 4);
 
-            stru_5C91D0.ItemsPostLayout(yw, &stru_5C91D0.itemBlock, 16, "   ");
+            briefingTextList.ItemsPostLayout(yw, &briefingTextList.itemBlock, 16, "   ");
         }
     }
 
-    FontUA::set_end(&stru_5C91D0.itemBlock);
+    FontUA::set_end(&briefingTextList.itemBlock);
 }
 
 void BriefDrawObjectMarkers(NC_STACK_ypaworld *yw, TBriefengScreen *brf)
@@ -1036,8 +1036,8 @@ void UpdateBriefingScreen(NC_STACK_ypaworld *yw, UserData *usr, TInputState *inp
             break;
         }
 
-        stru_5C91D0.InputHandle(yw, inpt);
-        stru_5C91D0.Formate(yw);
+        briefingTextList.InputHandle(yw, inpt);
+        briefingTextList.Formate(yw);
 
         FormatBriefingText(yw, brf);
 
@@ -1064,7 +1064,7 @@ void UpdateBriefingScreen(NC_STACK_ypaworld *yw, UserData *usr, TInputState *inp
         BriefDrawObjectMarkers(yw, brf);
         BriefDrawLevelTitle(yw);
 
-        GFX::Engine.ProcessDrawSeq(stru_5C91D0.cmdCommands, &stru_5C91D0.cmdInclude);
+        GFX::Engine.ProcessDrawSeq(briefingTextList.cmdCommands, &briefingTextList.cmdInclude);
 
         BriefDrawViewedObjectCaption(yw, brf, inpt, 0, 2);
     }

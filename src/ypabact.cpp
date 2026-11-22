@@ -4131,7 +4131,7 @@ size_t NC_STACK_ypabact::CollisionWithBact(int arg)
     if ( _fly_dir_length == 0.0 )
         return 0;
 
-    vec3d stru_5150E8(0.0, 0.0, 0.0);
+    vec3d collisionCenter(0.0, 0.0, 0.0);
 
     int v45 = 0;
 
@@ -4183,7 +4183,7 @@ size_t NC_STACK_ypabact::CollisionWithBact(int arg)
                 {
                     if ( !v53 )
                     {
-                        stru_5150E8 += v41;
+                        collisionCenter += v41;
 
                         v45++;
                     }
@@ -4224,23 +4224,23 @@ size_t NC_STACK_ypabact::CollisionWithBact(int arg)
         return 0;
     }
 
-    stru_5150E8 /= (double)v45;
+    collisionCenter /= (double)v45;
 
-    vec3d stru_5150F4 = stru_5150E8 - _position;
+    vec3d toCollisionCenter = collisionCenter - _position;
 
-    float v26 = stru_5150F4.length();
+    float v26 = toCollisionCenter.length();
 
     if ( v26 < 0.0001)
         return 0;
 
     bact_arg88 v33;
-    v33.pos1 = stru_5150F4 / v26;
+    v33.pos1 = toCollisionCenter / v26;
 
     // FIX MY MATH
-    // stru_5150F4 should be normalised?
+    // toCollisionCenter should be normalised?
     // May be replace it with "dot < 0.0" ?
     // Because cos of 1.0...0 is 0..PI/2 and 0...-1.0 is PI/2..PI
-    if ( clp_acos( stru_5150F4.dot( _fly_dir ) ) > C_PI_2 )
+    if ( clp_acos( toCollisionCenter.dot( _fly_dir ) ) > C_PI_2 )
         return 0;
 
     if ( !(_status_flg & BACT_STFLAG_BCRASH) )
@@ -4253,8 +4253,8 @@ size_t NC_STACK_ypabact::CollisionWithBact(int arg)
 
             yw_arg180 v40;
             v40.field_4 = 1.0;
-            v40.field_8 = stru_5150E8.x;
-            v40.field_C = stru_5150E8.z;
+            v40.field_8 = collisionCenter.x;
+            v40.field_C = collisionCenter.z;
             v40.effects_type = 5;
 
             _world->FFeedback_Play(&v40);

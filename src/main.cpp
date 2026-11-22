@@ -46,9 +46,9 @@
 #include "obj3d.h"
 
 
-int dword_513638 = 0;
-int dword_51362C = 0;
-int dword_513630 = 0;
+int tmpSettingsSaved = 0;
+int lastReplayIndex = 0;
+int replayStarted = 0;
 std::string buildDate;
 
 int tform_inited = 0;
@@ -224,7 +224,7 @@ int ProcessGameplayFrame(int32_t frameTicks, bool timeFrozen)
     {
         ypaworld->DeleteLevel();
 
-        if ( dword_513638 || levelInfo.State == TLevelInfo::STATE_ABORTED )
+        if ( tmpSettingsSaved || levelInfo.State == TLevelInfo::STATE_ABORTED )
         {
             if ( !ypaworld->LoadSettings("settings.tmp", 
                                          userdata.UserName,
@@ -232,7 +232,7 @@ int ProcessGameplayFrame(int32_t frameTicks, bool timeFrozen)
                                          false))
                 return 0;
 
-            dword_513638 = 0;
+            tmpSettingsSaved = 0;
         }
 
         int v0 = 1;
@@ -318,7 +318,7 @@ std::string PickReplayFile(uint32_t a1)
 
     int v2 = a1 % userdata.snaps.size();
 
-    if ( dword_51362C == v2 )
+    if ( lastReplayIndex == v2 )
     {
         if ( v2 )
         {
@@ -330,13 +330,13 @@ std::string PickReplayFile(uint32_t a1)
         }
     }
 
-    dword_51362C = v2;
+    lastReplayIndex = v2;
     return userdata.snaps[v2];
 }
 
 int RunReplay(base_64arg *arg)
 {
-    if ( (userdata.p_YW->_replayPlayer->field_74 - 3) <= userdata.p_YW->_replayPlayer->frame_id  &&  dword_513630 )
+    if ( (userdata.p_YW->_replayPlayer->field_74 - 3) <= userdata.p_YW->_replayPlayer->frame_id  &&  replayStarted )
     {
         ypaworld->StopReplay();
 
@@ -349,7 +349,7 @@ int RunReplay(base_64arg *arg)
             return 0;
         }
 
-        dword_513630 = 1;
+        replayStarted = 1;
         GameScreenMode = GAME_SCREEN_MODE_REPLAY;
     }
 
@@ -408,7 +408,7 @@ int ProcessReplayFrame()
     {
         ypaworld->StopReplay();
 
-        if ( dword_513638 )
+        if ( tmpSettingsSaved )
         {
             if ( !ypaworld->LoadSettings("settings.tmp",
                                          userdata.UserName,
@@ -416,7 +416,7 @@ int ProcessReplayFrame()
                                          false) )
                 return 0;
 
-            dword_513638 = 0;
+            tmpSettingsSaved = 0;
         }
 
         GameScreenMode = GAME_SCREEN_MODE_UNKNOWN;
@@ -505,7 +505,7 @@ int ProcessMenuFrame()
         if ( !userdata.SaveBuildProtoState() )
             return 0;
 
-        dword_513638 = 1;
+        tmpSettingsSaved = 1;
 
         ypaworld->CloseGameShell();
 
@@ -538,7 +538,7 @@ int ProcessMenuFrame()
         if ( !userdata.SaveBuildProtoState() )
             return 0;
 
-        dword_513638 = 1;
+        tmpSettingsSaved = 1;
 
         ypaworld->CloseGameShell();
 
@@ -546,7 +546,7 @@ int ProcessMenuFrame()
 
         if ( ypaworld->StartReplay(repname) )
         {
-            dword_513630 = 1;
+            replayStarted = 1;
             GameScreenMode = GAME_SCREEN_MODE_REPLAY;
         }
         else

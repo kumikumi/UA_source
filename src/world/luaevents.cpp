@@ -2,7 +2,7 @@
 #include "../yw.h"
 #include "../yw_internal.h"
 
-extern int dword_5C8B78;
+extern int exitMenuPendingAction;
 extern GuiList exit_menu;
 extern tehMap robo_map;
 
@@ -493,7 +493,7 @@ int LuaEvents::Lua_WrldExitTutorialWindow(lua_State *l)
     
     if ( ConfirmDialogGetState() != 3 )
     {
-        dword_5C8B78 = 8;
+        exitMenuPendingAction = 8;
         wrld->OpenConfirmDialog( Locale::Text::Advanced(Locale::ADV_EXITRAINING) , &exit_menu);
     }
     

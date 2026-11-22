@@ -23,8 +23,8 @@
 extern yw_infolog info_log;
 
 int vertMenuSpace;
-int dword_5A50B2;
-int dword_5A50B2_h;
+int videoMenuRowWidth;
+int menuListWidth;
 int word_5A50AE;
 int word_5A50BC;
 int word_5A50BA;
@@ -32,8 +32,8 @@ int word_5A50BE;
 int buttonsSpace;
 int checkBoxWidth;
 
-int dword_5A50B6;
-int dword_5A50B6_h;
+int netMenuWidth;
+int subBarButtonWidth;
 
 int scaledFontHeight;
 int bottomButtonsY;
@@ -41,12 +41,12 @@ int button1LineWidth;
 int bottomSecondBtnPosX;
 int bottomThirdBtnPosX;
 
-GuiList stru_5C91D0;
+GuiList briefingTextList;
 
 uint32_t bact_id = 0x10000;
 
 // method 169
-uint32_t dword_5A7A80;
+uint32_t maxLoadedCommandID;
 
 NC_STACK_ypaworld::NC_STACK_ypaworld()
 : _unitsList(this, NC_STACK_ypabact::GetKidRefNode, World::BLIST_UNITS)
@@ -2708,7 +2708,7 @@ bool NC_STACK_ypaworld::CreateTitleControls(){
 bool NC_STACK_ypaworld::CreateSubBarControls(){
     int v70 = 0;
     NC_STACK_button::button_64_arg btn_64arg;
-    dword_5A50B6_h = _screenSize.x / 4 - 20;
+    subBarButtonWidth = _screenSize.x / 4 - 20;
 
     _GameShell->sub_bar_button = Nucleus::CInit<NC_STACK_button>({ 
         {NC_STACK_button::BTN_ATT_X, (int32_t)0},
@@ -2729,8 +2729,8 @@ bool NC_STACK_ypaworld::CreateSubBarControls(){
     btn_64arg.ypos = 0;
     btn_64arg.button_type = NC_STACK_button::TYPE_BUTTON;
     btn_64arg.tileset_up = 18;
-    btn_64arg.xpos = dword_5A50B6_h + buttonsSpace;
-    btn_64arg.width = dword_5A50B6_h;
+    btn_64arg.xpos = subBarButtonWidth + buttonsSpace;
+    btn_64arg.width = subBarButtonWidth;
     btn_64arg.caption = Locale::Text::GlobMap(Locale::GLOBMAP_REWIND);
     btn_64arg.caption2.clear();
     btn_64arg.downCode = 1251;
@@ -2744,7 +2744,7 @@ bool NC_STACK_ypaworld::CreateSubBarControls(){
 
     if ( _GameShell->sub_bar_button->Add(&btn_64arg) )
     {
-        btn_64arg.xpos = 2 * (buttonsSpace + dword_5A50B6_h);
+        btn_64arg.xpos = 2 * (buttonsSpace + subBarButtonWidth);
         btn_64arg.caption = Locale::Text::GlobMap(Locale::GLOBMAP_STEPFWD);
         btn_64arg.caption2.clear();
         btn_64arg.downCode = 0;
@@ -2764,7 +2764,7 @@ bool NC_STACK_ypaworld::CreateSubBarControls(){
 
             if ( _GameShell->sub_bar_button->Add(&btn_64arg) )
             {
-                btn_64arg.xpos = (_screenSize.x - 3 * dword_5A50B6_h - 2 * buttonsSpace);
+                btn_64arg.xpos = (_screenSize.x - 3 * subBarButtonWidth - 2 * buttonsSpace);
                 btn_64arg.caption = Locale::Text::Advanced(Locale::ADV_GOTOLDSV);
                 btn_64arg.caption2.clear();
                 btn_64arg.pressedCode = 0;
@@ -2774,7 +2774,7 @@ bool NC_STACK_ypaworld::CreateSubBarControls(){
 
                 if ( _GameShell->sub_bar_button->Add(&btn_64arg) )
                 {
-                    btn_64arg.xpos = (_screenSize.x - 2 * dword_5A50B6_h - buttonsSpace);
+                    btn_64arg.xpos = (_screenSize.x - 2 * subBarButtonWidth - buttonsSpace);
                     btn_64arg.caption = Locale::Text::GlobMap(Locale::GLOBMAP_LOAD);
                     btn_64arg.caption2.clear();
                     btn_64arg.upCode = 1021;
@@ -2784,7 +2784,7 @@ bool NC_STACK_ypaworld::CreateSubBarControls(){
 
                     if ( _GameShell->sub_bar_button->Add(&btn_64arg) )
                     {
-                        btn_64arg.xpos = _screenSize.x - dword_5A50B6_h;
+                        btn_64arg.xpos = _screenSize.x - subBarButtonWidth;
                         btn_64arg.caption = Locale::Text::GlobMap(Locale::GLOBMAP_GOBACK);
                         btn_64arg.caption2.clear();
                         btn_64arg.pressedCode = 0;
@@ -2927,7 +2927,7 @@ bool NC_STACK_ypaworld::CreateInputControls()
     args.maxShownEntries = 8;
     args.withIcon = false;
     args.entryHeight = _fontH;
-    args.entryWidth = dword_5A50B2_h;
+    args.entryWidth = menuListWidth;
     args.enabled = true;
     args.vborder = _fontBorderH;
     args.instantInput = false;
@@ -3363,7 +3363,7 @@ bool NC_STACK_ypaworld::CreateVideoControls()
 
                                 if ( _GameShell->video_button->Add(&btn_64arg) )
                                 {
-                                    int v117 = dword_5A50B2 - 6 * buttonsSpace - 2 * checkBoxWidth;
+                                    int v117 = videoMenuRowWidth - 6 * buttonsSpace - 2 * checkBoxWidth;
 
                                     btn_64arg.tileset_down = 19;
                                     btn_64arg.button_type = NC_STACK_button::TYPE_CHECKBX;
@@ -3633,7 +3633,7 @@ bool NC_STACK_ypaworld::CreateVideoControls()
                                                                                                     btn_64arg.button_type = NC_STACK_button::TYPE_CAPTION;
                                                                                                     btn_64arg.xpos = 0;
                                                                                                     btn_64arg.ypos = 11 * (_fontH + vertMenuSpace);
-                                                                                                    btn_64arg.width = (dword_5A50B2 - 5 * buttonsSpace) * 0.3;
+                                                                                                    btn_64arg.width = (videoMenuRowWidth - 5 * buttonsSpace) * 0.3;
                                                                                                     btn_64arg.caption = Locale::Text::Dialogs(Locale::DLG_S_DESTRFX);
                                                                                                     btn_64arg.caption2.clear();
                                                                                                     btn_64arg.downCode = 0;
@@ -3657,13 +3657,13 @@ bool NC_STACK_ypaworld::CreateVideoControls()
                                                                                                         btn_64arg.button_type = NC_STACK_button::TYPE_SLIDER;
                                                                                                         btn_64arg.pressedCode = 1110;
                                                                                                         btn_64arg.button_id = 1159;
-                                                                                                        btn_64arg.xpos = buttonsSpace + (dword_5A50B2 - 5 * buttonsSpace) * 0.3;
+                                                                                                        btn_64arg.xpos = buttonsSpace + (videoMenuRowWidth - 5 * buttonsSpace) * 0.3;
                                                                                                         btn_64arg.caption = " ";
                                                                                                         btn_64arg.downCode = 1108;
                                                                                                         btn_64arg.flags = 0;
                                                                                                         btn_64arg.field_34 = &v225;
                                                                                                         btn_64arg.upCode = 1109;
-                                                                                                        btn_64arg.width = (dword_5A50B2 - 5 * buttonsSpace) * 0.55;
+                                                                                                        btn_64arg.width = (videoMenuRowWidth - 5 * buttonsSpace) * 0.55;
 
                                                                                                         if ( _GameShell->video_button->Add(&btn_64arg) )
                                                                                                         {
@@ -3672,11 +3672,11 @@ bool NC_STACK_ypaworld::CreateVideoControls()
                                                                                                             btn_64arg.field_3A = 16;
                                                                                                             btn_64arg.button_type = NC_STACK_button::TYPE_CAPTION;
                                                                                                             btn_64arg.caption2.clear();
-                                                                                                            btn_64arg.xpos = buttonsSpace + (dword_5A50B2 - 5 * buttonsSpace) * 0.85;
+                                                                                                            btn_64arg.xpos = buttonsSpace + (videoMenuRowWidth - 5 * buttonsSpace) * 0.85;
                                                                                                             btn_64arg.downCode = 0;
                                                                                                             btn_64arg.upCode = 0;
                                                                                                             btn_64arg.pressedCode = 0;
-                                                                                                            btn_64arg.width = (dword_5A50B2 - 5 * buttonsSpace) * 0.15;
+                                                                                                            btn_64arg.width = (videoMenuRowWidth - 5 * buttonsSpace) * 0.15;
                                                                                                             btn_64arg.button_id = 1158;
                                                                                                             btn_64arg.caption = " 4";
                                                                                                             btn_64arg.flags = NC_STACK_button::FLAG_BORDER | NC_STACK_button::FLAG_CENTER | NC_STACK_button::FLAG_TEXT;
@@ -3686,7 +3686,7 @@ bool NC_STACK_ypaworld::CreateVideoControls()
                                                                                                                 btn_64arg.button_type = NC_STACK_button::TYPE_CAPTION;
                                                                                                                 btn_64arg.xpos = 0;
                                                                                                                 btn_64arg.ypos = 12 * (vertMenuSpace + _fontH);
-                                                                                                                btn_64arg.width = (dword_5A50B2 - 5 * buttonsSpace) * 0.3;
+                                                                                                                btn_64arg.width = (videoMenuRowWidth - 5 * buttonsSpace) * 0.3;
                                                                                                                 btn_64arg.caption = Locale::Text::Dialogs(Locale::DLG_S_FXVOL);
                                                                                                                 btn_64arg.caption2.clear();
                                                                                                                 btn_64arg.downCode = 0;
@@ -3697,7 +3697,7 @@ bool NC_STACK_ypaworld::CreateVideoControls()
 
                                                                                                                 if ( _GameShell->video_button->Add(&btn_64arg) )
                                                                                                                 {
-                                                                                                                    btn_64arg.width = (dword_5A50B2 - 5 * buttonsSpace) * 0.55;
+                                                                                                                    btn_64arg.width = (videoMenuRowWidth - 5 * buttonsSpace) * 0.55;
 
                                                                                                                     v225.min = 1;
                                                                                                                     v225.max = 127;
@@ -3709,7 +3709,7 @@ bool NC_STACK_ypaworld::CreateVideoControls()
                                                                                                                     btn_64arg.button_type = NC_STACK_button::TYPE_SLIDER;
                                                                                                                     btn_64arg.caption2.clear();
                                                                                                                     btn_64arg.button_id = 1152;
-                                                                                                                    btn_64arg.xpos = buttonsSpace + (dword_5A50B2 - 5 * buttonsSpace) * 0.3;
+                                                                                                                    btn_64arg.xpos = buttonsSpace + (videoMenuRowWidth - 5 * buttonsSpace) * 0.3;
                                                                                                                     btn_64arg.caption = " ";
                                                                                                                     btn_64arg.downCode = 1115;
                                                                                                                     btn_64arg.upCode = 1117;
@@ -3726,8 +3726,8 @@ bool NC_STACK_ypaworld::CreateVideoControls()
                                                                                                                         btn_64arg.caption = "4";
                                                                                                                         btn_64arg.button_id = 1153;
                                                                                                                         btn_64arg.caption2.clear();
-                                                                                                                        btn_64arg.xpos = (2 * buttonsSpace) + (dword_5A50B2 - 5 * buttonsSpace) * 0.85;
-                                                                                                                        btn_64arg.width = (dword_5A50B2 - 5 * buttonsSpace) * 0.15;
+                                                                                                                        btn_64arg.xpos = (2 * buttonsSpace) + (videoMenuRowWidth - 5 * buttonsSpace) * 0.85;
+                                                                                                                        btn_64arg.width = (videoMenuRowWidth - 5 * buttonsSpace) * 0.15;
                                                                                                                         btn_64arg.downCode = 0;
                                                                                                                         btn_64arg.flags = NC_STACK_button::FLAG_CENTER | NC_STACK_button::FLAG_TEXT;
                                                                                                                         btn_64arg.upCode = 0;
@@ -3737,7 +3737,7 @@ bool NC_STACK_ypaworld::CreateVideoControls()
                                                                                                                         {
                                                                                                                             btn_64arg.button_type = NC_STACK_button::TYPE_CAPTION;
                                                                                                                             btn_64arg.xpos = 0;
-                                                                                                                            btn_64arg.width = (dword_5A50B2 - 5 * buttonsSpace) * 0.3;
+                                                                                                                            btn_64arg.width = (videoMenuRowWidth - 5 * buttonsSpace) * 0.3;
                                                                                                                             btn_64arg.ypos = 13 * (vertMenuSpace + _fontH);
                                                                                                                             btn_64arg.caption = Locale::Text::Dialogs(Locale::DLG_S_CDVOL);
                                                                                                                             btn_64arg.caption2.clear();
@@ -3749,7 +3749,7 @@ bool NC_STACK_ypaworld::CreateVideoControls()
 
                                                                                                                             if ( _GameShell->video_button->Add(&btn_64arg) )
                                                                                                                             {
-                                                                                                                                btn_64arg.width = (dword_5A50B2 - 5 * buttonsSpace) * 0.55;
+                                                                                                                                btn_64arg.width = (videoMenuRowWidth - 5 * buttonsSpace) * 0.55;
                                                                                                                                 v225.min = 1;
                                                                                                                                 v225.max = 127;
                                                                                                                                 v225.value = 100;
@@ -3761,7 +3761,7 @@ bool NC_STACK_ypaworld::CreateVideoControls()
                                                                                                                                 btn_64arg.button_type = NC_STACK_button::TYPE_SLIDER;
                                                                                                                                 btn_64arg.caption2.clear();
                                                                                                                                 btn_64arg.downCode = 1118;
-                                                                                                                                btn_64arg.xpos = buttonsSpace + (dword_5A50B2 - 5 * buttonsSpace) * 0.3;
+                                                                                                                                btn_64arg.xpos = buttonsSpace + (videoMenuRowWidth - 5 * buttonsSpace) * 0.3;
                                                                                                                                 btn_64arg.caption = " ";
                                                                                                                                 btn_64arg.pressedCode = 1119;
                                                                                                                                 btn_64arg.field_34 = &v225;
@@ -3779,8 +3779,8 @@ bool NC_STACK_ypaworld::CreateVideoControls()
                                                                                                                                     btn_64arg.downCode = 0;
                                                                                                                                     btn_64arg.upCode = 0;
                                                                                                                                     btn_64arg.pressedCode = 0;
-                                                                                                                                    btn_64arg.xpos = (2 * buttonsSpace) + (dword_5A50B2 - 5 * buttonsSpace) * 0.85;
-                                                                                                                                    btn_64arg.width = (dword_5A50B2 - 5 * buttonsSpace) * 0.15;
+                                                                                                                                    btn_64arg.xpos = (2 * buttonsSpace) + (videoMenuRowWidth - 5 * buttonsSpace) * 0.85;
+                                                                                                                                    btn_64arg.width = (videoMenuRowWidth - 5 * buttonsSpace) * 0.15;
                                                                                                                                     btn_64arg.button_id = 1155;
                                                                                                                                     btn_64arg.flags = NC_STACK_button::FLAG_CENTER | NC_STACK_button::FLAG_TEXT;
 
@@ -3892,7 +3892,7 @@ bool NC_STACK_ypaworld::CreateVideoControls()
             btn_64arg.field_3A = 16;
             btn_64arg.button_type = NC_STACK_button::TYPE_CAPTION;
             btn_64arg.xpos = checkBoxWidth + buttonsSpace;
-            btn_64arg.width = (dword_5A50B2 - 6 * buttonsSpace - 2 * checkBoxWidth) / 2;
+            btn_64arg.width = (videoMenuRowWidth - 6 * buttonsSpace - 2 * checkBoxWidth) / 2;
             btn_64arg.caption = Locale::Text::Advanced(Locale::ADV_VSYNC);
             btn_64arg.caption2.clear();
             btn_64arg.downCode = 0;
@@ -4447,7 +4447,7 @@ bool NC_STACK_ypaworld::CreateNetworkControls()
     args.maxShownEntries = 12;
     args.withIcon = false;
     args.entryHeight = _fontH;
-    args.entryWidth = dword_5A50B2_h;
+    args.entryWidth = menuListWidth;
     args.enabled = true;
     args.vborder = _fontBorderH;
     args.instantInput = false;
@@ -4493,7 +4493,7 @@ bool NC_STACK_ypaworld::CreateNetworkControls()
     btn_64arg.ypos = 14 * (vertMenuSpace + _fontH);
     btn_64arg.button_id = UIWidgets::NETWORK_MENU_WIDGET_IDS::TXTBOX;
     btn_64arg.flags = NC_STACK_button::FLAG_TEXT;
-    btn_64arg.width = dword_5A50B6 * 0.8;
+    btn_64arg.width = netMenuWidth * 0.8;
     btn_64arg.txt_r = _iniColors[60].r;
     btn_64arg.txt_g = _iniColors[60].g;
     btn_64arg.txt_b = _iniColors[60].b;
@@ -4505,9 +4505,9 @@ bool NC_STACK_ypaworld::CreateNetworkControls()
     {
         btn_64arg.tileset_down = 19;
         btn_64arg.tileset_up = 18;
-        btn_64arg.xpos = buttonsSpace + dword_5A50B6 * 0.8;
+        btn_64arg.xpos = buttonsSpace + netMenuWidth * 0.8;
         btn_64arg.field_3A = 30;
-        btn_64arg.width = dword_5A50B6 * 0.2 - buttonsSpace;
+        btn_64arg.width = netMenuWidth * 0.2 - buttonsSpace;
         btn_64arg.button_type = NC_STACK_button::TYPE_BUTTON;
         btn_64arg.caption = Locale::Text::Netdlg(Locale::NETDLG_SEND);
         btn_64arg.caption2.clear();
@@ -4521,7 +4521,7 @@ bool NC_STACK_ypaworld::CreateNetworkControls()
 
         if ( _GameShell->network_button->Add(&btn_64arg) )
         {
-            int v284 = ((dword_5A50B6 - 3 * buttonsSpace) * 0.25 - 3 * buttonsSpace) * 0.25;
+            int v284 = ((netMenuWidth - 3 * buttonsSpace) * 0.25 - 3 * buttonsSpace) * 0.25;
 
             TileMap *v198 = GFX::Engine.GetTileset(8);
 
@@ -4531,7 +4531,7 @@ bool NC_STACK_ypaworld::CreateNetworkControls()
             btn_64arg.button_type = NC_STACK_button::TYPE_CAPTION;
             btn_64arg.ypos = (15 * (vertMenuSpace + _fontH));
             btn_64arg.xpos = 0;
-            btn_64arg.width = dword_5A50B6 * 0.4 - 2 * buttonsSpace;
+            btn_64arg.width = netMenuWidth * 0.4 - 2 * buttonsSpace;
             btn_64arg.caption = Locale::Text::Netdlg(Locale::NETDLG_SELRACE);
             btn_64arg.caption2.clear();
             btn_64arg.downCode = 0;
@@ -4586,7 +4586,7 @@ bool NC_STACK_ypaworld::CreateNetworkControls()
                                 btn_64arg.field_3A = 30;
                                 btn_64arg.button_type = NC_STACK_button::TYPE_BUTTON;
                                 btn_64arg.xpos += v284 + 2 * buttonsSpace;
-                                btn_64arg.width = dword_5A50B2_h - btn_64arg.xpos;
+                                btn_64arg.width = menuListWidth - btn_64arg.xpos;
                                 btn_64arg.caption = Locale::Text::Netdlg(Locale::NETDLG_BACK);
                                 btn_64arg.caption2.clear();
                                 btn_64arg.pressedCode = 0;
@@ -4605,7 +4605,7 @@ bool NC_STACK_ypaworld::CreateNetworkControls()
                                     btn_64arg.ypos = 0;
                                     btn_64arg.tileset_up = 16;
                                     btn_64arg.field_3A = 16;
-                                    btn_64arg.width = dword_5A50B2_h;
+                                    btn_64arg.width = menuListWidth;
                                     btn_64arg.button_type = NC_STACK_button::TYPE_CAPTION;
                                     btn_64arg.caption = Locale::Text::Netdlg(Locale::NETDLG_SELPROV);
                                     btn_64arg.caption2.clear();
@@ -4640,9 +4640,9 @@ bool NC_STACK_ypaworld::CreateNetworkControls()
                                                 btn_64arg.tileset_up = 18;
                                                 btn_64arg.button_type = NC_STACK_button::TYPE_BUTTON;
                                                 btn_64arg.field_3A = 30;
-                                                btn_64arg.xpos = dword_5A50B6 * 0.3;
+                                                btn_64arg.xpos = netMenuWidth * 0.3;
                                                 btn_64arg.ypos = (buttonsSpace + _fontH) * 15.2;
-                                                btn_64arg.width = dword_5A50B6 * 0.4;
+                                                btn_64arg.width = netMenuWidth * 0.4;
                                                 btn_64arg.caption = Locale::Text::Netdlg(Locale::NETDLG_NEW);
                                                 btn_64arg.button_id = UIWidgets::NETWORK_MENU_WIDGET_IDS::BTN_CREATE_SESSTION;
                                                 btn_64arg.flags = NC_STACK_button::FLAG_BORDER | NC_STACK_button::FLAG_CENTER | NC_STACK_button::FLAG_TEXT;
@@ -4703,7 +4703,7 @@ bool NC_STACK_ypaworld::CreateNetworkControls()
                                                                 btn_64arg.xpos = v204 + checkBoxWidth;
                                                                 btn_64arg.ypos = 4 * (_fontH + buttonsSpace);
                                                                 btn_64arg.caption = " ";
-                                                                btn_64arg.width = dword_5A50B2_h - v204 - checkBoxWidth;
+                                                                btn_64arg.width = menuListWidth - v204 - checkBoxWidth;
                                                                 btn_64arg.flags = NC_STACK_button::FLAG_TEXT;
                                                                 btn_64arg.caption2.clear();
                                                                 btn_64arg.downCode = 0;
@@ -4805,7 +4805,7 @@ bool NC_STACK_ypaworld::CreateNetworkControls()
                                                                                                         btn_64arg.field_3A = 16;
                                                                                                         btn_64arg.button_type = NC_STACK_button::TYPE_CAPTION;
                                                                                                         btn_64arg.ypos = 3 * (_fontH + buttonsSpace);
-                                                                                                        btn_64arg.width = dword_5A50B6 * 0.3;
+                                                                                                        btn_64arg.width = netMenuWidth * 0.3;
                                                                                                         btn_64arg.caption = Locale::Text::Get(Locale::LBL_YOUPLAY, Locale::DefaultStrings::YouPlay);
                                                                                                         btn_64arg.caption2.clear();
                                                                                                         btn_64arg.downCode = 0;
@@ -4819,9 +4819,9 @@ bool NC_STACK_ypaworld::CreateNetworkControls()
 
                                                                                                         if ( _GameShell->network_button->Add(&btn_64arg) )
                                                                                                         {
-                                                                                                            btn_64arg.xpos = dword_5A50B6 * 0.3;
+                                                                                                            btn_64arg.xpos = netMenuWidth * 0.3;
                                                                                                             btn_64arg.button_type = NC_STACK_button::TYPE_CAPTION;
-                                                                                                            btn_64arg.width = dword_5A50B6 * 0.7;
+                                                                                                            btn_64arg.width = netMenuWidth * 0.7;
                                                                                                             btn_64arg.flags = NC_STACK_button::FLAG_TEXT;
                                                                                                             btn_64arg.button_id = 1226;
                                                                                                             btn_64arg.caption = "...";
@@ -4834,7 +4834,7 @@ bool NC_STACK_ypaworld::CreateNetworkControls()
                                                                                                                 btn_64arg.button_type = NC_STACK_button::TYPE_CAPTION;
                                                                                                                 btn_64arg.xpos = 0;
                                                                                                                 btn_64arg.ypos = (14 * (vertMenuSpace + _fontH));
-                                                                                                                btn_64arg.width = dword_5A50B2_h;
+                                                                                                                btn_64arg.width = menuListWidth;
                                                                                                                 btn_64arg.caption = Locale::Text::Advanced(Locale::ADV_REFRESHSESS);
                                                                                                                 btn_64arg.caption2.clear();
                                                                                                                 btn_64arg.downCode = 0;
@@ -5087,7 +5087,7 @@ bool NC_STACK_ypaworld::CreateGameShellControls()
         buttonsSpace = 2;
         vertMenuSpace = 2;
         checkBoxWidth = 8;
-        dword_5A50B2 = 210;
+        videoMenuRowWidth = 210;
         word_5A50AE = 200;
         word_5A50BC = 220;
         word_5A50BA = 300;
@@ -5098,7 +5098,7 @@ bool NC_STACK_ypaworld::CreateGameShellControls()
         buttonsSpace = 3;
         vertMenuSpace = 3;
         checkBoxWidth = 16;
-        dword_5A50B2 = 380;
+        videoMenuRowWidth = 380;
         word_5A50AE = 280;
         word_5A50BC = 390;
         word_5A50BA = 500;
@@ -5134,7 +5134,7 @@ bool NC_STACK_ypaworld::CreateGameShellControls()
     if (!this->CreateConfirmControls()) return false;    
 
 
-    dword_5A50B2_h = menuWidth - _fontVBScrollW;
+    menuListWidth = menuWidth - _fontVBScrollW;
 
     
     printf("Creating CreateInputControls\n");    
@@ -5149,7 +5149,7 @@ bool NC_STACK_ypaworld::CreateGameShellControls()
     if (!this->CreateAboutControls()) return false;
     
 
-    dword_5A50B6 = menuWidth - _fontVBScrollW;
+    netMenuWidth = menuWidth - _fontVBScrollW;
 
     if (!this->CreateNetworkControls()) return false;
 
@@ -6154,7 +6154,7 @@ size_t NC_STACK_ypaworld::LoadGame(const std::string &saveFile)
     _levelInfo.UserMask = 0;
 
     bact_id = 0x10000;
-    dword_5A7A80 = 0;
+    maxLoadedCommandID = 0;
 
     InitSuperItems();
 
@@ -6164,11 +6164,11 @@ size_t NC_STACK_ypaworld::LoadGame(const std::string &saveFile)
     if ( !LoadingParseSaveFile(saveFile) )
         return 0;
 
-    dword_5A7A80++;
+    maxLoadedCommandID++;
     bact_id++;
 
     if ( _userRobo )
-        dynamic_cast<NC_STACK_yparobo *>(_userRobo) ->setROBO_commCount(dword_5A7A80);
+        dynamic_cast<NC_STACK_yparobo *>(_userRobo) ->setROBO_commCount(maxLoadedCommandID);
 
     LoadingUnitsRefresh();
 
