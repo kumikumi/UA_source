@@ -117,12 +117,25 @@ link_directories(${SDL2_NET_LIBRARY_DIRS})
 pkg_search_module(VORBISFILE REQUIRED vorbisfile)
 link_directories(${VORBISFILE_LIBRARY_DIRS})
 
-#find_package(FFmpeg REQUIRED avformat avcodec avutil swscale swresample OPTIONAL avresample)
-find_package(FFmpeg REQUIRED)
+# Only the components used. Modern FFmpeg no longer ships libavresample or
+# libpostproc, which FindFFmpeg would otherwise require by default.
+find_package(FFmpeg REQUIRED COMPONENTS avcodec avformat avutil swscale swresample)
 
 find_package(OpenGL REQUIRED)
 
-find_package(OpenAL REQUIRED)
+if(APPLE)
+    # Apple's OpenAL framework is deprecated; use OpenAL Soft instead. Homebrew
+    # installs it keg-only, so the macos preset adds it to CMAKE_PREFIX_PATH.
+    set(CMAKE_FIND_FRAMEWORK LAST)
+    find_package(OpenAL REQUIRED)
+    set(CMAKE_FIND_FRAMEWORK FIRST)
+    if(OPENAL_INCLUDE_DIR MATCHES "\\.framework")
+        message(FATAL_ERROR "OpenAL Soft not found. Run: brew install openal-soft, "
+                            "then configure with: cmake --preset macos")
+    endif()
+else()
+    find_package(OpenAL REQUIRED)
+endif()
 
 find_package(Lua REQUIRED)
 
@@ -169,6 +182,11 @@ target_include_directories(UA_source PUBLIC
 										${VORBISFILE_INCLUDE_DIRS}
 										${OPENAL_INCLUDE_DIR}
 										${LUA_INCLUDE_DIR})
+
+if(APPLE)
+    # Every OpenGL call is marked deprecated on macOS; the warnings bury real ones.
+    target_compile_definitions(UA_source PRIVATE GL_SILENCE_DEPRECATION)
+endif()
 
 if(CMAKE_BUILD_TYPE MATCHES [dD][eE][bB][uU][gG])
    target_compile_options(UA_source PUBLIC "-g" "-O0")

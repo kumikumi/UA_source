@@ -926,7 +926,7 @@ int FileHandle::puts(const std::string &str)
     return fputs(str.c_str(), hndl.get());
 }
 
-int FileHandle::printf(const std::string &format, ...)
+int FileHandle::printf(const char *format, ...)
 {
     if (!hndl)
         return -100;
@@ -934,7 +934,7 @@ int FileHandle::printf(const std::string &format, ...)
     va_list args;
     va_start (args, format);
 
-    int num = vfprintf(hndl.get(), format.c_str(), args);
+    int num = vfprintf(hndl.get(), format, args);
 
     va_end (args);
 

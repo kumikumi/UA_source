@@ -1,0 +1,35 @@
+{
+    "version": 3,
+    "configurePresets": [
+        {
+            "name": "macos",
+            "displayName": "macOS (Homebrew)",
+            "description": "Homebrew installs OpenAL Soft and Lua 5.4 keg-only, so point CMake at them explicitly.",
+            "generator": "Ninja",
+            "binaryDir": "${sourceDir}/../build/macos",
+            "cacheVariables": {
+                "CMAKE_BUILD_TYPE": "RelWithDebInfo",
+                "CMAKE_PREFIX_PATH": "/opt/homebrew/opt/openal-soft;/opt/homebrew/opt/lua@5.4",
+                "CMAKE_EXPORT_COMPILE_COMMANDS": "ON"
+            },
+            "condition": {
+                "type": "equals",
+                "lhs": "${hostSystemName}",
+                "rhs": "Darwin"
+            }
+        },
+        {
+            "name": "macos-debug",
+            "inherits": "macos",
+            "displayName": "macOS (Homebrew) Debug with AddressSanitizer",
+            "binaryDir": "${sourceDir}/../build/macos-debug",
+            "cacheVariables": {
+                "CMAKE_BUILD_TYPE": "Debug"
+            }
+        }
+    ],
+    "buildPresets": [
+        { "name": "macos", "configurePreset": "macos" },
+        { "name": "macos-debug", "configurePreset": "macos-debug" }
+    ]
+}

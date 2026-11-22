@@ -14,8 +14,14 @@ class Glext
 {
 public:
     static bool init();
-    
-    
+
+    // Version of the context actually created, which may be lower than the one
+    // requested: macOS has no 3.x compatibility profile and falls back to 2.1.
+    static bool HasVersion(int major, int minor);
+
+    static int VersionMajor;
+    static int VersionMinor;
+
 public:
     static PFNGLGENFRAMEBUFFERSPROC GLGenFramebuffers;
     static PFNGLBINDFRAMEBUFFERPROC GLBindFramebuffer;

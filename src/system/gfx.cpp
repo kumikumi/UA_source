@@ -2624,7 +2624,10 @@ void GFXEngine::Init()
     StaticInit();
     
     _glext = Glext::init();
-    
+
+    printf("OpenGL: %s, %s, %s\n", (const char *)glGetString(GL_VERSION),
+           (const char *)glGetString(GL_RENDERER), (const char *)glGetString(GL_VENDOR));
+
     SetDeviceByGUID( read_guid("env/guid3d.def") );
     
     System::EventsAddHandler(EventsWatcher);
@@ -2639,7 +2642,15 @@ void GFXEngine::Init()
         _colorEffects = 0;
         _vbo = false;
     }
-    
+
+    // The VBO renderer's GLSL 1.40 shaders and uniform buffers need GL 3.1.
+    if (_vbo && !Glext::HasVersion(3, 1))
+    {
+        printf("OpenGL %d.%d context, gfx.vbo needs 3.1: using the legacy renderer\n",
+               Glext::VersionMajor, Glext::VersionMinor);
+        _vbo = false;
+    }
+
     if (_vbo)
     {
         Glext::GLGenVertexArrays(1, &_globalVao);

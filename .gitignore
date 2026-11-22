@@ -2,3 +2,5 @@
 *.o
 .vscode
 src/UA_source
+/build/
+src/Debug/

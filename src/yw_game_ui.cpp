@@ -2622,7 +2622,7 @@ void create_info_log(NC_STACK_ypaworld *yw)
         {
             std::string tmp = fmt::sprintf("<%02d:%02d:%02d>", (yw->_timeStamp >> 10) / 60 / 60 % 24, (yw->_timeStamp >> 10) / 60 % 60, (yw->_timeStamp >> 10) % 60);
             std::string tmp2 = Locale::Text::Common(Locale::CMN_MISNCONT);
-            sprintf(info_log.msgs[0].txt, tmp2.c_str(), tmp.c_str());
+            snprintf(info_log.msgs[0].txt, sizeof(info_log.msgs[0].txt), tmp2.c_str(), tmp.c_str());
         }
         else
         {

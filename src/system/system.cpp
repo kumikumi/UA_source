@@ -249,6 +249,19 @@ void Init(bool oldGL)
 
     cont = SDL_GL_CreateContext(window);
 
+    if (!cont && !oldGL)
+    {
+        // macOS has no 3.x compatibility profile, so the request fails there.
+        // GL 2.1 is enough for the legacy renderer, which GFX then selects.
+        printf("Couldn't create OpenGL 3.1 context (%s), trying 2.1\n", SDL_GetError());
+        SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 2);
+        SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 1);
+        cont = SDL_GL_CreateContext(window);
+    }
+
+    if (!cont)
+        printf("Couldn't create OpenGL context: %s\n", SDL_GetError());
+
     TTF_Init();
 
     ScanFonts();

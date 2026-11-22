@@ -205,7 +205,11 @@ public:
     
     virtual char *gets(char *str, int num);
     virtual int puts(const std::string &str);
-    virtual int printf(const std::string &format, ...);
+    // va_start on a reference parameter is undefined, so the format is a C string.
+#if defined(__GNUC__)
+    __attribute__((format(printf, 2, 3)))
+#endif
+    virtual int printf(const char *format, ...);
     virtual int vprintf(const std::string &format,va_list args);
     virtual bool ReadLine(std::string *out);
 

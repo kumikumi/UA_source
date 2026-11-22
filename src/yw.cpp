@@ -1921,7 +1921,7 @@ void NC_STACK_ypaworld::DeleteLevel()
 
             if ( fil )
             {
-                fil->printf(_GameShell->UserName);
+                fil->puts(_GameShell->UserName);
                 delete fil;
             }
         }

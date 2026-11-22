@@ -1,5 +1,6 @@
 #include "glfuncs.h"
 #include <stdexcept>
+#include <string>
 
 namespace GFX
 {   
@@ -75,15 +76,25 @@ inline void SetGLFunc(T &pFunc, const char *name)
 }
 
 
+int Glext::VersionMajor = 0;
+int Glext::VersionMinor = 0;
+
+bool Glext::HasVersion(int major, int minor)
+{
+    return VersionMajor > major || (VersionMajor == major && VersionMinor >= minor);
+}
+
 bool Glext::init()
 {
-    int major = 0, minor = 0;
-    SDL_GL_GetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, &major);
-    SDL_GL_GetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, &minor);
-    
-    if (major < 2)
+    // SDL reports the requested version, so ask the context itself.
+    // GL_VERSION starts with "major.minor", e.g. "2.1 Metal - 90.5".
+    const char *version = (const char *)glGetString(GL_VERSION);
+    if (!version || sscanf(version, "%d.%d", &VersionMajor, &VersionMinor) != 2)
         return false;
-    
+
+    if (VersionMajor < 2)
+        return false;
+
     try {
     SetGLFunc(GLGenFramebuffers, "glGenFramebuffers");
     SetGLFunc(GLBindFramebuffer, "glBindFramebuffer");

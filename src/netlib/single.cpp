@@ -147,7 +147,7 @@ void ZNDSingle::ProcessSystemPkt(Pkt* pkt)
                 do
                 {
                     char bf[10];
-                    sprintf(bf, "%04d", (int)(ttime.GetTicks() % 10000));
+                    snprintf(bf, sizeof(bf), "%04d", (int)(ttime.GetTicks() % 10000));
                     nm = base;
                     nm += bf;
                     cnt ++;

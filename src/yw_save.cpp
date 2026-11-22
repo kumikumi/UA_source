@@ -65,7 +65,7 @@ int yw_write_user(FSMgr::FileHandle *fil, UserData *usr)
             jodie += "_";
     }
     
-    fil->printf(jodie);
+    fil->puts(jodie);
 
     fil->printf("      ; the contact flags\n");
     fil->printf("end\n\n");
@@ -100,7 +100,7 @@ int yw_write_input(FSMgr::FileHandle *fil, UserData *usr)
             fil->printf("$");
 
             if ( usr->InputConfig[i].PKeyCode )
-                fil->printf(Input::Engine.KeyNamesTable.at(usr->InputConfig[i].PKeyCode).Name.c_str());
+                fil->puts(Input::Engine.KeyNamesTable.at(usr->InputConfig[i].PKeyCode).Name);
             else
                 fil->printf("nop");
         }
@@ -113,7 +113,7 @@ int yw_write_input(FSMgr::FileHandle *fil, UserData *usr)
 
             if ( usr->InputConfig[i].NKeyCode != Input::KC_NONE )
             {
-                fil->printf(Input::Engine.KeyNamesTable.at(usr->InputConfig[i].NKeyCode).Name.c_str());
+                fil->puts(Input::Engine.KeyNamesTable.at(usr->InputConfig[i].NKeyCode).Name);
             }
             else
             {
@@ -128,7 +128,7 @@ int yw_write_input(FSMgr::FileHandle *fil, UserData *usr)
 
             if ( usr->InputConfig[i].PKeyCode != Input::KC_NONE )
             {
-                fil->printf(Input::Engine.KeyNamesTable.at(usr->InputConfig[i].PKeyCode).Name.c_str());
+                fil->puts(Input::Engine.KeyNamesTable.at(usr->InputConfig[i].PKeyCode).Name);
             }
             else
             {
@@ -143,7 +143,7 @@ int yw_write_input(FSMgr::FileHandle *fil, UserData *usr)
             fil->printf("    input.hotkey[%d] = ", usr->InputConfig[i].KeyID);
 
             if ( usr->InputConfig[i].PKeyCode != Input::KC_NONE )
-                fil->printf(Input::Engine.KeyNamesTable.at(usr->InputConfig[i].PKeyCode).Name.c_str());
+                fil->puts(Input::Engine.KeyNamesTable.at(usr->InputConfig[i].PKeyCode).Name);
             else
                 fil->printf("nop");
         }
@@ -151,7 +151,7 @@ int yw_write_input(FSMgr::FileHandle *fil, UserData *usr)
             continue;
 
         fil->printf("         ; ");
-        fil->printf(usr->InputConfigTitle[i]);
+        fil->puts(usr->InputConfigTitle[i]);
         fil->printf("\n");
     }
 
@@ -417,14 +417,14 @@ int yw_write_levelnum(NC_STACK_ypaworld *yw, FSMgr::FileHandle *fil)
 void yw_write_map(NC_STACK_ypaworld *yw, const Common::PlaneBytes &map, const std::string &padding, FSMgr::FileHandle *fil)
 {
     if ( !padding.empty() )
-        fil->printf(padding.c_str());
+        fil->puts(padding);
 
     fil->printf("%d %d\n", map.Width(), map.Height());
 
     for (uint32_t y = 0; y < map.Height(); y++)
     {
         if ( !padding.empty() )
-            fil->printf(padding.c_str());
+            fil->puts(padding);
 
         const uint8_t * v6 = map.Line(y);
         
@@ -759,7 +759,7 @@ int yw_write_wunderinfo(NC_STACK_ypaworld *yw, FSMgr::FileHandle *fil)
     for ( const TMapGem &gem : yw->_techUpgrades )
     {
         if ( yw->GetSector(gem.CellId)->PurposeType != cellArea::PT_TECHUPGRADE )
-            fil->printf("    disablegem %d\n", i);
+            fil->printf("    disablegem %d\n", (int)i);
 
         i++;
     }

@@ -4,13 +4,9 @@
 #include <list>
 #include <vector>
 #include <queue>
-#if defined(__APPLE__) && defined(__MACH__)
-#include <OpenAL/al.h>
-#include <OpenAL/alc.h>
-#else
-#include <AL/al.h>
-#include <AL/alc.h>
-#endif
+// FindOpenAL's include directory is the AL/ directory itself on every platform.
+#include <al.h>
+#include <alc.h>
 
 #include <SDL2/SDL_thread.h>
 #include <SDL2/SDL_mutex.h>
