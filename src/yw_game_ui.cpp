@@ -106,7 +106,7 @@ bzd bzda;
 
 
 
-void NC_STACK_ypaworld::sb_0x4c87fc(const std::string &a2, GuiBase *lstvw)
+void NC_STACK_ypaworld::OpenConfirmDialog(const std::string &a2, GuiBase *lstvw)
 {
     GuiWinOpen(&lstvw2);
     GuiWinToFront(&lstvw2);
@@ -116,11 +116,11 @@ void NC_STACK_ypaworld::sb_0x4c87fc(const std::string &a2, GuiBase *lstvw)
     dword_5BAF9C = 3;
 }
 
-void NC_STACK_ypaworld::sub_449DE8(const std::string &a2)
+void NC_STACK_ypaworld::ConfirmOpenHelp(const std::string &a2)
 {
     if ( !_isNetGame )
     {
-        sb_0x4c87fc( Locale::Text::Advanced(Locale::ADV_RLYHELP) , &exit_menu);
+        OpenConfirmDialog( Locale::Text::Advanced(Locale::ADV_RLYHELP) , &exit_menu);
 
         dword_5C8B78 = 13;
 
@@ -1912,7 +1912,7 @@ void RoboMapLayoutVScroll(NC_STACK_ypaworld *yw)
 
 
 
-void sub_4F6114(NC_STACK_ypaworld *yw, int a2, CmdStream *cmdbuf, int a3, int a4, int a5, int a6, int a7, mapFunc ffunc, int xpos, int ypos)
+void RoboMapLayoutTileLayer(NC_STACK_ypaworld *yw, int a2, CmdStream *cmdbuf, int a3, int a4, int a5, int a6, int a7, mapFunc ffunc, int xpos, int ypos)
 {
     int v33;
 
@@ -2040,7 +2040,7 @@ void sub_4F6114(NC_STACK_ypaworld *yw, int a2, CmdStream *cmdbuf, int a3, int a4
 
 
 
-int sub_4F60A4(NC_STACK_ypaworld *yw, int x, int y)
+int RoboMapFogTile(NC_STACK_ypaworld *yw, int x, int y)
 {
     if ( yw->IsSector( {x, y} ) )
     {
@@ -2053,7 +2053,7 @@ int sub_4F60A4(NC_STACK_ypaworld *yw, int x, int y)
         return 9;
 }
 
-int sub_4F6048(NC_STACK_ypaworld *yw, int x, int y)
+int RoboMapOwnerTile(NC_STACK_ypaworld *yw, int x, int y)
 {
     if ( yw->IsSector( {x, y} ) )
     {
@@ -2071,7 +2071,7 @@ int sub_4F6048(NC_STACK_ypaworld *yw, int x, int y)
     return 0;
 }
 
-int sub_4F5FE0(NC_STACK_ypaworld *yw, int x, int y)
+int RoboMapSectorTypeTile(NC_STACK_ypaworld *yw, int x, int y)
 {
     if ( yw->IsSector( {x, y} ) )
     {
@@ -2084,7 +2084,7 @@ int sub_4F5FE0(NC_STACK_ypaworld *yw, int x, int y)
     return 0;
 }
 
-int sub_4F5CEC(NC_STACK_ypaworld *yw, int x, int y)
+int RoboMapLegoTile(NC_STACK_ypaworld *yw, int x, int y)
 {
     int v9 = x / 4;
     int v8 = x & 3;
@@ -2176,7 +2176,7 @@ int sub_4F5CEC(NC_STACK_ypaworld *yw, int x, int y)
     }
 }
 
-void sb_0x4f6650__sub0(NC_STACK_ypaworld *yw, CmdStream *cmdbuf, int xpos, int ypos, int w, int h)
+void RoboMapLayoutTerrainLayers(NC_STACK_ypaworld *yw, CmdStream *cmdbuf, int xpos, int ypos, int w, int h)
 {
     float v7 = robo_map.field_1D8 / robo_map.field_1E0;
     float v8 = -robo_map.field_1DC / robo_map.field_1E4;
@@ -2185,41 +2185,41 @@ void sb_0x4f6650__sub0(NC_STACK_ypaworld *yw, CmdStream *cmdbuf, int xpos, int y
     int v10 = v8 - (h / 2);
     int v22 = h + v10;
 
-    sub_4F6114(yw, 4 << robo_map.field_1EE, cmdbuf, v9, v10, v23, v22, robo_map.field_1EE + 50, sub_4F60A4, xpos, ypos);
+    RoboMapLayoutTileLayer(yw, 4 << robo_map.field_1EE, cmdbuf, v9, v10, v23, v22, robo_map.field_1EE + 50, RoboMapFogTile, xpos, ypos);
 
     if ( robo_map.field_1EC & 2 )
-        sub_4F6114(yw, 4 << robo_map.field_1EE, cmdbuf, v9, v10, v23, v22, robo_map.field_1EE + 50, sub_4F6048, xpos, ypos);
+        RoboMapLayoutTileLayer(yw, 4 << robo_map.field_1EE, cmdbuf, v9, v10, v23, v22, robo_map.field_1EE + 50, RoboMapOwnerTile, xpos, ypos);
 
     if ( robo_map.field_1EC & 1 )
     {
         switch ( robo_map.field_1EE )
         {
         case 0:
-            sub_4F6114(yw, 4, cmdbuf, v9, v10, v23, v22, 43, sub_4F5FE0, xpos, ypos);
+            RoboMapLayoutTileLayer(yw, 4, cmdbuf, v9, v10, v23, v22, 43, RoboMapSectorTypeTile, xpos, ypos);
             break;
 
         case 1:
-            sub_4F6114(yw, 8, cmdbuf, v9, v10, v23, v22, 44, sub_4F5FE0, xpos, ypos);
+            RoboMapLayoutTileLayer(yw, 8, cmdbuf, v9, v10, v23, v22, 44, RoboMapSectorTypeTile, xpos, ypos);
             break;
 
         case 2:
-            sub_4F6114(yw, 4, cmdbuf, v9 + 2, v10 + 2, v23 + 2, v22 + 2, 42, sub_4F5CEC, xpos, ypos);
+            RoboMapLayoutTileLayer(yw, 4, cmdbuf, v9 + 2, v10 + 2, v23 + 2, v22 + 2, 42, RoboMapLegoTile, xpos, ypos);
             break;
 
         case 3:
-            sub_4F6114(yw, 8, cmdbuf, v9 + 4, v10 + 4, v23 + 4, v22 + 4, 41, sub_4F5CEC, xpos, ypos);
+            RoboMapLayoutTileLayer(yw, 8, cmdbuf, v9 + 4, v10 + 4, v23 + 4, v22 + 4, 41, RoboMapLegoTile, xpos, ypos);
             break;
 
         case 4:
-            sub_4F6114(yw, 16, cmdbuf, v9 + 8, v10 + 8, v23 + 8, v22 + 8, 40, sub_4F5CEC, xpos, ypos);
+            RoboMapLayoutTileLayer(yw, 16, cmdbuf, v9 + 8, v10 + 8, v23 + 8, v22 + 8, 40, RoboMapLegoTile, xpos, ypos);
             break;
         }
     }
 }
 
-void sb_0x4f6650(NC_STACK_ypaworld *yw, CmdStream *cmdbuf, int x, int y)
+void RoboMapLayoutTerrain(NC_STACK_ypaworld *yw, CmdStream *cmdbuf, int x, int y)
 {
-    sb_0x4f6650__sub0(yw, cmdbuf, x, y, robo_map.w - robo_map.field_24C, robo_map.h - robo_map.field_250);
+    RoboMapLayoutTerrainLayers(yw, cmdbuf, x, y, robo_map.w - robo_map.field_24C, robo_map.h - robo_map.field_250);
     FontUA::set_end(cmdbuf);
 }
 
@@ -2280,7 +2280,7 @@ void MapRoboUpdateMapInt(NC_STACK_ypaworld *yw)
     int v14 = robo_map.y + robo_map.field_23C - (yw->_screenSize.y / 2);
 
     robo_map.t1_cmdbuf_3.clear();
-    sb_0x4f6650(yw, &robo_map.t1_cmdbuf_3, v15, v14);
+    RoboMapLayoutTerrain(yw, &robo_map.t1_cmdbuf_3, v15, v14);
 }
 
 void  CreateRoboMap(NC_STACK_ypaworld *yw)
@@ -3045,7 +3045,7 @@ void buy_list_update_sub(NC_STACK_ypaworld *yw, int a2, GuiList *lstvw, CmdStrea
     FontUA::next_line(cur);
 }
 
-float NC_STACK_ypaworld::sub_4498F4()
+float NC_STACK_ypaworld::GetUnitLimitCostFactor()
 {
     float v3 = 1.0;
 
@@ -3062,7 +3062,7 @@ float NC_STACK_ypaworld::sub_4498F4()
     return v3;
 }
 
-void gui_update_create_btn__sub0(NC_STACK_ypaworld *yw)
+void BottomBarLayoutBuyList(NC_STACK_ypaworld *yw)
 {
     gui_lstvw.itemBlock.clear();
     Input::Engine.RemClickBox(&gui_lstvw);
@@ -3097,7 +3097,7 @@ void gui_update_create_btn__sub0(NC_STACK_ypaworld *yw)
 
             const World::TVhclProto &proto = yw->_vhclProtos[v5];
 
-            int v17 = dround(yw->sub_4498F4() * 2 * proto.energy / 100.0);
+            int v17 = dround(yw->GetUnitLimitCostFactor() * 2 * proto.energy / 100.0);
 
             const std::string v8 = yw->GetVehicleName(proto);
 
@@ -3111,7 +3111,7 @@ void gui_update_create_btn__sub0(NC_STACK_ypaworld *yw)
             int v9 = bzda.field_4DC[ v3 ].d;
             const World::TBuildingProto &v10 = yw->_buildProtos[v9];
 
-            int v18 = dround(yw->sub_4498F4() * v10.Energy / 100.0);
+            int v18 = dround(yw->GetUnitLimitCostFactor() * v10.Energy / 100.0);
             
             std::string v13;
             if ( yw->_isNetGame )
@@ -3159,7 +3159,7 @@ void gui_update_create_btn(NC_STACK_ypaworld *yw, CmdStream *cur)
             if ( bzda.field_1D0 & 0x16 )
             {
                 if ( gui_lstvw.IsOpen() )
-                    gui_update_create_btn__sub0(yw);
+                    BottomBarLayoutBuyList(yw);
 
                 FontUA::select_tileset(cur, 22);
             }
@@ -3430,7 +3430,7 @@ void gui_update_tools(NC_STACK_ypaworld *yw, CmdStream *cur)
     FontUA::store_u8(cur, 85);
 }
 
-void sub_449970(NC_STACK_ypaworld *yw, CmdStream *cur, int a4, int a3, const std::string &a5, int a6, int a7)
+void BottomBarDrawRatingRow(NC_STACK_ypaworld *yw, CmdStream *cur, int a4, int a3, const std::string &a5, int a6, int a7)
 {
     int v10, v22;
 
@@ -3511,27 +3511,27 @@ void BottomBarDrawVehicleRatings(NC_STACK_ypaworld *yw, CmdStream *cur)
 
             FontUA::set_txtColor(cur, yw->_iniColors[63].r, yw->_iniColors[63].g, yw->_iniColors[63].b);
 
-            sub_449970(yw, cur, v29_4, v30,  Locale::Text::Advanced(Locale::ADV_VSROBO), v5, v6);
+            BottomBarDrawRatingRow(yw, cur, v29_4, v30,  Locale::Text::Advanced(Locale::ADV_VSROBO), v5, v6);
 
             v30 += yw->_fontH;
 
-            sub_449970(yw, cur, v29_4, v30,  Locale::Text::Advanced(Locale::ADV_VSTANK), a6, v6);
+            BottomBarDrawRatingRow(yw, cur, v29_4, v30,  Locale::Text::Advanced(Locale::ADV_VSTANK), a6, v6);
 
             v30 += yw->_fontH;
 
-            sub_449970(yw, cur, v29_4, v30,  Locale::Text::Advanced(Locale::ADV_VSPLANE), v26, v6);
+            BottomBarDrawRatingRow(yw, cur, v29_4, v30,  Locale::Text::Advanced(Locale::ADV_VSPLANE), v26, v6);
 
             v30 += yw->_fontH;
 
-            sub_449970(yw, cur, v29_4, v30,  Locale::Text::Advanced(Locale::ADV_VSHELI), v25, v6);
+            BottomBarDrawRatingRow(yw, cur, v29_4, v30,  Locale::Text::Advanced(Locale::ADV_VSHELI), v25, v6);
 
             v30 += yw->_fontH;
 
-            sub_449970(yw, cur, v29_4, v30,  Locale::Text::Advanced(Locale::ADV_CAPTURE), v28, v6);
+            BottomBarDrawRatingRow(yw, cur, v29_4, v30,  Locale::Text::Advanced(Locale::ADV_CAPTURE), v28, v6);
 
             v30 += yw->_fontH;
 
-            sub_449970(yw, cur, v29_4, v30,  Locale::Text::Advanced(Locale::ADV_RECON), v29, v6);
+            BottomBarDrawRatingRow(yw, cur, v29_4, v30,  Locale::Text::Advanced(Locale::ADV_RECON), v29, v6);
         }
     }
 }
@@ -3919,7 +3919,7 @@ int BottomBarHandleHotkeys(NC_STACK_ypaworld *yw, TInputState *inpt)
         break;
 
     case 43:
-        yw->sub_449DE8(Locale::Text::Help(Locale::HELP_GAMEPLAY));
+        yw->ConfirmOpenHelp(Locale::Text::Help(Locale::HELP_GAMEPLAY));
         break;
 
     case 46:
@@ -4107,7 +4107,7 @@ NC_STACK_ypabact * GetNextSquadMember(NC_STACK_ypaworld *yw)
     return NULL;
 }
 
-int sub_4C885C()
+int ConfirmDialogGetState()
 {
     if ( dword_5BAF9C == 3 )
     {
@@ -4119,7 +4119,7 @@ int sub_4C885C()
 
 void OpenExitMenu(NC_STACK_ypaworld *yw)
 {
-    if ( sub_4C885C() != 3 )
+    if ( ConfirmDialogGetState() != 3 )
     {
         yw->GuiWinOpen( &exit_menu );
         exit_menu.Attach(yw->_guiActive);
@@ -4128,7 +4128,7 @@ void OpenExitMenu(NC_STACK_ypaworld *yw)
 
 void CloseExitMenu(NC_STACK_ypaworld *yw)
 {
-    if ( sub_4C885C() != 3 )
+    if ( ConfirmDialogGetState() != 3 )
         yw->GuiWinClose( &exit_menu );
 }
 
@@ -4183,7 +4183,7 @@ void UpdateBuyList()
     }
 }
 
-void sb_0x4c66f8__sub0(NC_STACK_ypaworld *yw)
+void NotifyReturnToHostStation(NC_STACK_ypaworld *yw)
 {
     if ( yw->_timeStamp - yw->_msgTimestampHSReturn > 35000 )
     {
@@ -4198,7 +4198,7 @@ void sb_0x4c66f8__sub0(NC_STACK_ypaworld *yw)
     yw->_msgTimestampHSReturn = yw->_timeStamp;
 }
 
-void sb_0x4c66f8(NC_STACK_ypaworld *yw, NC_STACK_ypabact *bact1, NC_STACK_ypabact *bact2)
+void SwitchControlToUnit(NC_STACK_ypaworld *yw, NC_STACK_ypabact *bact1, NC_STACK_ypabact *bact2)
 {
     if ( bact1 != bact2 )
     {
@@ -4223,7 +4223,7 @@ void sb_0x4c66f8(NC_STACK_ypaworld *yw, NC_STACK_ypabact *bact1, NC_STACK_ypabac
             if ( bact1 == yw->_userRobo )
             {
                 yw->_mouseGrabbed = false;
-                sb_0x4c66f8__sub0(yw);
+                NotifyReturnToHostStation(yw);
             }
             else
             {
@@ -4501,7 +4501,7 @@ void  BottomBarHandleInput(NC_STACK_ypaworld *yw, TInputState *inpt)
 
                 if ( winpt->flag & TClickBoxInf::FLAG_BTN_UP )
                 {
-                    yw->sub_449DE8(Locale::Text::Help(Locale::HELP_GAMEPLAY));
+                    yw->ConfirmOpenHelp(Locale::Text::Help(Locale::HELP_GAMEPLAY));
                 }
 
                 yw->SetShowingTooltipWithHotkey(Locale::TIP_ONLINEHELP, 43);
@@ -4561,7 +4561,7 @@ void  BottomBarHandleInput(NC_STACK_ypaworld *yw, TInputState *inpt)
     if ( bact1 )
     {
         if ( bact1 != bact2 )
-            sb_0x4c66f8(yw, bact1, bact2);
+            SwitchControlToUnit(yw, bact1, bact2);
     }
 
     UpdateBuyList();
@@ -4574,7 +4574,7 @@ void  BottomBarHandleInput(NC_STACK_ypaworld *yw, TInputState *inpt)
 
 
 
-void sub_4E1D6C(NC_STACK_ypaworld *yw, CmdStream *cur, int x, int y, uint8_t icon, uint8_t icon2, uint8_t icon3, float a6, float a7, const std::string &a8)
+void EnergyPanelDrawGauge(NC_STACK_ypaworld *yw, CmdStream *cur, int x, int y, uint8_t icon, uint8_t icon2, uint8_t icon3, float a6, float a7, const std::string &a8)
 {
     int v26 = (a6 * up_panel.field_1E4);
     int v25 = (a7 * up_panel.field_1E4);
@@ -4707,7 +4707,7 @@ void EnergyPanelDrawReloadGauge(NC_STACK_ypaworld *yw, CmdStream *cur, int x, in
         a1a = fmt::sprintf("%d", -a5);
     }
 
-    sub_4E1D6C(yw, cur, x, y, icon, v11, 57, a6a, a7a, a1a);
+    EnergyPanelDrawGauge(yw, cur, x, y, icon, v11, 57, a6a, a7a, a1a);
 }
 
 void EnergyPanelDrawMainGauge(NC_STACK_ypaworld *yw, CmdStream *cur, int x, int y, char a4, int a5, int a6, int a7)
@@ -4750,7 +4750,7 @@ void EnergyPanelDrawMainGauge(NC_STACK_ypaworld *yw, CmdStream *cur, int x, int 
             a1a = "";
     }
 
-    sub_4E1D6C(yw, cur, x, y, v16, v10, 0, a6a, 0.0, a1a);
+    EnergyPanelDrawGauge(yw, cur, x, y, v16, v10, 0, a6a, 0.0, a1a);
 }
 
 
@@ -4795,7 +4795,7 @@ void EnergyPanelDrawCreateGauge(NC_STACK_ypaworld *yw, CmdStream *cur, int a3, i
         a6a = 0.0;
     }
 
-    sub_4E1D6C(yw, cur, a3, a2, v18, 56, v9, a6a, a7a,  fmt::sprintf("%d", a6 / 100) );
+    EnergyPanelDrawGauge(yw, cur, a3, a2, v18, 56, v9, a6a, a7a,  fmt::sprintf("%d", a6 / 100) );
 }
 
 void EnergyPanelDrawBeamGauge(NC_STACK_ypaworld *yw, CmdStream *cur, int x, int y, char a4, int a5, int a6, int a7)
@@ -4836,7 +4836,7 @@ void EnergyPanelDrawBeamGauge(NC_STACK_ypaworld *yw, CmdStream *cur, int x, int 
         a6a = 0.0;
     }
 
-    sub_4E1D6C(yw, cur, x, y, v18, 56, v9, a6a, a7a,  fmt::sprintf("%d", a6 / 100) );
+    EnergyPanelDrawGauge(yw, cur, x, y, v18, 56, v9, a6a, a7a,  fmt::sprintf("%d", a6 / 100) );
 }
 
 void EnergyPanelUpdateLayout(NC_STACK_ypaworld *yw)
@@ -4978,7 +4978,7 @@ void EnergyPanelHandleInput(NC_STACK_ypaworld *yw, TInputState *inpt)
 }
 
 
-char sub_4C7134(NC_STACK_ypaworld *yw, NC_STACK_ypabact *bact)
+char GetVehicleTypeIcon(NC_STACK_ypaworld *yw, NC_STACK_ypabact *bact)
 {
     uint8_t icon = yw->_vhclProtos[ bact->_vehicleID ].type_icon;
 
@@ -4988,7 +4988,7 @@ char sub_4C7134(NC_STACK_ypaworld *yw, NC_STACK_ypabact *bact)
     return icon;
 }
 
-void sub_4C7950(NC_STACK_ypaworld *yw, CmdStream *cur, int a4, int a3)
+void SquadManagerDrawDragIcon(NC_STACK_ypaworld *yw, CmdStream *cur, int a4, int a3)
 {
     if ( a4 > 0 && a3 > 0 )
     {
@@ -5001,7 +5001,7 @@ void sub_4C7950(NC_STACK_ypaworld *yw, CmdStream *cur, int a4, int a3)
                 FontUA::set_center_xpos(cur, a4 - (yw->_screenSize.x / 2));
                 FontUA::set_center_ypos(cur, a3 - (yw->_screenSize.y / 2));
 
-                FontUA::store_u8(cur, sub_4C7134(yw, squadron_manager.field_2BC));
+                FontUA::store_u8(cur, GetVehicleTypeIcon(yw, squadron_manager.field_2BC));
             }
         }
     }
@@ -5022,7 +5022,7 @@ void SquadManagerLayoutEmptyLine(NC_STACK_ypaworld *yw, CmdStream *cur)
 }
 
 
-void sub_4514F0(TileMap *tyle, CmdStream *cur, const std::string &st, int a3, char a5)
+void LayoutClippedTileString(TileMap *tyle, CmdStream *cur, const std::string &st, int a3, char a5)
 {
     int wdth = 0;
     int char_num = 0;
@@ -5084,7 +5084,7 @@ void SquadManagerLayoutHostStation(NC_STACK_ypaworld *yw, NC_STACK_ypabact *bact
     }
     else
     {
-        v13[0] = sub_4C7134(yw, bact);
+        v13[0] = GetVehicleTypeIcon(yw, bact);
     }
     v13[1] = 0;
 
@@ -5108,7 +5108,7 @@ void SquadManagerLayoutHostStation(NC_STACK_ypaworld *yw, NC_STACK_ypabact *bact
 
     FontUA::select_tileset(cur, 28);
 
-    sub_4514F0(yw->_guiTiles[28], cur, v13, squadron_manager.entryWidth - 2 * yw->_fontBorderW, 64);
+    LayoutClippedTileString(yw->_guiTiles[28], cur, v13, squadron_manager.entryWidth - 2 * yw->_fontBorderW, 64);
 
     FontUA::next_line(cur);
 }
@@ -5159,7 +5159,7 @@ void SquadManagerLayoutSquad(NC_STACK_ypaworld *yw, NC_STACK_ypabact *bact, CmdS
     else if ( yw->_lastMsgSender == bact && ttt )
         pv += '"'; //34
     else
-        pv += sub_4C7134(yw, bact);
+        pv += GetVehicleTypeIcon(yw, bact);
 
     pv += '@'; //64
 
@@ -5177,7 +5177,7 @@ void SquadManagerLayoutSquad(NC_STACK_ypaworld *yw, NC_STACK_ypabact *bact, CmdS
             else if ( kid == yw->_lastMsgSender && ttt )
                 pv += '"'; //34
             else
-                pv += sub_4C7134(yw, kid); 
+                pv += GetVehicleTypeIcon(yw, kid); 
 
             if ( kid == v44 )
                 v46 = v41;
@@ -5209,7 +5209,7 @@ void SquadManagerLayoutSquad(NC_STACK_ypaworld *yw, NC_STACK_ypabact *bact, CmdS
 
     FontUA::select_tileset(cur, 28);
 
-    sub_4514F0(yw->_guiTiles[28], cur, pv, squadron_manager.entryWidth - 2 * yw->_fontBorderW, 64);
+    LayoutClippedTileString(yw->_guiTiles[28], cur, pv, squadron_manager.entryWidth - 2 * yw->_fontBorderW, 64);
     if ( v46 )
     {
         if ( squadron_manager.entryWidth - squadron_manager.field_2CC - yw->_fontBorderW > v46 )
@@ -5353,17 +5353,17 @@ void SquadManagerLayoutItems(NC_STACK_ypaworld *yw, TInputState *inpt)
     {
         if ( squadron_manager.field_2C8 != winpt->move.ScreenPos.x || squadron_manager.field_2CA != winpt->move.ScreenPos.y )
         {
-            sub_4C7950(yw, &squadron_manager.itemBlock, squadron_manager.field_2C4, squadron_manager.field_2C6);
+            SquadManagerDrawDragIcon(yw, &squadron_manager.itemBlock, squadron_manager.field_2C4, squadron_manager.field_2C6);
 
             if ( squadron_manager.field_2A8 & 2 )
-                sub_4C7950(yw, &squadron_manager.itemBlock, squadron_manager.field_2C4 + squadron_manager.field_2CC / 4, squadron_manager.field_2C6 + (yw->_fontH / 4) );
+                SquadManagerDrawDragIcon(yw, &squadron_manager.itemBlock, squadron_manager.field_2C4 + squadron_manager.field_2CC / 4, squadron_manager.field_2C6 + (yw->_fontH / 4) );
         }
     }
 
     FontUA::set_end(&squadron_manager.itemBlock);
 }
 
-void sub_4C707C(NC_STACK_ypaworld *yw)
+void SquadManagerUpdateRows(NC_STACK_ypaworld *yw)
 {
     squadron_manager.squads.fill(NULL);
 
@@ -5469,7 +5469,7 @@ void SquadManagerDropUnit(NC_STACK_ypaworld *yw, TClickBoxInf *winpt)
             squadron_manager.field_2BC->ReorganizeGroup(&arg109);
         }
         yw->_activeCmdrID = squadron_manager.field_2BC->_commandID;
-        sub_4C707C(yw);
+        SquadManagerUpdateRows(yw);
         yw->UpdateCommanderList();
     }
     else
@@ -5519,7 +5519,7 @@ void SquadManagerDropUnit(NC_STACK_ypaworld *yw, TClickBoxInf *winpt)
                 v6->ReorganizeGroup(&arg109);
             }
             yw->_activeCmdrID = v6->_commandID;
-            sub_4C707C(yw);
+            SquadManagerUpdateRows(yw);
             yw->UpdateCommanderList();
         }
     }
@@ -5540,7 +5540,7 @@ void NC_STACK_ypaworld::SquadManagerShowStatusTooltip(NC_STACK_ypabact *bact)
         SetShowingTooltip(Locale::TIP_FINDER_WAITORDER);
 }
 
-NC_STACK_ypabact * NC_STACK_ypaworld::sub_4C7B0C(int sqid, int a3)
+NC_STACK_ypabact * NC_STACK_ypaworld::SquadManagerPickUnit(int sqid, int a3)
 {
     NC_STACK_ypabact *v3 = squadron_manager.squads[sqid];
 
@@ -5602,7 +5602,7 @@ int NC_STACK_ypaworld::SquadManagerBeginDrag(TClickBoxInf *winpt)
     if ( (int32_t)(winpt->selected_btnID - 8 + squadron_manager.firstShownEntries) >= squadron_manager.numEntries )
         return 0;
 
-    NC_STACK_ypabact *v5 = sub_4C7B0C(winpt->selected_btnID - 8, winpt->move.BtnPos.x);
+    NC_STACK_ypabact *v5 = SquadManagerPickUnit(winpt->selected_btnID - 8, winpt->move.BtnPos.x);
 
     if ( !v5 )
         return 0;
@@ -5652,7 +5652,7 @@ void NC_STACK_ypaworld::SquadManager_InputHandle(TInputState *inpt)
     else
     {
         TClickBoxInf *winpt = &inpt->ClickInf;
-        sub_4C707C(this);
+        SquadManagerUpdateRows(this);
 
         if ( squadron_manager.field_2A8 & 1 )
         {
@@ -5680,7 +5680,7 @@ void NC_STACK_ypaworld::SquadManager_InputHandle(TInputState *inpt)
             {
                 if ( winpt->flag & TClickBoxInf::FLAG_BTN_UP )
                 {
-                    sub_449DE8(Locale::Text::Help(Locale::HELP_FINDERWND));
+                    ConfirmOpenHelp(Locale::Text::Help(Locale::HELP_FINDERWND));
                 }
                 SetShowingTooltip(Locale::TIP_ONLINEHELP);
             }
@@ -5766,7 +5766,7 @@ void NC_STACK_ypaworld::SquadManager_InputHandle(TInputState *inpt)
 }
 
 
-void sub_4C1FBC()
+void RoboMapUpdateSelectionRect()
 {
     ButtonBox &pMapInter = robo_map.buttons[17];
 
@@ -6047,7 +6047,7 @@ void  RoboMap_InputHandle(NC_STACK_ypaworld *yw, TInputState *inpt)
             dword_516518 = winpt->move.ScreenPos.x;
             dword_51651C = winpt->move.ScreenPos.y;
 
-            sub_4C1FBC();
+            RoboMapUpdateSelectionRect();
 
             if ( !(winpt->flag & TClickBoxInf::FLAG_LM_HOLD) )
             {
@@ -6089,7 +6089,7 @@ void  RoboMap_InputHandle(NC_STACK_ypaworld *yw, TInputState *inpt)
                     dword_516518 = dword_516510;
                     dword_51651C = dword_516514;
 
-                    sub_4C1FBC();
+                    RoboMapUpdateSelectionRect();
 
                     winpt->flag &= ~TClickBoxInf::FLAG_LM_DOWN;
                 }
@@ -6235,7 +6235,7 @@ void  RoboMap_InputHandle(NC_STACK_ypaworld *yw, TInputState *inpt)
                 if ( winpt->flag & TClickBoxInf::FLAG_BTN_UP )
                 {
                     robo_map.flags &= ~GuiBase::FLAG_HELP_DOWN;
-                    yw->sub_449DE8(Locale::Text::Help(Locale::HELP_MAPWND)); //MAKE ME
+                    yw->ConfirmOpenHelp(Locale::Text::Help(Locale::HELP_MAPWND)); //MAKE ME
                 }
 
                 yw->SetShowingTooltip(Locale::TIP_ONLINEHELP);
@@ -6363,7 +6363,7 @@ void NC_STACK_ypaworld::NetSendExitMsg(uint8_t normExit)
     _GameShell->sentAQ = false;
 }
 
-void sub_451714(TileMap *, CmdStream *cur, const std::string &txt, int a2, uint8_t a4)
+void LayoutCenteredTextField(TileMap *, CmdStream *cur, const std::string &txt, int a2, uint8_t a4)
 {
     if ( a2 > 0 )
     {
@@ -6387,7 +6387,7 @@ void sub_451714(TileMap *, CmdStream *cur, const std::string &txt, int a2, uint8
 }
 
 
-void sub_4DA8DC(NC_STACK_ypaworld *yw, CmdStream *cur, int a4, int a3, const std::string &a5)
+void ExitMenuLayoutButton(NC_STACK_ypaworld *yw, CmdStream *cur, int a4, int a3, const std::string &a5)
 {
     std::string v5 = a5;
 
@@ -6430,7 +6430,7 @@ void sub_4DA8DC(NC_STACK_ypaworld *yw, CmdStream *cur, int a4, int a3, const std
         FontUA::set_flag(cur, 0x10);
     }
 
-    sub_451714(yw->_guiTiles[v11], cur, v5, dword_5C8B88 - 2 * yw->_fontBorderW, 32);
+    LayoutCenteredTextField(yw->_guiTiles[v11], cur, v5, dword_5C8B88 - 2 * yw->_fontBorderW, 32);
 
     FontUA::unset_flag(cur, 0x10);
 
@@ -6469,11 +6469,11 @@ void ExitMenuLayoutItems(NC_STACK_ypaworld *yw, int a2, int a4)
 
     FontUA::set_txtColor(&exit_menu.itemBlock, yw->_iniColors[68].r, yw->_iniColors[68].g, yw->_iniColors[68].b);
 
-    sub_4DA8DC(yw, &exit_menu.itemBlock, a4 & 0x100, a2 & 0x100, Locale::Text::Common(Locale::CMN_EXITMISN));
-    sub_4DA8DC(yw, &exit_menu.itemBlock, a4 & 0x200, a2 & 0x200, Locale::Text::Common(Locale::CMN_SAVE));
-    sub_4DA8DC(yw, &exit_menu.itemBlock, a4 & 0x400, a2 & 0x400, Locale::Text::Common(Locale::CMN_LOAD));
-    sub_4DA8DC(yw, &exit_menu.itemBlock, a4 & 0x800, a2 & 0x800, Locale::Text::Common(Locale::CMN_RESTART));
-    sub_4DA8DC(yw, &exit_menu.itemBlock, a4 & 0x1000, a2 & 0x1000, Locale::Text::Common(Locale::CMN_CONTINUE));
+    ExitMenuLayoutButton(yw, &exit_menu.itemBlock, a4 & 0x100, a2 & 0x100, Locale::Text::Common(Locale::CMN_EXITMISN));
+    ExitMenuLayoutButton(yw, &exit_menu.itemBlock, a4 & 0x200, a2 & 0x200, Locale::Text::Common(Locale::CMN_SAVE));
+    ExitMenuLayoutButton(yw, &exit_menu.itemBlock, a4 & 0x400, a2 & 0x400, Locale::Text::Common(Locale::CMN_LOAD));
+    ExitMenuLayoutButton(yw, &exit_menu.itemBlock, a4 & 0x800, a2 & 0x800, Locale::Text::Common(Locale::CMN_RESTART));
+    ExitMenuLayoutButton(yw, &exit_menu.itemBlock, a4 & 0x1000, a2 & 0x1000, Locale::Text::Common(Locale::CMN_CONTINUE));
 
     exit_menu.ItemsPostLayout(yw, &exit_menu.itemBlock, 0, "xyz");
 
@@ -6521,7 +6521,7 @@ void NC_STACK_ypaworld::ExitMenuHandleInput(TInputState *inpt)
 
     if ( GetConfirmDialogOwner() == &exit_menu )
     {
-        int v7 = sub_4C885C();
+        int v7 = ConfirmDialogGetState();
 
         if ( v7 == 1 )
         {
@@ -6602,7 +6602,7 @@ void NC_STACK_ypaworld::ExitMenuHandleInput(TInputState *inpt)
             {
             case 7:
                 if ( winpt->flag & TClickBoxInf::FLAG_BTN_UP )
-                    sub_449DE8(Locale::Text::Help(Locale::HELP_GAMEMENU));
+                    ConfirmOpenHelp(Locale::Text::Help(Locale::HELP_GAMEMENU));
 
                 SetShowingTooltip(Locale::TIP_ONLINEHELP);
                 break;
@@ -6615,10 +6615,10 @@ void NC_STACK_ypaworld::ExitMenuHandleInput(TInputState *inpt)
                 {
                     dword_5C8B78 = 8;
 
-                    if ( sub_4C885C() != 3 )
+                    if ( ConfirmDialogGetState() != 3 )
                         GuiWinClose( &exit_menu );
 
-                    sb_0x4c87fc( Locale::Text::Advanced(Locale::ADV_RLYEXIT) , &exit_menu);
+                    OpenConfirmDialog( Locale::Text::Advanced(Locale::ADV_RLYEXIT) , &exit_menu);
                 }
                 break;
 
@@ -6632,10 +6632,10 @@ void NC_STACK_ypaworld::ExitMenuHandleInput(TInputState *inpt)
                     {
                         dword_5C8B78 = 9;
 
-                        if ( sub_4C885C() != 3 )
+                        if ( ConfirmDialogGetState() != 3 )
                             GuiWinClose( &exit_menu );
 
-                        sb_0x4c87fc( Locale::Text::Advanced(Locale::ADV_RLYSAVE) , &exit_menu);
+                        OpenConfirmDialog( Locale::Text::Advanced(Locale::ADV_RLYSAVE) , &exit_menu);
                     }
                 }
                 break;
@@ -6650,10 +6650,10 @@ void NC_STACK_ypaworld::ExitMenuHandleInput(TInputState *inpt)
                     {
                         dword_5C8B78 = 10;
 
-                        if ( sub_4C885C() != 3 )
+                        if ( ConfirmDialogGetState() != 3 )
                             GuiWinClose( &exit_menu );
 
-                        sb_0x4c87fc( Locale::Text::Advanced(Locale::ADV_RLYLOAD) , &exit_menu);
+                        OpenConfirmDialog( Locale::Text::Advanced(Locale::ADV_RLYLOAD) , &exit_menu);
                     }
                 }
                 break;
@@ -6668,10 +6668,10 @@ void NC_STACK_ypaworld::ExitMenuHandleInput(TInputState *inpt)
                     {
                         dword_5C8B78 = 11;
 
-                        if ( sub_4C885C() != 3 )
+                        if ( ConfirmDialogGetState() != 3 )
                             GuiWinClose( &exit_menu );
 
-                        sb_0x4c87fc(Locale::Text::Advanced(Locale::ADV_RLYRESTART) , &exit_menu);
+                        OpenConfirmDialog(Locale::Text::Advanced(Locale::ADV_RLYRESTART) , &exit_menu);
                     }
                 }
                 break;
@@ -6699,13 +6699,13 @@ void NC_STACK_ypaworld::ExitMenuHandleInput(TInputState *inpt)
 
 
 
-void sub_4C8534(NC_STACK_ypaworld *yw, CmdStream *cur, const std::string &a2)
+void ConfirmDialogLayoutTextLine(NC_STACK_ypaworld *yw, CmdStream *cur, const std::string &a2)
 {
     FontUA::store_u8(cur, 123);
     FontUA::store_u8(cur, 32);
     FontUA::store_u8(cur, 32);
 
-    sub_451714(yw->_guiTiles[0], cur, a2, lstvw2.entryWidth - 2 * dword_5BAFA8, 32);
+    LayoutCenteredTextField(yw->_guiTiles[0], cur, a2, lstvw2.entryWidth - 2 * dword_5BAFA8, 32);
 
     FontUA::store_u8(cur, 32);
     FontUA::store_u8(cur, 32);
@@ -6736,7 +6736,7 @@ void ConfirmDialogLayoutButtons(NC_STACK_ypaworld *yw, CmdStream *cur, int a3)
 
     FontUA::store_u8(cur, 98);
 
-    sub_451714(yw->_guiTiles[v8], cur, Locale::Text::Common(Locale::CMN_OK), dword_5BAFA0 - 2 * yw->_fontBorderW, 32);
+    LayoutCenteredTextField(yw->_guiTiles[v8], cur, Locale::Text::Common(Locale::CMN_OK), dword_5BAFA0 - 2 * yw->_fontBorderW, 32);
 
     FontUA::unset_flag(cur, 0x10);
 
@@ -6762,7 +6762,7 @@ void ConfirmDialogLayoutButtons(NC_STACK_ypaworld *yw, CmdStream *cur, int a3)
 
     FontUA::store_u8(cur, 98);
 
-    sub_451714(yw->_guiTiles[v8], cur, Locale::Text::Common(Locale::CMN_CANCEL), dword_5BAFA0 - 2 * yw->_fontBorderW, 32);
+    LayoutCenteredTextField(yw->_guiTiles[v8], cur, Locale::Text::Common(Locale::CMN_CANCEL), dword_5BAFA0 - 2 * yw->_fontBorderW, 32);
 
     FontUA::unset_flag(cur, 0x10);
 
@@ -6785,8 +6785,8 @@ void NC_STACK_ypaworld::ConfirmDialogLayoutItems(int a2)
 
     FontUA::set_txtColor(&lstvw2.itemBlock, _iniColors[60].r, _iniColors[60].g, _iniColors[60].b);
 
-    sub_4C8534(this, &lstvw2.itemBlock, dword_5BAF98);
-    sub_4C8534(this, &lstvw2.itemBlock, " ");
+    ConfirmDialogLayoutTextLine(this, &lstvw2.itemBlock, dword_5BAF98);
+    ConfirmDialogLayoutTextLine(this, &lstvw2.itemBlock, " ");
 
     FontUA::set_txtColor(&lstvw2.itemBlock, _iniColors[68].r, _iniColors[68].g, _iniColors[68].b);
 
@@ -7088,7 +7088,7 @@ NC_STACK_ypabact * NC_STACK_ypaworld::GetLastMsgSender()
     return NULL;
 }
 
-bool sub_4C3E34(NC_STACK_ypabact* const &a1, NC_STACK_ypabact* const &a2)
+bool CompareCommanderIds(NC_STACK_ypabact* const &a1, NC_STACK_ypabact* const &a2)
 {
     return (a1->_commandID & 0xFFFFFF) < (a2->_commandID & 0xFFFFFF);
 }
@@ -7107,7 +7107,7 @@ void NC_STACK_ypaworld::UpdateCommanderList()
         }
     }
 
-    std::sort(_cmdrsRemap.begin(), _cmdrsRemap.end(), sub_4C3E34);
+    std::sort(_cmdrsRemap.begin(), _cmdrsRemap.end(), CompareCommanderIds);
 
     if ( !_cmdrsRemap.empty() )
     {
@@ -7207,7 +7207,7 @@ void RoboMapFollowViewer(NC_STACK_ypaworld *yw)
 
 
 
-int sub_4C3C88(const void *a1, const void *a2)
+int CompareVehicleProtos(const void *a1, const void *a2)
 {
     uint8_t aa1 = *(const uint8_t *)a1;
     uint8_t aa2 = *(const uint8_t *)a2;
@@ -7329,7 +7329,7 @@ void UpdateVehicleList(NC_STACK_ypaworld *yw)
 
     dword_5BAA60 = yw;
 
-    qsort(bzda.field_2DC, v3, 1, sub_4C3C88);
+    qsort(bzda.field_2DC, v3, 1, CompareVehicleProtos);
 
     if ( !v3 )
     {
@@ -7348,7 +7348,7 @@ void UpdateVehicleList(NC_STACK_ypaworld *yw)
     }
 }
 
-int sub_4C3D6C(const void *a1, const void *a2)
+int CompareBuildingProtos(const void *a1, const void *a2)
 {
 
     uint8_t aa1 = *(const uint8_t *)a1;
@@ -7423,7 +7423,7 @@ void UpdateBuildingList(NC_STACK_ypaworld *yw)
 
     dword_5BAA60 = yw;
 
-    qsort(bzda.field_3DC, v3, 1, sub_4C3D6C);
+    qsort(bzda.field_3DC, v3, 1, CompareBuildingProtos);
 
     if ( !v3 )
     {
@@ -8172,7 +8172,7 @@ void yw_RenderInfoVehicleWire(NC_STACK_ypaworld *yw, sklt_wis *wis, World::TVhcl
 
 
 
-void sub_4E4F80(NC_STACK_ypaworld *yw, sklt_wis *wis, CmdStream *cur, float x, float y, int value, int maxval, int valCH, int valBG, const std::string &txt1, const std::string &txt2, int flag = 0)
+void RenderInfoBar(NC_STACK_ypaworld *yw, sklt_wis *wis, CmdStream *cur, float x, float y, int value, int maxval, int valCH, int valBG, const std::string &txt1, const std::string &txt2, int flag = 0)
 {
     int wnd_xpos = 0;
     int wnd_xpos2 = 0;
@@ -8287,7 +8287,7 @@ void yw_RenderInfoLifebar(NC_STACK_ypaworld *yw, sklt_wis *wis, CmdStream *cur, 
         a6a = vhcl->energy;
     }
 
-    sub_4E4F80(yw, wis, cur, xpos, ypos, a6a, v10, 2, 6, Locale::Text::HUD(Locale::HUDSTR_EGY), fmt::sprintf("%d", (a6a + 99) / 100));
+    RenderInfoBar(yw, wis, cur, xpos, ypos, a6a, v10, 2, 6, Locale::Text::HUD(Locale::HUDSTR_EGY), fmt::sprintf("%d", (a6a + 99) / 100));
 }
 
 
@@ -8300,7 +8300,7 @@ void yw_RenderInfoShieldbar(NC_STACK_ypaworld *yw, sklt_wis *wis, CmdStream *cur
     else
         v10 = vhcl->shield;
 
-    sub_4E4F80(yw, wis, cur, xpos, ypos, v10, 100, 1, 5, Locale::Text::HUD(Locale::HUDSTR_AMR), fmt::sprintf("%d%%", v10), 2);
+    RenderInfoBar(yw, wis, cur, xpos, ypos, v10, 100, 1, 5, Locale::Text::HUD(Locale::HUDSTR_AMR), fmt::sprintf("%d%%", v10), 2);
 }
 
 
@@ -8351,7 +8351,7 @@ void yw_RenderInfoVehicleName(NC_STACK_ypaworld *yw, sklt_wis *wis, CmdStream *c
 
         FontUA::set_txtColor(cur,  yw->_iniColors[65].r,  yw->_iniColors[65].g,  yw->_iniColors[65].b);
 
-        sub_451714(yw->_guiTiles[15], cur, name, v31, 32);
+        LayoutCenteredTextField(yw->_guiTiles[15], cur, name, v31, 32);
     }
 
     if ( wis->sklts_intern[2] )
@@ -8437,7 +8437,7 @@ void yw_RenderInfoReloadbar(NC_STACK_ypaworld *yw, sklt_wis *wis, CmdStream *cur
         else
             txt2 = fmt::sprintf("%d%%", v12);
 
-        sub_4E4F80(yw, wis, cur, xpos, ypos, v12, 100, 1, 3, Locale::Text::HUD(Locale::HUDSTR_RLD), txt2);
+        RenderInfoBar(yw, wis, cur, xpos, ypos, v12, 100, 1, 3, Locale::Text::HUD(Locale::HUDSTR_RLD), txt2);
     }
 }
 
@@ -8452,7 +8452,7 @@ void yw_RenderInfoWeaponInf(NC_STACK_ypaworld *yw, sklt_wis *wis, CmdStream *cur
         else
             txt2 = fmt::sprintf("%d x%d", weap->energy / 100, vhcl->num_weapons);
 
-        sub_4E4F80(yw, wis, cur, xpos, ypos, weap->energy, 100, 7, 7, Locale::Text::HUD(Locale::HUDSTR_DMG), txt2, 1 | 2);
+        RenderInfoBar(yw, wis, cur, xpos, ypos, weap->energy, 100, 7, 7, Locale::Text::HUD(Locale::HUDSTR_DMG), txt2, 1 | 2);
     }
 }
 
@@ -9165,7 +9165,7 @@ void DrawHud(NC_STACK_ypaworld *yw)
 
 
 
-void sub_4E3B80(NC_STACK_ypaworld *yw, float x1, float y1, float x2, float y2, SDL_Color *out1, SDL_Color *out2)
+void HudColorRadialPulse(NC_STACK_ypaworld *yw, float x1, float y1, float x2, float y2, SDL_Color *out1, SDL_Color *out2)
 {
     float v15 = yw->_hud.field_86 * 2.0 - 1.0;
 
@@ -9193,7 +9193,7 @@ void sub_4E3B80(NC_STACK_ypaworld *yw, float x1, float y1, float x2, float y2, S
     *out2 = GFX::Engine.Color(v13, v12, v14);
 }
 
-void sub_4E3D98(NC_STACK_ypaworld *yw, float x1, float y1, float x2, float y2, SDL_Color *out1, SDL_Color *out2)
+void HudColorTimeBlend(NC_STACK_ypaworld *yw, float x1, float y1, float x2, float y2, SDL_Color *out1, SDL_Color *out2)
 {
     int v7 = yw->_timeStamp % 300;
     float v9 = v7 / 30000.0;
@@ -9291,7 +9291,7 @@ void yw_RenderHUDTarget(NC_STACK_ypaworld *yw, sklt_wis *wis)
                 wis_color_func func;
 
                 if ( wis->field_72 )
-                    func = sub_4E3B80;
+                    func = HudColorRadialPulse;
                 else
                     func = NULL;
 
@@ -9330,7 +9330,7 @@ void yw_RenderHUDTarget(NC_STACK_ypaworld *yw, sklt_wis *wis)
                 v27 = yw->GetColor(36);
 
                 if ( wis->field_72 )
-                    func = sub_4E3D98;
+                    func = HudColorTimeBlend;
                 else
                     func = NULL;
             }
@@ -9343,7 +9343,7 @@ void yw_RenderHUDTarget(NC_STACK_ypaworld *yw, sklt_wis *wis)
                 a11 = yw->GetColor(37);
 
                 if ( wis->field_72 )
-                    func = sub_4E3B80;
+                    func = HudColorRadialPulse;
                 else
                     func = NULL;
             }
@@ -9639,7 +9639,7 @@ struct aab
     int b;
 };
 
-int sub_47F360(const void *a1, const void *a2)
+int CompareScoresDesc(const void *a1, const void *a2)
 {
     return (((const aab *)a2)->b) - (((const aab *)a1)->b);
 }
@@ -9662,7 +9662,7 @@ void DrawNetScores(NC_STACK_ypaworld *yw, CmdStream *cur, const std::array<World
             }
         }
 
-        qsort(v25, nums, sizeof(aab), sub_47F360);
+        qsort(v25, nums, sizeof(aab), CompareScoresDesc);
 
         for (int i = 0; i < nums; i++)
         {
@@ -10027,7 +10027,7 @@ int NC_STACK_ypaworld::yw_MouseFindCreationPoint(TClickBoxInf *winp)
     return 0;
 }
 
-int NC_STACK_ypaworld::sb_0x4d3d44(TClickBoxInf *winp)
+int NC_STACK_ypaworld::UserActCreateCheck(TClickBoxInf *winp)
 {
     if ( _guiActFlags & 8 || bzda.field_8EC == -1 )
         return 4;
@@ -10342,7 +10342,7 @@ void NC_STACK_ypaworld::yw_SMAN_MouseSelect(TClickBoxInf *winp)
     {
         int v3 = winp->selected_btnID - 8;
 
-        NC_STACK_ypabact *v4 = sub_4C7B0C(v3, winp->move.BtnPos.x);
+        NC_STACK_ypabact *v4 = SquadManagerPickUnit(v3, winp->move.BtnPos.x);
 
         if ( v4 )
         {
@@ -10495,16 +10495,16 @@ void NC_STACK_ypaworld::UpdateActionEnergyCost()
     {
         if ( bzda.field_8EC != -1 )
         {
-            _updateMessage.energy = dround(sub_4498F4() * (2 * _vhclProtos[bzda.field_2DC[bzda.field_8EC]].energy));
+            _updateMessage.energy = dround(GetUnitLimitCostFactor() * (2 * _vhclProtos[bzda.field_2DC[bzda.field_8EC]].energy));
         }
     }
     else if ( bzda.field_1D0 == 16 && bzda.field_8F4 != -1 )
     {
-        _updateMessage.energy = dround(sub_4498F4() * _buildProtos[bzda.field_3DC[bzda.field_8F4]].Energy);
+        _updateMessage.energy = dround(GetUnitLimitCostFactor() * _buildProtos[bzda.field_3DC[bzda.field_8F4]].Energy);
     }
 }
 
-int sub_4D3C80(NC_STACK_ypaworld *yw)
+int SelectMouseUnitSquadLeader(NC_STACK_ypaworld *yw)
 {
     if ( !yw->_bactOnMouse )
         return 0;
@@ -10534,7 +10534,7 @@ void NC_STACK_ypaworld::ExecuteMouseAction(int arg)
     case World::DOACTION_8:
         if ( _bactOnMouse->_bact_type != BACT_TYPES_GUN && _bactOnMouse != _userRobo )
         {
-            if ( sub_4D3C80(this) )
+            if ( SelectMouseUnitSquadLeader(this) )
             {
                 _activeCmdrID = _bactOnMouse->_commandID;
                 UpdateCommanderList();
@@ -10609,11 +10609,11 @@ void NC_STACK_ypaworld::ExecuteMouseAction(int arg)
         break;
 
     case World::DOACTION_5:
-        sb_0x4c66f8(this, _bactOnMouse, _viewerBact);
+        SwitchControlToUnit(this, _bactOnMouse, _viewerBact);
 
         if ( _bactOnMouse->_bact_type != BACT_TYPES_GUN && _bactOnMouse != _userRobo )
         {
-            if ( sub_4D3C80(this) )
+            if ( SelectMouseUnitSquadLeader(this) )
             {
                 _activeCmdrID = _bactOnMouse->_commandID;
                 UpdateCommanderList();
@@ -10727,7 +10727,7 @@ void NC_STACK_ypaworld::HandleWorldMouse(TInputState *arg)
                     }
                     else
                     {
-                        switch ( sb_0x4d3d44(&arg->ClickInf) )
+                        switch ( UserActCreateCheck(&arg->ClickInf) )
                         {
                         case 0:
                             doAction = World::DOACTION_ADD_UNIT1;
@@ -10798,7 +10798,7 @@ void NC_STACK_ypaworld::HandleWorldMouse(TInputState *arg)
                     }
                     else if ( _activeCmdrRemapIndex != -1 )
                     {
-                        switch ( sb_0x4d3d44(&arg->ClickInf) )
+                        switch ( UserActCreateCheck(&arg->ClickInf) )
                         {
                         case 0:
                             doAction = World::DOACTION_ADD_UNIT2;

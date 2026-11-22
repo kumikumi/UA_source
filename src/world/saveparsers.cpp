@@ -769,13 +769,13 @@ int SaveSuperBombParser::Handle(ScriptParser::Parser &parser, const std::string 
         switch( parser.stoi(p2) )
         {
         case 1:
-            _o.sub_4D12D8(_id, 0);
+            _o.ActivateSuperItem(_id, 0);
             break;
         case 2:
-            _o.sub_4D1594(_id);
+            _o.StopSuperItem(_id);
             break;
         case 3:
-            _o.sub_4D1444(_id);
+            _o.TriggerSuperItem(_id);
             break;
         default:
             break;

@@ -344,7 +344,7 @@ void draw_splashScreen(NC_STACK_ypaworld *yw, NC_STACK_bitmap *splashScreen);
 void yw_RenderVector2D(NC_STACK_ypaworld *yw, UAskeleton::Data *wire, float a3, float a4, float a5, float a6, float a7, float a8, float a9, float a10, SDL_Color coloooor, wis_color_func color_func, wis_color_func color_func2, bool aspectCorrection = false);
 void yw_debriefUpdate(NC_STACK_ypaworld *yw, TInputState *inpt);
 
-int sub_4C885C();
+int ConfirmDialogGetState();
 void TakeScreenshot(NC_STACK_ypaworld *yw);
 
 int recorder_create_camera(NC_STACK_ypaworld *yw);

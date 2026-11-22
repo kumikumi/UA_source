@@ -491,10 +491,10 @@ int LuaEvents::Lua_WrldExitTutorialWindow(lua_State *l)
 {
     NC_STACK_ypaworld *wrld = (NC_STACK_ypaworld *)lua_touserdata(l, 1);
     
-    if ( sub_4C885C() != 3 )
+    if ( ConfirmDialogGetState() != 3 )
     {
         dword_5C8B78 = 8;
-        wrld->sb_0x4c87fc( Locale::Text::Advanced(Locale::ADV_EXITRAINING) , &exit_menu);
+        wrld->OpenConfirmDialog( Locale::Text::Advanced(Locale::ADV_EXITRAINING) , &exit_menu);
     }
     
     return 0;

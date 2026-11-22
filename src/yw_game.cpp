@@ -126,7 +126,7 @@ void NC_STACK_ypaworld::PowerStationErase(cellArea *cell)
     _lvlBuildingsMap(cell->CellId) = 0;
 }
 
-void sb_0x44ca90__sub2(NC_STACK_ypaworld *yw, TLevelDescription *mapp)
+void LoadLevelPalette(NC_STACK_ypaworld *yw, TLevelDescription *mapp)
 {
     if (!mapp->Palettes.empty())
     {
@@ -284,7 +284,7 @@ int NC_STACK_ypaworld::LevelCommonLoader(TLevelDescription *mapp, int levelID, i
 
         Common::Env.SetPrefix("rsrc", fmt::sprintf("data:set%d", mapp->SetID));
 
-        sb_0x44ca90__sub2(this, mapp);
+        LoadLevelPalette(this, mapp);
 
         if ( yw_LoadSet(mapp->SetID) )
         {
@@ -944,7 +944,7 @@ void NC_STACK_ypaworld::CellCheckHealth(cellArea *cell, int newOwner, NC_STACK_y
 
 
 
-TSectorCollision NC_STACK_ypaworld::sub_44DBF8(int _dx, int _dz, int _dxx, int _dzz, int flags)
+TSectorCollision NC_STACK_ypaworld::GetSectorCollision(int _dx, int _dz, int _dxx, int _dzz, int flags)
 {
     int v8 = flags;
     
@@ -1060,7 +1060,7 @@ TSectorCollision NC_STACK_ypaworld::sub_44DBF8(int _dx, int _dz, int _dxx, int _
     return tmp;
 }
 
-void sub_44DF60(UAskeleton::Data *arg, int id)
+void RecalcCollisionPlane(UAskeleton::Data *arg, int id)
 {
     UAskeleton::Polygon &tr = arg->polygons[id];
 
@@ -1081,7 +1081,7 @@ void sub_44DF60(UAskeleton::Data *arg, int id)
     tr.D = -tmp3.dot( arg->POO[vtx1] );
 }
 
-void NC_STACK_ypaworld::sub_44E07C(TSectorCollision &arg)
+void NC_STACK_ypaworld::FitFillerCollisionHeights(TSectorCollision &arg)
 {
     if ( arg.CollisionType == 2 )
     {
@@ -1096,7 +1096,7 @@ void NC_STACK_ypaworld::sub_44E07C(TSectorCollision &arg)
             skel->POO[2].y = cur.height;
             skel->POO[3].y = left.height;
 
-            sub_44DF60(skel, 0);
+            RecalcCollisionPlane(skel, 0);
         }
         else
         {
@@ -1121,7 +1121,7 @@ void NC_STACK_ypaworld::sub_44E07C(TSectorCollision &arg)
             skel->POO[2].y = cur.height;
             skel->POO[3].y = cur.height;
 
-            sub_44DF60(skel, 0);
+            RecalcCollisionPlane(skel, 0);
         }
         else
         {
@@ -1194,15 +1194,15 @@ void NC_STACK_ypaworld::sub_44E07C(TSectorCollision &arg)
             skel->POO[3].y = left.height;
             skel->POO[4].y = cur.averg_height;
 
-            sub_44DF60(skel, 0);
-            sub_44DF60(skel, 1);
-            sub_44DF60(skel, 2);
-            sub_44DF60(skel, 3);
+            RecalcCollisionPlane(skel, 0);
+            RecalcCollisionPlane(skel, 1);
+            RecalcCollisionPlane(skel, 2);
+            RecalcCollisionPlane(skel, 3);
         }
     }
 }
 
-int sub_44D36C(const vec3d &v, int id, NC_STACK_skeleton *skeleton)
+int IsPointInSkeletonPolygon(const vec3d &v, int id, NC_STACK_skeleton *skeleton)
 {
     UAskeleton::Data *sklt = skeleton->GetSkelet();
     
@@ -1276,7 +1276,7 @@ int sub_44D36C(const vec3d &v, int id, NC_STACK_skeleton *skeleton)
     return v7;
 }
 
-void NC_STACK_ypaworld::sub_44D8B8(ypaworld_arg136 *arg, const TSectorCollision &loc)
+void NC_STACK_ypaworld::IntersectRaySkeleton(ypaworld_arg136 *arg, const TSectorCollision &loc)
 {
     UAskeleton::Data *skel = loc.sklt->GetSkelet();
     for ( size_t i = 0; i < skel->polygons.size(); i++)
@@ -1292,7 +1292,7 @@ void NC_STACK_ypaworld::sub_44D8B8(ypaworld_arg136 *arg, const TSectorCollision 
             {
                 vec3d px = arg->vect * v19 + arg->stPos;
 
-                if ( sub_44D36C(px, i, loc.sklt) )
+                if ( IsPointInSkeletonPolygon(px, i, loc.sklt) )
                 {
                     arg->isect = 1;
                     arg->tVal = v19;
@@ -1992,7 +1992,7 @@ void NC_STACK_ypaworld::SetupPowerStationInfo(cellArea *cell, int power)
 }
 
 
-void NC_STACK_ypaworld::sb_0x456384(const Common::Point &cellId, int ownerid2, int blg_id, int a7)
+void NC_STACK_ypaworld::PlaceBuilding(const Common::Point &cellId, int ownerid2, int blg_id, int a7)
 {
     uamessage_bldVhcl bvMsg;
 
@@ -2270,7 +2270,7 @@ void NC_STACK_ypaworld::CollideSphereWithSkeleton(ypaworld_arg137 *arg, const TS
 
                 if ( StepTowardPolygonCentroid(a2.sklt->GetSkelet(), i, tx, arg->radius, v18) )
                 {
-                    if ( sub_44D36C(v18, i, a2.sklt) )
+                    if ( IsPointInSkeletonPolygon(v18, i, a2.sklt) )
                         v27 = 1;
                 }
                 else
@@ -2339,7 +2339,7 @@ void NC_STACK_ypaworld::BuildingConstructUpdate(int dtime)
             rCell.PurposeType = cellArea::PT_NONE;
             rCell.PurposeIndex = 0;
 
-            sb_0x456384(bldProc.CellID, bldProc.Owner, bldProc.BuildID, 0);
+            PlaceBuilding(bldProc.CellID, bldProc.Owner, bldProc.BuildID, 0);
 
             if ( bldProc.Owner == _userRobo->_owner )
             {
@@ -2560,7 +2560,7 @@ void NC_STACK_ypaworld::DoSectorsEnergyRecalc()
 }
 
 
-void NC_STACK_ypaworld::sub_4D12D8(int id, int a3)
+void NC_STACK_ypaworld::ActivateSuperItem(int id, int a3)
 {
     TMapSuperItem &sitem = _levelInfo.SuperItems[id];
 
@@ -2611,7 +2611,7 @@ void NC_STACK_ypaworld::sub_4D12D8(int id, int a3)
     ShowMessage(&arg159);
 }
 
-void NC_STACK_ypaworld::sub_4D1594(int id)
+void NC_STACK_ypaworld::StopSuperItem(int id)
 {
     TMapSuperItem &sitem = _levelInfo.SuperItems[id];
 
@@ -2652,7 +2652,7 @@ void NC_STACK_ypaworld::sub_4D1594(int id)
     ShowMessage(&arg159);
 }
 
-void NC_STACK_ypaworld::sub_4D1444(int id)
+void NC_STACK_ypaworld::TriggerSuperItem(int id)
 {
     TMapSuperItem &sitem = _levelInfo.SuperItems[id];
     sitem.State = TMapSuperItem::STATE_TRIGGED;
@@ -2696,7 +2696,7 @@ void NC_STACK_ypaworld::sub_4D1444(int id)
 }
 
 
-NC_STACK_ypabact * NC_STACK_ypaworld::sb_0x47b028__sub0(uint32_t bactid)
+NC_STACK_ypabact * NC_STACK_ypaworld::FindStationByUnitGid(uint32_t bactid)
 {
     for ( NC_STACK_ypabact * &station : _unitsList )
     {
@@ -2771,7 +2771,7 @@ void NC_STACK_ypaworld::RefreshUnitPRT(NC_STACK_ypabact *unit, NC_STACK_ypabact 
         unit->_primTtype = BACT_TGT_TYPE_NONE;
 
         setTarget_msg arg67;
-        arg67.tgt.pbact = sb_0x47b028__sub0((int)(size_t)unit->_primT.pbact);
+        arg67.tgt.pbact = FindStationByUnitGid((int)(size_t)unit->_primT.pbact);
         arg67.tgt_type = BACT_TGT_TYPE_UNIT_IND;
         arg67.priority = 0;
         unit->SetTarget(&arg67);
@@ -2970,7 +2970,7 @@ void UpdateGates(NC_STACK_ypaworld *yw)
 }
 
 
-bool NC_STACK_ypaworld::sub_4D11C0(int id, int owner)
+bool NC_STACK_ypaworld::IsSuperItemHeldBy(int id, int owner)
 {
     const TMapSuperItem &sitem = _levelInfo.SuperItems[id];
 
@@ -2988,7 +2988,7 @@ bool NC_STACK_ypaworld::sub_4D11C0(int id, int owner)
     return true;
 }
 
-bool NC_STACK_ypaworld::sub_4D12A0(int owner)
+bool NC_STACK_ypaworld::OwnerHasHostStation(int owner)
 {
     for ( NC_STACK_ypabact * &unit : _unitsList )
     {
@@ -2999,7 +2999,7 @@ bool NC_STACK_ypaworld::sub_4D12A0(int owner)
     return false;
 }
 
-void NC_STACK_ypaworld::sub_4D16C4(int id)
+void NC_STACK_ypaworld::DeactivateSuperItem(int id)
 {
     TMapSuperItem &sitem = _levelInfo.SuperItems[id];
 
@@ -3052,26 +3052,26 @@ void NC_STACK_ypaworld::UpdateActiveSuperItem(int id)
     {
         if ( unit->_bact_type == BACT_TYPES_ROBO && sitem.ActivateOwner == unit->_owner )
         {
-            if ( sub_4D11C0(id, sitem.ActivateOwner) )
+            if ( IsSuperItemHeldBy(id, sitem.ActivateOwner) )
             {
                 if ( sitem.CountDown > 0 )
                     sitem.CountDown = sitem.CountDown - _frameTime;
                 else
-                    sub_4D1444(id);
+                    TriggerSuperItem(id);
             }
             else if ( !sitem.KeySectors.empty() )
             {
-                sub_4D1594(id);
+                StopSuperItem(id);
             }
             else
             {
-                sub_4D12D8(id, 0);
+                ActivateSuperItem(id, 0);
             }
             return;
         }
     }
 
-    sub_4D16C4(id);
+    DeactivateSuperItem(id);
 }
 
 
@@ -3098,7 +3098,7 @@ void PlaySuperItemCountdownSound(NC_STACK_ypaworld *yw, int id)
     }
 }
 
-bool NC_STACK_ypaworld::sub_4D1230(int id, int a3)
+bool NC_STACK_ypaworld::IsSuperItemLostBy(int id, int a3)
 {
     const TMapSuperItem &sitem = _levelInfo.SuperItems[id];
 
@@ -3125,15 +3125,15 @@ void NC_STACK_ypaworld::UpdateStoppedSuperItem(int id)
     {
         if ( unit->_bact_type == BACT_TYPES_ROBO && sitem.ActivateOwner == unit->_owner )
         {
-            if ( sub_4D11C0(id, sitem.ActivateOwner) )
-                sub_4D12D8(id, 1);
-            else if ( sub_4D1230(id, sitem.ActivateOwner) )
-                sub_4D16C4(id);
+            if ( IsSuperItemHeldBy(id, sitem.ActivateOwner) )
+                ActivateSuperItem(id, 1);
+            else if ( IsSuperItemLostBy(id, sitem.ActivateOwner) )
+                DeactivateSuperItem(id);
             return;
         }
     }
 
-    sub_4D16C4(id);
+    DeactivateSuperItem(id);
 }
 
 void NC_STACK_ypaworld::KillUnitsInSuperBombRadius(uint8_t activate, float a5, float a6, float a7)
@@ -3226,14 +3226,14 @@ void NC_STACK_ypaworld::UpdateTriggeredSuperItem(int id)
 {
     const TMapSuperItem &sitem = _levelInfo.SuperItems[id];
 
-    if ( !sub_4D1230(id, sitem.ActivateOwner) && sub_4D12A0(sitem.ActivateOwner) )
+    if ( !IsSuperItemLostBy(id, sitem.ActivateOwner) && OwnerHasHostStation(sitem.ActivateOwner) )
     {
         if ( sitem.Type == TMapSuperItem::TYPE_BOMB )
             UpdateSuperBombShockwave(id);
     }
     else
     {
-        sub_4D16C4(id);
+        DeactivateSuperItem(id);
     }
 }
 
@@ -3248,10 +3248,10 @@ void NC_STACK_ypaworld::UpdateSuperItems()
             switch ( sitem.State )
             {
             case TMapSuperItem::STATE_INACTIVE:
-                if ( sub_4D11C0(i, sitem.PCell->owner) )
+                if ( IsSuperItemHeldBy(i, sitem.PCell->owner) )
                 {
-                    if ( sub_4D12A0(sitem.PCell->owner) )
-                        sub_4D12D8(i, 0);
+                    if ( OwnerHasHostStation(sitem.PCell->owner) )
+                        ActivateSuperItem(i, 0);
                 }
                 break;
 
@@ -3420,7 +3420,7 @@ void NC_STACK_ypaworld::NetReleaseMissiles(NC_STACK_ypabact *bact)
     }
 }
 
-void NC_STACK_ypaworld::sub_4F1BE8(NC_STACK_ypabact *bct)
+void NC_STACK_ypaworld::DetachFromRoboGunSlot(NC_STACK_ypabact *bct)
 {
     if ( bct->_bact_type == BACT_TYPES_GUN )
     {
@@ -3449,7 +3449,7 @@ void NC_STACK_ypaworld::NetRemove(NC_STACK_ypabact *bct)
 
             NetReleaseMissiles(slave);
             slave->CleanAttackersTarget();
-            sub_4F1BE8(slave);
+            DetachFromRoboGunSlot(slave);
 
             slave->_status_flg |= BACT_STFLAG_DEATH1;
             slave->_status = BACT_STATUS_DEAD;
@@ -3459,7 +3459,7 @@ void NC_STACK_ypaworld::NetRemove(NC_STACK_ypabact *bct)
 
         NetReleaseMissiles(cmnder);
         cmnder->CleanAttackersTarget();
-        sub_4F1BE8(cmnder);
+        DetachFromRoboGunSlot(cmnder);
 
         cmnder->_status_flg |= BACT_STFLAG_DEATH1;
         cmnder->_status = BACT_STATUS_DEAD;
@@ -4581,7 +4581,7 @@ void NC_STACK_ypaworld::CameraPrepareRender(TGameRecorder *rcrd, NC_STACK_ypabac
     bact->_tForm.SclRot = bact->_rotation;
 }
 
-void sub_445654(NC_STACK_ypaworld *yw, CmdStream *in, char *buf, const char *fmt, ...)
+void DebugInfoPrintf(NC_STACK_ypaworld *yw, CmdStream *in, char *buf, const char *fmt, ...)
 {
     FontUA::copy_position(in);
 
@@ -4700,7 +4700,7 @@ void NC_STACK_ypaworld::debug_info_draw(TInputState *inpt)
 
             if ( !_buildDate.empty() )
             {
-                sub_445654(this, &dbg_txt, buf_sprintf, "build id: %s", _buildDate.c_str());
+                DebugInfoPrintf(this, &dbg_txt, buf_sprintf, "build id: %s", _buildDate.c_str());
 
                 FontUA::next_line(&dbg_txt);
             }
@@ -4713,7 +4713,7 @@ void NC_STACK_ypaworld::debug_info_draw(TInputState *inpt)
             else
                 all_time = (_timeStamp + _playersStats[1].ElapsedTime) / 1024;
 
-            sub_445654(
+            DebugInfoPrintf(
                       this,
                       &dbg_txt,
                       buf_sprintf,
@@ -4727,52 +4727,52 @@ void NC_STACK_ypaworld::debug_info_draw(TInputState *inpt)
 
             FontUA::next_line(&dbg_txt);
 
-            sub_445654(this, &dbg_txt, buf_sprintf, "prof all: %d", _profileVals[PFID_FRAMETIME]);
+            DebugInfoPrintf(this, &dbg_txt, buf_sprintf, "prof all: %d", _profileVals[PFID_FRAMETIME]);
             FontUA::next_line(&dbg_txt);
 
-            sub_445654(this, &dbg_txt, buf_sprintf, "prof fprint: %d", _profileVals[PFID_MARKTIME]);
+            DebugInfoPrintf(this, &dbg_txt, buf_sprintf, "prof fprint: %d", _profileVals[PFID_MARKTIME]);
             FontUA::next_line(&dbg_txt);
 
-            sub_445654(this, &dbg_txt, buf_sprintf, "prof gui: %d", _profileVals[PFID_GUITIME]);
+            DebugInfoPrintf(this, &dbg_txt, buf_sprintf, "prof gui: %d", _profileVals[PFID_GUITIME]);
             FontUA::next_line(&dbg_txt);
 
-            sub_445654(this, &dbg_txt, buf_sprintf, "prof ai: %d", _profileVals[PFID_UPDATETIME]);
+            DebugInfoPrintf(this, &dbg_txt, buf_sprintf, "prof ai: %d", _profileVals[PFID_UPDATETIME]);
             FontUA::next_line(&dbg_txt);
 
-            sub_445654(this, &dbg_txt, buf_sprintf, "prof rend: %d", _profileVals[PFID_RENDERTIME]);
+            DebugInfoPrintf(this, &dbg_txt, buf_sprintf, "prof rend: %d", _profileVals[PFID_RENDERTIME]);
             FontUA::next_line(&dbg_txt);
             
-            sub_445654(this, &dbg_txt, buf_sprintf, "prof 2d rend: %d", _profileVals[PFID_NEWGUITIME]);
+            DebugInfoPrintf(this, &dbg_txt, buf_sprintf, "prof 2d rend: %d", _profileVals[PFID_NEWGUITIME]);
             FontUA::next_line(&dbg_txt);
 
-            sub_445654(this, &dbg_txt, buf_sprintf, "prof net: %d", _profileVals[PFID_NETTIME]);
+            DebugInfoPrintf(this, &dbg_txt, buf_sprintf, "prof net: %d", _profileVals[PFID_NETTIME]);
             FontUA::next_line(&dbg_txt);
 
-            sub_445654(this, &dbg_txt, buf_sprintf, "sec type/wtype: %d/%d", _userUnit->_pSector->type_id, _userUnit->_pSector->PurposeType);
+            DebugInfoPrintf(this, &dbg_txt, buf_sprintf, "sec type/wtype: %d/%d", _userUnit->_pSector->type_id, _userUnit->_pSector->PurposeType);
             FontUA::next_line(&dbg_txt);
 
-            sub_445654(this, &dbg_txt, buf_sprintf, "beam energy: %d", _beamEnergyCapacity);
+            DebugInfoPrintf(this, &dbg_txt, buf_sprintf, "beam energy: %d", _beamEnergyCapacity);
             FontUA::next_line(&dbg_txt);
 
-            sub_445654(this, &dbg_txt, buf_sprintf, "num sqd: %d,%d", _dbgTotalSquadCount, _dbgTotalSquadCountMax);
+            DebugInfoPrintf(this, &dbg_txt, buf_sprintf, "num sqd: %d,%d", _dbgTotalSquadCount, _dbgTotalSquadCountMax);
             FontUA::next_line(&dbg_txt);
 
-            sub_445654(this, &dbg_txt, buf_sprintf, "num vhcl: %d,%d", _dbgTotalVehicleCount, _dbgTotalVehicleCountMax);
+            DebugInfoPrintf(this, &dbg_txt, buf_sprintf, "num vhcl: %d,%d", _dbgTotalVehicleCount, _dbgTotalVehicleCountMax);
             FontUA::next_line(&dbg_txt);
 
-            sub_445654(this, &dbg_txt, buf_sprintf, "num flk: %d,%d", _dbgTotalFlakCount, _dbgTotalFlakCountMax);
+            DebugInfoPrintf(this, &dbg_txt, buf_sprintf, "num flk: %d,%d", _dbgTotalFlakCount, _dbgTotalFlakCountMax);
             FontUA::next_line(&dbg_txt);
 
-            sub_445654(this, &dbg_txt, buf_sprintf, "num robo: %d,%d", _dbgTotalRoboCount, _dbgTotalRoboCountMax);
+            DebugInfoPrintf(this, &dbg_txt, buf_sprintf, "num robo: %d,%d", _dbgTotalRoboCount, _dbgTotalRoboCountMax);
             FontUA::next_line(&dbg_txt);
 
-            sub_445654(this, &dbg_txt, buf_sprintf, "num wpn: %d,%d", _dbgTotalWeaponCount, _dbgTotalWeaponCountMax);
+            DebugInfoPrintf(this, &dbg_txt, buf_sprintf, "num wpn: %d,%d", _dbgTotalWeaponCount, _dbgTotalWeaponCountMax);
             FontUA::next_line(&dbg_txt);
 
-            sub_445654(this, &dbg_txt, buf_sprintf, "reload const: %d", _userRobo->_reload_const);
+            DebugInfoPrintf(this, &dbg_txt, buf_sprintf, "reload const: %d", _userRobo->_reload_const);
             FontUA::next_line(&dbg_txt);
 
-            sub_445654(
+            DebugInfoPrintf(
                       this,
                       &dbg_txt,
                       buf_sprintf,
@@ -4787,7 +4787,7 @@ void NC_STACK_ypaworld::debug_info_draw(TInputState *inpt)
                       _countUnitsPerOwner[7]);
             FontUA::next_line(&dbg_txt);
 
-            sub_445654(
+            DebugInfoPrintf(
                       this,
                       &dbg_txt,
                       buf_sprintf,
@@ -4803,9 +4803,9 @@ void NC_STACK_ypaworld::debug_info_draw(TInputState *inpt)
             FontUA::next_line(&dbg_txt);
 
             if ( _invulnerable )
-                sub_445654(this, &dbg_txt, buf_sprintf, "invulnerable: %s", "YES");
+                DebugInfoPrintf(this, &dbg_txt, buf_sprintf, "invulnerable: %s", "YES");
             else
-                sub_445654(this, &dbg_txt, buf_sprintf, "invulnerable: %s", "NO");
+                DebugInfoPrintf(this, &dbg_txt, buf_sprintf, "invulnerable: %s", "NO");
             FontUA::next_line(&dbg_txt);
         }
         else if ( _showDebugMode == 2 )
@@ -4868,7 +4868,7 @@ void NC_STACK_ypaworld::debug_info_draw(TInputState *inpt)
                             break;
                         }
 
-                        sub_445654(this, &dbg_txt, buf_sprintf, "%s status: %s latency: %d", v35, v36, pl.Latency);
+                        DebugInfoPrintf(this, &dbg_txt, buf_sprintf, "%s status: %s latency: %d", v35, v36, pl.Latency);
 
                         FontUA::next_line(&dbg_txt);
                     }
@@ -4876,17 +4876,17 @@ void NC_STACK_ypaworld::debug_info_draw(TInputState *inpt)
 
                 FontUA::next_line(&dbg_txt);
 
-                sub_445654(this, &dbg_txt, buf_sprintf, "net send: %d bytes/sec", _GameShell->netsend_speed);
+                DebugInfoPrintf(this, &dbg_txt, buf_sprintf, "net send: %d bytes/sec", _GameShell->netsend_speed);
                 FontUA::next_line(&dbg_txt);
 
-                sub_445654(this, &dbg_txt, buf_sprintf, "net rcv: %d bytes/sec", _GameShell->netrecv_speed);
+                DebugInfoPrintf(this, &dbg_txt, buf_sprintf, "net rcv: %d bytes/sec", _GameShell->netrecv_speed);
                 FontUA::next_line(&dbg_txt);
 
-                sub_445654(this, &dbg_txt, buf_sprintf, "packet: %d bytes", _GameShell->net_packet_size);
+                DebugInfoPrintf(this, &dbg_txt, buf_sprintf, "packet: %d bytes", _GameShell->net_packet_size);
                 FontUA::next_line(&dbg_txt);
 
                 if ( _netInfoOverkill )
-                    sub_445654(this, &dbg_txt, buf_sprintf, "WARNING: INFO OVERKILL");
+                    DebugInfoPrintf(this, &dbg_txt, buf_sprintf, "WARNING: INFO OVERKILL");
 
                 FontUA::next_line(&dbg_txt);
 
@@ -4897,31 +4897,31 @@ void NC_STACK_ypaworld::debug_info_draw(TInputState *inpt)
 
                     FontUA::next_line(&dbg_txt);
 
-                    sub_445654(this, &dbg_txt, buf_sprintf, "thread send list now: %d", v100[0]);
+                    DebugInfoPrintf(this, &dbg_txt, buf_sprintf, "thread send list now: %d", v100[0]);
                     FontUA::next_line(&dbg_txt);
 
-                    sub_445654(this, &dbg_txt, buf_sprintf, "thread recv list now: %d", v100[1]);
+                    DebugInfoPrintf(this, &dbg_txt, buf_sprintf, "thread recv list now: %d", v100[1]);
                     FontUA::next_line(&dbg_txt);
 
-                    sub_445654(this, &dbg_txt, buf_sprintf, "thread send list max: %d", v100[3]);
+                    DebugInfoPrintf(this, &dbg_txt, buf_sprintf, "thread send list max: %d", v100[3]);
                     FontUA::next_line(&dbg_txt);
 
-                    sub_445654(this, &dbg_txt, buf_sprintf, "thread recv list max: %d", v100[2]);
+                    DebugInfoPrintf(this, &dbg_txt, buf_sprintf, "thread recv list max: %d", v100[2]);
                     FontUA::next_line(&dbg_txt);
 
-                    sub_445654(this, &dbg_txt, buf_sprintf, "send call now: %d", v100[4]);
+                    DebugInfoPrintf(this, &dbg_txt, buf_sprintf, "send call now: %d", v100[4]);
                     FontUA::next_line(&dbg_txt);
 
-                    sub_445654(this, &dbg_txt, buf_sprintf, "send call max: %d", v100[5]);
+                    DebugInfoPrintf(this, &dbg_txt, buf_sprintf, "send call max: %d", v100[5]);
                     FontUA::next_line(&dbg_txt);
 
-                    sub_445654(this, &dbg_txt, buf_sprintf, "send bugs: %d", v100[6]);
+                    DebugInfoPrintf(this, &dbg_txt, buf_sprintf, "send bugs: %d", v100[6]);
                     FontUA::next_line(&dbg_txt);
                 }
             }
             else
             {
-                sub_445654(this, &dbg_txt, buf_sprintf, "not a network game");
+                DebugInfoPrintf(this, &dbg_txt, buf_sprintf, "not a network game");
                 FontUA::next_line(&dbg_txt);
             }
         }
@@ -4929,7 +4929,7 @@ void NC_STACK_ypaworld::debug_info_draw(TInputState *inpt)
         {
             for (int i = 0; i < 17; i++)
             {
-                sub_445654(this, &dbg_txt, buf_sprintf, "slider[%d] = %f", i, inpt->Sliders[i]);
+                DebugInfoPrintf(this, &dbg_txt, buf_sprintf, "slider[%d] = %f", i, inpt->Sliders[i]);
                 FontUA::next_line(&dbg_txt);
             }
 
@@ -4943,10 +4943,10 @@ void NC_STACK_ypaworld::debug_info_draw(TInputState *inpt)
                     buf += '_';
             }
 
-            sub_445654(this, &dbg_txt, buf_sprintf, buf.c_str());
+            DebugInfoPrintf(this, &dbg_txt, buf_sprintf, buf.c_str());
             FontUA::next_line(&dbg_txt);
 
-            sub_445654(this, &dbg_txt, buf_sprintf, "keycode = %d", inpt->KbdLastDown);
+            DebugInfoPrintf(this, &dbg_txt, buf_sprintf, "keycode = %d", inpt->KbdLastDown);
             FontUA::next_line(&dbg_txt);
         }
         else
@@ -4969,7 +4969,7 @@ void NC_STACK_ypaworld::debug_info_draw(TInputState *inpt)
 
                         v109 = 1;
 
-                        sub_445654(this, &dbg_txt, buf_sprintf, "robo owner %d with energy %d / %d / %d / %d", robo->_owner, robo->_energy, robo->_roboBuildSpare, robo->_roboVehicleSpare, robo->_energy_max);
+                        DebugInfoPrintf(this, &dbg_txt, buf_sprintf, "robo owner %d with energy %d / %d / %d / %d", robo->_owner, robo->_energy, robo->_roboBuildSpare, robo->_roboVehicleSpare, robo->_energy_max);
                         FontUA::next_line(&dbg_txt);
 
                         const char *v71;
@@ -5025,10 +5025,10 @@ void NC_STACK_ypaworld::debug_info_draw(TInputState *inpt)
                             break;
                         }
 
-                        sub_445654(this, &dbg_txt, buf_sprintf, "    do build job   >%s<   and vhcl job   >%s<", v71, v73);
+                        DebugInfoPrintf(this, &dbg_txt, buf_sprintf, "    do build job   >%s<   and vhcl job   >%s<", v71, v73);
                         FontUA::next_line(&dbg_txt);
 
-                        sub_445654(this, &dbg_txt, buf_sprintf, "    wait power %d, radar %d, flak %d, location %d",
+                        DebugInfoPrintf(this, &dbg_txt, buf_sprintf, "    wait power %d, radar %d, flak %d, location %d",
                                          robo->_roboPowerDelay / 1000,
                                          robo->_roboRadarDelay / 1000,
                                          robo->_roboSafetyDelay / 1000,
@@ -5036,74 +5036,74 @@ void NC_STACK_ypaworld::debug_info_draw(TInputState *inpt)
 
                         FontUA::next_line(&dbg_txt);
 
-                        sub_445654(this, &dbg_txt, buf_sprintf, "    wait conquer %d, defense %d, recon %d, robo %d",
+                        DebugInfoPrintf(this, &dbg_txt, buf_sprintf, "    wait conquer %d, defense %d, recon %d, robo %d",
                                          robo->_roboConqDelay / 1000,
                                          robo->_roboEnemyDelay / 1000,
                                          robo->_roboExploreDelay / 1000,
                                          robo->_roboDangerDelay / 1000);
                         FontUA::next_line(&dbg_txt);
 
-                        sub_445654(this, &dbg_txt, buf_sprintf, "    values  ");
+                        DebugInfoPrintf(this, &dbg_txt, buf_sprintf, "    values  ");
                         FontUA::next_line(&dbg_txt);
 
                         if ( robo->_roboPowerDelay > 0 )
-                            sub_445654(this, &dbg_txt, buf_sprintf, "power -1, ");
+                            DebugInfoPrintf(this, &dbg_txt, buf_sprintf, "power -1, ");
                         else
-                            sub_445654(this, &dbg_txt, buf_sprintf, "power %d, ", robo->_roboPowerValue);
+                            DebugInfoPrintf(this, &dbg_txt, buf_sprintf, "power %d, ", robo->_roboPowerValue);
 
                         FontUA::next_line(&dbg_txt);
 
                         if ( robo->_roboRadarDelay > 0 )
-                            sub_445654(this, &dbg_txt, buf_sprintf, "radar -1, ");
+                            DebugInfoPrintf(this, &dbg_txt, buf_sprintf, "radar -1, ");
                         else
-                            sub_445654(this, &dbg_txt, buf_sprintf, "radar %d, ", robo->_roboRadarValue);
+                            DebugInfoPrintf(this, &dbg_txt, buf_sprintf, "radar %d, ", robo->_roboRadarValue);
 
                         FontUA::next_line(&dbg_txt);
 
                         if ( robo->_roboSafetyDelay > 0 )
-                            sub_445654(this, &dbg_txt, buf_sprintf, "flak -1, ");
+                            DebugInfoPrintf(this, &dbg_txt, buf_sprintf, "flak -1, ");
                         else
-                            sub_445654(this, &dbg_txt, buf_sprintf, "flak %d, ", robo->_roboSafetyValue);
+                            DebugInfoPrintf(this, &dbg_txt, buf_sprintf, "flak %d, ", robo->_roboSafetyValue);
 
                         FontUA::next_line(&dbg_txt);
 
                         if ( robo->_roboPositionDelay > 0 )
-                            sub_445654(this, &dbg_txt, buf_sprintf, "power -1, ");
+                            DebugInfoPrintf(this, &dbg_txt, buf_sprintf, "power -1, ");
                         else
-                            sub_445654(this, &dbg_txt, buf_sprintf, "power %d, ", robo->_roboPositionValue);
+                            DebugInfoPrintf(this, &dbg_txt, buf_sprintf, "power %d, ", robo->_roboPositionValue);
 
                         FontUA::next_line(&dbg_txt);
 
                         if ( robo->_roboEnemyDelay > 0 )
-                            sub_445654(this, &dbg_txt, buf_sprintf, "defense -1, ");
+                            DebugInfoPrintf(this, &dbg_txt, buf_sprintf, "defense -1, ");
                         else
-                            sub_445654(this, &dbg_txt, buf_sprintf, "defense %d, ", robo->_roboEnemyValue);
+                            DebugInfoPrintf(this, &dbg_txt, buf_sprintf, "defense %d, ", robo->_roboEnemyValue);
 
                         FontUA::next_line(&dbg_txt);
 
                         if ( robo->_roboConqDelay > 0 )
-                            sub_445654(this, &dbg_txt, buf_sprintf, "conquer -1, ");
+                            DebugInfoPrintf(this, &dbg_txt, buf_sprintf, "conquer -1, ");
                         else
-                            sub_445654(this, &dbg_txt, buf_sprintf, "conquer %d, ", robo->_roboConqValue);
+                            DebugInfoPrintf(this, &dbg_txt, buf_sprintf, "conquer %d, ", robo->_roboConqValue);
 
                         FontUA::next_line(&dbg_txt);
 
                         if ( robo->_roboExploreDelay > 0 )
-                            sub_445654(this, &dbg_txt, buf_sprintf, "recon -1, ");
+                            DebugInfoPrintf(this, &dbg_txt, buf_sprintf, "recon -1, ");
                         else
-                            sub_445654(this, &dbg_txt, buf_sprintf, "recon %d, ", robo->_roboExploreValue);
+                            DebugInfoPrintf(this, &dbg_txt, buf_sprintf, "recon %d, ", robo->_roboExploreValue);
 
                         FontUA::next_line(&dbg_txt);
 
                         if ( robo->_roboDangerDelay > 0 )
-                            sub_445654(this, &dbg_txt, buf_sprintf, "robo -1, ");
+                            DebugInfoPrintf(this, &dbg_txt, buf_sprintf, "robo -1, ");
                         else
-                            sub_445654(this, &dbg_txt, buf_sprintf, "robo %d, ", robo->_roboDangerValue);
+                            DebugInfoPrintf(this, &dbg_txt, buf_sprintf, "robo %d, ", robo->_roboDangerValue);
 
                         FontUA::next_line(&dbg_txt);
 
                         if ( robo->_roboState & NC_STACK_yparobo::ROBOSTATE_DOCKINUSE )
-                            sub_445654(this, &dbg_txt, buf_sprintf, "dock energy %d time %d", robo->_roboDockEnerg, robo->_roboDockTime);
+                            DebugInfoPrintf(this, &dbg_txt, buf_sprintf, "dock energy %d time %d", robo->_roboDockEnerg, robo->_roboDockTime);
                     }
                 }
             }
@@ -5115,10 +5115,10 @@ void NC_STACK_ypaworld::debug_info_draw(TInputState *inpt)
 
         FontUA::next_line(&dbg_txt);
 
-        sub_445654(this, &dbg_txt, buf_sprintf, "fps: %d", _FPS);
+        DebugInfoPrintf(this, &dbg_txt, buf_sprintf, "fps: %d", _FPS);
         FontUA::next_line(&dbg_txt);
 
-        sub_445654(this, &dbg_txt, buf_sprintf, "polys: %d,%d", _polysCount, _polysDraw);
+        DebugInfoPrintf(this, &dbg_txt, buf_sprintf, "polys: %d,%d", _polysCount, _polysDraw);
         FontUA::next_line(&dbg_txt);
 
         FontUA::set_end(&dbg_txt);

@@ -1146,21 +1146,21 @@ void NC_STACK_ypaworld::IntersectRay(ypaworld_arg136 *arg)
     if ( dx == dxx && dz == dzz )
     {
         elems = 1;
-        a6[0] = sub_44DBF8(dx, dz, dx, dz, arg->flags);
+        a6[0] = GetSectorCollision(dx, dz, dx, dz, arg->flags);
     }
     else if ( dx == dxx || dz == dzz )
     {
         elems = 2;
-        a6[0] = sub_44DBF8(dx, dz, dx,  dz,  arg->flags);
-        a6[1] = sub_44DBF8(dx, dz, dxx, dzz, arg->flags);
+        a6[0] = GetSectorCollision(dx, dz, dx,  dz,  arg->flags);
+        a6[1] = GetSectorCollision(dx, dz, dxx, dzz, arg->flags);
     }
     else
     {
         elems = 4;
-        a6[0] = sub_44DBF8(dx, dz, dx,  dz,  arg->flags);
-        a6[1] = sub_44DBF8(dx, dz, dx,  dzz, arg->flags);
-        a6[2] = sub_44DBF8(dx, dz, dxx, dz,  arg->flags);
-        a6[3] = sub_44DBF8(dx, dz, dxx, dzz, arg->flags);
+        a6[0] = GetSectorCollision(dx, dz, dx,  dz,  arg->flags);
+        a6[1] = GetSectorCollision(dx, dz, dx,  dzz, arg->flags);
+        a6[2] = GetSectorCollision(dx, dz, dxx, dz,  arg->flags);
+        a6[3] = GetSectorCollision(dx, dz, dxx, dzz, arg->flags);
     }
 
     for (int i = 0; i < elems; i++)
@@ -1168,11 +1168,11 @@ void NC_STACK_ypaworld::IntersectRay(ypaworld_arg136 *arg)
         if ( a6[i].CollisionType )
         {
             if ( a6[i].CollisionType != 1)
-                sub_44E07C(a6[i]);
+                FitFillerCollisionHeights(a6[i]);
 
             arg->stPos = stpos - a6[i].pos;
 
-            sub_44D8B8(arg, a6[i]);
+            IntersectRaySkeleton(arg, a6[i]);
 
             if ( arg->isect )
                 break;
@@ -1203,54 +1203,54 @@ void NC_STACK_ypaworld::FindSphereCollisions(ypaworld_arg137 *arg)
         switch ( i )
         {
         case 0:
-            a6 = sub_44DBF8(dxx, dzz, dxx, dzz, arg->field_30);
+            a6 = GetSectorCollision(dxx, dzz, dxx, dzz, arg->field_30);
             break;
 
         case 1:
             if ( dxx != xxmr )
-                a6 = sub_44DBF8(dxx, dzz, xxmr, dzz, arg->field_30);
+                a6 = GetSectorCollision(dxx, dzz, xxmr, dzz, arg->field_30);
             break;
 
         case 2:
             if ( dxx != xxpr )
-                a6 = sub_44DBF8(dxx, dzz, xxpr, dzz, arg->field_30);
+                a6 = GetSectorCollision(dxx, dzz, xxpr, dzz, arg->field_30);
             break;
 
         case 3:
             if ( dzz != zzmr )
-                a6 = sub_44DBF8(dxx, dzz, dxx, zzmr, arg->field_30);
+                a6 = GetSectorCollision(dxx, dzz, dxx, zzmr, arg->field_30);
             break;
 
         case 4:
             if ( dzz != zzpr )
-                a6 = sub_44DBF8(dxx, dzz, dxx, zzpr, arg->field_30);
+                a6 = GetSectorCollision(dxx, dzz, dxx, zzpr, arg->field_30);
             break;
 
         case 5:
             if ( dxx != xxmr && dzz != zzmr )
-                a6 = sub_44DBF8(dxx, dzz, xxmr, zzmr, arg->field_30);
+                a6 = GetSectorCollision(dxx, dzz, xxmr, zzmr, arg->field_30);
             break;
 
         case 6:
             if ( dxx != xxpr && dzz != zzmr )
-                a6 = sub_44DBF8(dxx, dzz, xxpr, zzmr, arg->field_30);
+                a6 = GetSectorCollision(dxx, dzz, xxpr, zzmr, arg->field_30);
             break;
 
         case 7:
             if ( dxx != xxpr && dzz != zzpr )
-                a6 = sub_44DBF8(dxx, dzz, xxpr, zzpr, arg->field_30);
+                a6 = GetSectorCollision(dxx, dzz, xxpr, zzpr, arg->field_30);
             break;
 
         case 8:
             if ( dxx != xxmr && dzz != zzpr )
-                a6 = sub_44DBF8(dxx, dzz, xxmr, zzpr, arg->field_30);
+                a6 = GetSectorCollision(dxx, dzz, xxmr, zzpr, arg->field_30);
             break;
         }
 
         if ( a6.CollisionType )
         {
             if ( a6.CollisionType != 1 )
-                sub_44E07C(a6);
+                FitFillerCollisionHeights(a6);
 
             arg->pos = pos - a6.pos;
 
@@ -1731,7 +1731,7 @@ size_t NC_STACK_ypaworld::CreateBuilding(ypaworld_arg148 *arg)
 
     if ( arg->field_C )
     {
-        sb_0x456384(arg->CellId, arg->owner, arg->blg_ID, arg->field_18 & 1);
+        PlaceBuilding(arg->CellId, arg->owner, arg->blg_ID, arg->field_18 & 1);
     }
     else
     {        
@@ -1811,16 +1811,16 @@ void NC_STACK_ypaworld::IntersectLongRay(ypaworld_arg136 *arg)
         v10 = v33 >> 16;
         v11 = -v34 >> 16;
 
-        a6 = sub_44DBF8(a2a, a3a, v10, v11, arg->flags);
+        a6 = GetSectorCollision(a2a, a3a, v10, v11, arg->flags);
 
         if ( a6.CollisionType )
         {
             if ( a6.CollisionType != 1 )
-                sub_44E07C(a6);
+                FitFillerCollisionHeights(a6);
 
             arg->stPos = stpos - a6.pos;
 
-            sub_44D8B8(arg, a6);
+            IntersectRaySkeleton(arg, a6);
 
             if ( arg->isect )
                 return;
@@ -1842,16 +1842,16 @@ void NC_STACK_ypaworld::IntersectLongRay(ypaworld_arg136 *arg)
 
     if ( v24 != v10 || -v27 != v11 )
     {
-        a6 = sub_44DBF8(a2a, a3a, v24, -v27, arg->flags);
+        a6 = GetSectorCollision(a2a, a3a, v24, -v27, arg->flags);
 
         if ( a6.CollisionType )
         {
             if ( a6.CollisionType != 1 )
-                sub_44E07C(a6);
+                FitFillerCollisionHeights(a6);
 
             arg->stPos = stpos - a6.pos;
 
-            sub_44D8B8(arg, a6);
+            IntersectRaySkeleton(arg, a6);
         }
     }
 }

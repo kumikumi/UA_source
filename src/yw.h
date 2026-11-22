@@ -2105,9 +2105,9 @@ public:
     void DoSectorsEnergyRecalc();
     void RecalcSectorsPowerForPS(const TPowerStationInfo &ps);
     
-    void sub_4D12D8(int id, int a3);
-    void sub_4D1594(int id);
-    void sub_4D1444(int id);
+    void ActivateSuperItem(int id, int a3);
+    void StopSuperItem(int id);
+    void TriggerSuperItem(int id);
     int LoadingParseSaveFile(const std::string &filename);
     void LoadingUnitsRefresh();
     int ParseSettingsFile(const std::string &fname, uint32_t sdfMask);
@@ -2143,7 +2143,7 @@ public:
     
     //PRT - Position Robo Target
     void RefreshUnitPRT(NC_STACK_ypabact *unit, NC_STACK_ypabact *robo, bool isRobo); 
-    NC_STACK_ypabact * sb_0x47b028__sub0(uint32_t bactid); // CHECK IT
+    NC_STACK_ypabact * FindStationByUnitGid(uint32_t bactid); // CHECK IT
     
     void yw_processVhclDataMsgs(uamessage_vhclData *msg, NC_STACK_ypabact *host_node);
     NC_STACK_ypabact * yw_getHostByOwner(uint8_t owner);
@@ -2151,7 +2151,7 @@ public:
     void yw_netApplyVhclDataI(NC_STACK_ypabact *bact, uamessage_vhclDataI *dat, int id, uint32_t timestamp);
     void NetRemove(NC_STACK_ypabact *bct);
     void NetReleaseMissiles(NC_STACK_ypabact *bact);
-    void sub_4F1BE8(NC_STACK_ypabact *bct);
+    void DetachFromRoboGunSlot(NC_STACK_ypabact *bct);
     void BriefingSetObject(const TBriefObject &obj, bool doAdd);
     
     
@@ -2166,7 +2166,7 @@ public:
     
     
     NC_STACK_ypabact *yw_createUnit(int model_id);
-    void sb_0x456384(const Common::Point &cellId, int ownerid2, int blg_id, int a7);
+    void PlaceBuilding(const Common::Point &cellId, int ownerid2, int blg_id, int a7);
     void SetupPowerStationInfo(cellArea *cell, int power);
     void ResetAccumMap();
     
@@ -2207,10 +2207,10 @@ public:
     void UpdateStoppedSuperItem(int id);
     void UpdateActiveSuperItem(int id);
     void UpdateSuperItems();
-    void sub_4D16C4(int id);
-    bool sub_4D1230(int id, int a3);
-    bool sub_4D11C0(int id, int owner);
-    bool sub_4D12A0(int owner);
+    void DeactivateSuperItem(int id);
+    bool IsSuperItemLostBy(int id, int a3);
+    bool IsSuperItemHeldBy(int id, int owner);
+    bool OwnerHasHostStation(int owner);
     
     void UpdateCommanderList();
     NC_STACK_ypabact *GetLastMsgSender();
@@ -2231,12 +2231,12 @@ public:
     
     void HandleWorldMouse(TInputState *arg);
     void UpdateActionEnergyCost();
-    float sub_4498F4();
+    float GetUnitLimitCostFactor();
     
     int SquadManagerBeginDrag(TClickBoxInf *winpt);
     void yw_SMAN_MouseSelect(TClickBoxInf *winp);
     void SquadManager_InputHandle(TInputState *inpt);
-    NC_STACK_ypabact * sub_4C7B0C(int sqid, int a3);
+    NC_STACK_ypabact * SquadManagerPickUnit(int sqid, int a3);
     
     bool recorder_create_camera();
     void recorder_updateObjectList(TGameRecorder *rcrd, float a5, int period);
@@ -2281,14 +2281,14 @@ public:
     int HandleWaypointMode(TInputState *arg, int a3);
     int UserActBeamCheck();
     int UserActBuildCheck();
-    int sb_0x4d3d44(TClickBoxInf *winp);
+    int UserActCreateCheck(TClickBoxInf *winp);
     void ExitMenuHandleInput(TInputState *inpt);
     
     int yw_MouseFindCreationPoint(TClickBoxInf *winp);
     
-    void sb_0x4c87fc(const std::string &a2, GuiBase *lstvw);
+    void OpenConfirmDialog(const std::string &a2, GuiBase *lstvw);
     void NetSendExitMsg(uint8_t normExit);
-    void sub_449DE8(const std::string &a2);
+    void ConfirmOpenHelp(const std::string &a2);
     
     void LoadKeyNames();
     
@@ -2327,9 +2327,9 @@ public:
     bool IsSector(const Common::Point &sz) const;
     bool IsSectorBorder(const Common::Point &sz, int border) const;
     int SectorBeamEnergy(const Common::Point &sector);
-    TSectorCollision sub_44DBF8(int _dx, int _dz, int _dxx, int _dzz, int flags);
-    void sub_44E07C(TSectorCollision &arg);
-    void sub_44D8B8(ypaworld_arg136 *arg, const TSectorCollision &loc);
+    TSectorCollision GetSectorCollision(int _dx, int _dz, int _dxx, int _dzz, int flags);
+    void FitFillerCollisionHeights(TSectorCollision &arg);
+    void IntersectRaySkeleton(ypaworld_arg136 *arg, const TSectorCollision &loc);
     void CollideSphereWithSkeleton(ypaworld_arg137 *arg, const TSectorCollision &a2);    
     
     void VoiceMessageUpdate();
