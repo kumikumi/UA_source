@@ -536,7 +536,13 @@ size_t NC_STACK_particle::Emit(area_arg_65 *arg, InstanceOpts * uopts)
     
     SpawnOpts *opts = dynamic_cast<SpawnOpts *>(uopts);
     if (!opts)
-        return 1;    
+        return 1;
+
+    // The game data has an emitter on a point its model lacks: the destroyed
+    // Mykonian cube (VPxBRGR2) emits from point 35 of 19. The original engine
+    // read past the point array there; skip such emitters instead of crashing.
+    if ( _pointID < 0 || (size_t)_pointID >= arg->sklt->POO.size() )
+        return 1;
 
     if (opts->TimeStamp < 0)
         opts->TimeStamp = arg->timeStamp;

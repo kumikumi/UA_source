@@ -291,7 +291,20 @@ size_t NC_STACK_base::LoadingFromIFF(IFFile **file)
     
     RecalcInternal();
     MakeCoordsCache();
-    
+
+    // Particle emitters on points the skeleton lacks are skipped when
+    // rendering (NC_STACK_particle::Emit); report the bad data once here.
+    if ( _skeleton && _skeleton->GetSkelet() )
+    {
+        int points = _skeleton->GetSkelet()->POO.size();
+        for (NC_STACK_ade *ade : _ADES)
+        {
+            if ( ade->IsParticle() && (ade->getADE_point() < 0 || ade->getADE_point() >= points) )
+                ypa_log_out("Warning: %s has a particle emitter on skeleton point %d, but its skeleton has %d points\n",
+                            getName().c_str(), ade->getADE_point(), points);
+        }
+    }
+
     return obj_ok;
 }
 
