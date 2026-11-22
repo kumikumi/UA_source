@@ -620,6 +620,7 @@ std::array<std::string, ADV_MAX> DefaultStrings::Advanced = Common::ArrayInit<st
     {ADV_EXISTSAVEDGAME, "2441"},
     {ADV_NETALONE, "2442"},
     {ADV_WINDOWEDMODE, "Windowed Mode"},
+    {ADV_VSYNC, "Vertical Sync"},
     {ADV_KILLSFACTION, "KILLS"},
     {ADV_KILLSBYPLAYER, "BY PLAYER"},
     {ADV_KILLSALL, "ALL"},

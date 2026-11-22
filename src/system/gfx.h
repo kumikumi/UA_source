@@ -498,6 +498,9 @@ public:
     // display keeps its resolution and refresh rate.
     void SetFullscreen(bool fullscreen);
 
+    // Vertical sync on or off; gfx.vsync 2 makes "on" adaptive.
+    void SetVsync(bool enabled);
+
     // Renders at the window's current size. Returns true if it changed; call
     // outside BeginFrame/EndFrame.
     bool UpdateResolution();

@@ -6,6 +6,7 @@
 #include "../ypaflyer.h"
 #include "../ypacar.h"
 #include "../log.h"
+#include "../system/inivals.h"
 
 namespace World
 {
@@ -3256,10 +3257,26 @@ int LevelMapsParser::Handle(ScriptParser::Parser &parser, const std::string &p1,
 
 
 
+bool VideoParser::IsScope(ScriptParser::Parser &parser, const std::string &word, const std::string &opt)
+{
+    if ( StriCmp(word, "new_video") )
+        return false;
+
+    // Profiles saved before the vsync option was added follow gfx.vsync
+    if ( System::IniConf::GfxVsync.Get<int>() != 0 )
+        _o._GameShell->GFXFlags |= World::GFX_FLAG_VSYNC;
+    else
+        _o._GameShell->GFXFlags &= ~World::GFX_FLAG_VSYNC;
+
+    return true;
+}
+
 int VideoParser::Handle(ScriptParser::Parser &parser, const std::string &p1, const std::string &p2)
 {
     if ( !StriCmp(p1, "end") )
     {
+        GFX::Engine.SetVsync( _o._GameShell->IsVsyncFlag() );
+
         if ( GFX::Engine.getWDD_drawPrim() )
             _o._GameShell->GFXFlags |= World::GFX_FLAG_DRAWPRIMITIVES;
         else
@@ -3359,6 +3376,13 @@ int VideoParser::Handle(ScriptParser::Parser &parser, const std::string &p1, con
             _o._preferences &= ~World::PREF_ENEMYINDICATOR;
             _o._GameShell->enemyIndicator = false;
         }
+    }
+    else if ( !StriCmp(p1, "vsync") )
+    {
+        if ( StrGetBool(p2) )
+            _o._GameShell->GFXFlags |= World::GFX_FLAG_VSYNC;
+        else
+            _o._GameShell->GFXFlags &= ~World::GFX_FLAG_VSYNC;
     }
     else if ( !StriCmp(p1, "gfxmode") )
     {

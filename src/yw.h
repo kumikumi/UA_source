@@ -303,6 +303,7 @@ enum GFX_FLAG
     GFX_FLAG_DRAWPRIMITIVES     = (1 << 3),
     GFX_FLAG_16BITTEXTURE       = (1 << 4),
     GFX_FLAG_WINDOWED           = (1 << 5),
+    GFX_FLAG_VSYNC              = (1 << 6),
 };
 
 enum SAVE_DATA_FLAG
@@ -808,6 +809,11 @@ public:
     bool IsWindowedFlag()
     {
         return (GFXFlags & World::GFX_FLAG_WINDOWED) != 0;
+    }
+
+    bool IsVsyncFlag()
+    {
+        return (GFXFlags & World::GFX_FLAG_VSYNC) != 0;
     }
 
 protected:

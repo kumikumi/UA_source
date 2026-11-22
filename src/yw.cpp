@@ -3890,6 +3890,47 @@ bool NC_STACK_ypaworld::CreateVideoControls()
             }
         }
     }
+    // Vertical sync, a row the port adds below the original options
+    if ( v70 )
+    {
+        v70 = 0;
+
+        btn_64arg.width = checkBoxWidth;
+        btn_64arg.tileset_down = 19;
+        btn_64arg.tileset_up = 18;
+        btn_64arg.button_type = NC_STACK_button::TYPE_CHECKBX;
+        btn_64arg.field_3A = 30;
+        btn_64arg.xpos = 0;
+        btn_64arg.ypos = 14 * (vertMenuSpace + _fontH);
+        btn_64arg.caption = "g";
+        btn_64arg.caption2 = "g";
+        btn_64arg.downCode = 1136;
+        btn_64arg.upCode = 1137;
+        btn_64arg.pressedCode = 0;
+        btn_64arg.flags = 0;
+        btn_64arg.button_id = 1173;
+
+        if ( _GameShell->video_button->Add(&btn_64arg) )
+        {
+            btn_64arg.tileset_down = 16;
+            btn_64arg.tileset_up = 16;
+            btn_64arg.field_3A = 16;
+            btn_64arg.button_type = NC_STACK_button::TYPE_CAPTION;
+            btn_64arg.xpos = checkBoxWidth + buttonsSpace;
+            btn_64arg.width = (dword_5A50B2 - 6 * buttonsSpace - 2 * checkBoxWidth) / 2;
+            btn_64arg.caption = Locale::Text::Advanced(Locale::ADV_VSYNC);
+            btn_64arg.caption2.clear();
+            btn_64arg.downCode = 0;
+            btn_64arg.upCode = 0;
+            btn_64arg.pressedCode = 0;
+            btn_64arg.flags = NC_STACK_button::FLAG_TEXT;
+            btn_64arg.button_id = 2;
+
+            if ( _GameShell->video_button->Add(&btn_64arg) )
+                v70 = 1;
+        }
+    }
+
     if ( !v70 )
     {
         ypa_log_out("Unable to add video-button\n");
@@ -5953,6 +5994,10 @@ void NC_STACK_ypaworld::UpdateGameShell()
 
     v16.butID = 1166;
     v16.field_4 = (!_GameShell->IsWindowedFlag()) + 1;
+    _GameShell->video_button->SetState(&v16);
+
+    v16.butID = 1173;
+    v16.field_4 = (!_GameShell->IsVsyncFlag()) + 1;
     _GameShell->video_button->SetState(&v16);
 
     tmp = _GameShell->video_button->GetSliderData(1159);

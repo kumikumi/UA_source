@@ -459,24 +459,8 @@ size_t GFXEngine::ReadIniDisplaySettings()
 
     _solidFont = System::IniConf::GfxSolidFont.Get<bool>();
 
-    switch( System::IniConf::GfxVsync.Get<int>() )
-    {
-        case 0:
-            SDL_GL_SetSwapInterval(0);
-            break;
-        
-        default:
-        case 1:
-            SDL_GL_SetSwapInterval(1);
-            break;
-        
-        case 2:
-            {
-                if ( SDL_GL_SetSwapInterval(-1) == -1)
-                    SDL_GL_SetSwapInterval(1);
-            }
-            break;
-    }
+    // The player's setting replaces this once their profile is loaded
+    SetVsync( System::IniConf::GfxVsync.Get<int>() != 0 );
 
     fpsLimitter(System::IniConf::GfxMaxFps.Get<int>());
 
@@ -2319,6 +2303,14 @@ void GFXEngine::UpdateFpsLimit()
         FpsMaxTicks = 0;
     else
         FpsMaxTicks = 1000 / fps;
+}
+
+void GFXEngine::SetVsync(bool enabled)
+{
+    if ( !enabled )
+        SDL_GL_SetSwapInterval(0);
+    else if ( System::IniConf::GfxVsync.Get<int>() != 2 || SDL_GL_SetSwapInterval(-1) == -1 )
+        SDL_GL_SetSwapInterval(1); // Adaptive (-1) is not supported everywhere
 }
 
 std::string GFXEngine::GetRendererInfo()

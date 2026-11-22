@@ -215,6 +215,11 @@ int yw_write_video(FSMgr::FileHandle *fil, UserData *usr)
     else
         fil->printf("    enemyindicator = no\n");
 
+    if ( usr->IsVsyncFlag() )
+        fil->printf("    vsync = yes\n");
+    else
+        fil->printf("    vsync = no\n");
+
     fil->printf("    fxnumber = %d\n", usr->fxnumber);
     
     // The size is informational: the game renders at the window size.

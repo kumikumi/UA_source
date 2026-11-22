@@ -1069,6 +1069,16 @@ void UserData::ApplyOptions()
         forceChange = true;
     }
 
+    if ( _settingsChangeOptions & 0x2000 )
+    {
+        if ( confGFXFlags & World::GFX_FLAG_VSYNC )
+            GFXFlags |= World::GFX_FLAG_VSYNC;
+        else
+            GFXFlags &= ~World::GFX_FLAG_VSYNC;
+
+        GFX::Engine.SetVsync( IsVsyncFlag() );
+    }
+
     if ( forceChange )
     {
         yw->SetWindowed( IsWindowedFlag() );
@@ -1794,6 +1804,10 @@ void UserData::CancelOptions()
 
     v10.butID = 1166;
     v10.field_4 = (!IsWindowedFlag()) + 1;
+    video_button->SetState(&v10);
+
+    v10.butID = 1173;
+    v10.field_4 = (!IsVsyncFlag()) + 1;
     video_button->SetState(&v10);
 
     v10.butID = 1165;
@@ -2793,6 +2807,16 @@ void UserData::GameShellUiHandleInput()
         {
             confGFXFlags &= ~World::GFX_FLAG_WINDOWED;
             _settingsChangeOptions |= 0x400;
+        }
+        else if ( r.code == 1136 )
+        {
+            confGFXFlags |= World::GFX_FLAG_VSYNC;
+            _settingsChangeOptions |= 0x2000;
+        }
+        else if ( r.code == 1137 )
+        {
+            confGFXFlags &= ~World::GFX_FLAG_VSYNC;
+            _settingsChangeOptions |= 0x2000;
         }
         else if ( r.code == 1132 )
         {
