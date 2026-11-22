@@ -84,62 +84,62 @@ size_t NC_STACK_button::Deinit()
 // Update slider
 void NC_STACK_button::UpdateSlider(WidgetEntry *sbt)
 {
-    Slider *sbttt = sbt->slider;
+    Slider *slider = sbt->slider;
 
-    if ( sbttt->value > sbttt->max )
-        sbttt->value = sbttt->max;
+    if ( slider->value > slider->max )
+        slider->value = slider->max;
 
-    if ( sbttt->value < sbttt->min)
-        sbttt->value = sbttt->min;
+    if ( slider->value < slider->min)
+        slider->value = slider->min;
 
-    int thumbWidth = sbt->width / (sbttt->max - sbttt->min + 1) + 1;
+    int thumbWidth = sbt->width / (slider->max - slider->min + 1) + 1;
 
     if ( thumbWidth < 6 )
         thumbWidth = 6;
 
-    sbttt->thumbStart = (float)((sbttt->value - sbttt->min) * (sbt->width - thumbWidth) / (sbttt->max - sbttt->min)) + 0.5;
+    slider->thumbStart = (float)((slider->value - slider->min) * (sbt->width - thumbWidth) / (slider->max - slider->min)) + 0.5;
 
-    if ( sbttt->thumbStart < 0 )
-        sbttt->thumbStart = 0;
+    if ( slider->thumbStart < 0 )
+        slider->thumbStart = 0;
 
-    sbttt->thumbEnd = thumbWidth + sbttt->thumbStart;
+    slider->thumbEnd = thumbWidth + slider->thumbStart;
 
-    if ( sbttt->thumbEnd > sbt->width )
-        sbttt->thumbEnd = sbt->width;
+    if ( slider->thumbEnd > sbt->width )
+        slider->thumbEnd = sbt->width;
 
 
     CmdStream captionbuf;
     captionbuf.reserve(512);
     
-    if ( sbttt->thumbStart > 0 )
+    if ( slider->thumbStart > 0 )
     {
         if ( sbt->flags & FLAG_BORDER )
         {
             FontUA::store_u8(&captionbuf, track_left_chr);
 
-            if ( sbttt->thumbStart > 1 )
+            if ( slider->thumbStart > 1 )
             {
-                FontUA::op17(&captionbuf, sbttt->thumbStart);
+                FontUA::op17(&captionbuf, slider->thumbStart);
                 FontUA::store_u8(&captionbuf, track_fill_chr);
             }
         }
         else
         {
-            FontUA::op17(&captionbuf, sbttt->thumbStart);
+            FontUA::op17(&captionbuf, slider->thumbStart);
             FontUA::store_u8(&captionbuf, track_fill_chr);
         }
     }
 
     FontUA::store_u8(&captionbuf, left_chr);
 
-    FontUA::op17(&captionbuf, sbttt->thumbEnd);
+    FontUA::op17(&captionbuf, slider->thumbEnd);
 
     FontUA::store_u8(&captionbuf, fill_chr);
     FontUA::store_u8(&captionbuf, right_chr);
 
     if ( sbt->flags & FLAG_BORDER )
     {
-        if ( sbttt->thumbEnd < sbt->width - 1 )
+        if ( slider->thumbEnd < sbt->width - 1 )
         {
             FontUA::op17(&captionbuf, sbt->width - 1);
 
@@ -147,7 +147,7 @@ void NC_STACK_button::UpdateSlider(WidgetEntry *sbt)
             FontUA::store_u8(&captionbuf, track_right_chr);
         }
     }
-    else if ( sbttt->thumbEnd < sbt->width )
+    else if ( slider->thumbEnd < sbt->width )
     {
         FontUA::op17(&captionbuf, sbt->width - 1);
 
@@ -382,22 +382,22 @@ NC_STACK_button::ResCode NC_STACK_button::ProcessWidgetsEvents(TInputState *arg)
         {
             if (it->button_type == TYPE_SLIDER && it->flags & FLAG_DOWN)
             {
-                Slider *sbttt = it->slider;
+                Slider *slider = it->slider;
 
-                if (sbttt->pressPart == 2)
+                if (slider->pressPart == 2)
                 {
                     if (it->flags & FLAG_PRESSED)
                         result = ResCode(it->pressed_id, it->button_id);
 
-                    int scaledDx = (arg->ClickInf.move.ScreenPos.x - sbttt->scrDownX) * (sbttt->max - sbttt->min + 1);
+                    int scaledDx = (arg->ClickInf.move.ScreenPos.x - slider->scrDownX) * (slider->max - slider->min + 1);
 
-                    sbttt->value = sbttt->oldValue + scaledDx / it->width;
+                    slider->value = slider->oldValue + scaledDx / it->width;
 
-                    if ( sbttt->value < sbttt->min )
-                        sbttt->value = sbttt->min;
+                    if ( slider->value < slider->min )
+                        slider->value = slider->min;
 
-                    if ( sbttt->value > sbttt->max )
-                        sbttt->value = sbttt->max;
+                    if ( slider->value > slider->max )
+                        slider->value = slider->max;
 
                     UpdateSlider(&(*it));
                 }
@@ -471,24 +471,24 @@ NC_STACK_button::ResCode NC_STACK_button::ProcessWidgetsEvents(TInputState *arg)
                 {
                     if ( arg->ClickInf.flag & TClickBoxInf::FLAG_BTN_DOWN )
                     {
-                        Slider *sbttt = sbt.slider;
-                        if ( arg->ClickInf.ldw_pos.BtnPos.x < sbttt->thumbStart )
+                        Slider *slider = sbt.slider;
+                        if ( arg->ClickInf.ldw_pos.BtnPos.x < slider->thumbStart )
                         {
-                            sbttt->pressPart = 1;
-                            if ( sbttt->value > sbttt->min )
-                                sbttt->value -= 1;
+                            slider->pressPart = 1;
+                            if ( slider->value > slider->min )
+                                slider->value -= 1;
                         }
-                        else if ( arg->ClickInf.ldw_pos.BtnPos.x <= sbttt->thumbEnd )
+                        else if ( arg->ClickInf.ldw_pos.BtnPos.x <= slider->thumbEnd )
                         {
-                            sbttt->pressPart = 2;
-                            sbttt->oldValue = sbttt->value;
-                            sbttt->scrDownX = arg->ClickInf.ldw_pos.ScreenPos.x;
+                            slider->pressPart = 2;
+                            slider->oldValue = slider->value;
+                            slider->scrDownX = arg->ClickInf.ldw_pos.ScreenPos.x;
                         }
                         else
                         {
-                            sbttt->pressPart = 3;
-                            if ( sbttt->value < sbttt->max )
-                                sbttt->value += 1;
+                            slider->pressPart = 3;
+                            if ( slider->value < slider->max )
+                                slider->value += 1;
                         }
 
                         sbt.flags |= FLAG_PRESSED | FLAG_DOWN;

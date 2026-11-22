@@ -1973,25 +1973,25 @@ void RoboMapLayoutTileLayer(NC_STACK_ypaworld *yw, int tileSize, CmdStream *cmdb
 
         if ( col & msk )
         {
-            int v37_4 = msk & col;
+            int tileOffset = msk & col;
 
             int firstTile = ffunc(yw, col >> tileShift, tileY) & 0xFF;
 
             if ( firstTile )
             {
-                FontUA::set_xoff(cmdbuf, v37_4);
+                FontUA::set_xoff(cmdbuf, tileOffset);
                 FontUA::store_u8(cmdbuf, firstTile);
 
                 gapWidth = 0;
             }
             else
             {
-                gapWidth = tileSize - v37_4;
+                gapWidth = tileSize - tileOffset;
 
                 FontUA::add_xpos(cmdbuf, gapWidth);
             }
 
-            col += tileSize - v37_4;
+            col += tileSize - tileOffset;
         }
 
         while ( col < right - tileSize )
@@ -3511,34 +3511,34 @@ void BottomBarDrawVehicleRatings(NC_STACK_ypaworld *yw, CmdStream *cur)
             if ( !reconRating )
                 reconRating = 1;
 
-            int v29_4 = 4 * yw->_screenSize.x / 7;
-            int rowWidth = yw->_screenSize.x - v29_4;
+            int rowX = 4 * yw->_screenSize.x / 7;
+            int rowWidth = yw->_screenSize.x - rowX;
 
             int rowY = -(yw->_downScreenBorder + 7 * yw->_fontH);
 
             FontUA::set_txtColor(cur, yw->_iniColors[63].r, yw->_iniColors[63].g, yw->_iniColors[63].b);
 
-            BottomBarDrawRatingRow(yw, cur, v29_4, rowY,  Locale::Text::Advanced(Locale::ADV_VSROBO), roboRating, rowWidth);
+            BottomBarDrawRatingRow(yw, cur, rowX, rowY,  Locale::Text::Advanced(Locale::ADV_VSROBO), roboRating, rowWidth);
 
             rowY += yw->_fontH;
 
-            BottomBarDrawRatingRow(yw, cur, v29_4, rowY,  Locale::Text::Advanced(Locale::ADV_VSTANK), tankRating, rowWidth);
+            BottomBarDrawRatingRow(yw, cur, rowX, rowY,  Locale::Text::Advanced(Locale::ADV_VSTANK), tankRating, rowWidth);
 
             rowY += yw->_fontH;
 
-            BottomBarDrawRatingRow(yw, cur, v29_4, rowY,  Locale::Text::Advanced(Locale::ADV_VSPLANE), flyerRating, rowWidth);
+            BottomBarDrawRatingRow(yw, cur, rowX, rowY,  Locale::Text::Advanced(Locale::ADV_VSPLANE), flyerRating, rowWidth);
 
             rowY += yw->_fontH;
 
-            BottomBarDrawRatingRow(yw, cur, v29_4, rowY,  Locale::Text::Advanced(Locale::ADV_VSHELI), heliRating, rowWidth);
+            BottomBarDrawRatingRow(yw, cur, rowX, rowY,  Locale::Text::Advanced(Locale::ADV_VSHELI), heliRating, rowWidth);
 
             rowY += yw->_fontH;
 
-            BottomBarDrawRatingRow(yw, cur, v29_4, rowY,  Locale::Text::Advanced(Locale::ADV_CAPTURE), conquerRating, rowWidth);
+            BottomBarDrawRatingRow(yw, cur, rowX, rowY,  Locale::Text::Advanced(Locale::ADV_CAPTURE), conquerRating, rowWidth);
 
             rowY += yw->_fontH;
 
-            BottomBarDrawRatingRow(yw, cur, v29_4, rowY,  Locale::Text::Advanced(Locale::ADV_RECON), reconRating, rowWidth);
+            BottomBarDrawRatingRow(yw, cur, rowX, rowY,  Locale::Text::Advanced(Locale::ADV_RECON), reconRating, rowWidth);
         }
     }
 }
@@ -5153,10 +5153,10 @@ void SquadManagerLayoutSquad(NC_STACK_ypaworld *yw, NC_STACK_ypabact *bact, CmdS
     std::string pv;
     
     int hoverIconX = 0;
-    NC_STACK_ypabact *v44 = NULL;
+    NC_STACK_ypabact *hoverUnit = NULL;
 
     if ( yw->_guiActFlags & 0x20 )
-        v44 = yw->_bactOnMouse;
+        hoverUnit = yw->_bactOnMouse;
 
     pv += GetSquadStatusIcon(bact);
     pv += '@'; //64
@@ -5172,7 +5172,7 @@ void SquadManagerLayoutSquad(NC_STACK_ypaworld *yw, NC_STACK_ypabact *bact, CmdS
 
     pv += '@'; //64
 
-    if ( bact == v44 )
+    if ( bact == hoverUnit )
         hoverIconX = squadron_manager.cmdrIconX;
 
     int iconX = squadron_manager.kidIconsX;
@@ -5188,7 +5188,7 @@ void SquadManagerLayoutSquad(NC_STACK_ypaworld *yw, NC_STACK_ypabact *bact, CmdS
             else
                 pv += GetVehicleTypeIcon(yw, kid); 
 
-            if ( kid == v44 )
+            if ( kid == hoverUnit )
                 hoverIconX = iconX;
 
             iconX += squadron_manager.iconWidth;
@@ -5226,7 +5226,7 @@ void SquadManagerLayoutSquad(NC_STACK_ypaworld *yw, NC_STACK_ypabact *bact, CmdS
             FontUA::add_xpos(cur, -(squadron_manager.entryWidth - 2 * yw->_fontBorderW));
             FontUA::add_xpos(cur, hoverIconX);
 
-            float energyRatio = (float)v44->_energy / (float)v44->_energy_max;
+            float energyRatio = (float)hoverUnit->_energy / (float)hoverUnit->_energy_max;
 
             if ( energyRatio > 0.25 )
             {
@@ -5440,7 +5440,7 @@ void SquadManagerDropUnit(NC_STACK_ypaworld *yw, TClickBoxInf *winpt)
         {
             if ( squadron_manager.dragUnit->_host_station != squadron_manager.dragUnit->_parent )
             {
-                NC_STACK_ypabact *v3 = NULL;
+                NC_STACK_ypabact *newChief = NULL;
 
                 World::RefBactList *kidlist = squadron_manager.dragUnit->_kidRef.PList();
                 if (kidlist)
@@ -5454,7 +5454,7 @@ void SquadManagerDropUnit(NC_STACK_ypaworld *yw, TClickBoxInf *winpt)
 
                         TReorgOrder order;
 
-                        if ( v3 )
+                        if ( newChief )
                         {
                             order.unit = itbact;
                             order.mode = 4;
@@ -5464,9 +5464,9 @@ void SquadManagerDropUnit(NC_STACK_ypaworld *yw, TClickBoxInf *winpt)
                             order.unit = NULL;
                             order.mode = 3;
 
-                            v3 = itbact;
+                            newChief = itbact;
                         }
-                        v3->ReorganizeGroup(&order);
+                        newChief->ReorganizeGroup(&order);
                     }
                 }
             }
@@ -5832,7 +5832,7 @@ void RoboMapMakeSquadFromBox(NC_STACK_ypaworld *yw)
     else if ( maxCellY < 1 )
         maxCellY = 1;
 
-    NC_STACK_ypabact *v13 = NULL;
+    NC_STACK_ypabact *newChief = NULL;
 
     for (int i = minCellY; i <= maxCellY; i++)
     {
@@ -5853,7 +5853,7 @@ void RoboMapMakeSquadFromBox(NC_STACK_ypaworld *yw)
                                 if ( bct->_status != BACT_STATUS_CREATE && bct->_status != BACT_STATUS_BEAM && bct->_status != BACT_STATUS_DEAD )
                                 {
 
-                                    if ( v13 )
+                                    if ( newChief )
                                     {
                                         if ( bct->_bact_type != BACT_TYPES_ROBO )
                                         {
@@ -5861,7 +5861,7 @@ void RoboMapMakeSquadFromBox(NC_STACK_ypaworld *yw)
                                             order.unit = bct;
                                             order.mode = 4;
 
-                                            v13->ReorganizeGroup(&order);
+                                            newChief->ReorganizeGroup(&order);
 
                                             hostSelected = 0;
                                         }
@@ -5875,13 +5875,13 @@ void RoboMapMakeSquadFromBox(NC_STACK_ypaworld *yw)
                                         }
                                         else
                                         {
-                                            v13 = bct;
+                                            newChief = bct;
 
                                             TReorgOrder order;
                                             order.unit = NULL;
                                             order.mode = 3;
 
-                                            v13->ReorganizeGroup(&order);
+                                            newChief->ReorganizeGroup(&order);
 
                                             hostSelected = 0;
                                         }
@@ -5901,8 +5901,8 @@ void RoboMapMakeSquadFromBox(NC_STACK_ypaworld *yw)
     if ( hostSelected )
         bzda.activeMode = bzda.enabledModes & 0x20;
 
-    if ( v13 )
-        yw->_activeCmdrID = v13->_commandID;
+    if ( newChief )
+        yw->_activeCmdrID = newChief->_commandID;
 
     yw->UpdateCommanderList();
 }
@@ -6817,7 +6817,7 @@ void NC_STACK_ypaworld::ConfirmDialogHandleInput(TInputState *inpt)
     {
         TClickBoxInf *winpt = &inpt->ClickInf;
 
-        int a1_1 = 0;
+        int pressedFlags = 0;
 
         if ( _kbdLastKeyHit == Input::KC_RETURN )
         {
@@ -6853,7 +6853,7 @@ void NC_STACK_ypaworld::ConfirmDialogHandleInput(TInputState *inpt)
             if ( winpt->selected_btnID == 8 )
             {
                 if ( winpt->flag & (TClickBoxInf::FLAG_BTN_DOWN | TClickBoxInf::FLAG_BTN_HOLD) )
-                    a1_1 = 0x100;
+                    pressedFlags = 0x100;
 
                 if ( winpt->flag & TClickBoxInf::FLAG_BTN_UP )
                 {
@@ -6864,7 +6864,7 @@ void NC_STACK_ypaworld::ConfirmDialogHandleInput(TInputState *inpt)
             else if ( winpt->selected_btnID == 9 )
             {
                 if ( winpt->flag & (TClickBoxInf::FLAG_BTN_DOWN | TClickBoxInf::FLAG_BTN_HOLD) )
-                    a1_1 = 0x200;
+                    pressedFlags = 0x200;
 
                 if ( winpt->flag & TClickBoxInf::FLAG_BTN_UP )
                 {
@@ -6876,7 +6876,7 @@ void NC_STACK_ypaworld::ConfirmDialogHandleInput(TInputState *inpt)
 
         lstvw2.InputHandle(this, inpt);
         lstvw2.Formate(this);
-        ConfirmDialogLayoutItems(a1_1);
+        ConfirmDialogLayoutItems(pressedFlags);
     }
 }
 
@@ -8918,22 +8918,22 @@ void DrawNetPlayerName(NC_STACK_ypaworld *yw, CmdStream *cur, NC_STACK_ypabact *
                     {
                         int tileH = yw->_guiTiles[15]->h;
 
-                        int v27_4 = ((yw->_screenSize.x / 2) * (viewX / viewZ + 1.0));
+                        int screenX = ((yw->_screenSize.x / 2) * (viewX / viewZ + 1.0));
                         int screenY = (yw->_screenSize.y / 2) * (viewY / viewZ + 1.0);
 
                         int textWidth = 96;
 
-                        if ( v27_4 + 96 >= yw->_screenSize.x )
-                            textWidth = yw->_screenSize.x - v27_4 - 1;
+                        if ( screenX + 96 >= yw->_screenSize.x )
+                            textWidth = yw->_screenSize.x - screenX - 1;
 
-                        if ( textWidth > 0 && v27_4 >= 0 )
+                        if ( textWidth > 0 && screenX >= 0 )
                         {
-                            if ( textWidth + v27_4 <  yw->_screenSize.x && screenY >= 0 )
+                            if ( textWidth + screenX <  yw->_screenSize.x && screenY >= 0 )
                             {
                                 if ( tileH + screenY < yw->_screenSize.y )
                                 {
                                     FontUA::select_tileset(cur, 15);
-                                    FontUA::set_center_xpos(cur, v27_4 - (yw->_screenSize.x / 2) );
+                                    FontUA::set_center_xpos(cur, screenX - (yw->_screenSize.x / 2) );
                                     FontUA::set_center_ypos(cur, screenY - (yw->_screenSize.y / 2) );
 
                                     FontUA::set_txtColor(cur, yw->_iniColors[ bact->_owner ].r, yw->_iniColors[ bact->_owner ].g, yw->_iniColors[ bact->_owner ].b);

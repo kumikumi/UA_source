@@ -683,15 +683,15 @@ void NC_STACK_ypagun::SetGunBasis(const vec3d &_basis, bool directDown)
 
             if ( basis.x != 0.0 )
             {
-                float v14 = 1.0 - POW2(_rotation.m11);
-                _rotation.m10 = sqrt( v14 / (POW2(basis.z) / (POW2(basis.x)) + 1.0) );
-                _rotation.m12 = sqrt( v14 - POW2(_rotation.m10) );
+                float xzLenSq = 1.0 - POW2(_rotation.m11);
+                _rotation.m10 = sqrt( xzLenSq / (POW2(basis.z) / (POW2(basis.x)) + 1.0) );
+                _rotation.m12 = sqrt( xzLenSq - POW2(_rotation.m10) );
             }
             else
             {
-                float v17 = 1.0 - POW2(_rotation.m11);
-                _rotation.m12 = sqrt( v17 / (POW2(basis.x) / (POW2(basis.z)) + 1.0) );
-                _rotation.m10 = sqrt( v17 - POW2(_rotation.m12) );
+                float xzLenSq = 1.0 - POW2(_rotation.m11);
+                _rotation.m12 = sqrt( xzLenSq / (POW2(basis.x) / (POW2(basis.z)) + 1.0) );
+                _rotation.m10 = sqrt( xzLenSq - POW2(_rotation.m12) );
             }
 
             if ( basis.x < 0.0 )

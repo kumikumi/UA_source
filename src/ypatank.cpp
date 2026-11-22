@@ -1264,7 +1264,7 @@ size_t NC_STACK_ypatank::CollisionWithBact(int arg)
         int pushCount = 0;
         int inContact = 0;
 
-        NC_STACK_ypabact *v117 = NULL;
+        NC_STACK_ypabact *nearestUnit = NULL;
 
         float checkRange = 300.0;
         float dtime = arg * 0.001;
@@ -1368,10 +1368,10 @@ size_t NC_STACK_ypatank::CollisionWithBact(int arg)
 
                                 if ( aheadCos >= minCos && dist < touchDist )
                                 {
-                                    if ( !v117 || dist < nearestDist )
+                                    if ( !nearestUnit || dist < nearestDist )
                                     {
                                         nearestDist = dist;
-                                        v117 = unit;
+                                        nearestUnit = unit;
 
                                         hitAngle = clp_acos(aheadCos);
 
@@ -1381,13 +1381,13 @@ size_t NC_STACK_ypatank::CollisionWithBact(int arg)
                                         if ( dist < touchDist )
                                             inContact = 1;
 
-                                        if ( _rotation.AxisZ().dot( v117->_rotation.AxisZ() ) < 0.0 )
+                                        if ( _rotation.AxisZ().dot( nearestUnit->_rotation.AxisZ() ) < 0.0 )
                                             otherBlocking = 1;
 
-                                        if ( v117->_status == BACT_STATUS_IDLE )
+                                        if ( nearestUnit->_status == BACT_STATUS_IDLE )
                                             otherBlocking = 1;
 
-                                        if ( v117->_waitCol_time <= 0 )
+                                        if ( nearestUnit->_waitCol_time <= 0 )
                                             otherNotWaiting = 1;
                                     }
 
@@ -1419,7 +1419,7 @@ size_t NC_STACK_ypatank::CollisionWithBact(int arg)
         }
 
 
-        if ( !v117 )
+        if ( !nearestUnit )
         {
             _status_flg &= ~BACT_STFLAG_BCRASH;
             return 0;
@@ -1687,24 +1687,24 @@ size_t NC_STACK_ypatank::CheckFireAI(TFireCheck *arg)
         }
     }
 
-    World::TWeapProto *v22 = NULL;
+    World::TWeapProto *weapon = NULL;
     int directFire = 0;
 
     if ( _weapon == -1 )
     {
-        v22 = NULL;
+        weapon = NULL;
     }
     else
     {
-        v22 = &_world->GetWeaponsProtos().at( _weapon );
+        weapon = &_world->GetWeaponsProtos().at( _weapon );
 
-        if ( v22->_weaponFlags & 1 )
-            directFire = v22->_weaponFlags & 0xFE;
+        if ( weapon->_weaponFlags & 1 )
+            directFire = weapon->_weaponFlags & 0xFE;
         else
-            v22 = NULL;
+            weapon = NULL;
     }
 
-    if ( !v22 )
+    if ( !weapon )
     {
         if ( _mgun == -1 )
             return 0;
@@ -1747,7 +1747,7 @@ size_t NC_STACK_ypatank::CheckFireAI(TFireCheck *arg)
             return 1;
         }
     }
-    else if ( v22 )
+    else if ( weapon )
     {
         if ( directFire )
         {
@@ -1780,19 +1780,19 @@ bool NC_STACK_ypatank::TestTargetSector(const NC_STACK_ypabact * tgt) const
 
         _world->GetSectorInfo(&sectInfo);
 
-        cellArea *arg130_Pcell = sectInfo.pcell;
+        cellArea *cornerCell = sectInfo.pcell;
         sectInfo.pos_x = tgt->_position.x;
         sectInfo.pos_z = _position.z;
 
         _world->GetSectorInfo(&sectInfo);
 
-        if ( fabs(_pSector->height    - arg130_Pcell->height) >= 500.0 && fabs(sectInfo.pcell->height -   tgt->_pSector->height) >= 500.0 )
+        if ( fabs(_pSector->height    - cornerCell->height) >= 500.0 && fabs(sectInfo.pcell->height -   tgt->_pSector->height) >= 500.0 )
             return 0;
-        if ( fabs(_pSector->height    - sectInfo.pcell->height) >= 500.0 && fabs(arg130_Pcell->height -   tgt->_pSector->height) >= 500.0 )
+        if ( fabs(_pSector->height    - sectInfo.pcell->height) >= 500.0 && fabs(cornerCell->height -   tgt->_pSector->height) >= 500.0 )
             return 0;
-        if ( fabs(_pSector->height    - arg130_Pcell->height) >= 500.0 && fabs(_pSector->height    - sectInfo.pcell->height) >= 500.0 )
+        if ( fabs(_pSector->height    - cornerCell->height) >= 500.0 && fabs(_pSector->height    - sectInfo.pcell->height) >= 500.0 )
             return 0;
-        if ( fabs(arg130_Pcell->height -   tgt->_pSector->height) >= 500.0 && fabs(sectInfo.pcell->height -   tgt->_pSector->height) >= 500.0 )
+        if ( fabs(cornerCell->height -   tgt->_pSector->height) >= 500.0 && fabs(sectInfo.pcell->height -   tgt->_pSector->height) >= 500.0 )
             return 0;
     }
     return 1;

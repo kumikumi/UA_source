@@ -3610,7 +3610,7 @@ void UserData::GameShellUiHandleInput()
                 if ( isHost )
                 {
                     std::string unused;
-                    std::string v425_1;
+                    std::string unusedText;
 
                     if ( p_YW->_netDriver->GetPlayerCount() <= 1 )
                     {

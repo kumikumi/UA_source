@@ -752,35 +752,35 @@ void SFXEngine::sound_eos_clbk(void *_smpl)
     walsmpl *smpl = static_cast<walsmpl *>(_smpl);
 
     int chanIdx = 0;
-    TSoundSource *v3 = NULL;
+    TSoundSource *src = NULL;
 
     for (int i = 0; i < SFXe.audio_channels; i++)
     {
         if ( smpl == SFXe.snd_channels[i].hSample )
         {
             chanIdx = i;
-            v3 = SFXe.snd_channels[i].sndSouce;
+            src = SFXe.snd_channels[i].sndSouce;
             break;
         }
     }
 
-    if ( v3 )
+    if ( src )
     {
-        if ( v3->IsEnabled() )
+        if ( src->IsEnabled() )
         {
-            if ( v3->IsFragmented() )
+            if ( src->IsFragmented() )
             {
-                v3->CurrentFrag++;
+                src->CurrentFrag++;
 
-                if ( v3->CurrentFrag >= v3->PFragments->size() )
+                if ( src->CurrentFrag >= src->PFragments->size() )
                 {
-                    if ( v3->IsLoop() )
-                        v3->CurrentFrag = 0;
+                    if ( src->IsLoop() )
+                        src->CurrentFrag = 0;
                     else
-                        v3->SetEnabled(false);
+                        src->SetEnabled(false);
                 }
 
-                if ( v3->IsEnabled() )
+                if ( src->IsEnabled() )
                 {
                     for (int i = 0; i < SFXe.audio_channels; i++)
                     {
@@ -788,11 +788,11 @@ void SFXEngine::sound_eos_clbk(void *_smpl)
                         {
                             smpl = SFXe.snd_channels[i].hSample;
                             SFXe.snd_channels[chanIdx].sndSouce = NULL;
-                            SFXe.snd_channels[i].sndSouce = v3;
+                            SFXe.snd_channels[i].sndSouce = src;
                         }
                     }
 
-                    TSampleParams *frag = &v3->PFragments->at( v3->CurrentFrag );
+                    TSampleParams *frag = &src->PFragments->at( src->CurrentFrag );
 
                     wrapper_playSound(
                         SFXe.digDriver,
@@ -800,17 +800,17 @@ void SFXEngine::sound_eos_clbk(void *_smpl)
                         sound_eos_clbk,
                         (char *)frag->Sample->Data + frag->rlOffset,
                         frag->rlSmplCnt,
-                        v3->ResultRate,
-                        v3->ResultVol,
+                        src->ResultRate,
+                        src->ResultVol,
                         SFXe.audio_volume,
-                        v3->ResultPan,
+                        src->ResultPan,
                         frag->Loop,
                         0);
                 }
             }
             else
             {
-                v3->SetEnabled(false);
+                src->SetEnabled(false);
             }
         }
     }

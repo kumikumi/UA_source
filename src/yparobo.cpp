@@ -4151,15 +4151,15 @@ int NC_STACK_yparobo::RateSectorForRelocation()
 {
     Common::Point pt( _roboPositionCellIndex % _wrldSectors.x, _roboPositionCellIndex / _wrldSectors.x);
 
-    int a1_4 = RateAreaControl(_cellId);
+    int currentRating = RateAreaControl(_cellId);
     int targetRating = RateAreaControl( pt );
 
     float distance = _cellId.LengthTo<float>( pt );
 
-    if ( distance > 0.0 && a1_4 < targetRating )
+    if ( distance > 0.0 && currentRating < targetRating )
         targetRating = ((float)targetRating * (1.0 - distance * 0.8 / 91.0));
 
-    if ( targetRating <= a1_4 )
+    if ( targetRating <= currentRating )
         return -1;
 
     return targetRating;

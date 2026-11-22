@@ -341,7 +341,7 @@ size_t NC_STACK_ypabact::Deinit()
 
 void NC_STACK_ypabact::CopyTargetOf(NC_STACK_ypabact *unit)
 {
-    NC_STACK_ypabact *v6 = NULL;
+    NC_STACK_ypabact *target = NULL;
 
     _waypoints_count = 0;
     _m_cmdID = 0;
@@ -362,9 +362,9 @@ void NC_STACK_ypabact::CopyTargetOf(NC_STACK_ypabact *unit)
         }
         else
         {
-            v6 = _world->FindBactByCmdOwn(unit->_m_cmdID, unit->_m_owner);
+            target = _world->FindBactByCmdOwn(unit->_m_cmdID, unit->_m_owner);
 
-            if ( v6 )
+            if ( target )
                 tgType = BACT_TGT_TYPE_UNIT;
             else
                 tgType = BACT_TGT_TYPE_NONE;
@@ -374,7 +374,7 @@ void NC_STACK_ypabact::CopyTargetOf(NC_STACK_ypabact *unit)
     {
         if ( unit->_primTtype == BACT_TGT_TYPE_UNIT )
         {
-            v6 = unit->_primT.pbact;
+            target = unit->_primT.pbact;
             tgType = BACT_TGT_TYPE_UNIT;
         }
         else if ( unit->_primTtype == BACT_TGT_TYPE_CELL )
@@ -389,7 +389,7 @@ void NC_STACK_ypabact::CopyTargetOf(NC_STACK_ypabact *unit)
     if ( tgType == BACT_TGT_TYPE_NONE )
     {
         tgType = BACT_TGT_TYPE_UNIT;
-        v6 = unit;
+        target = unit;
     }
 
     if ( _bact_type != BACT_TYPES_TANK && _bact_type != BACT_TYPES_CAR )
@@ -400,7 +400,7 @@ void NC_STACK_ypabact::CopyTargetOf(NC_STACK_ypabact *unit)
 
         if ( tgType == BACT_TGT_TYPE_UNIT )
         {
-            targetMsg.tgt.pbact = v6;
+            targetMsg.tgt.pbact = target;
         }
         else
         {
@@ -416,7 +416,7 @@ void NC_STACK_ypabact::CopyTargetOf(NC_STACK_ypabact *unit)
 
         if ( tgType == BACT_TGT_TYPE_UNIT )
         {
-            pathReq.to = v6->_position.XZ();
+            pathReq.to = target->_position.XZ();
         }
         else
         {
@@ -431,8 +431,8 @@ void NC_STACK_ypabact::CopyTargetOf(NC_STACK_ypabact *unit)
 
         if ( tgType == BACT_TGT_TYPE_UNIT )
         {
-            _m_cmdID = v6->_commandID;
-            _m_owner = v6->_owner;
+            _m_cmdID = target->_commandID;
+            _m_owner = target->_owner;
         }
     }
 }
@@ -5005,22 +5005,22 @@ size_t NC_STACK_ypabact::CheckFireAI(TFireCheck *arg)
     if ( len == 0.0 )
         return 0;
 
-    World::TWeapProto *v8 = NULL;
+    World::TWeapProto *weapon = NULL;
 
     int weaponKind;
 
     if ( _weapon != -1 )
     {
-        v8 = &_world->GetWeaponsProtos().at( _weapon );
+        weapon = &_world->GetWeaponsProtos().at( _weapon );
 
 
-        if ( v8->_weaponFlags & 1 )
-            weaponKind = v8->_weaponFlags & 0xFE;
+        if ( weapon->_weaponFlags & 1 )
+            weaponKind = weapon->_weaponFlags & 0xFE;
         else
-            v8 = NULL;
+            weapon = NULL;
     }
 
-    if ( !v8 )
+    if ( !weapon )
     {
         if ( _mgun == -1 )
             return 0;
@@ -5032,10 +5032,10 @@ size_t NC_STACK_ypabact::CheckFireAI(TFireCheck *arg)
     {
         float hitRadius;
 
-        if ( v8 )
+        if ( weapon )
         {
 
-            float combinedRadius = arg->radius * 0.8 + v8->radius;
+            float combinedRadius = arg->radius * 0.8 + weapon->radius;
 
             if ( combinedRadius >= 40.0 )
             {
@@ -5079,7 +5079,7 @@ size_t NC_STACK_ypabact::CheckFireAI(TFireCheck *arg)
                 return 1;
         }
     }
-    else if ( v8 )
+    else if ( weapon )
     {
         if ( weaponKind )
         {
@@ -5095,7 +5095,7 @@ size_t NC_STACK_ypabact::CheckFireAI(TFireCheck *arg)
         }
         else
         {
-            if ( (arg->pos.XZ() - _position.XZ()).length() < v8->radius )
+            if ( (arg->pos.XZ() - _position.XZ()).length() < weapon->radius )
                 return 1;
         }
     }
@@ -5268,7 +5268,7 @@ size_t NC_STACK_ypabact::FireMinigun(TMinigunShot *arg)
     if ( _mgun == -1 )
         return 0;
 
-    NC_STACK_ypabact *v108 = NULL;
+    NC_STACK_ypabact *nearestHit = NULL;
     float nearestDist = 0.0;
     float hitRadius = 0.0;
     vec3d nearestPos;
@@ -5412,9 +5412,9 @@ size_t NC_STACK_ypabact::FireMinigun(TMinigunShot *arg)
 
                                                 damaged = 1;
 
-                                                if ( !v108 || nearestDist > dist )
+                                                if ( !nearestHit || nearestDist > dist )
                                                 {
-                                                    v108 = cellUnit;
+                                                    nearestHit = cellUnit;
                                                     nearestDist = dist;
 
                                                     nearestPos = cellUnit->_position;
@@ -5473,7 +5473,7 @@ size_t NC_STACK_ypabact::FireMinigun(TMinigunShot *arg)
 
             vec3d impactPos;
 
-            if ( v108 )
+            if ( nearestHit )
             {
                 hasImpact = 1;
                 hitWorld = 0;

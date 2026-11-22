@@ -1379,20 +1379,20 @@ void NC_STACK_ypaworld::DrawMapRegionsTutorial()
 
             if ( !region.Rect.IsEmpty() )
             {
-                ResBitmap *v20 = NULL;
+                ResBitmap *regionBitmap = NULL;
 
                 if ( region.Status == TMapRegionInfo::STATUS_ENABLED ||  region.Status == TMapRegionInfo::STATUS_COMPLETED)
                 {
                     if ( i == _globalMapRegions.SelectedRegion )
                     {
-                        v20 = _globalMapRegions.RolloverImage->GetBitmap();
+                        regionBitmap = _globalMapRegions.RolloverImage->GetBitmap();
                     }
                 }
 
-                if ( v20 )
+                if ( regionBitmap )
                 {
                     GFX::TMaskedBlitParams maskedBlit;
-                    maskedBlit.bitmap = v20;
+                    maskedBlit.bitmap = regionBitmap;
                     maskedBlit.mask = _globalMapRegions.MaskImage->GetBitmap();
 
                     maskedBlit.maskIndex = i;
@@ -1450,28 +1450,28 @@ void NC_STACK_ypaworld::DrawMapRegions()
 
             if ( !region.Rect.IsEmpty() )
             {
-                ResBitmap *v20 = NULL;
+                ResBitmap *regionBitmap = NULL;
 
                 if ( region.Status == TMapRegionInfo::STATUS_ENABLED )
                 {
                     if ( i == _globalMapRegions.SelectedRegion )
                     {
-                        v20 = _globalMapRegions.RolloverImage->GetBitmap();
+                        regionBitmap = _globalMapRegions.RolloverImage->GetBitmap();
                     }
                     else
                     {
-                        v20 = _globalMapRegions.EnabledImage->GetBitmap();
+                        regionBitmap = _globalMapRegions.EnabledImage->GetBitmap();
                     }
                 }
                 else if ( region.Status == TMapRegionInfo::STATUS_COMPLETED )
                 {
-                    v20 = _globalMapRegions.FinishedImage->GetBitmap();
+                    regionBitmap = _globalMapRegions.FinishedImage->GetBitmap();
                 }
 
-                if ( v20 )
+                if ( regionBitmap )
                 {
                     GFX::TMaskedBlitParams maskedBlit;
-                    maskedBlit.bitmap = v20;
+                    maskedBlit.bitmap = regionBitmap;
                     maskedBlit.mask = _globalMapRegions.MaskImage->GetBitmap();
 
                     maskedBlit.maskIndex = i;
