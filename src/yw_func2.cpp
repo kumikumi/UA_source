@@ -600,11 +600,6 @@ void UserData::CloseSaveLoadMenu()
         titel_button->ShowScreen();
     }
 
-    NC_STACK_button::button_66arg v3;
-    v3.field_4 = 2;
-    v3.butID = 1156;
-    video_button->SetState(&v3);
-
     diskScreenMode = 0;
 }
 
@@ -917,7 +912,6 @@ void UserData::ApplyOptions()
     NC_STACK_ypaworld *yw = p_YW;
 
     bool forceChange = false;
-    Common::Point resolution;
 
     if ( _settingsChangeOptions & 0x200 )
     {
@@ -1033,12 +1027,6 @@ void UserData::ApplyOptions()
         SFXEngine::SFXe.setMasterVolume(soundVolume);
     }
 
-    if ( _settingsChangeOptions & 1 )
-    {
-        if ( _gfxMode != p_YW->_gfxMode && _gfxMode)
-            p_YW->_gfxMode = _gfxMode;
-    }
-
     if ( _settingsChangeOptions & 0x1000 )
     {
         if ( !conf3DGuid.empty() )
@@ -1050,7 +1038,6 @@ void UserData::ApplyOptions()
 
                 GFX::Engine.SetDeviceByGUID(win3d_guid); //Save to file current gfx device
 
-                p_YW->_gfxMode = Common::Point(GFX::DEFAULT_WIDTH, GFX::DEFAULT_HEIGHT);
                 forceChange = true;
             }
         }
@@ -1084,21 +1071,7 @@ void UserData::ApplyOptions()
 
     if ( forceChange )
     {
-        yw->SetGameShellVideoMode( IsWindowedFlag() );
-
-        int v24 = 0;
-        for (const GFX::GfxMode &nod : GFX::GFXEngine::Instance.GetAvailableModes())
-        {
-            if ( yw->_gfxMode == nod )
-            {
-                _gfxModeIndex = v24;
-                video_button->SetText(1156, nod.name);
-
-                break;
-            }
-
-            v24++;
-        }
+        yw->SetWindowed( IsWindowedFlag() );
     }
 
     _settingsChangeOptions = 0;
@@ -1106,18 +1079,11 @@ void UserData::ApplyOptions()
 
     video_button->HideScreen();
 
-    if ( video_listvw.IsOpen() )
-        p_YW->GuiWinClose( &video_listvw );
-
     if ( d3d_listvw.IsOpen() )
         p_YW->GuiWinClose( &d3d_listvw );
 
     NC_STACK_button::button_66arg v38;
     v38.field_4 = 2;
-    v38.butID = 1156;
-
-    video_button->SetState(&v38);
-
     v38.butID = 1172;
     video_button->SetState(&v38);
 
@@ -1338,10 +1304,6 @@ void UserData::ShowToolTip(int id)
         p_YW->SetShowingTooltip(Locale::TIP_CONF_MUSICVOLUME);
         break;
 
-    case 1156:
-        p_YW->SetShowingTooltip(Locale::TIP_CONF_RESOLUTION);
-        break;
-
     case 1157:
         p_YW->SetShowingTooltip(Locale::TIP_CONF_FARDEPTH);
         break;
@@ -1487,14 +1449,6 @@ void UserData::ShowOptionsMenu()
     video_button->ShowScreen();
 
     EnvMode = ENVMODE_SETTINGS;
-
-    if ( video_listvw.IsOpen() )
-    {
-        p_YW->GuiWinClose( &video_listvw );
-        p_YW->GuiWinOpen( &video_listvw );
-    }
-
-    video_listvw.selectedEntry = _gfxModeIndex;
 }
 
 void UserData::ShowSaveLoadMenu()
@@ -1666,6 +1620,9 @@ void UserData::ShowMenuMsgBox(int code, const std::string &txt1, const std::stri
 void UserData::ShowConfirmDialog( int a2, const std::string &txt1, const std::string &txt2, int a5)
 {
     confirmMode = a2;
+    confirmText1 = txt1;
+    confirmText2 = txt2;
+    confirmSingleButton = a5;
 
     NC_STACK_button::button_66arg v12;
     v12.butID = 1300;
@@ -1804,32 +1761,10 @@ void UserData::InputConfigRestoreDefault()
     }
 }
 
-void UserData::sub_46C5F0()
-{
-    if ( video_listvw.selectedEntry != _gfxModeIndex)
-    {
-        _gfxModeIndex = video_listvw.selectedEntry;
-
-        _gfxMode = GFX::GFXEngine::Instance.GetAvailableModes().at(_gfxModeIndex);
-        video_button->SetText(1156, _gfxMode.name);
-    }
-}
-
 void UserData::CancelOptions()
 {
     _settingsChangeOptions = 0;
     EnvMode = ENVMODE_TITLE;
-
-    int gfxId = GFX::GFXEngine::Instance.GetGfxModeIndex(p_YW->_gfxMode);
-    
-    if (gfxId < 0)
-        gfxId = 0;
-
-    video_listvw.selectedEntry = gfxId;
-    _gfxModeIndex = gfxId;
-    _gfxMode = p_YW->_gfxMode;
-
-    video_button->SetText(1156, _gfxMode.name);
 
     video_button->SetText(1172, win3d_name);
 
@@ -1883,18 +1818,12 @@ void UserData::CancelOptions()
 
     video_button->HideScreen();
 
-    if ( video_listvw.IsOpen() )
-        p_YW->GuiWinClose( &video_listvw );
-
     if ( d3d_listvw.IsOpen() )
         p_YW->GuiWinClose( &d3d_listvw );
 
     titel_button->ShowScreen();
 
     v10.field_4 = 2;
-    v10.butID = 1156;
-    video_button->SetState(&v10);
-
     v10.butID = 1172;
     video_button->SetState(&v10);
 }
@@ -2252,7 +2181,6 @@ void UserData::GameShellUiHandleInput()
         network_button->HideScreen();
 
         p_YW->GuiWinClose( &input_listview );
-        p_YW->GuiWinClose( &video_listvw );
         p_YW->GuiWinClose( &disk_listvw );
         p_YW->GuiWinClose( &local_listvw );
         p_YW->GuiWinClose( &network_listvw );
@@ -2344,9 +2272,6 @@ void UserData::GameShellUiHandleInput()
             case 4:
                 sub_46D960();
                 break;
-            case 5:
-                ApplyOptions();
-                break;
             case 6:
                 sb_0x46cdf8();
                 break;
@@ -2394,9 +2319,6 @@ void UserData::GameShellUiHandleInput()
                 break;
             case 4:
                 sub_46D960();
-                break;
-            case 5:
-                ApplyOptions();
                 break;
             case 6:
                 sb_0x46cdf8();
@@ -2757,37 +2679,8 @@ void UserData::GameShellUiHandleInput()
     {
         if ( Input->KbdLastHit == Input::KC_RETURN )
         {
-                        printf("Line = %d\n", __LINE__);
-
-            if ( video_listvw.IsClosed() && d3d_listvw.IsClosed() )
-            {
-                if ( _settingsChangeOptions & 1 && _gfxMode != p_YW->_gfxMode && _gfxMode )
-                {
-                    ShowConfirmDialog(5, Locale::Text::Dialogs(Locale::DLG_S_RESCHANGE)
-                                , Locale::Text::Dialogs(Locale::DLG_S_RESWARN), 0);
-                }
-                else
-                {
-                    ApplyOptions();
-                }
-            }
-
-            if ( video_listvw.IsOpen() )
-            {
-                p_YW->GuiWinClose( &video_listvw );
-
-                if ( video_listvw.IsClosed() )
-                {
-                    v408.butID = 1156;
-                    v408.field_4 = 2;
-
-                    video_button->SetState(&v408);
-                }
-
-                _settingsChangeOptions |= 1;
-                sub_46C5F0();
-            }
-
+            if ( d3d_listvw.IsClosed() )
+                ApplyOptions();
         }
         else if ( Input->KbdLastHit == Input::KC_ESCAPE )
         {
@@ -2806,18 +2699,7 @@ void UserData::GameShellUiHandleInput()
         if ( r.btn )
             ShowToolTip(r.btn);
 
-        if ( r.code == 1100 )
-        {
-            p_YW->GuiWinOpen( &video_listvw );
-            SFXEngine::SFXe.startSound(&samples1_info, 7);
-
-            Input->ClickInf.flag &= ~TClickBoxInf::FLAG_LM_DOWN;
-        }
-        else if ( r.code == 1101 )
-        {
-            p_YW->GuiWinClose( &video_listvw );
-        }
-        else if ( r.code == 1102 )
+        if ( r.code == 1102 )
         {
             _settingsChangeOptions |= 0x10;
             confGFXFlags |= World::GFX_FLAG_FARVIEW;
@@ -2876,15 +2758,7 @@ void UserData::GameShellUiHandleInput()
         }
         else if ( r.code == 1124 )
         {
-            if ( (_settingsChangeOptions & 1) &&  _gfxMode != p_YW->_gfxMode && _gfxMode )
-            {
-                ShowConfirmDialog(5, Locale::Text::Dialogs(Locale::DLG_S_RESCHANGE)
-                            , Locale::Text::Dialogs(Locale::DLG_S_RESWARN), 0);
-            }
-            else
-            {
-                ApplyOptions();
-            }
+            ApplyOptions();
         }
         else if ( r.code == 1125 ) // Options CANCEL
         {
@@ -2943,29 +2817,6 @@ void UserData::GameShellUiHandleInput()
         }
         else if ( r.code == 1250 )
             p_YW->_helpURL = Locale::Text::Help(Locale::HELP_SETTINGS);
-    }
-
-    if ( EnvMode == ENVMODE_SETTINGS && video_listvw.IsOpen() )
-    {
-        video_listvw.InputHandle(p_YW, Input);
-
-        if ( video_listvw.listFlags & GuiList::GLIST_FLAG_SEL_DONE )
-        {
-            _settingsChangeOptions |= 1;
-            
-            if (!remoteMode)
-                sub_46C5F0();
-        }
-
-        if ( video_listvw.IsClosed() )
-        {
-            v408.field_4 = 2;
-            v408.butID = 1156;
-
-            video_button->SetState(&v408);
-        }
-
-        video_listvw.Formate(p_YW);
     }
 
     if ( EnvMode == ENVMODE_SETTINGS && d3d_listvw.IsOpen() )

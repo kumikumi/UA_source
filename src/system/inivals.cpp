@@ -27,7 +27,6 @@ Common::Ini::Key IniConf::GfxMaxFps("gfx.maxfps", Common::Ini::KT_DIGIT, (int32_
 Common::Ini::Key IniConf::GfxNewSky("gfx.newsky", Common::Ini::KT_BOOL, false);
 Common::Ini::Key IniConf::GfxSkyDistance("gfx.skydistance", Common::Ini::KT_DIGIT, (int32_t)3000);
 Common::Ini::Key IniConf::GfxSkyLength("gfx.skylength", Common::Ini::KT_DIGIT, (int32_t)500);
-Common::Ini::Key IniConf::GfxAdditionalModes("gfx.custommodes", Common::Ini::KT_STRING);
 
 // Gfx Engine
 Common::Ini::Key IniConf::GfxMode("gfx.mode", Common::Ini::KT_DIGIT);
@@ -197,7 +196,6 @@ Common::Ini::Key IniConf::NetKickoff("net.kickoff", Common::Ini::KT_DIGIT, (int3
 // Particles
 Common::Ini::Key IniConf::ParticlesLimit("particles.limit", Common::Ini::KT_DIGIT, (int32_t)5000);
 
-Common::Ini::Key IniConf::MenuWindowed("menu.windowed", Common::Ini::KT_BOOL, false);
 
 // AllowMods
 Common::Ini::Key IniConf::DevMode("devmode", Common::Ini::KT_BOOL, false);
@@ -384,9 +382,7 @@ void IniConf::Init()
         
         , &ParticlesLimit
                   
-        , &MenuWindowed
                   
-        , &GfxAdditionalModes
         , &GfxVBO
                   
         , &DevMode

@@ -1997,29 +1997,9 @@ int MiscParser::Handle(ScriptParser::Parser &parser, const std::string &p1, cons
     {
         return ScriptParser::RESULT_SCOPE_END;
     }
-    else if ( !StriCmp(p1, "one_game_res") )
+    else if ( !StriCmp(p1, "one_game_res") || !StriCmp(p1, "shell_default_res") || !StriCmp(p1, "game_default_res") )
     {
-        _o._oneGameRes = StrGetBool(p2);
-    }
-    else if ( !StriCmp(p1, "shell_default_res") )
-    {
-    	Stok stok(p2, "_ \t");
-    	std::string pp1, pp2;
-        if ( stok.GetNext(&pp1) && stok.GetNext(&pp2) )
-        {
-            _o._shellDefaultRes = Common::Point(parser.stol(pp1, NULL, 0), parser.stol(pp2, NULL, 0));
-            _o._shellGfxMode = Common::Point(parser.stol(pp1, NULL, 0), parser.stol(pp2, NULL, 0));
-        }
-    }
-    else if ( !StriCmp(p1, "game_default_res") )
-    {
-    	Stok stok(p2, "_ \t");
-        std::string pp1, pp2;
-        if ( stok.GetNext(&pp1) && stok.GetNext(&pp2) )
-        {
-            _o._gameDefaultRes = Common::Point(parser.stol(pp1, NULL, 0), parser.stol(pp2, NULL, 0));
-            _o._gfxMode = Common::Point(parser.stol(pp1, NULL, 0), parser.stol(pp2, NULL, 0));
-        }
+        // The game renders at the window size; fixed resolutions are ignored.
     }
     else if ( !StriCmp(p1, "max_impulse") )
     {
@@ -3297,9 +3277,7 @@ int VideoParser::Handle(ScriptParser::Parser &parser, const std::string &p1, con
 
     if ( !StriCmp(p1, "videomode") )
     {
-        int modeid = parser.stoi(p2);
-        _o._gameDefaultRes = Common::Point((modeid >> 12 & 0xFFF), (modeid & 0xFFF));
-        _o._GameShell->game_default_res = modeid;
+        // Resolution of older profiles; the game renders at the window size.
     }
     else if ( !StriCmp(p1, "farview") )
     {
@@ -3384,33 +3362,16 @@ int VideoParser::Handle(ScriptParser::Parser &parser, const std::string &p1, con
     }
     else if ( !StriCmp(p1, "gfxmode") )
     {
+        // WIDTH_HEIGHT_WINDOWED; only the windowed flag is used now.
         Stok stok(p2, " _");
         std::string resW, resH, resWin;
-        
-        if ( stok.GetNext(&resW) && stok.GetNext(&resH) && stok.GetNext(&resWin))
+
+        if ( stok.GetNext(&resW) && stok.GetNext(&resH) && stok.GetNext(&resWin) )
         {
-            int w = parser.stoi(resW);
-            int h = parser.stoi(resH);
-            int win = parser.stoi(resWin);
-            
-            const std::vector<GFX::GfxMode> &pModes = GFX::GFXEngine::Instance.GetAvailableModes();
-            for (size_t i = 0; i < pModes.size(); ++i)
-            {
-                const GFX::GfxMode &mode = pModes.at(i);
-                if (mode.w == w && mode.h == h)
-                {
-                    _o._GameShell->_gfxModeIndex = i;
-                    _o._gfxMode = mode;
-
-                    if (win)
-                        _o._GameShell->GFXFlags |= World::GFX_FLAG_WINDOWED;
-                    else
-                        _o._GameShell->GFXFlags &= ~World::GFX_FLAG_WINDOWED;
-
-                    _o._GameShell->_gfxMode = mode;
-                    break;
-                }
-            }
+            if ( parser.stoi(resWin) )
+                _o._GameShell->GFXFlags |= World::GFX_FLAG_WINDOWED;
+            else
+                _o._GameShell->GFXFlags &= ~World::GFX_FLAG_WINDOWED;
         }
     }
     else

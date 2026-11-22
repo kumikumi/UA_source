@@ -239,6 +239,12 @@ void Init(bool oldGL)
 
     SDL_GL_SetAttribute(SDL_GL_DEPTH_SIZE, 24);
 
+    // The game renders at whatever size the window has, so start with most of
+    // the desktop rather than a fixed resolution.
+    SDL_Rect usable;
+    if (SDL_GetDisplayUsableBounds(0, &usable) == 0)
+        winRes = ResRatio(usable.w * 3 / 4, usable.h * 3 / 4);
+
     window = SDL_CreateWindow("OpenUA (Urban Assault)", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, winRes.W, winRes.H, SDL_WINDOW_RESIZABLE | SDL_WINDOW_OPENGL);
 
     if (!window)
@@ -246,6 +252,10 @@ void Init(bool oldGL)
         printf("Couldn't create window and renderer: %s", SDL_GetError());
         return;
     }
+
+    int drawW, drawH;
+    SDL_GL_GetDrawableSize(window, &drawW, &drawH);
+    winRes = ResRatio(drawW, drawH);
 
     cont = SDL_GL_CreateContext(window);
 
@@ -277,10 +287,10 @@ void Deinit()
 
     FontsList.clear();
 
-    if (!cont)
+    if (cont)
         SDL_GL_DeleteContext(cont);
 
-    if (!window)
+    if (window)
         SDL_DestroyWindow(window);
 
     SDL_Quit();
@@ -348,46 +358,22 @@ void Flip()
     SDL_GL_SwapWindow(window);
 }
 
-void SetVideoMode(const Common::Point &sz, uint32_t full, SDL_DisplayMode *mode)
+void SetFullscreen(bool fullscreen)
 {
-    if (window)
-    {
-        SDL_SetWindowFullscreen(window, full);
+    if (!window || fullscreen == IsFullscreen())
+        return;
 
-        if (full != 0 && mode)
-        {
-            SDL_Delay(250);
-            SDL_SetWindowDisplayMode(window, mode);
-        }
-        else
-        {
-            if (winRes != sz)
-            {
-                if (SDL_GetWindowFlags(window) & SDL_WINDOW_MAXIMIZED)
-                {
-                    SDL_RestoreWindow(window);
-                    SDL_Delay(250);
-                    
-                    SDL_SetWindowSize(window, sz.x, sz.y);
-                    
-                    SDL_MaximizeWindow(window);
-                    SDL_Delay(250);
-                }
-                else
-                    SDL_SetWindowSize(window, sz.x, sz.y);
-            }
-        }
-        
-        int w, h;
-        SDL_GL_GetDrawableSize(window, &w, &h);
-        winRes = ResRatio(w, h);
-    }
+    SDL_SetWindowFullscreen(window, fullscreen ? SDL_WINDOW_FULLSCREEN_DESKTOP : 0);
+
+    // Some platforms resize asynchronously; the size event updates winRes again.
+    int w, h;
+    SDL_GL_GetDrawableSize(window, &w, &h);
+    winRes = ResRatio(w, h);
 }
 
-void RestoreWindow()
+bool IsFullscreen()
 {
-    SDL_RestoreWindow(window);
-    SDL_Delay(250);
+    return window && (SDL_GetWindowFlags(window) & SDL_WINDOW_FULLSCREEN) != 0;
 }
 
 void SetReleativeMouse(bool mode)

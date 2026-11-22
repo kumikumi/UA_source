@@ -36,7 +36,6 @@ public:
     static Common::Ini::Key GfxNewSky;
     static Common::Ini::Key GfxSkyDistance;
     static Common::Ini::Key GfxSkyLength;
-    static Common::Ini::Key GfxAdditionalModes;
     
     static Common::Ini::Key GfxMode;
     static Common::Ini::Key GfxXRes;
@@ -194,7 +193,6 @@ public:
     static Common::Ini::Key NetKickoff;
     
     static Common::Ini::Key ParticlesLimit;
-    static Common::Ini::Key MenuWindowed;
     
     static Common::Ini::Key GameHideBlacksect;
     

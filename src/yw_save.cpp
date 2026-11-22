@@ -184,7 +184,6 @@ int yw_write_sound(FSMgr::FileHandle *fil, UserData *usr)
 int yw_write_video(FSMgr::FileHandle *fil, UserData *usr)
 {
     fil->printf("new_video\n");
-    fil->printf("    videomode = %d\n", ((usr->p_YW->_gameDefaultRes.x << 12) | usr->p_YW->_gameDefaultRes.y) );
 
     if ( usr->GFXFlags & World::GFX_FLAG_FARVIEW )
         fil->printf("    farview = yes\n");
@@ -218,10 +217,9 @@ int yw_write_video(FSMgr::FileHandle *fil, UserData *usr)
 
     fil->printf("    fxnumber = %d\n", usr->fxnumber);
     
-    if (usr->IsWindowedFlag())
-        fil->printf("    ;#!gfxmode = %d_%d_1\n", usr->p_YW->_gfxMode.w, usr->p_YW->_gfxMode.h);
-    else
-        fil->printf("    ;#!gfxmode = %d_%d_0\n", usr->p_YW->_gfxMode.w, usr->p_YW->_gfxMode.h);
+    // The size is informational: the game renders at the window size.
+    fil->printf("    ;#!gfxmode = %d_%d_%d\n", usr->p_YW->_screenSize.x, usr->p_YW->_screenSize.y,
+                usr->IsWindowedFlag() ? 1 : 0);
     
     fil->printf("end\n\n");
 

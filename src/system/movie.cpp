@@ -457,7 +457,7 @@ void TMovie::ProcessFrame(uint32_t tm)
     else if (scrAspect < frmAspect)
         qH = scrAspect / frmAspect;
 
-    static std::array<GFX::TVertex, 4> vtx = {
+    std::array<GFX::TVertex, 4> vtx = {
         GFX::TVertex( vec3f(-1.0 * qW,  1.0 * qH, 0.0), tUtV(0.0, 0.0) ),
         GFX::TVertex( vec3f(-1.0 * qW, -1.0 * qH, 0.0), tUtV(0.0, 1.0) ),
         GFX::TVertex( vec3f( 1.0 * qW, -1.0 * qH, 0.0), tUtV(1.0, 1.0) ),

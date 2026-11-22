@@ -248,14 +248,6 @@ size_t NC_STACK_ypaworld::Init(IDVList &stak)
         return 0;
     }
 
-    _shellGfxMode = Common::Point( GFX::DEFAULT_WIDTH, GFX::DEFAULT_HEIGHT );
-    _gfxMode = Common::Point( GFX::DEFAULT_WIDTH, GFX::DEFAULT_HEIGHT );
-    
-    
-            
-    _shellDefaultRes = Common::Point(640, 480);
-    _gameDefaultRes = Common::Point(640, 480);
-
     if ( !InitMapRegionsNet() )
     {
         ypa_log_out("yw_main.c/OM_NEW: yw_InitLevelNet() failed!\n");
@@ -2097,12 +2089,6 @@ bool NC_STACK_ypaworld::InitGameShell(UserData *usr)
         return false;
     }
     
-    usr->_gfxMode = _gfxMode;
-    usr->_gfxModeIndex = GFX::GFXEngine::Instance.GetGfxModeIndex(_gfxMode);
-    
-    if (usr->_gfxModeIndex < 0)
-        usr->_gfxModeIndex = 0;
-
     usr->InputConfig[World::INPUT_BIND_DRIVE_DIR]   = UserData::TInputConf(World::INPUT_BIND_TYPE_SLIDER, 3,  Input::KC_RIGHT, Input::KC_LEFT);
     usr->InputConfig[World::INPUT_BIND_DRIVE_SPEED] = UserData::TInputConf(World::INPUT_BIND_TYPE_SLIDER, 4,  Input::KC_UP, Input::KC_DOWN);
     usr->InputConfig[World::INPUT_BIND_FLY_DIR]     = UserData::TInputConf(World::INPUT_BIND_TYPE_SLIDER, 0,  Input::KC_RIGHT, Input::KC_LEFT);
@@ -3165,27 +3151,6 @@ bool NC_STACK_ypaworld::CreateVideoControls()
     GuiList::tInit args;
     args = GuiList::tInit();
     args.resizeable = false;
-    args.numEntries = GFX::GFXEngine::Instance.GetAvailableModes().size();
-    args.shownEntries = 4;
-    args.firstShownEntry = 0;
-    args.selectedEntry = 0;
-    args.maxShownEntries = 4;
-    args.withIcon = false;
-    args.entryHeight = _fontH;
-    args.entryWidth = v94;
-    args.enabled = true;
-    args.vborder = _fontBorderH;
-    args.instantInput = true;
-    args.keyboardInput = true;
-
-    if ( !_GameShell->video_listvw.Init(this, args) )
-    {
-        ypa_log_out("Unable to create Game-Video-Menu\n");
-        return false;
-    }
-
-    args = GuiList::tInit();
-    args.resizeable = false;
     args.numEntries = devices.size();
     args.shownEntries = 4;
     args.firstShownEntry = 0;
@@ -3219,9 +3184,6 @@ bool NC_STACK_ypaworld::CreateVideoControls()
 
     int v98 = v294 * 0.4;
     int v99 = posLeftPaddingX + buttonsSpace + v98;
-
-    _GameShell->video_listvw.x = v99;
-    _GameShell->video_listvw.y = 6 * vertMenuSpace + 6 * _fontH + scaledFontHeight;
 
     _GameShell->d3d_listvw.x = v99;
     _GameShell->d3d_listvw.y = 7 * vertMenuSpace + 7 * _fontH + scaledFontHeight;
@@ -3281,45 +3243,6 @@ bool NC_STACK_ypaworld::CreateVideoControls()
 
                 if ( _GameShell->video_button->Add(&btn_64arg) )
                 {
-                    btn_64arg.tileset_down = 16;
-                    btn_64arg.tileset_up = 16;
-                    btn_64arg.field_3A = 16;
-                    btn_64arg.xpos = 0;
-                    btn_64arg.button_type = NC_STACK_button::TYPE_CAPTION;
-                    btn_64arg.ypos = 5 * (_fontH + vertMenuSpace);
-                    btn_64arg.width = v98;
-                    btn_64arg.caption = Locale::Text::Dialogs(Locale::DLG_S_RES);
-                    btn_64arg.caption2.clear();
-                    btn_64arg.downCode = 0;
-                    btn_64arg.upCode = 0;
-                    btn_64arg.pressedCode = 0;
-                    btn_64arg.button_id = 2;
-                    btn_64arg.flags = NC_STACK_button::FLAG_BORDER | NC_STACK_button::FLAG_TEXT;
-                    btn_64arg.txt_r = _iniColors[60].r;
-                    btn_64arg.txt_g = _iniColors[60].g;
-                    btn_64arg.txt_b = _iniColors[60].b;
-
-                    if ( _GameShell->video_button->Add(&btn_64arg) )
-                    {
-                        btn_64arg.tileset_down = 19;
-                        btn_64arg.field_3A = 30;
-                        btn_64arg.button_type = NC_STACK_button::TYPE_CHECKBX;
-                        btn_64arg.caption = _gfxMode.name;
-                        btn_64arg.caption2.clear();
-                        btn_64arg.pressedCode = 0;
-                        btn_64arg.tileset_up = 18;
-                        btn_64arg.downCode = 1100;
-                        btn_64arg.button_id = 1156;
-                        btn_64arg.xpos = buttonsSpace + v294 * 0.4;
-                        btn_64arg.upCode = 1101;
-                        btn_64arg.flags = NC_STACK_button::FLAG_BORDER | NC_STACK_button::FLAG_CENTER | NC_STACK_button::FLAG_TEXT;
-                        btn_64arg.width = v294 * 0.6;
-                        btn_64arg.txt_r = _iniColors[68].r;
-                        btn_64arg.txt_g = _iniColors[68].g;
-                        btn_64arg.txt_b = _iniColors[68].b;
-
-                        if ( _GameShell->video_button->Add(&btn_64arg) )
-                        {
                             btn_64arg.tileset_down = 16;
                             btn_64arg.tileset_up = 16;
                             btn_64arg.field_3A = 16;
@@ -3857,8 +3780,6 @@ bool NC_STACK_ypaworld::CreateVideoControls()
                                     }
                                 }
                             }
-                        }
-                    }
                 }
             }
         }
@@ -4869,7 +4790,8 @@ bool NC_STACK_ypaworld::CreateNetworkControls()
 bool NC_STACK_ypaworld::OpenGameShell()
 {
     printf("OpenGameShell\n");
-    SetGameShellVideoMode( _GameShell->IsWindowedFlag() );
+    UpdateScreenSize();
+    LoadScreenFonts();
 
     if ( !yw_LoadSet(46) )
     {
@@ -4971,8 +4893,73 @@ bool NC_STACK_ypaworld::OpenGameShell()
     _GameShell->InputConfigTitle[World::INPUT_BIND_HELP]        = Locale::Text::Inputs(Locale::INPUTS_HELP);
     _GameShell->InputConfigTitle[World::INPUT_BIND_ANALYZER]    = Locale::Text::Inputs(Locale::INPUTS_ANALYZER);
 
- 
+    if ( !CreateGameShellControls() )
+        return false;
 
+    ShowGameShellPage();
+
+    UpdateGameShell();
+
+    SFXEngine::SFXe.startSound(&_GameShell->samples1_info, 6);
+
+    _GameShell->HasInited = true;
+
+    if ( _GameShell->remoteMode )
+    {
+        _GameShell->GameShellUiOpenNetwork();
+        _GameShell->p_YW->_isNetGame = true;
+        _GameShell->FreeFraction = (World::OWNER_GHOR_BIT | World::OWNER_MYKO_BIT | World::OWNER_TAER_BIT);
+        _GameShell->SelectedFraction = World::OWNER_RESIST_BIT;
+    }
+    else
+    {
+        _GameShell->yw_netcleanup();
+        _GameShell->netSelMode = UserData::NETSCREEN_MODE_SELECT;
+    }
+
+    _GameShell->netSel = -1;
+
+    if ( _GameShell->p_YW->_preferences & World::PREF_CDMUSICDISABLE )
+    {
+        SFXEngine::SFXe.StopMusicTrack();
+        SFXEngine::SFXe.SetMusicTrack(_GameShell->shelltrack, _GameShell->shelltrack__adv.min_delay, _GameShell->shelltrack__adv.max_delay);
+        SFXEngine::SFXe.PlayMusicTrack();
+    }
+
+    return true;
+}
+
+
+void NC_STACK_ypaworld::CloseGameShell()
+{
+    if ( _GameShell->HasInited )
+    {       
+        DeleteGameShellControls();
+
+        SFXEngine::SFXe.StopPlayingSounds();
+
+        _globalMapRegions.UnloadImages();
+
+        if ( _GameShell->EnvMode == ENVMODE_TUTORIAL || _GameShell->EnvMode == ENVMODE_SINGLEPLAY )
+        {
+            if ( _levelInfo.State == TLevelInfo::STATE_BRIEFING )
+            {
+                FreeBriefing();
+            }
+            else if ( _levelInfo.State == TLevelInfo::STATE_DEBRIEFING )
+            {
+                FreeDebrief();
+            }
+        }
+
+        sb_0x44ac24(this);
+
+        _GameShell->HasInited = false;
+    }
+}
+
+bool NC_STACK_ypaworld::CreateGameShellControls()
+{
     if ( _screenSize.x < 512 )
     {
         buttonsSpace = 2;
@@ -5044,6 +5031,98 @@ bool NC_STACK_ypaworld::OpenGameShell()
 
     if (!this->CreateNetworkControls()) return false;
 
+    return true;
+}
+
+void NC_STACK_ypaworld::DeleteGameShellControls()
+{
+    if ( _GameShell->confirm_button )
+    {
+        _GameShell->confirm_button->HideScreen();
+        _GameShell->confirm_button->Delete();
+    }
+    _GameShell->confirm_button = NULL;
+
+    if ( _GameShell->sub_bar_button )
+    {
+        _GameShell->sub_bar_button->HideScreen();
+        _GameShell->sub_bar_button->Delete();
+    }
+    _GameShell->sub_bar_button = NULL;
+
+    if ( _GameShell->titel_button )
+    {
+        _GameShell->titel_button->HideScreen();
+        _GameShell->titel_button->Delete();
+    }
+    _GameShell->titel_button = NULL;
+
+    if ( _GameShell->button_input_button )
+    {
+        if ( _GameShell->input_listview.IsOpen() )
+            _GameShell->p_YW->GuiWinClose( &_GameShell->input_listview );
+        _GameShell->input_listview.Free();
+
+        _GameShell->button_input_button->HideScreen();
+        _GameShell->button_input_button->Delete();
+        _GameShell->button_input_button = NULL;
+    }
+
+    if ( _GameShell->video_button )
+    {
+        if ( _GameShell->d3d_listvw.IsOpen() )
+            _GameShell->p_YW->GuiWinClose( &_GameShell->d3d_listvw );
+        _GameShell->d3d_listvw.Free();
+
+        _GameShell->video_button->HideScreen();
+        _GameShell->video_button->Delete();
+        _GameShell->video_button = NULL;
+    }
+
+    if ( _GameShell->disk_button )
+    {
+        if ( _GameShell->disk_listvw.IsOpen() )
+            _GameShell->p_YW->GuiWinClose( &_GameShell->disk_listvw );
+        _GameShell->disk_listvw.Free();
+
+        _GameShell->disk_button->HideScreen();
+        _GameShell->disk_button->Delete();
+        _GameShell->disk_button = NULL;
+    }
+
+    if ( _GameShell->locale_button )
+    {
+        if ( _GameShell->local_listvw.IsOpen() )
+            _GameShell->p_YW->GuiWinClose( &_GameShell->local_listvw );
+        _GameShell->local_listvw.Free();
+
+        _GameShell->locale_button->HideScreen();
+        _GameShell->locale_button->Delete();
+        _GameShell->locale_button = NULL;
+    }
+
+    if ( _GameShell->about_button )
+    {
+        _GameShell->about_button->HideScreen();
+        _GameShell->about_button->Delete();
+        _GameShell->about_button = NULL;
+    }
+
+    if ( _GameShell->network_button )
+    {
+        if ( _GameShell->network_listvw.IsOpen() )
+            _GameShell->p_YW->GuiWinClose( &_GameShell->network_listvw );
+        _GameShell->network_listvw.Free();
+
+        _GameShell->network_button->HideScreen();
+        _GameShell->network_button->Delete();
+        _GameShell->network_button = NULL;
+    }
+}
+
+// Shows the controls of the current shell page, e.g. after creating them anew.
+void NC_STACK_ypaworld::ShowGameShellPage()
+{
     switch (_GameShell->EnvMode)
     {
     default:
@@ -5068,152 +5147,46 @@ bool NC_STACK_ypaworld::OpenGameShell()
     case ENVMODE_NETPLAY:
         _GameShell->network_button->ShowScreen();
         break;
+    case ENVMODE_INPUT:
+        _GameShell->ShowInputSettings();
+        break;
+    case ENVMODE_SETTINGS:
+        _GameShell->ShowOptionsMenu();
+        break;
+    case ENVMODE_SELPLAYER:
+        _GameShell->ShowSaveLoadMenu();
+        break;
+    case ENVMODE_SELLOCALE:
+        _GameShell->ShowLanguageMenu();
+        break;
+    case ENVMODE_ABOUT:
+        _GameShell->ShowAbout();
+        break;
     }
-
-
-    UpdateGameShell();
-
-    SFXEngine::SFXe.startSound(&_GameShell->samples1_info, 6);
-
-    _GameShell->HasInited = true;
-
-    if ( _GameShell->remoteMode )
-    {
-        _GameShell->GameShellUiOpenNetwork();
-        _GameShell->p_YW->_isNetGame = true;
-        _GameShell->FreeFraction = (World::OWNER_GHOR_BIT | World::OWNER_MYKO_BIT | World::OWNER_TAER_BIT);
-        _GameShell->SelectedFraction = World::OWNER_RESIST_BIT;
-    }
-    else
-    {
-        _GameShell->yw_netcleanup();
-        _GameShell->netSelMode = UserData::NETSCREEN_MODE_SELECT;
-    }
-
-    _GameShell->netSel = -1;
-
-    if ( _GameShell->p_YW->_preferences & World::PREF_CDMUSICDISABLE )
-    {
-        SFXEngine::SFXe.StopMusicTrack();
-        SFXEngine::SFXe.SetMusicTrack(_GameShell->shelltrack, _GameShell->shelltrack__adv.min_delay, _GameShell->shelltrack__adv.max_delay);
-        SFXEngine::SFXe.PlayMusicTrack();
-    }
-
-    return true;
 }
 
-
-void NC_STACK_ypaworld::CloseGameShell()
+// Lays the shell out for a new screen size, staying on the same page.
+void NC_STACK_ypaworld::RelayoutGameShell()
 {
-    if ( _GameShell->HasInited )
-    {       
-        if ( _GameShell->confirm_button )
-        {
-            _GameShell->confirm_button->HideScreen();
-            _GameShell->confirm_button->Delete();
-        }
-        _GameShell->confirm_button = NULL;
+    DeleteGameShellControls();
 
-        if ( _GameShell->sub_bar_button )
-        {
-            _GameShell->sub_bar_button->HideScreen();
-            _GameShell->sub_bar_button->Delete();
-        }
-        _GameShell->sub_bar_button = NULL;
-
-        if ( _GameShell->titel_button )
-        {
-            _GameShell->titel_button->HideScreen();
-            _GameShell->titel_button->Delete();
-        }
-        _GameShell->titel_button = NULL;
-
-        if ( _GameShell->button_input_button )
-        {
-            if ( _GameShell->input_listview.IsOpen() )
-                _GameShell->p_YW->GuiWinClose( &_GameShell->input_listview );
-            _GameShell->input_listview.Free();
-
-            _GameShell->button_input_button->HideScreen();
-            _GameShell->button_input_button->Delete();
-            _GameShell->button_input_button = NULL;
-        }
-
-        if ( _GameShell->video_button )
-        {
-            if ( _GameShell->video_listvw.IsOpen() )
-                _GameShell->p_YW->GuiWinClose( &_GameShell->video_listvw );
-            _GameShell->video_listvw.Free();
-
-            if ( _GameShell->d3d_listvw.IsOpen() )
-                _GameShell->p_YW->GuiWinClose( &_GameShell->d3d_listvw );
-            _GameShell->d3d_listvw.Free();
-
-            _GameShell->video_button->HideScreen();
-            _GameShell->video_button->Delete();
-            _GameShell->video_button = NULL;
-        }
-
-        if ( _GameShell->disk_button )
-        {
-            if ( _GameShell->disk_listvw.IsOpen() )
-                _GameShell->p_YW->GuiWinClose( &_GameShell->disk_listvw );
-            _GameShell->disk_listvw.Free();
-
-            _GameShell->disk_button->HideScreen();
-            _GameShell->disk_button->Delete();
-            _GameShell->disk_button = NULL;
-        }
-
-        if ( _GameShell->locale_button )
-        {
-            if ( _GameShell->local_listvw.IsOpen() )
-                _GameShell->p_YW->GuiWinClose( &_GameShell->local_listvw );
-            _GameShell->local_listvw.Free();
-
-            _GameShell->locale_button->HideScreen();
-            _GameShell->locale_button->Delete();
-            _GameShell->locale_button = NULL;
-        }
-
-        if ( _GameShell->about_button )
-        {
-            _GameShell->about_button->HideScreen();
-            _GameShell->about_button->Delete();
-            _GameShell->about_button = NULL;
-        }
-
-        if ( _GameShell->network_button )
-        {
-            if ( _GameShell->network_listvw.IsOpen() )
-                _GameShell->p_YW->GuiWinClose( &_GameShell->network_listvw );
-            _GameShell->network_listvw.Free();
-
-            _GameShell->network_button->HideScreen();
-            _GameShell->network_button->Delete();
-            _GameShell->network_button = NULL;
-        }
-
-        SFXEngine::SFXe.StopPlayingSounds();
-
-        _globalMapRegions.UnloadImages();
-
-        if ( _GameShell->EnvMode == ENVMODE_TUTORIAL || _GameShell->EnvMode == ENVMODE_SINGLEPLAY )
-        {
-            if ( _levelInfo.State == TLevelInfo::STATE_BRIEFING )
-            {
-                FreeBriefing();
-            }
-            else if ( _levelInfo.State == TLevelInfo::STATE_DEBRIEFING )
-            {
-                FreeDebrief();
-            }
-        }
-
-        sb_0x44ac24(this);
-
-        _GameShell->HasInited = false;
+    if ( !CreateGameShellControls() )
+    {
+        ypa_log_out("Error: Unable to lay out GameShell for %d x %d\n", _screenSize.x, _screenSize.y);
+        return;
     }
+
+    ShowGameShellPage();
+
+    if ( (_GameShell->EnvMode == ENVMODE_TUTORIAL || _GameShell->EnvMode == ENVMODE_SINGLEPLAY)
+         && _levelInfo.State == TLevelInfo::STATE_BRIEFING )
+        RelayoutBriefingTextList();
+
+    if ( _GameShell->confirmMode )
+        _GameShell->ShowConfirmDialog(_GameShell->confirmMode, _GameShell->confirmText1,
+                                      _GameShell->confirmText2, _GameShell->confirmSingleButton);
+
+    UpdateGameShell();
 }
 
 //Draw bkg or briefing
@@ -5792,15 +5765,7 @@ size_t NC_STACK_ypaworld::LoadLanguage(const std::string &langname)
         return 0;
     }
     
-    std::string fontStr;
-
-    if ( _screenSize.x >= 512 )
-        fontStr = Locale::Text::Font();
-    else
-        fontStr = Locale::Text::SmallFont();
-
-    GFX::Engine.LoadFontByDescr(fontStr);
-    Gui::UA::LoadFont(fontStr);
+    LoadScreenFonts();
 
     return 1;
 }
@@ -5882,8 +5847,6 @@ void NC_STACK_ypaworld::UpdateGameShell()
     v16.butID = 1166;
     v16.field_4 = (!_GameShell->IsWindowedFlag()) + 1;
     _GameShell->video_button->SetState(&v16);
-
-    _GameShell->video_button->SetText(1156, _GameShell->p_YW->_gfxMode.name);
 
     tmp = _GameShell->video_button->GetSliderData(1159);
     tmp->value = _GameShell->fxnumber;
@@ -6366,7 +6329,7 @@ size_t NC_STACK_ypaworld::LoadSettings(const std::string &fileName, const std::s
     
     if (playIntro && !_GameShell->remoteMode)
     {
-        SetGameShellVideoMode( _GameShell->IsWindowedFlag() );
+        SetWindowed( _GameShell->IsWindowedFlag() );
         PlayIntroMovie();
     }
 
@@ -6449,48 +6412,44 @@ bool NC_STACK_ypaworld::ReloadInput(size_t id)
 }
 
 
-size_t NC_STACK_ypaworld::SetGameShellVideoMode(bool windowed)
+// Applies the player's windowed setting. Only done when the game starts and when
+// the player changes it in the options; otherwise the window is left as it is.
+void NC_STACK_ypaworld::SetWindowed(bool windowed)
 {
-    UserData *usr = _GameShell;
-    
-    if (System::IniConf::MenuWindowed.Get<bool>())
-        windowed = true;
+    GFX::Engine.SetFullscreen(!windowed);
+    UpdateScreenSize();
+}
 
-    if ( _shellGfxMode == GFX::Engine.GetGfxMode() && windowed == GFX::Engine.GetGfxMode().windowed )
-        return 1;
-
-    int v6;
-
-    if ( usr->HasInited )
+void NC_STACK_ypaworld::UpdateScreenSize()
+{
+    // The player can also switch fullscreen outside the game, e.g. with the
+    // window's fullscreen button; keep their setting in line with the window.
+    if ( _GameShell )
     {
-        CloseGameShell();
-        v6 = 1;
-    }
-    else
-    {
-        v6 = 0;
+        if ( System::IsFullscreen() )
+            _GameShell->GFXFlags &= ~World::GFX_FLAG_WINDOWED;
+        else
+            _GameShell->GFXFlags |= World::GFX_FLAG_WINDOWED;
     }
 
-    GFX::Engine.SetResolution( _shellGfxMode, windowed );
+    GFX::Engine.UpdateResolution();
+
+    if ( _screenSize == GFX::Engine.GetScreenSize() )
+        return;
 
     _screenSize = GFX::Engine.GetScreenSize();
 
-    if ( v6 && !OpenGameShell())
-    {
-        ypa_log_out("Error: Unable to open GameShell with mode %d x %d\n", _shellGfxMode.x, _shellGfxMode.y);
+    LoadScreenFonts();
 
-        return 0;
-    }
+    if ( _GameShell && _GameShell->HasInited )
+        RelayoutGameShell();
 
-    if ( usr->GFXFlags & World::GFX_FLAG_SOFTMOUSE )
-    {
-        GFX::Engine.setWDD_cursor(1);
-    }
-    else
-    {
-        GFX::Engine.setWDD_cursor(0);
-    }
+    if ( _guiLoaded )
+        RelayoutGameGui();
+}
 
+void NC_STACK_ypaworld::LoadScreenFonts()
+{
     if ( _screenSize.x >= 512 )
     {
         GFX::Engine.LoadFontByDescr( Locale::Text::Font() );
@@ -6501,8 +6460,6 @@ size_t NC_STACK_ypaworld::SetGameShellVideoMode(bool windowed)
         GFX::Engine.LoadFontByDescr( Locale::Text::SmallFont() );
         Gui::UA::LoadFont( Locale::Text::SmallFont() );
     }
-
-    return 1;
 }
 
 

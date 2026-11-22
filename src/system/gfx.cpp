@@ -415,7 +415,7 @@ int GFXEngine::LoadFontByDescr(const std::string &fontname)
 }
 
 
-size_t GFXEngine::ReadIniDisplaySettings(IDVList &stak)
+size_t GFXEngine::ReadIniDisplaySettings()
 {
     int txt16bit_def = read_yes_no_status("env/txt16bit.def", 1);
     int drawprim_def = read_yes_no_status("env/drawprim.def", 0);
@@ -449,7 +449,7 @@ size_t GFXEngine::ReadIniDisplaySettings(IDVList &stak)
         break;
     }
 
-    SetResVariables( Common::Point(stak.Get<int32_t>(ATT_WIDTH, DEFAULT_WIDTH), stak.Get<int32_t>(ATT_HEIGHT, DEFAULT_HEIGHT)) );
+    SetResVariables( System::GetResolution() );
 
     _forcesoftcursor = 0;
     _disable_lowres = System::IniConf::GfxDisableLowres.Get<bool>();
@@ -501,11 +501,11 @@ bool GFXEngine::SetResVariables(Common::Point res)
     return true;
 }
 
-size_t GFXEngine::ReadIniSettings(IDVList &stak)
+size_t GFXEngine::ReadIniSettings()
 {
     System::IniConf::ReadFromNucleusIni();
 
-    if ( !ReadIniDisplaySettings(stak) )
+    if ( !ReadIniDisplaySettings() )
         return 0;
 
     _dither = System::IniConf::GfxDither.Get<bool>();
@@ -1810,12 +1810,6 @@ void GFXEngine::BeginFrame()
     _states.Zwrite = saved;
     SetRenderStates(0);
     
-    if (!_vbo)
-    {
-        glEnableClientState(GL_VERTEX_ARRAY);
-        glEnableClientState(GL_COLOR_ARRAY);
-    }
-    
     _states.Prog = _stdShaderProg;
 }
 
@@ -2389,98 +2383,6 @@ Common::Point TileMap::GetSize(uint8_t c) const
 namespace GFX
 {
 
-GfxMode::GfxMode(GfxMode &&g)
-{
-    w = std::move(g.w);
-    h = std::move(g.h);
-    bpp = std::move(g.bpp);
-    mode = std::move(g.mode);
-    name = std::move(g.name);
-    windowed = std::move(g.windowed);
-}
-
-GfxMode::GfxMode(const GfxMode &g)
-{
-    w = g.w;
-    h = g.h;
-    bpp = g.bpp;
-    mode = g.mode;
-    name = g.name;
-    windowed = g.windowed;
-}
-
-GfxMode::GfxMode(const Common::Point &sz)
-: w(sz.x), h(sz.y)
-{
-    name = GenName(w, h);
-}
-
-GfxMode& GfxMode::operator=(const GfxMode &g)
-{
-    w = g.w;
-    h = g.h;
-    bpp = g.bpp;
-    mode = g.mode;
-    name = g.name;
-    windowed = g.windowed;
-    return *this;
-}
-
-GfxMode::operator bool() const
-{
-    if (w == 0 || h == 0)
-        return false;
-    return true;
-}
-
-bool GfxMode::operator==(const GfxMode &g) const
-{
-    return (w == g.w && h == g.h);
-}
-
-bool GfxMode::operator==(const Common::Point &g) const
-{
-    return (w == g.x && h == g.y);
-}
-
-bool GfxMode::operator!=(const GfxMode &g) const
-{
-    return w != g.w || h != g.h;
-}
-
-bool GfxMode::operator!=(const Common::Point &g) const
-{
-    return w != g.x || h != g.y;
-}
-
-bool GfxMode::SortCompare(const GfxMode &a, const GfxMode &b)
-{
-    if (a.w > b.w)
-        return true;
-    else if (a.w == b.w && a.h > b.h)
-        return true;
-    return false;
-}
-
-std::string GfxMode::GenName(int w, int h)
-{
-    return fmt::sprintf("%d x %d", w, h);
-}
-
-
-
-
-void GFXEngine::AddGfxMode(const GfxMode &md)
-{
-    for (const GfxMode &m : graphicsModes)
-    {
-        if ( m.w == md.w && m.h == md.h )
-            return;
-    }
-
-    graphicsModes.push_back(md);
-}
-
 
 uint32_t GFXEngine::CursPix(uint8_t *data, int ofs, int bpp)
 {
@@ -2662,77 +2564,14 @@ void GFXEngine::Init()
         
         Glext::GLBindBufferBase(GL_UNIFORM_BUFFER, _vboParamsBlockBinding, _vboParams);
     }
-    
-    std::array<Common::Point, 17> checkModes
-    {{
-        {640, 480},     {800, 600},     {1024, 768},    {1280, 1024}, 
-        {1440, 1050},   {1600, 1200},   {720, 480},     {852, 480}, 
-        {1280, 720},    {1366, 768},    {1600, 900},    {1920, 1080}, 
-        {1920, 1200},   {2560, 1080},   {2560, 1440},   {3440, 1440},
-        {3840, 2160}
-     }};
-    
-    graphicsModes.reserve(checkModes.size());
-
-    for(Common::Point m : checkModes)
+    else
     {
-        SDL_DisplayMode target, closest;
-
-        target.w = m.x;
-        target.h = m.y;
-        target.format = _pixfmt->format;
-        target.refresh_rate = 0;
-        target.driverdata   = 0;
-
-        if (SDL_GetClosestDisplayMode(0, &target, &closest) )
-        {
-            GfxMode mode;
-            mode.w = closest.w;
-            mode.h = closest.h;
-            mode.mode = closest;
-            mode.bpp = _pixfmt->BytesPerPixel;
-            mode.name = GfxMode::GenName(mode.w, mode.h);
-
-            AddGfxMode(mode);
-        }
+        // The legacy renderer draws from client-side arrays, and nothing
+        // disables these, so enable them once rather than every frame:
+        // movies are drawn before the first BeginFrame.
+        glEnableClientState(GL_VERTEX_ARRAY);
+        glEnableClientState(GL_COLOR_ARRAY);
     }
-    
-    // Force to add custom resolutions
-    std::vector<std::string> customModes = Stok::Split(System::IniConf::GfxAdditionalModes.Get<std::string>(), ",");
-    for (std::string mod : customModes)
-    {
-        std::vector<std::string> vals = Stok::Split(mod, ":-x \t");
-        if (vals.size() >= 2)
-        {
-            SDL_DisplayMode target, closest;
-            
-            target.w = std::stoi(vals[0]);
-            target.h = std::stoi(vals[1]);
-            target.format = _pixfmt->format;
-            target.refresh_rate = 0;
-            target.driverdata   = 0;
-
-            GfxMode mode;
-            mode.w = target.w;
-            mode.h = target.h;
-            mode.mode = target;
-            mode.bpp = _pixfmt->BytesPerPixel;
-            mode.name = GfxMode::GenName(mode.w, mode.h);
-                
-            if (SDL_GetClosestDisplayMode(0, &target, &closest) )
-            {
-                mode.mode = closest;
-                mode.bpp = SDL_BYTESPERPIXEL(closest.format) * 8;
-                mode.name = GfxMode::GenName(mode.w, mode.h);
-            }
-            
-            AddGfxMode(mode);
-        }
-    }
-    
-    
-
-    std::sort(graphicsModes.begin(), graphicsModes.end(), GfxMode::SortCompare);
     
     cursors[0] = LoadCursor("Pointer");
     cursors[1] = LoadCursor("Cancel");
@@ -2746,9 +2585,7 @@ void GFXEngine::Init()
     cursors[9] = LoadCursor("Beam");
     cursors[10] = LoadCursor("Build");
 
-    IDVList stak { {ATT_WIDTH,  (int32_t)640},
-            {ATT_HEIGHT, (int32_t)480} };
-    ReadIniSettings( stak );
+    ReadIniSettings();
 
     RecreateScreenSurface();
     Gui::Instance.SetScreenSize(GetScreenSize());
@@ -2927,154 +2764,27 @@ void GFXEngine::SetCursor(int curID, int force)
     CurrentCursorID = curID;
 }
 
-GfxMode GFXEngine::sub_41F68C()
+void GFXEngine::SetFullscreen(bool fullscreen)
 {
-    for (const GfxMode &m : graphicsModes)
-    {
-        if (m.w == 640 && m.h == 480)
-            return m;
-    }
-
-    return graphicsModes.front();
+    System::SetFullscreen(fullscreen);
+    UpdateResolution();
 }
 
-
-GfxMode GFXEngine::windd_func0__sub0(const std::string &file)
+bool GFXEngine::UpdateResolution()
 {
-    FSMgr::FileHandle *fil = uaOpenFileAlloc(file, "r");
+    Common::Point res = System::GetResolution();
 
-    if ( fil )
-    {
-        std::string line;
-        if ( fil->ReadLine(&line) )
-        {
-            size_t pos = line.find_first_of("\n\r");
-            
-            if (pos != std::string::npos)
-                line.erase(pos);
-            
-            bool windowed = false;
-            pos = line.find("Windowed");
-            
-            if (pos != std::string::npos && pos >= 1)
-            {
-                windowed = true;
-                line.erase(pos - 1);
-            }           
+    if (res == _resolution || res.x <= 0 || res.y <= 0)
+        return false;
 
-            for (const GfxMode &m : graphicsModes)
-            {
-                if ( StriCmp(m.name, line) == 0 )
-                {
-                    GfxMode tmp = m;
-                    tmp.windowed = windowed;
-                    return tmp;
-                }
-            }
-        }
-        delete fil;
-    }
-
-    return sub_41F68C();
-}
-
-int GFXEngine::GetGfxModeIndex(const Common::Point &res)
-{
-    int i = 0;
-    for (const GfxMode &m : graphicsModes)
-    {
-        if (m == res)
-            return i;
-        ++i;
-    }
-    return -1;
-}
-
-void GFXEngine::SetResolution(const Common::Point &res, bool windowed)
-{
-    if (GfxSelectedMode == res && GfxSelectedMode.windowed == windowed)
-        return;
-    
-    UA_PALETTE *screen_palette = GetPalette();
-
-    UA_PALETTE palette_copy;
-
-    if ( screen_palette )
-        palette_copy = *screen_palette; // Copy palette
-    else
-    {
-        for(auto &x : palette_copy)
-        {
-            x.r = 0;
-            x.g = 0;
-            x.b = 0;
-            x.a = 0;
-        }
-    }
-
-    EndFrame();
-
-    //cls3D->Delete();
-    
-    GfxMode picked;
-    if ( res )
-    {
-        for (const GfxMode &m : graphicsModes)
-        {
-            if ( m.w == res.x && m.h == res.y )
-            {
-                picked = m;
-                picked.windowed = windowed;
-                break;
-            }
-        }
-
-        if ( !picked )
-            picked = sub_41F68C();
-    }
-    else
-    {
-        picked = windd_func0__sub0("env/vid.def");
-    }
-    
-    if (!picked.windowed)
-        System::SetVideoMode(Common::Point(picked.w, picked.h), SDL_WINDOW_FULLSCREEN_DESKTOP, &picked.mode);
-    else
-        System::SetVideoMode(Common::Point(picked.w, picked.h), 0, NULL);
-    
-    SetResVariables(picked);        
+    SetResVariables(res);
     ApplyResolution();
-    
     RecreateScreenSurface();
-    
-    BeginFrame();
-    SetPalette(palette_copy);
-    
-    GfxSelectedMode = picked;
-    
-    FSMgr::FileHandle *fil = uaOpenFileAlloc("env/vid.def", "w");
-    if ( fil )
-    {
-        if (picked.windowed)
-            fil->printf("%s Windowed\n", picked.name.c_str());
-        else
-            fil->printf("%s\n", picked.name.c_str());
-            
-        delete fil;
-    }
-    
     Gui::Instance.SetScreenSize(GetScreenSize());
-    
     UpdateFBOSizes();
+
+    return true;
 }
-
-const std::vector<GfxMode> &GFXEngine::GetAvailableModes()
-{
-    return graphicsModes;
-}
-
-
-
 
 void GFXEngine::SetTracyRmp(ResBitmap *rmp)
 {
@@ -3084,11 +2794,6 @@ void GFXEngine::SetTracyRmp(ResBitmap *rmp)
 void GFXEngine::SetShadeRmp(ResBitmap *rmp)
 {
     setRSTR_shdRmp(rmp);
-}
-
-GfxMode GFXEngine::GetGfxMode()
-{
-    return GfxSelectedMode;
 }
 
 TileMap * GFXEngine::GetTileset(int id)

@@ -1506,12 +1506,18 @@ void UserData::ypaworld_func151__sub7()
 //////////////multiplayer wnd///////////
 netgamelst netgame_wnd;
 
-void CreateNetGameWindow(NC_STACK_ypaworld *yw)
+// Spans the net game window across the screen at two thirds of its height.
+void SetNetGameWindowLayout(NC_STACK_ypaworld *yw)
 {
-    netgame_wnd.flags = 0x138;
     netgame_wnd.x = 0;
     netgame_wnd.y = 2 * yw->_screenSize.y / 3;
     netgame_wnd.w = yw->_screenSize.x - 1;
+    netgame_wnd.field_1D4 = yw->_screenSize.x;
+}
+
+void CreateNetGameWindow(NC_STACK_ypaworld *yw)
+{
+    netgame_wnd.flags = 0x138;
     netgame_wnd.h = 2 * yw->_fontH + 2;
 
     netgame_wnd.buttons.resize(2);
@@ -1522,10 +1528,11 @@ void CreateNetGameWindow(NC_STACK_ypaworld *yw)
 
     netgame_wnd.field_1CC = yw->_guiTiles[0]->map[97].w;
     netgame_wnd.field_1D0 = 2 * yw->_fontH;
-    netgame_wnd.field_1D4 = yw->_screenSize.x;
     netgame_wnd.field_1D8 = netgame_wnd.field_1D0;
     netgame_wnd.field_1DC[0] = 0;
     netgame_wnd.field_21C = 0;
+
+    SetNetGameWindowLayout(yw);
 
     netgame_wnd.cmdCommands.reserve(1024);
 

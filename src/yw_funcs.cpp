@@ -1547,6 +1547,14 @@ int NC_STACK_ypaworld::CreateBriefingTextList()
     return 1;
 }
 
+// Fits the briefing text list to a new screen size.
+void NC_STACK_ypaworld::RelayoutBriefingTextList()
+{
+    GuiWinClose(&stru_5C91D0);
+    stru_5C91D0.Free();
+    CreateBriefingTextList();
+}
+
 bool NC_STACK_ypaworld::InitBriefing(int lvlid)
 {
     _briefScreen.Clear();
@@ -2013,37 +2021,6 @@ void sub_4C41DC(NC_STACK_ypaworld *yw, GuiList *lstvw, CmdStream *out, const std
 
     FontUA::store_u8(out, 125);
     FontUA::next_line(out);
-}
-
-void ypaworld_func158__video_list_draw(NC_STACK_ypaworld *yw, UserData *usr)
-{
-    usr->video_listvw.itemBlock.clear();
-
-    usr->video_listvw.SetRect(yw, -2, -2);
-
-    usr->video_listvw.ItemsPreLayout(yw, &usr->video_listvw.itemBlock, 0, "uvw");
-
-    int index = 0;
-    for (const GFX::GfxMode &nod : GFX::GFXEngine::Instance.GetAvailableModes())
-    {
-        if ( index >= usr->video_listvw.firstShownEntries && index < usr->video_listvw.firstShownEntries + usr->video_listvw.shownEntries)
-        {
-            if ( usr->video_listvw.selectedEntry == index )
-                sub_4C4284(yw, &usr->video_listvw, &usr->video_listvw.itemBlock, nod.name);
-            else
-                sub_4C41DC(yw, &usr->video_listvw, &usr->video_listvw.itemBlock, nod.name);
-        }
-        index++;
-    }
-
-    if ( index >= 4 )
-        index = 4;
-
-    usr->video_listvw.shownEntries = index;
-    usr->video_listvw.ItemsPostLayout(yw, &usr->video_listvw.itemBlock, 0, "xyz");
-    FontUA::set_end(&usr->video_listvw.itemBlock);
-
-    GFX::Engine.ProcessDrawSeq(usr->video_listvw.cmdCommands, &usr->video_listvw.cmdInclude);
 }
 
 void ypaworld_func158__d3d_list_draw(NC_STACK_ypaworld *yw, UserData *usr)
@@ -2699,9 +2676,6 @@ void DrawGameShellControls(NC_STACK_ypaworld *yw, UserData *usr)
     case ENVMODE_SETTINGS:
         usr->video_button->Draw();
 
-        if ( usr->video_listvw.IsOpen() )
-            ypaworld_func158__video_list_draw(yw, usr);
-
         if ( usr->d3d_listvw.IsOpen() )
             ypaworld_func158__d3d_list_draw(yw, usr);
         break;
@@ -2841,10 +2815,6 @@ void UserData::clear()
 
     inputChangedParts = 0;
     video_button = NULL;
-    //GuiList video_listvw;
-    game_default_res = 0;
-    //nlist video_mode_list;
-    _gfxModeIndex = 0;
     //GuiList d3d_listvw;
     win3d_guid.clear();
     win3d_name.clear();

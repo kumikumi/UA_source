@@ -296,12 +296,6 @@ struct TRenderNode
     static bool CompareDistance(TRenderNode *a, TRenderNode *b);
 };
     
-enum
-{
-    DEFAULT_WIDTH = 640,
-    DEFAULT_HEIGHT = 480,
-};
-
 struct TShaderProg
 {
     uint32_t ID = 0;
@@ -427,43 +421,6 @@ struct ScreenFont
     std::list<ScreenText *> entries;
 };
     
-struct GfxMode
-{
-    int w = 0;
-    int h = 0;
-    int bpp = 0;
-    bool windowed = false;
-    SDL_DisplayMode mode = {0};
-    std::string name;
-    
-    GfxMode() {};
-    GfxMode(GfxMode &&g);
-    GfxMode(const GfxMode &g);
-    GfxMode(const Common::Point &sz);
-
-    GfxMode& operator=(const GfxMode &g);    
-    operator bool() const;
-    
-    bool operator==(const GfxMode &g) const;
-    bool operator==(const Common::Point &g) const;
-    bool operator!=(const GfxMode &g) const;
-    bool operator!=(const Common::Point &g) const;
-        
-    GfxMode WithWindowed(bool state) const
-    {
-        GfxMode t = *this;
-        t.windowed = state;
-        return t;
-    }
-    
-    operator Common::Point() const { return Common::Point(w, h); };
-    
-    static bool SortCompare(const GfxMode &a, const GfxMode &b);
-    
-    static std::string GenName(int w, int h);
-    
-};
-
 enum WDD_ATT
 {
     WDD_ATT_CURSOR = 0x80002000,
@@ -538,18 +495,18 @@ public:
     uint8_t *MakeDepthScreenCopy(int *ow, int *oh);
 
     
-    GfxMode windd_func0__sub0(const std::string &file);
-    GfxMode sub_41F68C();
-    
-    int  GetGfxModeIndex(const Common::Point &res);
+    // Fullscreen covers the desktop without changing the display mode, so the
+    // display keeps its resolution and refresh rate.
+    void SetFullscreen(bool fullscreen);
 
-    void SetResolution(const Common::Point &res, bool windowed);
+    // Renders at the window's current size. Returns true if it changed; call
+    // outside BeginFrame/EndFrame.
+    bool UpdateResolution();
+
     void SetTracyRmp(ResBitmap *rmp);
     void SetShadeRmp(ResBitmap *rmp);
 
     void SetCursor(int curID, int force);
-    GfxMode GetGfxMode();
-    const std::vector<GfxMode> &GetAvailableModes();
 
     void SetTileset(TileMap *tileset, int id);
     TileMap * GetTileset(int id);
@@ -586,13 +543,12 @@ private:
     GFXEngine();
     ~GFXEngine();
     
-    void AddGfxMode(const GfxMode &md);
     uint32_t CursPix(uint8_t *data, int ofs, int bpp);
     
     static int EventsWatcher(void *, SDL_Event *event);
 
 public:
-    virtual size_t ReadIniSettings(IDVList &stak);
+    virtual size_t ReadIniSettings();
     virtual size_t raster_func198(const Common::FLine &arg);
     virtual size_t raster_func199(const Common::Line &arg);
     virtual size_t raster_func200(const Common::FLine &arg);
@@ -659,7 +615,7 @@ public:
     
     
     // windd methods
-    size_t ReadIniDisplaySettings(IDVList &stak);
+    size_t ReadIniDisplaySettings();
 
     virtual void setW3D_texFilt(int arg);
 
@@ -745,10 +701,8 @@ public:
     static GFXEngine Instance;
     
 private:
-    std::vector<GfxMode> graphicsModes;
     std::array<SDL_Cursor *, 11> cursors;
     int CurrentCursorID = -1;
-    GfxMode GfxSelectedMode;
     
     SDL_Surface *ScreenSurface = NULL;
     GLuint screenTex = 0;

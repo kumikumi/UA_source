@@ -2440,10 +2440,9 @@ void RoboMapZoom(NC_STACK_ypaworld *yw, int a2)
     }
 }
 
-int CreateBottomBar(NC_STACK_ypaworld *yw)
+// Positions the bottom bar and its button groups along the screen's bottom edge.
+void SetBottomBarLayout(NC_STACK_ypaworld *yw)
 {
-    bzda = bzd();
-
     int v3 = yw->_screenSize.x - 11 * yw->_iconOrderW;
     bzda.field_8FC = v3 / 4;
 
@@ -2458,15 +2457,23 @@ int CreateBottomBar(NC_STACK_ypaworld *yw)
     bzda.field_908 = yw->_iconOrderW + bzda.field_8FC + bzda.field_8FC / 2;
     bzda.field_90C = 2 * yw->_iconOrderW + bzda.field_908 + bzda.field_8FC;
     bzda.field_910 = 5 * yw->_iconOrderW + bzda.field_90C + bzda.field_8FC;
-    bzda.field_914 = 1;
-    bzda.field_918 = 0;
-    bzda.flags = 0;
-    bzda.buttons.resize(11);
 
     bzda.x = 0;
     bzda.y = yw->_screenSize.y - yw->_iconOrderH;
     bzda.w = yw->_screenSize.x;
     bzda.h = yw->_iconOrderH;
+}
+
+int CreateBottomBar(NC_STACK_ypaworld *yw)
+{
+    bzda = bzd();
+
+    SetBottomBarLayout(yw);
+
+    bzda.field_914 = 1;
+    bzda.field_918 = 0;
+    bzda.flags = 0;
+    bzda.buttons.resize(11);
 
     for (int i = 0; i < 11; i++)
         bzda.buttons[i] = ButtonBox();
@@ -2727,6 +2734,37 @@ void CreateConfirmWindow(NC_STACK_ypaworld *yw)
 }
 
 
+// Sizes the HUD's vector graphics relative to the screen.
+void SetHudLayout(NC_STACK_ypaworld *yw)
+{
+    sklt_wis *wis = &yw->_hud;
+
+    float CW, CH;
+    GFX::Engine.getAspectCorrection(CW, CH, false);
+
+    if ( yw->_screenSize.x >= 512 )
+    {
+        wis->field_9E = 8;
+        wis->field_96 = 28;
+        wis->field_92 = (float)yw->_guiTiles[0]->h / ((float)yw->_screenSize.y * CH);
+        wis->field_8E = wis->field_92 * 14.0;
+        wis->field_9A = 28;
+    }
+    else
+    {
+        wis->field_9E = 6;
+        wis->field_96 = 18;
+        wis->field_92 = (float)yw->_guiTiles[0]->h * 1.5 / ((float)yw->_screenSize.y * CH);
+        wis->field_8E = wis->field_92 * 18.0;
+        wis->field_9A = 18;
+    }
+
+    wis->field_72 = 0;
+    wis->field_8A = (float)(yw->_guiTiles[51]->map[1].w * wis->field_9E + wis->field_9A + wis->field_96) / ((float)yw->_screenSize.x * CW);
+
+    wis->field_72 = 1;
+}
+
 void LoadHud(NC_STACK_ypaworld *yw)
 {
     const std::array<std::string, 14> off_51825C
@@ -2763,30 +2801,7 @@ void LoadHud(NC_STACK_ypaworld *yw)
             wis->sklts_intern[i] = wis->sklts[i]->GetSkelet();
     }
 
-    float CW, CH;
-    GFX::Engine.getAspectCorrection(CW, CH, false);
-
-    if ( yw->_screenSize.x >= 512 )
-    {
-        wis->field_9E = 8;
-        wis->field_96 = 28;
-        wis->field_92 = (float)yw->_guiTiles[0]->h / ((float)yw->_screenSize.y * CH);
-        wis->field_8E = wis->field_92 * 14.0;
-        wis->field_9A = 28;
-    }
-    else
-    {
-        wis->field_9E = 6;
-        wis->field_96 = 18;
-        wis->field_92 = (float)yw->_guiTiles[0]->h * 1.5 / ((float)yw->_screenSize.y * CH);
-        wis->field_8E = wis->field_92 * 18.0;
-        wis->field_9A = 18;
-    }
-
-    wis->field_72 = 0;
-    wis->field_8A = (float)(yw->_guiTiles[51]->map[1].w * wis->field_9E + wis->field_9A + wis->field_96) / ((float)yw->_screenSize.x * CW);
-
-    wis->field_72 = 1;
+    SetHudLayout(yw);
 }
 
 void FreeExitMenu(NC_STACK_ypaworld *yw)
@@ -11333,6 +11348,40 @@ void NC_STACK_ypaworld::GUI_Close()
         _mouseCursorHidden = false;
         _guiLoaded = false;
     }
+}
+
+// Keeps a window rectangle on screen, between the energy panel and the bottom bar.
+static void ClampToGuiArea(NC_STACK_ypaworld *yw, int16_t &x, int16_t &y, int16_t &w, int16_t &h, int minW, int minH)
+{
+    int top = yw->_upScreenBorder;
+    int bottom = yw->_screenSize.y - yw->_downScreenBorder;
+
+    int ww = std::max(minW, std::min<int>(w, yw->_screenSize.x));
+    int hh = std::max(minH, std::min<int>(h, bottom - top));
+
+    x = std::max(0, std::min<int>(x, yw->_screenSize.x - ww));
+    y = std::max(top, std::min<int>(y, bottom - hh));
+    w = ww;
+    h = hh;
+}
+
+// Lays the in-game GUI out for a new screen size, keeping the windows' state.
+void NC_STACK_ypaworld::RelayoutGameGui()
+{
+    FreeEnergyPanel();
+    CreateEnergyPanel(this);
+    SetBottomBarLayout(this);
+    SetHudLayout(this);
+    SetNetGameWindowLayout(this);
+
+    // The map keeps a second rectangle for its minimise/maximise toggle.
+    ClampToGuiArea(this, robo_map.x, robo_map.y, robo_map.w, robo_map.h, robo_map.field_210, robo_map.field_212);
+    ClampToGuiArea(this, robo_map.field_208, robo_map.field_20A, robo_map.field_20C, robo_map.field_20E,
+                   robo_map.field_210, robo_map.field_212);
+
+    GuiList *windows[] = {&squadron_manager, &info_log, &exit_menu, &lstvw2, &gui_lstvw};
+    for (GuiList *win : windows)
+        win->SetRect(this, -2, -2);
 }
 
 void NC_STACK_ypaworld::GuiWinToFront(GuiBase *win)

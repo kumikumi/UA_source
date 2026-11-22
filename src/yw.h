@@ -536,12 +536,6 @@ public:
     uint8_t inputChangedParts;
     
     NC_STACK_button *video_button;
-    GuiList video_listvw;
-    int game_default_res;
-
-    GFX::GfxMode _gfxMode;
-    
-    int _gfxModeIndex;
     GuiList d3d_listvw;
     
     std::string win3d_guid;
@@ -701,6 +695,10 @@ public:
     Gui::UABlockMsgBox *_menuMsgBox = NULL;
     
     uint8_t confirmMode;
+    // Kept so the dialog can be shown again after the shell is laid out anew.
+    std::string confirmText1;
+    std::string confirmText2;
+    int confirmSingleButton = 0;
     int _menuMsgBoxCode = 0;
 
     EnvAction envAction;
@@ -793,7 +791,6 @@ public:
     void sub_46D2B4();
     void InputConfCopyToBackup();
     void InputConfigRestoreDefault();
-    void sub_46C5F0();
     void  UpdateSelected3DDevFromList();
     void CloseSaveLoadMenu();
     void ShowAbout();
@@ -1941,7 +1938,16 @@ public:
     virtual bool SaveSettings(UserData *usr, const std::string &fileName, uint32_t sdfMask);
     virtual size_t LoadSettings(const std::string &fileName, const std::string &userName, uint32_t sdfMask, bool updateGameShell, bool playIntro = false);
     virtual bool ReloadInput(size_t id);
-    virtual size_t SetGameShellVideoMode(bool windowed);
+    void SetWindowed(bool windowed);
+
+    // Follows the window size: call once per frame, outside BeginFrame/EndFrame.
+    void UpdateScreenSize();
+    void LoadScreenFonts();
+    bool CreateGameShellControls();
+    void DeleteGameShellControls();
+    void ShowGameShellPage();
+    void RelayoutGameShell();
+    void RelayoutGameGui();
     virtual size_t ReloadLanguage();
     virtual void ypaworld_func176(yw_arg176 *arg);
     virtual void ypaworld_func177(yw_arg177 *arg);
@@ -2086,6 +2092,7 @@ public:
     void FreeBriefing();
     void FreeBriefDataSet();
     int CreateBriefingTextList();
+    void RelayoutBriefingTextList();
     void yw_ActivateWunderstein(cellArea *cell, int a3);
     void yw_InitTechUpgradeBuildings();
     
@@ -2717,13 +2724,6 @@ public:
     std::string _helpURL;
     std::string _helpSavedURL; 
     
-    bool _oneGameRes = false;
-    Common::Point _shellDefaultRes;
-    Common::Point _gameDefaultRes;
-    
-    GFX::GfxMode _gfxMode;
-    Common::Point _shellGfxMode;
-
     float _maxImpulse = 0.0;
     
 

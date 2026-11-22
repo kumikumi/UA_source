@@ -42,8 +42,9 @@ namespace System
     // Draw content of backbuffer
     void Flip();
     
-    void SetVideoMode(const Common::Point &sz, uint32_t full, SDL_DisplayMode *mode);
-    void RestoreWindow();
+    // Fullscreen is borderless over the desktop: the display mode is never changed.
+    void SetFullscreen(bool fullscreen);
+    bool IsFullscreen();
     
     
     void SetReleativeMouse(bool mode);

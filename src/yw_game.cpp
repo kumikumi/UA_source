@@ -209,25 +209,7 @@ int NC_STACK_ypaworld::LevelCommonLoader(TLevelDescription *mapp, int levelID, i
     /* Set hidden fractions to default world's*/
     _hiddenFractions = _worldHiddenFractions;
 
-    if ( _gfxMode != GFX::Engine.GetGfxMode() || _GameShell->IsWindowedFlag() != GFX::Engine.GetGfxMode().windowed )
-    {
-        GFX::Engine.SetResolution(_gfxMode, _GameShell->IsWindowedFlag());
-
-        _screenSize = GFX::Engine.GetScreenSize();
-
-        GFX::Engine.setWDD_cursor( (_preferences & World::PREF_SOFTMOUSE) != 0 );
-
-        if ( _screenSize.x >= 512 )
-        {
-            GFX::Engine.LoadFontByDescr( Locale::Text::Font() );
-            Gui::UA::LoadFont( Locale::Text::Font() );
-        }
-        else
-        {
-            GFX::Engine.LoadFontByDescr( Locale::Text::SmallFont() );
-            Gui::UA::LoadFont( Locale::Text::SmallFont() );
-        }
-    }
+    UpdateScreenSize();
 
     NC_STACK_bitmap *diskScreenImage = loadDisk_screen(this);
 

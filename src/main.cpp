@@ -428,6 +428,8 @@ int ProcessMenuFrame()
 
 int ProcessNextFrame()
 {
+    ypaworld->UpdateScreenSize();
+
     input_states = TInputState();
     Input::Engine.QueryInput(&input_states);
 

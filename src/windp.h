@@ -102,6 +102,7 @@ public:
 extern netgamelst netgame_wnd;
 
 void CreateNetGameWindow(NC_STACK_ypaworld *yw);
+void SetNetGameWindowLayout(NC_STACK_ypaworld *yw);
 void ypaworld_func64__sub7__sub5(NC_STACK_ypaworld *yw, TInputState *inpt);
 
 
