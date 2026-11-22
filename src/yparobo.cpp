@@ -5796,9 +5796,8 @@ void NC_STACK_yparobo::UpdateGateBeamOut()
                 _position = _old_pos;
                 _roboYPos = _old_pos.y;
 
-                // TODO(bug): _GameShell is dereferenced here but only null-checked for the .rst
-                // delete below.
-                if ( !_world->SaveGame( fmt::sprintf("save:%s/%d.fin", _world->_GameShell->UserName, _world->_levelInfo.LevelID) ) )
+                if ( _world->_GameShell
+                        && !_world->SaveGame( fmt::sprintf("save:%s/%d.fin", _world->_GameShell->UserName, _world->_levelInfo.LevelID) ) )
                     ypa_log_out("Warning, final sgm save error\n");
 
                 _position = tt;

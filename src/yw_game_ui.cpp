@@ -9239,17 +9239,10 @@ void yw_RenderHUDTarget(NC_STACK_ypaworld *yw, THudState *wis)
 
     float openProgress = (yw->_timeStamp - wis->switch_time - 350) / 200.0;
 
-    if ( openProgress > 0.0 )
+    if ( openProgress > 0.0 && yw->_userUnit )
     {
-        World::TVhclProto *vhcl;
+        World::TVhclProto *vhcl = &yw->_vhclProtos[ yw->_userUnit->_vehicleID ];
 
-        if ( yw->_userUnit )
-            vhcl = &yw->_vhclProtos[ yw->_userUnit->_vehicleID ];
-        else
-            vhcl = NULL;
-
-        // TODO(bug): vhcl is NULL when there is no user unit, and is dereferenced
-        // right away.
         if ( vhcl->hud_wireframe )
             hud_wure = vhcl->hud_wireframe->GetSkelet();
         else

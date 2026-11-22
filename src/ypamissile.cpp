@@ -223,10 +223,11 @@ bool NC_STACK_ypamissile::TubeCollisionTest()
     {
         if ( i == 0 || pCells[i] != pCells[i - 1] )
         {
-            // TODO(bug): Logs the NULL sector but doesn't skip it, so the loop below still
-            // reads pCells[i]->unitsList. Should continue here.
             if (pCells[i] == NULL)
+            {
                 ypa_log_out("TubeCollisionTest NULL sector i = %d, 621: %f %f 62D: %f %f \n", i, _position.x, _position.z, _old_pos.x, _old_pos.z);
+                continue;
+            }
 
             for ( NC_STACK_ypabact* &bct : pCells[i]->unitsList )
             {

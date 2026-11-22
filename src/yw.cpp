@@ -1876,6 +1876,9 @@ void NC_STACK_ypaworld::FindUnitOnRay(TUnitRayQuery *arg)
 
     arg->distance = arg->vect.length();
 
+    if ( arg->distance <= 0.0 )
+        return;
+
     int stepX, stepZ, remaining;
 
     if ( absDx != 0.0 || absDz != 0.0 )
@@ -1916,7 +1919,6 @@ void NC_STACK_ypaworld::FindUnitOnRay(TUnitRayQuery *arg)
         stepX = 0;
     }
 
-    // TODO(bug): No check for a zero-length ray.
     vec3d dir = arg->vect / arg->distance;
 
     while ( remaining >= 0 )

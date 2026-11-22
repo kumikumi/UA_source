@@ -298,19 +298,21 @@ void GFXEngine::DrawTextEntry(const ScreenText *txt)
                     else
                     {
                         SDL_FreeSurface(tmp);
-                        // TODO(bug): tmp isn't checked again after this second render, so if it fails
-                        // tmp->w below dereferences NULL.
                         tmp = TTF_RenderUTF8_Blended(_font.ttfFont, txt->string.c_str(), clr);
-                        SDL_SetSurfaceBlendMode(tmp, SDL_BLENDMODE_BLEND);
+                        if (tmp)
+                            SDL_SetSurfaceBlendMode(tmp, SDL_BLENDMODE_BLEND);
                     }
 
-                    want.w = tmp->w;
-                    want.h = tmp->h;
-                    want.x = p1 + 1;
-                    want.y = textY;
+                    if (tmp)
+                    {
+                        want.w = tmp->w;
+                        want.h = tmp->h;
+                        want.x = p1 + 1;
+                        want.y = textY;
 
-                    SDL_BlitSurface(tmp, NULL, Screen(), &want);
-                    SDL_FreeSurface(tmp);
+                        SDL_BlitSurface(tmp, NULL, Screen(), &want);
+                        SDL_FreeSurface(tmp);
+                    }
 
 
                     SDL_SetClipRect(Screen(), NULL);

@@ -2095,10 +2095,7 @@ void NC_STACK_ypaworld::PlaceBuilding(const Common::Point &cellId, int ownerid2,
                         stateMsg.unsetFlags = 0;
                         stateMsg.setFlags = 0;
 
-                        // TODO(bug): gunn is NULL when the building's gun proto is not an ypagun (see the
-                        // check above), but it is used here without a check and passed to
-                        // AddSubject below.
-                        gunn->SetStateInternal(&stateMsg);
+                        gun_obj->SetStateInternal(&stateMsg);
 
                         gun_obj->_scale_time = 500;
                         gun_obj->_scale = vec3d(1.0, 1.0, 1.0);
@@ -2118,13 +2115,13 @@ void NC_STACK_ypaworld::PlaceBuilding(const Common::Point &cellId, int ownerid2,
 
                         if ( commander )
                         {
-                            commander->AddSubject(gunn);
+                            commander->AddSubject(gun_obj);
                         }
                         else
                         {
                             commander = gunn;
 
-                            robo->AddSubject(gunn);
+                            robo->AddSubject(gun_obj);
                         }
                     }
                 }
