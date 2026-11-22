@@ -1506,7 +1506,7 @@ void UserData::ypaworld_func151__sub7()
 //////////////multiplayer wnd///////////
 netgamelst netgame_wnd;
 
-void sb_0x451034__sub6(NC_STACK_ypaworld *yw)
+void CreateNetGameWindow(NC_STACK_ypaworld *yw)
 {
     netgame_wnd.flags = 0x138;
     netgame_wnd.x = 0;

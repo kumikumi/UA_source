@@ -415,7 +415,7 @@ int GFXEngine::LoadFontByDescr(const std::string &fontname)
 }
 
 
-size_t GFXEngine::windd_func0(IDVList &stak)
+size_t GFXEngine::ReadIniDisplaySettings(IDVList &stak)
 {
     int txt16bit_def = read_yes_no_status("env/txt16bit.def", 1);
     int drawprim_def = read_yes_no_status("env/drawprim.def", 0);
@@ -501,11 +501,11 @@ bool GFXEngine::SetResVariables(Common::Point res)
     return true;
 }
 
-size_t GFXEngine::func0(IDVList &stak)
+size_t GFXEngine::ReadIniSettings(IDVList &stak)
 {
     System::IniConf::ReadFromNucleusIni();
 
-    if ( !windd_func0(stak) )
+    if ( !ReadIniDisplaySettings(stak) )
         return 0;
 
     _dither = System::IniConf::GfxDither.Get<bool>();
@@ -2748,7 +2748,7 @@ void GFXEngine::Init()
 
     IDVList stak { {ATT_WIDTH,  (int32_t)640},
             {ATT_HEIGHT, (int32_t)480} };
-    func0( stak );
+    ReadIniSettings( stak );
 
     RecreateScreenSurface();
     Gui::Instance.SetScreenSize(GetScreenSize());

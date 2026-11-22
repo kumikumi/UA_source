@@ -1186,13 +1186,13 @@ void NC_STACK_ypaworld::ypaworld_func138(void *arg)
 }
 
 
-void NC_STACK_ypaworld::ypaworld_func139(GuiBase *lstvw)
+void NC_STACK_ypaworld::GuiWinAttach(GuiBase *lstvw)
 {
     if ( !(lstvw->flags & GuiBase::FLAG_WITH_ICON) )
         lstvw->flags &= ~GuiBase::FLAG_ICONIFED;
 
     if ( lstvw->flags & GuiBase::FLAG_IN_LIST )
-        ypaworld_func140(lstvw);
+        GuiWinDetach(lstvw);
 
     lstvw->Attach(_guiActive);
 
@@ -1210,7 +1210,7 @@ void NC_STACK_ypaworld::ypaworld_func139(GuiBase *lstvw)
 }
 
 
-void NC_STACK_ypaworld::ypaworld_func140(GuiBase *lstvw)
+void NC_STACK_ypaworld::GuiWinDetach(GuiBase *lstvw)
 {
     if ( lstvw->flags & GuiBase::FLAG_IN_LIST )
     {
@@ -5547,7 +5547,7 @@ size_t NC_STACK_ypaworld::ypaworld_func161(yw_arg161 *arg)
                             
                             PrepareAllFillers();
 
-                            if ( sb_0x451034(this) )
+                            if ( GUI_Open(this) )
                                 ok = 1;
                         }
                     }
@@ -6103,7 +6103,7 @@ size_t NC_STACK_ypaworld::LoadGame(const std::string &saveFile)
     
     PrepareAllFillers();
 
-    if ( !sb_0x451034(this) )
+    if ( !GUI_Open(this) )
         return 0;
 
     return 1;

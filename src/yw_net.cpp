@@ -3647,7 +3647,7 @@ size_t NC_STACK_ypaworld::ypaworld_func179(yw_arg161 *arg)
                             
                             PrepareAllFillers();
 
-                            if ( sb_0x451034(this) )
+                            if ( GUI_Open(this) )
                                 loadOK = true;
                         }
                     }

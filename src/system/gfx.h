@@ -592,7 +592,7 @@ private:
     static int EventsWatcher(void *, SDL_Event *event);
 
 public:
-    virtual size_t func0(IDVList &stak);
+    virtual size_t ReadIniSettings(IDVList &stak);
     virtual size_t raster_func198(const Common::FLine &arg);
     virtual size_t raster_func199(const Common::Line &arg);
     virtual size_t raster_func200(const Common::FLine &arg);
@@ -659,7 +659,7 @@ public:
     
     
     // windd methods
-    size_t windd_func0(IDVList &stak);
+    size_t ReadIniDisplaySettings(IDVList &stak);
 
     virtual void setW3D_texFilt(int arg);
 

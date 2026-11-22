@@ -757,14 +757,14 @@ public:
 
     void sb_0x46ca74();
     void sb_0x46cdf8();
-    void sb_0x46aa8c();
+    void ApplyOptions();
     void ShowSaveLoadMenu();
     void ShowInputSettings();
     void ShowLanguageMenu();
     void yw_returnToTitle();
     void InputPageCancel();
     void InputConfCancel();
-    void sub_46A3C0();
+    void CancelOptions();
     void sub_46C914();
     void sub_46C748();
     void sub_46B0E0();
@@ -1900,8 +1900,8 @@ public:
     virtual void ypaworld_func136(ypaworld_arg136 *arg);
     virtual void ypaworld_func137(ypaworld_arg137 *arg);
     virtual void ypaworld_func138(void *arg);
-    virtual void ypaworld_func139(GuiBase *lstvw);
-    virtual void ypaworld_func140(GuiBase *lstvw);
+    virtual void GuiWinAttach(GuiBase *lstvw);
+    virtual void GuiWinDetach(GuiBase *lstvw);
     virtual void ypaworld_func143(void *arg);
     virtual void ypaworld_func144(NC_STACK_ypabact *bacto);
     virtual size_t ypaworld_func145(NC_STACK_ypabact *bact);

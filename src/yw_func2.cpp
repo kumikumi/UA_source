@@ -912,7 +912,7 @@ void NC_STACK_ypaworld::SetFarView(bool farvw)
 }
 
 //Options OK
-void UserData::sb_0x46aa8c()
+void UserData::ApplyOptions()
 {
     NC_STACK_ypaworld *yw = p_YW;
 
@@ -1815,8 +1815,7 @@ void UserData::sub_46C5F0()
     }
 }
 
-//Options Cancel
-void UserData::sub_46A3C0()
+void UserData::CancelOptions()
 {
     _settingsChangeOptions = 0;
     EnvMode = ENVMODE_TITLE;
@@ -2346,7 +2345,7 @@ void UserData::GameShellUiHandleInput()
                 sub_46D960();
                 break;
             case 5:
-                sb_0x46aa8c();
+                ApplyOptions();
                 break;
             case 6:
                 sb_0x46cdf8();
@@ -2397,7 +2396,7 @@ void UserData::GameShellUiHandleInput()
                 sub_46D960();
                 break;
             case 5:
-                sb_0x46aa8c();
+                ApplyOptions();
                 break;
             case 6:
                 sb_0x46cdf8();
@@ -2769,7 +2768,7 @@ void UserData::GameShellUiHandleInput()
                 }
                 else
                 {
-                    sb_0x46aa8c();
+                    ApplyOptions();
                 }
             }
 
@@ -2792,7 +2791,7 @@ void UserData::GameShellUiHandleInput()
         }
         else if ( Input->KbdLastHit == Input::KC_ESCAPE )
         {
-            sub_46A3C0();
+            CancelOptions();
             EnvMode = ENVMODE_TITLE;
         }
         if ( Input->HotKeyID == 43 )
@@ -2884,12 +2883,12 @@ void UserData::GameShellUiHandleInput()
             }
             else
             {
-                sb_0x46aa8c();
+                ApplyOptions();
             }
         }
         else if ( r.code == 1125 ) // Options CANCEL
         {
-            sub_46A3C0();
+            CancelOptions();
         }
         else if ( r.code == 1126 )
         {

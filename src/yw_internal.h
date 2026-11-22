@@ -91,7 +91,7 @@ void sb_0x44ac24(NC_STACK_ypaworld *yw);
 
 
 
-int sb_0x451034(NC_STACK_ypaworld *yw);
+int GUI_Open(NC_STACK_ypaworld *yw);
 void splashScreen_OutText(NC_STACK_ypaworld *yw, const std::string &txt, int x, int y);
 
 

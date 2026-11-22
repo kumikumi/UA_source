@@ -176,7 +176,7 @@ void create_squad_man(NC_STACK_ypaworld *yw)
 
 
 
-void sub_4C3A54(NC_STACK_ypaworld *yw)
+void UpdateBottomBarModes(NC_STACK_ypaworld *yw)
 {
     if ( yw->_userUnit )
     {
@@ -219,7 +219,7 @@ void sub_4C3A54(NC_STACK_ypaworld *yw)
         bzda.field_1D0 = bzda.field_1CC & 1;
 }
 
-void sb_0x451034__sub8(NC_STACK_ypaworld *yw)
+void CreateEnergyPanel(NC_STACK_ypaworld *yw)
 {
     up_panel = energPanel();
 
@@ -2280,7 +2280,7 @@ void MapRoboUpdateMapInt(NC_STACK_ypaworld *yw)
     sb_0x4f6650(yw, &robo_map.t1_cmdbuf_3, v15, v14);
 }
 
-void  sb_0x451034__sub2(NC_STACK_ypaworld *yw)
+void  CreateRoboMap(NC_STACK_ypaworld *yw)
 {
     robo_map.t1_cmdbuf_1.reserve(256);
     robo_map.t1_cmdbuf_2.reserve(256);
@@ -2377,7 +2377,7 @@ void  sb_0x451034__sub2(NC_STACK_ypaworld *yw)
 }
 
 
-void sub_4C32A8(NC_STACK_ypaworld *yw, TMFWinStatus *status)
+void ValidateWinStatus(NC_STACK_ypaworld *yw, TMFWinStatus *status)
 {
     if ( status->Valid )
     {
@@ -2398,7 +2398,7 @@ void sub_4C32A8(NC_STACK_ypaworld *yw, TMFWinStatus *status)
     }
 }
 
-void sub_4C1970(NC_STACK_ypaworld *yw, int a2)
+void RoboMapZoom(NC_STACK_ypaworld *yw, int a2)
 {
     if ( a2 == 1 )
         robo_map.field_1EE++;
@@ -2440,7 +2440,7 @@ void sub_4C1970(NC_STACK_ypaworld *yw, int a2)
     }
 }
 
-int sb_0x451034__sub3(NC_STACK_ypaworld *yw)
+int CreateBottomBar(NC_STACK_ypaworld *yw)
 {
     bzda = bzd();
 
@@ -2474,7 +2474,7 @@ int sb_0x451034__sub3(NC_STACK_ypaworld *yw)
     bzda.cmdCommands.reserve(1088); 
     bzda.field_1D8 = 0;
 
-    sub_4C3A54(yw);
+    UpdateBottomBarModes(yw);
 
     bzda.field_8EC = 0;
     bzda.field_8F0 = 0;
@@ -2509,7 +2509,7 @@ int sb_0x451034__sub3(NC_STACK_ypaworld *yw)
         return 0;
 
 
-    sub_4C32A8(yw, &yw->_roboMapStatus);
+    ValidateWinStatus(yw, &yw->_roboMapStatus);
     if ( yw->_roboFinderStatus.Valid )
     {
         if ( yw->_roboFinderStatus.Rect.y < yw->_upScreenBorder
@@ -2520,7 +2520,7 @@ int sb_0x451034__sub3(NC_STACK_ypaworld *yw)
         }
     }
 
-    sub_4C32A8(yw, &yw->_vhclMapStatus);
+    ValidateWinStatus(yw, &yw->_vhclMapStatus);
     if ( yw->_vhclFinderStatus.Valid )
     {
         if ( yw->_vhclFinderStatus.Rect.y < yw->_upScreenBorder
@@ -2559,7 +2559,7 @@ int sb_0x451034__sub3(NC_STACK_ypaworld *yw)
         robo_map.field_20C = yw->_roboMapStatus.Data[5];
         robo_map.field_20E = yw->_roboMapStatus.Data[6];
 
-        sub_4C1970(yw, 0);
+        RoboMapZoom(yw, 0);
     }
 
 
@@ -2682,7 +2682,7 @@ void create_exit_menu(NC_STACK_ypaworld *yw)
 }
 
 
-void sb_0x451034__sub5(NC_STACK_ypaworld *yw)
+void CreateConfirmWindow(NC_STACK_ypaworld *yw)
 {
     int v2 = yw->_guiTiles[0]->GetWidth("WWWWWWW") * 3.5 + 16;
 
@@ -2727,7 +2727,7 @@ void sb_0x451034__sub5(NC_STACK_ypaworld *yw)
 }
 
 
-void sb_0x451034__sub9(NC_STACK_ypaworld *yw)
+void LoadHud(NC_STACK_ypaworld *yw)
 {
     const std::array<std::string, 14> off_51825C
     {
@@ -2789,22 +2789,22 @@ void sb_0x451034__sub9(NC_STACK_ypaworld *yw)
     wis->field_72 = 1;
 }
 
-void sub_4DA874(NC_STACK_ypaworld *yw)
+void FreeExitMenu(NC_STACK_ypaworld *yw)
 {
     exit_menu.Free();
 }
 
-void sub_46E16C(NC_STACK_ypaworld *yw)
+void FreeInfoLog(NC_STACK_ypaworld *yw)
 {
     info_log.Free();
 }
 
-void sub_4C706C(NC_STACK_ypaworld *yw)
+void FreeSquadManager(NC_STACK_ypaworld *yw)
 {
     squadron_manager.Free();
 }
 
-void sub_4C39A4(NC_STACK_ypaworld *yw)
+void FreeBottomBar(NC_STACK_ypaworld *yw)
 {
     yw->GuiWinClose( &gui_lstvw );
 
@@ -2817,12 +2817,12 @@ void sub_4C39A4(NC_STACK_ypaworld *yw)
     gui_lstvw.Free();
 }
 
-void sub_4E1D24()
+void FreeEnergyPanel()
 {
     Input::Engine.RemClickBox(&up_panel);
 }
 
-void sub_4E2B24(NC_STACK_ypaworld *yw)
+void FreeHud(NC_STACK_ypaworld *yw)
 {
     for (int i = 0; i < 14; i++)
     {
@@ -2835,7 +2835,7 @@ void sub_4E2B24(NC_STACK_ypaworld *yw)
     }
 }
 
-void sub_4C8524(NC_STACK_ypaworld *yw)
+void FreeConfirmWindow(NC_STACK_ypaworld *yw)
 {
     lstvw2.Free();
 }
@@ -2845,7 +2845,7 @@ void NC_STACK_ypaworld::FFeedback_StopAll()
     Input::Engine.ForceFeedback(Input::FF_STATE_STOP, Input::FF_TYPE_ALL);
 }
 
-int sb_0x451034(NC_STACK_ypaworld *yw)
+int GUI_Open(NC_STACK_ypaworld *yw)
 {
     if ( yw->_guiLoaded )
         return yw->_guiLoaded;
@@ -2857,34 +2857,34 @@ int sb_0x451034(NC_STACK_ypaworld *yw)
     yw->_prevMousePos = Common::Point();
     yw->_bactPrevClicked = NULL;
 
-    sb_0x451034__sub9(yw);
-    sb_0x451034__sub8(yw);
-    sb_0x451034__sub2(yw);
+    LoadHud(yw);
+    CreateEnergyPanel(yw);
+    CreateRoboMap(yw);
     create_squad_man(yw);
     create_info_log(yw);
     create_exit_menu(yw);
-    sb_0x451034__sub5(yw);
-    sb_0x451034__sub6(yw);
+    CreateConfirmWindow(yw);
+    CreateNetGameWindow(yw);
 
-    yw->ypaworld_func139(&robo_map);
-    yw->ypaworld_func139(&squadron_manager);
-    yw->ypaworld_func139(&info_log);
-    yw->ypaworld_func139(&exit_menu);
-    yw->ypaworld_func139(&lstvw2);
-    yw->ypaworld_func139(&netgame_wnd);
+    yw->GuiWinAttach(&robo_map);
+    yw->GuiWinAttach(&squadron_manager);
+    yw->GuiWinAttach(&info_log);
+    yw->GuiWinAttach(&exit_menu);
+    yw->GuiWinAttach(&lstvw2);
+    yw->GuiWinAttach(&netgame_wnd);
 
-    if ( !sb_0x451034__sub3(yw) )
+    if ( !CreateBottomBar(yw) )
     {
-        yw->ypaworld_func140(&lstvw2);
-        yw->ypaworld_func140(&exit_menu);
-        yw->ypaworld_func140(&info_log);
-        yw->ypaworld_func140(&squadron_manager);
-        yw->ypaworld_func140(&robo_map);
-        yw->ypaworld_func140(&netgame_wnd);
+        yw->GuiWinDetach(&lstvw2);
+        yw->GuiWinDetach(&exit_menu);
+        yw->GuiWinDetach(&info_log);
+        yw->GuiWinDetach(&squadron_manager);
+        yw->GuiWinDetach(&robo_map);
+        yw->GuiWinDetach(&netgame_wnd);
 
-        sub_4DA874(yw);
-        sub_46E16C(yw);
-        sub_4C706C(yw);
+        FreeExitMenu(yw);
+        FreeInfoLog(yw);
+        FreeSquadManager(yw);
         return 0;
     }
 
@@ -3520,7 +3520,7 @@ void ypaworld_func64__sub7__sub2__sub1__sub0(NC_STACK_ypaworld *yw, CmdStream *c
 
 void ypaworld_func64__sub7__sub2__sub1(NC_STACK_ypaworld *yw)
 {
-    sub_4C3A54(yw);
+    UpdateBottomBarModes(yw);
 
     bzda.cmdCommands.clear();
 
@@ -3969,7 +3969,7 @@ NC_STACK_ypabact * NC_STACK_ypaworld::GetNextSquad() const
     return GetNextCmdrByCmdId(_vehicleTakenCommandId);
 }
 
-void ypaworld_func64__sub7__sub2__sub2(NC_STACK_ypaworld *yw)
+void StoreWinStatus(NC_STACK_ypaworld *yw)
 {
     if ( yw->_userUnit->_status != BACT_STATUS_DEAD )
     {
@@ -4292,7 +4292,7 @@ void  ypaworld_func64__sub7__sub2(NC_STACK_ypaworld *yw, TInputState *inpt)
             robo_map.field_1E8 |= 8;
         }
 
-        ypaworld_func64__sub7__sub2__sub2(yw);
+        StoreWinStatus(yw);
 
         if ( winpt->selected_btn == &bzda )
         {
@@ -6117,7 +6117,7 @@ void  RoboMap_InputHandle(NC_STACK_ypaworld *yw, TInputState *inpt)
                     else
                         robo_map.field_1EC |= 1;
 
-                    sub_4C1970(yw, 0);
+                    RoboMapZoom(yw, 0);
                     break;
 
                 case 4:
@@ -6126,7 +6126,7 @@ void  RoboMap_InputHandle(NC_STACK_ypaworld *yw, TInputState *inpt)
                     else
                         robo_map.field_1EC |= 2;
 
-                    sub_4C1970(yw, 0);
+                    RoboMapZoom(yw, 0);
                     break;
 
                 case 5:
@@ -6135,7 +6135,7 @@ void  RoboMap_InputHandle(NC_STACK_ypaworld *yw, TInputState *inpt)
                     else
                         robo_map.field_1EC |= 4;
 
-                    sub_4C1970(yw, 0);
+                    RoboMapZoom(yw, 0);
                     break;
 
                 case 6:
@@ -6227,7 +6227,7 @@ void  RoboMap_InputHandle(NC_STACK_ypaworld *yw, TInputState *inpt)
                     robo_map.field_1E8 |= 0x40;
 
                 if ( winpt->flag & TClickBoxInf::FLAG_BTN_UP )
-                    sub_4C1970(yw, 1);
+                    RoboMapZoom(yw, 1);
 
                 break;
 
@@ -6236,7 +6236,7 @@ void  RoboMap_InputHandle(NC_STACK_ypaworld *yw, TInputState *inpt)
                     robo_map.field_1E8 |= 0x80;
 
                 if ( winpt->flag & TClickBoxInf::FLAG_BTN_UP )
-                    sub_4C1970(yw, 2);
+                    RoboMapZoom(yw, 2);
 
                 break;
 
@@ -9843,7 +9843,7 @@ void ypaworld_func2__sub0__sub1(NC_STACK_ypaworld *yw, NC_STACK_ypabact *bact1, 
             robo_map.field_20C = yw->_roboMapStatus.Data[5];
             robo_map.field_20E = yw->_roboMapStatus.Data[6];
 
-            sub_4C1970(yw, 0);
+            RoboMapZoom(yw, 0);
         }
 
         if ( yw->_roboFinderStatus.Valid )
@@ -9888,7 +9888,7 @@ void ypaworld_func2__sub0__sub1(NC_STACK_ypaworld *yw, NC_STACK_ypabact *bact1, 
             robo_map.field_20C = yw->_vhclMapStatus.Data[5];
             robo_map.field_20E = yw->_vhclMapStatus.Data[6];
 
-            sub_4C1970(yw, 0);
+            RoboMapZoom(yw, 0);
         }
 
         if ( yw->_vhclFinderStatus.Valid )
@@ -11313,20 +11313,20 @@ void NC_STACK_ypaworld::GUI_Close()
 {
     if ( _guiLoaded )
     {
-        ypaworld_func140(&lstvw2);
-        ypaworld_func140(&exit_menu);
-        ypaworld_func140(&info_log);
-        ypaworld_func140(&squadron_manager);
-        ypaworld_func140(&robo_map);
-        ypaworld_func140(&netgame_wnd);
+        GuiWinDetach(&lstvw2);
+        GuiWinDetach(&exit_menu);
+        GuiWinDetach(&info_log);
+        GuiWinDetach(&squadron_manager);
+        GuiWinDetach(&robo_map);
+        GuiWinDetach(&netgame_wnd);
 
-        sub_4DA874(this);
-        sub_46E16C(this);
-        sub_4C706C(this);
-        sub_4C39A4(this);
-        sub_4E1D24();
-        sub_4E2B24(this);
-        sub_4C8524(this);
+        FreeExitMenu(this);
+        FreeInfoLog(this);
+        FreeSquadManager(this);
+        FreeBottomBar(this);
+        FreeEnergyPanel();
+        FreeHud(this);
+        FreeConfirmWindow(this);
 
         FFeedback_StopAll();
 
