@@ -605,7 +605,7 @@ void NC_STACK_ypabact::Update(update_msg *arg)
     NC_STACK_ypabact *roboHost = _world->getYW_userHostStation();
 
     if ( _pSector->PurposeType == cellArea::PT_GATEOPENED && _bact_type == BACT_TYPES_ROBO && this == roboHost )
-        ((NC_STACK_yparobo *)roboHost)->ypabact_func65__sub0();
+        ((NC_STACK_yparobo *)roboHost)->UpdateGateBeamOut();
 
     if ( !(_status_flg & BACT_STFLAG_DEATH1) && _energy <= 0 && _bact_type != BACT_TYPES_MISSLE )
     {
@@ -1041,7 +1041,7 @@ void NC_STACK_ypabact::AI_layer1(update_msg *arg)
         {
             v36.priority = _primT_cmdID;
 
-            if ( _host_station->yparobo_func132(&v36) )
+            if ( _host_station->GetTargetByCommandID(&v36) )
             {
                 v36.priority = 0;
             }

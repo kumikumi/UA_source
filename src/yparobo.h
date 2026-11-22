@@ -81,11 +81,11 @@ public:
     virtual void HandBrake(update_msg *);
     virtual void CorrectPositionOnLand();
     virtual void DeadTimeUpdate(update_msg *arg);
-    virtual void yparobo_func128(robo_arg128 *arg);
+    virtual void FindMatchingCommander(robo_arg128 *arg);
     virtual void yparobo_func129(IDVPair *arg);
     virtual void yparobo_func130(IDVPair *arg);
     virtual void yparobo_func131(IDVPair *arg);
-    virtual size_t yparobo_func132(setTarget_msg *arg);
+    virtual size_t GetTargetByCommandID(setTarget_msg *arg);
     virtual bool MakeSquad(const std::vector<int> &VhclIDS, vec3d pos, bool usable);
     virtual int placeMessage(robo_arg134 *arg);
 
@@ -219,7 +219,7 @@ public:
     virtual int getROBO_lossFlags();
     virtual int getROBO_absReload();
     
-    void ypabact_func65__sub0();
+    void UpdateGateBeamOut();
     
     bool IsPlayerRobo() const;
     
@@ -230,7 +230,7 @@ protected:
 
     void checkCommander();
     void InitForce(NC_STACK_ypabact *unit);
-    void sub_4A9F24(NC_STACK_ypabact *unit);
+    void DispatchDockedForce(NC_STACK_ypabact *unit);
 
     NC_STACK_ypabact *AllocForce(robo_loct1 *arg);
 
@@ -277,28 +277,28 @@ protected:
     int CountOwnRadarSectors();
     int CountOwnedSectors();
     int CountUnseenSectors();
-    int sub_4F4E48(const Common::Point &cellId);
-    float sub_4F4C6C(NC_STACK_ypabact *bctnd);
+    int RateAreaControl(const Common::Point &cellId);
+    float RateEnemyTarget(NC_STACK_ypabact *bctnd);
     
-    int yparobo_func134__sub1(robo_arg134 *arg);
+    int ShouldPlaceMessage(robo_arg134 *arg);
     
-    void sub_4A4538(NC_STACK_ypabact *bact);
-    void sub_4A448C(NC_STACK_ypabact *bact);
+    void ClearSquadSecondaryTargets(NC_STACK_ypabact *bact);
+    void CopyWaypointsToSquad(NC_STACK_ypabact *bact);
     
-    int sb_0x4a45cc__sub0(NC_STACK_ypabact *bact);
-    void sb_0x4a7010__sub1__sub0(NC_STACK_ypabact *unit1, NC_STACK_ypabact *unit2);
-    void sb_0x4a7010__sub1(NC_STACK_ypabact *unit, robo_t1 *rbt);
-    int sub_4A5A08(NC_STACK_ypabact *bact, float a2, float a3);
-    int sub_4A58C0(NC_STACK_ypabact *bact, NC_STACK_ypabact *bact2);
+    int IsCommanderClosestToTarget(NC_STACK_ypabact *bact);
+    void SendSquadAgainstEnemyRobo(NC_STACK_ypabact *unit1, NC_STACK_ypabact *unit2);
+    void UpdateRoboAttackSquad(NC_STACK_ypabact *unit, robo_t1 *rbt);
+    int SendSquadToPosition(NC_STACK_ypabact *bact, float a2, float a3);
+    int SendSquadToUnit(NC_STACK_ypabact *bact, NC_STACK_ypabact *bact2);
     
-    void sub_4A1270(const vec3d &vaxis, float angle);
-    void sub_4A1014(float angle);
-    void sub_4A10E8(float angle);
+    void RotateGunsAroundAxis(const vec3d &vaxis, float angle);
+    void TurnRoboAboutOwnUpAxis(float angle);
+    void TurnRoboAboutWorldUpAxis(float angle);
     
     cellArea * yparobo_func0__sub0();
-    void sub_4F4FF4(int a2, setTarget_msg *parg67);
+    void GetBuildSiteApproachTarget(int a2, setTarget_msg *parg67);
     
-    void yparobo_func71__sub0(update_msg *arg);
+    void UpdateViewerLookAngles(update_msg *arg);
     int FindBestBldPowerStation();
     int FindBestBldDefenceCenter();
     int FindBestBldRadar();
