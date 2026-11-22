@@ -780,7 +780,7 @@ void NC_STACK_ypaworld::yw_ActivateWunderstein(cellArea *cell, int gemid)
     cell->PurposeType = cellArea::PT_TECHDEACTIVE;
 }
 
-void sub_44FD6C(NC_STACK_ypaworld *yw, const cellArea &cell, int bldX, int bldY)
+void SpawnBuildingExplosions(NC_STACK_ypaworld *yw, const cellArea &cell, int bldX, int bldY)
 {
     Common::Point dist = yw->_viewerBact->_cellId.AbsDistance( cell.CellId );
   
@@ -806,7 +806,7 @@ void sub_44FD6C(NC_STACK_ypaworld *yw, const cellArea &cell, int bldX, int bldY)
             arg146.vehicle_id = fx.ObjectID;
             arg146.pos = fx.Position + ttt;
 
-            NC_STACK_ypabact *boom = yw->ypaworld_func146(&arg146);
+            NC_STACK_ypabact *boom = yw->CreateVehicle(&arg146);
 
             if ( boom )
             {
@@ -818,7 +818,7 @@ void sub_44FD6C(NC_STACK_ypaworld *yw, const cellArea &cell, int bldX, int bldY)
                 arg78.unsetFlags = 0;
                 boom->SetState(&arg78);
 
-                yw->ypaworld_func134(boom);
+                yw->AddToUnitsList(boom);
 
                 bact_arg83 arg83;
                 arg83.pos = arg146.pos;
@@ -928,7 +928,7 @@ void NC_STACK_ypaworld::ypaworld_func129(yw_arg129 *arg)
             {
                 while ( v18 > v36 )
                 {
-                    sub_44FD6C(this, cell, bldX, bldY);
+                    SpawnBuildingExplosions(this, cell, bldX, bldY);
 
                     v18--;
                 }
@@ -937,7 +937,7 @@ void NC_STACK_ypaworld::ypaworld_func129(yw_arg129 *arg)
             {
                 while ( v18 < v36 )
                 {
-                    sub_44FD6C(this, cell, bldX, bldY);
+                    SpawnBuildingExplosions(this, cell, bldX, bldY);
 
                     v18++;
                 }
@@ -1018,7 +1018,7 @@ void NC_STACK_ypaworld::ypaworld_func133(void *arg)
 }
 
 
-void NC_STACK_ypaworld::ypaworld_func134(NC_STACK_ypabact *bact)
+void NC_STACK_ypaworld::AddToUnitsList(NC_STACK_ypabact *bact)
 {
     newMaster_msg arg73;
 
@@ -1224,7 +1224,7 @@ void NC_STACK_ypaworld::ypaworld_func143(void *arg)
 }
 
 
-void NC_STACK_ypaworld::ypaworld_func144(NC_STACK_ypabact *bacto)
+void NC_STACK_ypaworld::MoveToDeadCache(NC_STACK_ypabact *bacto)
 {
     if ( bacto->_bact_type == BACT_TYPES_MISSLE )
     {
@@ -1252,7 +1252,7 @@ void NC_STACK_ypaworld::ypaworld_func144(NC_STACK_ypabact *bacto)
 }
 
 
-size_t NC_STACK_ypaworld::ypaworld_func145(NC_STACK_ypabact *bact)
+size_t NC_STACK_ypaworld::IsNearViewer(NC_STACK_ypabact *bact)
 {
     if ( _viewerBact )
     {
@@ -1297,7 +1297,7 @@ size_t NC_STACK_ypaworld::ypaworld_func145(NC_STACK_ypabact *bact)
 }
 
 
-NC_STACK_ypabact * NC_STACK_ypaworld::ypaworld_func146(ypaworld_arg146 *vhcl_id)
+NC_STACK_ypabact * NC_STACK_ypaworld::CreateVehicle(ypaworld_arg146 *vhcl_id)
 {
     if ( vhcl_id->vehicle_id > NUM_VHCL_PROTO )
         return NULL;

@@ -932,7 +932,7 @@ void NC_STACK_ypabact::AI_layer1(update_msg *arg)
             _yls_time -= arg->frameTime;
 
             if ( _yls_time < 0 )
-                _world->ypaworld_func144(this);
+                _world->MoveToDeadCache(this);
         }
         else
         {
@@ -1382,7 +1382,7 @@ void NC_STACK_ypabact::AI_layer3(update_msg *arg)
     int v82 = _oflags & BACT_OFLAG_VIEWER;
     int v70 = _oflags & BACT_OFLAG_EXACTCOLL;
 
-    int v80 = _world->ypaworld_func145(this);
+    int v80 = _world->IsNearViewer(this);
 
     int v79;
 
@@ -2965,7 +2965,7 @@ void NC_STACK_ypabact::Die()
                 if ( _parent )
                     _parent->AddSubject(kid);
                 else
-                    _world->ypaworld_func134(kid);                  
+                    _world->AddToUnitsList(kid);                  
 
                 kid->_status_flg |= BACT_STFLAG_NOMSG;
             }
@@ -2993,7 +2993,7 @@ void NC_STACK_ypabact::Die()
             if ( _parent )
                 _parent->AddSubject(deputy);
             else
-                _world->ypaworld_func134(deputy);
+                _world->AddToUnitsList(deputy);
 
             while ( !_kidList.empty() )
                 deputy->AddSubject(_kidList.front());
@@ -3029,12 +3029,12 @@ void NC_STACK_ypabact::Die()
                     NC_STACK_ypabact *kidY = *kidYit;
                     kidYit++;
 
-                    _world->ypaworld_func134(kidY);
+                    _world->AddToUnitsList(kidY);
 
                     if ( kidY->_status != BACT_STATUS_DEAD )
                         ypa_log_out("Scheisse, da hфngt noch ein Lebendiger unter der Leiche! owner %d, state %d, class %d\n", kidY->_owner, kidY->_status, _bact_type);
                 }
-                _world->ypaworld_func134(kidX);
+                _world->AddToUnitsList(kidX);
             }
         }
     }
@@ -3132,7 +3132,7 @@ void NC_STACK_ypabact::Die()
 
             miss->_parent = NULL;
 
-            _world->ypaworld_func144(miss);
+            _world->MoveToDeadCache(miss);
         }
     }
     
@@ -5462,7 +5462,7 @@ size_t NC_STACK_ypabact::FireMinigun(bact_arg105 *arg)
 
     int v88 = getBACT_inputting();
 
-    if ( (v88 || _world->ypaworld_func145(this)) && !a5 )
+    if ( (v88 || _world->IsNearViewer(this)) && !a5 )
     {
         int v45;
 
@@ -6498,11 +6498,11 @@ void NC_STACK_ypabact::StartDestFX(const World::DestFX &fx)
         }
     }
 
-    NC_STACK_ypabact *bah = _world->ypaworld_func146(&arg146);
+    NC_STACK_ypabact *bah = _world->CreateVehicle(&arg146);
 
     if ( bah )
     {
-        _world->ypaworld_func134(bah);
+        _world->AddToUnitsList(bah);
 
         setState_msg v18;
         v18.newStatus = BACT_STATUS_DEAD;
@@ -6529,7 +6529,7 @@ void NC_STACK_ypabact::StartDestFX(const World::DestFX &fx)
 
 void NC_STACK_ypabact::StartDestFXByType(uint8_t type)
 {
-    if ( _world->ypaworld_func145(this) )
+    if ( _world->IsNearViewer(this) )
     {
         size_t a4 = _world->getYW_destroyFX();
 
@@ -6855,7 +6855,7 @@ void NC_STACK_ypabact::Release()
         }
     }
 
-    _world->ypaworld_func144(this);
+    _world->MoveToDeadCache(this);
 }
 
 size_t NC_STACK_ypabact::SetStateInternal(setState_msg *arg)

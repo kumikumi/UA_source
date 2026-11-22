@@ -287,7 +287,7 @@ void NC_STACK_ypaflyer::AI_layer3(update_msg *arg)
     int v82 = getBACT_exactCollisions();
     int v79 = getBACT_bactCollisions();
 
-    int v90 = _world->ypaworld_func145(this);
+    int v90 = _world->IsNearViewer(this);
 
     float v91;
 

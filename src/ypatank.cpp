@@ -89,7 +89,7 @@ void NC_STACK_ypatank::AI_layer3(update_msg *arg)
 
     float v224 = _radius + 300.0;
 
-    int v212 = _world->ypaworld_func145(this);
+    int v212 = _world->IsNearViewer(this);
 
     float v220 = _target_vec.length();
 

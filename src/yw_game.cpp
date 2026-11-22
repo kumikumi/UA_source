@@ -441,13 +441,13 @@ bool NC_STACK_ypaworld::yw_createRobos(const std::vector<MapRobo> &Robos)
             if ( v14.isect )
                 v15.pos.y += v14.isectPos.y;
 
-            NC_STACK_yparobo *robo = dynamic_cast<NC_STACK_yparobo *>( ypaworld_func146(&v15) );
+            NC_STACK_yparobo *robo = dynamic_cast<NC_STACK_yparobo *>( CreateVehicle(&v15) );
 
             if ( robo )
             {
                 int v20 = 0;
 
-                ypaworld_func134(robo);
+                AddToUnitsList(robo);
 
                 int v12;
 
@@ -2062,7 +2062,7 @@ void NC_STACK_ypaworld::sb_0x456384(const Common::Point &cellId, int ownerid2, i
                     v33.vehicle_id = GunProto.VhclID;
                     v33.pos = GunProto.Pos + World::SectorIDToCenterPos3( cellId );
 
-                    NC_STACK_ypabact *gun_obj = ypaworld_func146(&v33);
+                    NC_STACK_ypabact *gun_obj = CreateVehicle(&v33);
                     NC_STACK_ypagun *gunn = dynamic_cast<NC_STACK_ypagun *>(gun_obj);
 
                     if ( gun_obj )
@@ -3399,7 +3399,7 @@ void NC_STACK_ypaworld::NetReleaseMissiles(NC_STACK_ypabact *bact)
 
         misl->_parent = NULL;
 
-        ypaworld_func144(misl);
+        MoveToDeadCache(misl);
 
         misl->_status_flg |= BACT_STFLAG_DEATH1;
     }
@@ -3439,7 +3439,7 @@ void NC_STACK_ypaworld::NetRemove(NC_STACK_ypabact *bct)
             slave->_status_flg |= BACT_STFLAG_DEATH1;
             slave->_status = BACT_STATUS_DEAD;
 
-            ypaworld_func144(slave);
+            MoveToDeadCache(slave);
         }
 
         NetReleaseMissiles(cmnder);
@@ -3449,7 +3449,7 @@ void NC_STACK_ypaworld::NetRemove(NC_STACK_ypabact *bct)
         cmnder->_status_flg |= BACT_STFLAG_DEATH1;
         cmnder->_status = BACT_STATUS_DEAD;
 
-        ypaworld_func144(cmnder);
+        MoveToDeadCache(cmnder);
     }
 
     if ( bct->_bact_type == BACT_TYPES_ROBO )
@@ -3465,7 +3465,7 @@ void NC_STACK_ypaworld::NetRemove(NC_STACK_ypabact *bct)
 
     bct->_status = BACT_STATUS_DEAD;
 
-    ypaworld_func144(bct);
+    MoveToDeadCache(bct);
 
     bct->_status_flg |= BACT_STFLAG_DEATH1;
 }
@@ -4020,7 +4020,7 @@ bool NC_STACK_ypaworld::recorder_create_camera()
 
     bacto->_soundcarrier.Clear();
 
-    ypaworld_func134(bacto);
+    AddToUnitsList(bacto);
 
     bacto->setBACT_viewer(true);
     bacto->setBACT_inputting(true);
@@ -4119,7 +4119,7 @@ NC_STACK_ypabact *NC_STACK_ypaworld::recorder_newObject(trec_bct *oinf)
 
             prot->model_id = BACT_TYPES_BACT;
 
-            bacto = ypaworld_func146(&arg146);
+            bacto = CreateVehicle(&arg146);
 
             _vhclProtos[oinf->vhcl_id].model_id = v6;
         }
@@ -4301,7 +4301,7 @@ void NC_STACK_ypaworld::recorder_updateObjectList(TGameRecorder *rcrd, float a5,
             {
                 it++;
 
-                ypaworld_func144(bact);
+                MoveToDeadCache(bact);
             }
             else if ( oinf->bact_id < bact->_gid )
             {
@@ -4346,7 +4346,7 @@ void NC_STACK_ypaworld::recorder_updateObjectList(TGameRecorder *rcrd, float a5,
         NC_STACK_ypabact *bact = *it;
         it++;
 
-        ypaworld_func144(bact);
+        MoveToDeadCache(bact);
     }
 }
 

@@ -453,7 +453,7 @@ vec3d NC_STACK_ypamissile::CalcForceVector()
 
 void NC_STACK_ypamissile::AI_layer3(update_msg *arg)
 {
-    _world->ypaworld_func145(this);
+    _world->IsNearViewer(this);
 
     float v40 = _target_vec.length();
 

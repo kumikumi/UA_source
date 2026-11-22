@@ -403,14 +403,14 @@ bool SaveRoboParser::IsScope(ScriptParser::Parser &parser, const std::string &wo
     v5.pos.y = 0;
     v5.vehicle_id = parser.stoi(opt);
 
-    _r = dynamic_cast<NC_STACK_yparobo *> ( _o.ypaworld_func146(&v5) );
+    _r = dynamic_cast<NC_STACK_yparobo *> ( _o.CreateVehicle(&v5) );
 
     if ( !_r )
         return false;
 
     _lastRobo = _r;
 
-    _o.ypaworld_func134(_r);
+    _o.AddToUnitsList(_r);
 
     return true;
 }
@@ -442,7 +442,7 @@ bool SaveSquadParser::IsScope(ScriptParser::Parser &parser, const std::string &w
         v5.pos.y = 0;
         v5.vehicle_id = parser.stoi(opt);
 
-        _c = _o.ypaworld_func146(&v5);
+        _c = _o.CreateVehicle(&v5);
 
         if ( !_c )
             return false;
@@ -458,7 +458,7 @@ bool SaveSquadParser::IsScope(ScriptParser::Parser &parser, const std::string &w
         v5.pos.y = 0;
         v5.vehicle_id = parser.stoi(opt);
 
-        _c = _o.ypaworld_func146(&v5);
+        _c = _o.CreateVehicle(&v5);
 
         if ( !_c )
             return false;

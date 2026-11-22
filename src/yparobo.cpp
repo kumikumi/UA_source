@@ -426,7 +426,7 @@ void NC_STACK_yparobo::InitForce(NC_STACK_ypabact *unit)
         arg146.vehicle_id = unit->_vehicleID;
         arg146.pos = _position + _roboDockPos;
 
-        newUnit = _world->ypaworld_func146(&arg146);
+        newUnit = _world->CreateVehicle(&arg146);
     }
 
     if ( !newUnit )
@@ -901,7 +901,7 @@ size_t NC_STACK_yparobo::checkCollisions(float a2)
         }
 
 
-        int v26 = _world->ypaworld_func145(this);
+        int v26 = _world->IsNearViewer(this);
 
         if ( (isViewer || (v26 && v79)) && rcoll.robo_coll_radius > 0.01 )
         {
@@ -1395,7 +1395,7 @@ void NC_STACK_yparobo::doUserCommands(update_msg *arg)
             arg146.pos = arg->target_point;
             arg146.vehicle_id = arg->protoID;
 
-            NC_STACK_ypabact *newbact = _world->ypaworld_func146(&arg146);
+            NC_STACK_ypabact *newbact = _world->CreateVehicle(&arg146);
 
             if ( newbact )
             {
@@ -1461,7 +1461,7 @@ void NC_STACK_yparobo::doUserCommands(update_msg *arg)
         {
             arg146.pos = arg->target_point;
             arg146.vehicle_id = arg->protoID;
-            NC_STACK_ypabact *newbact2 = _world->ypaworld_func146(&arg146);
+            NC_STACK_ypabact *newbact2 = _world->CreateVehicle(&arg146);
 
             if ( newbact2 )
             {
@@ -2467,7 +2467,7 @@ NC_STACK_ypabact *NC_STACK_yparobo::AllocForce(robo_loct1 *arg)
         arg146.vehicle_id = v33;
         arg146.pos = _position + _roboDockPos;
 
-        NC_STACK_ypabact *newUnit = _world->ypaworld_func146(&arg146);
+        NC_STACK_ypabact *newUnit = _world->CreateVehicle(&arg146);
 
         if ( !newUnit )
             return NULL;
@@ -5536,7 +5536,7 @@ bool NC_STACK_yparobo::MakeSquad(const std::vector<int> &VhclIDS, vec3d pos, boo
     
     arg146.vehicle_id = VhclIDS[0];
 
-    NC_STACK_ypabact *squad_commander = _world->ypaworld_func146(&arg146); //Create first bact
+    NC_STACK_ypabact *squad_commander = _world->CreateVehicle(&arg146); //Create first bact
 
     if ( !squad_commander )
         return false;
@@ -5573,7 +5573,7 @@ bool NC_STACK_yparobo::MakeSquad(const std::vector<int> &VhclIDS, vec3d pos, boo
         arg146.pos.x = 100.0 * (curid % col - col / 2.0) + pos.x;
         arg146.pos.z = 100.0 * (curid / col) + pos.z;
 
-        NC_STACK_ypabact *next_bact = (NC_STACK_ypabact *)_world->ypaworld_func146(&arg146);
+        NC_STACK_ypabact *next_bact = (NC_STACK_ypabact *)_world->CreateVehicle(&arg146);
 
         if ( !next_bact )
             break;
@@ -5894,7 +5894,7 @@ void NC_STACK_yparobo::setROBO_proto(World::TRoboProto *proto)
 
         gun_req.vehicle_id = gun.robo_gun_type;
 
-        NC_STACK_ypabact *gun_obj = _world->ypaworld_func146(&gun_req);
+        NC_STACK_ypabact *gun_obj = _world->CreateVehicle(&gun_req);
         NC_STACK_ypagun *gungun = dynamic_cast<NC_STACK_ypagun *>(gun_obj);
 
         gun.gun_obj = gun_obj;

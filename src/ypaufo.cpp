@@ -83,7 +83,7 @@ void NC_STACK_ypaufo::AI_layer3(update_msg *arg)
 
     int v94 = getBACT_bactCollisions();
 
-    int v5 = _world->ypaworld_func145(this);
+    int v5 = _world->IsNearViewer(this);
 
     float v108 = _target_vec.length();
 

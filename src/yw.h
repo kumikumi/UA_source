@@ -1892,7 +1892,7 @@ public:
     virtual void ypaworld_func131(NC_STACK_ypabact *bact);
     virtual void ypaworld_func132(void *arg);
     virtual void ypaworld_func133(void *arg);
-    virtual void ypaworld_func134(NC_STACK_ypabact *bact);
+    virtual void AddToUnitsList(NC_STACK_ypabact *bact);
     virtual void ypaworld_func135(void *arg);
     virtual void ypaworld_func136(ypaworld_arg136 *arg);
     virtual void ypaworld_func137(ypaworld_arg137 *arg);
@@ -1900,9 +1900,9 @@ public:
     virtual void GuiWinAttach(GuiBase *lstvw);
     virtual void GuiWinDetach(GuiBase *lstvw);
     virtual void ypaworld_func143(void *arg);
-    virtual void ypaworld_func144(NC_STACK_ypabact *bacto);
-    virtual size_t ypaworld_func145(NC_STACK_ypabact *bact);
-    virtual NC_STACK_ypabact * ypaworld_func146(ypaworld_arg146 *vhcl_id);
+    virtual void MoveToDeadCache(NC_STACK_ypabact *bacto);
+    virtual size_t IsNearViewer(NC_STACK_ypabact *bact);
+    virtual NC_STACK_ypabact * CreateVehicle(ypaworld_arg146 *vhcl_id);
     virtual NC_STACK_ypamissile * ypaworld_func147(ypaworld_arg146 *arg);
     virtual size_t ypaworld_func148(ypaworld_arg148 *arg);
     virtual void ypaworld_func149(ypaworld_arg136 *arg);

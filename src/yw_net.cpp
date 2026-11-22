@@ -876,7 +876,7 @@ bool yw_netRecvUpdate(NC_STACK_ypaworld *yw, uamessage_update *msg, int owner)
                 newVhcl.pos = dat->pos;
                 newVhcl.vehicle_id = dat->vhclID;
 
-                NC_STACK_ypabact *tmp = yw->ypaworld_func146(&newVhcl);
+                NC_STACK_ypabact *tmp = yw->CreateVehicle(&newVhcl);
 
                 currHost = dynamic_cast<NC_STACK_yparobo *>(tmp);
 
@@ -897,7 +897,7 @@ bool yw_netRecvUpdate(NC_STACK_ypaworld *yw, uamessage_update *msg, int owner)
 
                 yw_netUpdDataVhcl(dat, currHost, owner, NULL);
 
-                yw->ypaworld_func134(currHost);
+                yw->AddToUnitsList(currHost);
             }
             break;
 
@@ -930,7 +930,7 @@ bool yw_netRecvUpdate(NC_STACK_ypaworld *yw, uamessage_update *msg, int owner)
             {
                 newVhcl.pos = dat->pos;
                 newVhcl.vehicle_id = dat->vhclID;
-                currComm = yw->ypaworld_func146(&newVhcl);
+                currComm = yw->CreateVehicle(&newVhcl);
 
                 if ( !currComm )
                 {
@@ -951,7 +951,7 @@ bool yw_netRecvUpdate(NC_STACK_ypaworld *yw, uamessage_update *msg, int owner)
                 newVhcl.pos = dat->pos;
                 newVhcl.vehicle_id = dat->vhclID;
 
-                NC_STACK_ypabact *tmp = yw->ypaworld_func146(&newVhcl);
+                NC_STACK_ypabact *tmp = yw->CreateVehicle(&newVhcl);
                 if ( !tmp )
                 {
                     log_netlog("RESTORE: Unable to create slave\n");
@@ -1142,7 +1142,7 @@ size_t yw_handleNormMsg(NC_STACK_ypaworld *yw, windp_recvMsg *msg, std::string *
         newVhcl.pos = nvMsg->pos;
         newVhcl.vehicle_id = nvMsg->type;
 
-        NC_STACK_ypabact *bacto = yw->ypaworld_func146(&newVhcl);
+        NC_STACK_ypabact *bacto = yw->CreateVehicle(&newVhcl);
 
         if ( !bacto )
             break;
@@ -1164,7 +1164,7 @@ size_t yw_handleNormMsg(NC_STACK_ypaworld *yw, windp_recvMsg *msg, std::string *
 
         if ( nvMsg->kind == 0 )
         {
-            yw->ypaworld_func134(bacto);
+            yw->AddToUnitsList(bacto);
         }
         else if ( nvMsg->kind == 1 )
         {
@@ -1186,7 +1186,7 @@ size_t yw_handleNormMsg(NC_STACK_ypaworld *yw, windp_recvMsg *msg, std::string *
             if ( !lstobj )
             {
                 log_netlog("NV: No master for created shadow object!\n");
-                yw->ypaworld_func144(bacto);
+                yw->MoveToDeadCache(bacto);
                 *err = msg->senderName;
 
                 break;
@@ -1243,7 +1243,7 @@ size_t yw_handleNormMsg(NC_STACK_ypaworld *yw, windp_recvMsg *msg, std::string *
 
         while( !bctt->_kidList.empty() )
         {
-            yw->ypaworld_func144(bctt->_kidList.front());
+            yw->MoveToDeadCache(bctt->_kidList.front());
             log_netlog("+++ DV: Released vehicle with slave! (%ds)\n", yw->_timeStamp / 1000);
             *err = msg->senderName;
         }
@@ -1261,7 +1261,7 @@ size_t yw_handleNormMsg(NC_STACK_ypaworld *yw, windp_recvMsg *msg, std::string *
             *err = msg->senderName;
         }
 
-        yw->ypaworld_func144(bctt);
+        yw->MoveToDeadCache(bctt);
 
         netDebug_addDestroyed(host_node->_owner, dvMsg->id);
 
@@ -1357,7 +1357,7 @@ size_t yw_handleNormMsg(NC_STACK_ypaworld *yw, windp_recvMsg *msg, std::string *
         if ( !weapLauncher )
         {
             log_netlog("\n+++ NW: Havent found vehicle %d (%ds)\n", nwMsg->id, yw->_timeStamp / 1000);
-            yw->ypaworld_func144(weapo);
+            yw->MoveToDeadCache(weapo);
             *err = msg->senderName;
             break;
         }
@@ -1567,7 +1567,7 @@ size_t yw_handleNormMsg(NC_STACK_ypaworld *yw, windp_recvMsg *msg, std::string *
                 if ( fndBact->_parent )
                     fndBact->_parent->AddSubject(nd);
                 else
-                    yw->ypaworld_func134(nd);
+                    yw->AddToUnitsList(nd);
                     
 
                 nd->_status_flg |= BACT_STFLAG_NOMSG;
@@ -1806,7 +1806,7 @@ size_t yw_handleNormMsg(NC_STACK_ypaworld *yw, windp_recvMsg *msg, std::string *
             newVhcl.vehicle_id = bvMsg->vhcl[0].protoID;
             newVhcl.pos = bvMsg->vhcl[0].pos;
 
-            NC_STACK_ypabact *kmnd = yw->ypaworld_func146(&newVhcl);
+            NC_STACK_ypabact *kmnd = yw->CreateVehicle(&newVhcl);
             if ( kmnd )
             {
                 NC_STACK_ypagun *kmnd_gn = dynamic_cast<NC_STACK_ypagun *>(kmnd);
@@ -1834,7 +1834,7 @@ size_t yw_handleNormMsg(NC_STACK_ypaworld *yw, windp_recvMsg *msg, std::string *
                     newVhcl.vehicle_id = bvMsg->vhcl[idid].protoID;
                     newVhcl.pos = bvMsg->vhcl[idid].pos;
 
-                    NC_STACK_ypabact *slv = yw->ypaworld_func146(&newVhcl);
+                    NC_STACK_ypabact *slv = yw->CreateVehicle(&newVhcl);
 
                     if ( slv )
                     {
@@ -3558,7 +3558,7 @@ bool NC_STACK_ypaworld::yw_NetSetHostStations(const std::vector<MapRobo> &Robos)
         }
         arg146.pos = place;
 
-        NC_STACK_ypabact *hostObj = ypaworld_func146(&arg146);
+        NC_STACK_ypabact *hostObj = CreateVehicle(&arg146);
 
         if ( !hostObj )
         {
@@ -3585,7 +3585,7 @@ bool NC_STACK_ypaworld::yw_NetSetHostStations(const std::vector<MapRobo> &Robos)
             _levelInfo.UserMask |= 1 << owner;
         }
 
-        ypaworld_func134(hostObj);
+        AddToUnitsList(hostObj);
 
         hostObj->setBACT_bactCollisions(1);
 
