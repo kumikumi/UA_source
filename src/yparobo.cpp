@@ -16,7 +16,7 @@
 
 int nextCommandID = 1;
 
-robo_t2 lastRoboMsgByType[100];
+TLastRoboMessage lastRoboMsgByType[100];
 int lastEnemyHostFoundMsgTime[8];
 
 
@@ -351,7 +351,7 @@ void NC_STACK_yparobo::DispatchDockedForce(NC_STACK_ypabact *unit)
 
         if ( unit->_status != BACT_STATUS_DEAD )
         {
-            bact_arg124 arg124;
+            TPathRequest arg124;
             arg124.from = unit->_position.XZ();
 
             if ( arg67.tgt_type == BACT_TGT_TYPE_UNIT )
@@ -363,7 +363,7 @@ void NC_STACK_yparobo::DispatchDockedForce(NC_STACK_ypabact *unit)
                 arg124.to = arg67.tgt_pos.XZ();
             }
 
-            arg124.field_12 = 1;
+            arg124.tgt_type = 1;
             arg124.steps_cnt = 32;
 
             if ( unit->IsNeedsWaypoints() && unit->PathFinder(&arg124) )
@@ -410,7 +410,7 @@ void NC_STACK_yparobo::InitForce(NC_STACK_ypabact *unit)
     if ( _roboState & ROBOSTATE_USEVHCLPARTS )
         v6 += _roboVehicleSpare;
 
-    bact_arg81 arg81;
+    TSummaryQuery arg81;
     arg81.enrg_type = 3;
     arg81.enrg_sum = 0;
 
@@ -523,11 +523,11 @@ int NC_STACK_yparobo::SendSquadToPosition(NC_STACK_ypabact *bact, float a2, floa
 
     if ( v5 )
     {
-        bact_arg124 arg125;
+        TPathRequest arg125;
         arg125.steps_cnt = 32;
         arg125.from = bact->_position.XZ();
         arg125.to = vec2d(a2, a3);
-        arg125.field_12 = 1;
+        arg125.tgt_type = 1;
         if ( !bact->SetPath(&arg125) )
             return 0;
     }
@@ -564,11 +564,11 @@ int NC_STACK_yparobo::SendSquadToUnit(NC_STACK_ypabact *bact, NC_STACK_ypabact *
 
     if ( v5 )
     {
-        bact_arg124 arg124;
+        TPathRequest arg124;
         arg124.steps_cnt = 32;
         arg124.from = bact->_position.XZ();
         arg124.to = bact2->_position.XZ();
-        arg124.field_12 = 1;
+        arg124.tgt_type = 1;
 
         if ( !bact->PathFinder(&arg124) )
             return 0;
@@ -654,7 +654,7 @@ void NC_STACK_yparobo::SendSquadAgainstEnemyRobo(NC_STACK_ypabact *unit1, NC_STA
     }
 }
 
-void NC_STACK_yparobo::UpdateRoboAttackSquad(NC_STACK_ypabact *unit, robo_t1 *rbt)
+void NC_STACK_yparobo::UpdateRoboAttackSquad(NC_STACK_ypabact *unit, TRoboAttackSlot *rbt)
 {
     NC_STACK_ypabact *foundBact = NULL;
     
@@ -662,7 +662,7 @@ void NC_STACK_yparobo::UpdateRoboAttackSquad(NC_STACK_ypabact *unit, robo_t1 *rb
     {
         for(NC_STACK_ypabact* &nod : *unit->_parent->_kidRef.PList())
         {
-            if ( nod->_commandID == rbt->field_4 )
+            if ( nod->_commandID == rbt->targetCommandID )
             {
                 foundBact = nod;
                 break;
@@ -685,8 +685,8 @@ void NC_STACK_yparobo::UpdateRoboAttackSquad(NC_STACK_ypabact *unit, robo_t1 *rb
     }
     else
     {
-        rbt->field_4 = 0;
-        rbt->field_0 = 0;
+        rbt->targetCommandID = 0;
+        rbt->squadCommandID = 0;
     }
 }
 
@@ -743,9 +743,9 @@ void NC_STACK_yparobo::doBeamUpdate(int a2)
 
         tmp.y = _roboYPos;
 
-        bact_arg80 v18;
+        TUnitPlacement v18;
         v18.pos = _roboBeamPos;
-        v18.field_C = 0;
+        v18.flags = 0;
 
         SetPosition(&v18);
 
@@ -826,8 +826,8 @@ size_t NC_STACK_yparobo::checkCollisions(float a2)
     if ( _position == _old_pos )
         return 0;
 
-    bact_arg88 arg88_2;
-    arg88_2.pos1 = vec3d(0.0, 0.0, 0.0);
+    TCollisionNormal arg88_2;
+    arg88_2.normal = vec3d(0.0, 0.0, 0.0);
 
     int v86 = 0;
 
@@ -863,8 +863,8 @@ size_t NC_STACK_yparobo::checkCollisions(float a2)
                 }
                 else if ( rcoll.robo_coll_radius > 0.01 )
                 {
-                    bact_arg88 arg88;
-                    arg88.pos1 = arg136.skel->polygons[ arg136.polyID ].Normal();
+                    TCollisionNormal arg88;
+                    arg88.normal = arg136.skel->polygons[ arg136.polyID ].Normal();
 
                     Recoil(&arg88);
 
@@ -969,14 +969,14 @@ size_t NC_STACK_yparobo::checkCollisions(float a2)
                 float v84 = ttmp.length();
 
                 if ( v84 != 0.0 )
-                    arg88_2.pos1 += ttmp / v84;
+                    arg88_2.normal += ttmp / v84;
                 else
-                    arg88_2.pos1 += _fly_dir;
+                    arg88_2.normal += _fly_dir;
             }
 
             if ( v86 )
             {
-                arg88_2.pos1 /= (float)v86;
+                arg88_2.normal /= (float)v86;
 
                 _position = _old_pos;
 
@@ -1032,9 +1032,9 @@ void NC_STACK_yparobo::wallow(update_msg *arg)
     {
         if (gun.gun_obj)
         {
-            bact_arg80 v11;
+            TUnitPlacement v11;
             v11.pos = _position + _rotation.Transpose().Transform(gun.pos);
-            v11.field_C = 4;
+            v11.flags = 4;
 
             gun.gun_obj->SetPosition(&v11);
         }
@@ -1164,9 +1164,9 @@ void NC_STACK_yparobo::AI_doMove(update_msg *arg)
             }
         }
 
-        arg74.field_0 = v49;
+        arg74.period = v49;
         arg74.flag = 0;
-        arg74.vec = _target_vec.X0Z() / v39;
+        arg74.thrustDir = _target_vec.X0Z() / v39;
     }
     else
     {
@@ -1218,9 +1218,9 @@ void NC_STACK_yparobo::AI_doMove(update_msg *arg)
                 SetTarget(&v34);
             }
         }
-        arg74.vec = vec3d(0.0, 0.0, 0.0);
+        arg74.thrustDir = vec3d(0.0, 0.0, 0.0);
         arg74.flag = 0;
-        arg74.field_0 = v49;
+        arg74.period = v49;
     }
 
     Move(&arg74);
@@ -1294,10 +1294,10 @@ void NC_STACK_yparobo::doUserCommands(update_msg *arg)
     setTarget_msg arg67;
     TUnitSpawn arg146;
     setState_msg arg78;
-    bact_arg109 arg109;
+    TReorgOrder arg109;
     TBuildingPlacement arg148;
-    robo_arg134 arg134;
-    bact_arg124 arg124;
+    TRoboMessage arg134;
+    TPathRequest arg124;
 
     int v6;
 
@@ -1323,8 +1323,8 @@ void NC_STACK_yparobo::doUserCommands(update_msg *arg)
 
         if ( !IsCommanderClosestToTarget(arg->selectBact) )
         {
-            arg109.field_4 = NULL;
-            arg109.field_0 = 6;
+            arg109.unit = NULL;
+            arg109.mode = 6;
 
             arg->selectBact->ReorganizeGroup(&arg109);
         }
@@ -1353,20 +1353,20 @@ void NC_STACK_yparobo::doUserCommands(update_msg *arg)
                 v8 = v8->_parent;
 
             arg134.unit = v8;
-            arg134.field_C = 0;
-            arg134.field_8 = 0;
-            arg134.field_10 = 0;
-            arg134.field_14 = 38;
+            arg134.param2 = 0;
+            arg134.param1 = 0;
+            arg134.param3 = 0;
+            arg134.priority = 38;
 
             if ( v8->_primTtype == BACT_TGT_TYPE_CELL )
             {
                 if ( v8->_primT.pcell->owner == _owner )
                 {
-                    arg134.field_4 = 15;
+                    arg134.msgID = 15;
                 }
                 else
                 {
-                    arg134.field_4 = 16;
+                    arg134.msgID = 16;
                 }
                 
                 placeMessage(&arg134);
@@ -1375,11 +1375,11 @@ void NC_STACK_yparobo::doUserCommands(update_msg *arg)
             {
                 if ( v8->_primT.pbact->_owner == _owner )
                 {
-                    arg134.field_4 = 15;
+                    arg134.msgID = 15;
                 }
                 else
                 {
-                    arg134.field_4 = 16;
+                    arg134.msgID = 16;
                 }
 
                 placeMessage(&arg134);
@@ -1582,7 +1582,7 @@ void NC_STACK_yparobo::doUserCommands(update_msg *arg)
             arg124.from = arg->selectBact->_position.XZ();
             arg124.to = arg->target_point.XZ();
             arg124.steps_cnt = 32;
-            arg124.field_12 = 1;
+            arg124.tgt_type = 1;
 
             int v14 = PathFinder(&arg124);
 
@@ -1651,7 +1651,7 @@ void NC_STACK_yparobo::doUserCommands(update_msg *arg)
                 arg124.from = arg->selectBact->_waypoints[v72 - 1].XZ();
                 arg124.to = arg->target_point.XZ();
                 arg124.steps_cnt = 32 - v72;
-                arg124.field_12 = 1;
+                arg124.tgt_type = 1;
 
                 if ( PathFinder(&arg124) && arg124.steps_cnt > 0 )
                 {
@@ -2319,7 +2319,7 @@ NC_STACK_ypabact *NC_STACK_yparobo::AllocForce(robo_loct1 *arg)
             if ( v8 > -1 && v8 >= v82 )
             {
 
-                bact_arg81 arg81;
+                TSummaryQuery arg81;
                 arg81.enrg_type = 1;
                 arg81.enrg_sum = 0;
                 node->GetSummary(&arg81);
@@ -2362,7 +2362,7 @@ NC_STACK_ypabact *NC_STACK_yparobo::AllocForce(robo_loct1 *arg)
 
     if ( !(_roboState & ROBOSTATE_DOCKINUSE) )
     {
-        bact_arg81 arg81_2;
+        TSummaryQuery arg81_2;
         arg81_2.enrg_sum = 0;
         arg81_2.enrg_type = 3;
 
@@ -2432,7 +2432,7 @@ NC_STACK_ypabact *NC_STACK_yparobo::AllocForce(robo_loct1 *arg)
     {
         if ( !(_roboState & ROBOSTATE_DOCKINUSE) )
         {
-            bact_arg81 arg81_3;
+            TSummaryQuery arg81_3;
             arg81_3.enrg_type = 1;
             arg81_3.enrg_sum = 0;
 
@@ -2587,13 +2587,13 @@ NC_STACK_ypabact *NC_STACK_yparobo::AllocForce(robo_loct1 *arg)
 
 void NC_STACK_yparobo::buildConquer()
 {
-    bact_arg92 arg92;
-    arg92.field_14 = 2;
+    TForcesRatio arg92;
+    arg92.flags = 2;
     arg92.pos = World::SectorIDToCenterPos3( {_roboVehicleCellID % _wrldSectors.x, _roboVehicleCellID / _wrldSectors.x} );
 
     GetForcesRatio(&arg92);
 
-    int v20 = (arg92.energ2 - arg92.energ1) * 0.5;
+    int v20 = (arg92.enemyEnergy - arg92.ownEnergy) * 0.5;
 
     if ( v20 < 15000 )
         v20 = 15000;
@@ -2698,7 +2698,7 @@ void NC_STACK_yparobo::buildDefense()
 
     if ( GetTargetByCommandID(&arg132) )
     {
-        bact_arg81 arg81;
+        TSummaryQuery arg81;
         arg81.enrg_sum = 0;
         arg81.enrg_type = 1;
 
@@ -2857,12 +2857,12 @@ void NC_STACK_yparobo::buildRobo()
             NC_STACK_ypabact *force = AllocForce(&loct);
             if ( force )
             {
-                for ( robo_t1 &ataker : _roboAttackers )
+                for ( TRoboAttackSlot &ataker : _roboAttackers )
                 {
-                    if ( !ataker.field_0 )
+                    if ( !ataker.squadCommandID )
                     {
-                        ataker.field_0 = force->_commandID;
-                        ataker.field_4 = arg132.tgt.pbact->_commandID;
+                        ataker.squadCommandID = force->_commandID;
+                        ataker.targetCommandID = arg132.tgt.pbact->_commandID;
                         break;
                     }
                 }
@@ -3260,14 +3260,14 @@ void NC_STACK_yparobo::AI_clearAttackerSlots()
     if ( _clock - _roboAttackersClearTime > 4000 )
     {
         _roboAttackersClearTime = _clock;
-        for ( robo_t1 &ataker : _roboAttackers )
+        for ( TRoboAttackSlot &ataker : _roboAttackers )
         {
-            if ( ataker.field_0 )
+            if ( ataker.squadCommandID )
             {
                 int v6 = 0;
                 for (NC_STACK_ypabact* &node : _kidList )
                 {
-                    if (node->_commandID == ataker.field_0)
+                    if (node->_commandID == ataker.squadCommandID)
                     {
                         v6 = 1;
                         break;
@@ -3276,8 +3276,8 @@ void NC_STACK_yparobo::AI_clearAttackerSlots()
 
                 if ( !v6 )
                 {
-                    ataker.field_0 = 0;
-                    ataker.field_4 = 0;
+                    ataker.squadCommandID = 0;
+                    ataker.targetCommandID = 0;
                 }
             }
         }
@@ -3312,14 +3312,14 @@ void NC_STACK_yparobo::searchEnemyRobo()
 
                 if ( sel )
                 {
-                    robo_arg134 v12;
+                    TRoboMessage v12;
 
-                    v12.field_4 = 6;
-                    v12.field_8 = unit->_owner;
-                    v12.field_14 = 48;
+                    v12.msgID = 6;
+                    v12.param1 = unit->_owner;
+                    v12.priority = 48;
                     v12.unit = sel;
-                    v12.field_C = 0;
-                    v12.field_10 = 0;
+                    v12.param2 = 0;
+                    v12.param3 = 0;
 
                     placeMessage(&v12);
                 }
@@ -3337,12 +3337,12 @@ void NC_STACK_yparobo::usersRoboEnergyCheck()
         if ( v1 < 0.07 )
             v1 = 0.01;
 
-        robo_arg134 v2;
-        v2.field_4 = 40;
-        v2.field_C = 0;
-        v2.field_10 = 0;
-        v2.field_14 = 98;
-        v2.field_8 = (v1 * 60000.0 * 5.0);
+        TRoboMessage v2;
+        v2.msgID = 40;
+        v2.param2 = 0;
+        v2.param3 = 0;
+        v2.priority = 98;
+        v2.param1 = (v1 * 60000.0 * 5.0);
         v2.unit = this;
 
         placeMessage(&v2);
@@ -3387,13 +3387,13 @@ void NC_STACK_yparobo::checkCommander()
 
                 if ( userRobo )
                 {
-                    robo_arg134 arg134;
-                    arg134.field_8 = commander->_commandID;
-                    arg134.field_4 = 10;
-                    arg134.field_10 = 0;
-                    arg134.field_C = 0;
+                    TRoboMessage arg134;
+                    arg134.param1 = commander->_commandID;
+                    arg134.msgID = 10;
+                    arg134.param3 = 0;
+                    arg134.param2 = 0;
                     arg134.unit = commander;
-                    arg134.field_14 = 28;
+                    arg134.priority = 28;
 
                     placeMessage(&arg134);
                 }
@@ -3405,7 +3405,7 @@ void NC_STACK_yparobo::checkCommander()
         {
             if ( v31 < 0.5 && userRobo )
             {
-                bact_arg81 arg81;
+                TSummaryQuery arg81;
                 arg81.enrg_sum = 0;
                 arg81.enrg_type = 3;
 
@@ -3419,13 +3419,13 @@ void NC_STACK_yparobo::checkCommander()
 
                 if ( v18 < arg81.enrg_sum )
                 {
-                    robo_arg134 arg134;
-                    arg134.field_8 = 20000;
-                    arg134.field_10 = 0;
-                    arg134.field_C = 0;
-                    arg134.field_4 = 18;
+                    TRoboMessage arg134;
+                    arg134.param1 = 20000;
+                    arg134.param3 = 0;
+                    arg134.param2 = 0;
+                    arg134.msgID = 18;
                     arg134.unit = commander;
-                    arg134.field_14 = 42;
+                    arg134.priority = 42;
 
                     placeMessage(&arg134);
                 }
@@ -3437,9 +3437,9 @@ void NC_STACK_yparobo::checkCommander()
                 {
                     _roboAttackersTime = _clock;
 
-                    for ( robo_t1 &ataker : _roboAttackers )
+                    for ( TRoboAttackSlot &ataker : _roboAttackers )
                     {
-                        if ( ataker.field_0 == commander->_commandID)
+                        if ( ataker.squadCommandID == commander->_commandID)
                         {
                             UpdateRoboAttackSquad(commander, &ataker);
                             break;
@@ -3463,11 +3463,11 @@ void NC_STACK_yparobo::checkCommander()
 
             if ( commander->IsNeedsWaypoints() )
             {
-                bact_arg124 arg124;
+                TPathRequest arg124;
                 arg124.steps_cnt = 32;
                 arg124.from = commander->_position.XZ();
                 arg124.to = _position.XZ();
-                arg124.field_12 = 1;
+                arg124.tgt_type = 1;
 
                 if ( ! commander->PathFinder(&arg124) )
                     break;
@@ -3500,13 +3500,13 @@ void NC_STACK_yparobo::checkCommander()
 
             if ( userRobo )
             {
-                robo_arg134 arg134;
-                arg134.field_8 = commander->_commandID;
-                arg134.field_10 = 0;
-                arg134.field_C = 0;
-                arg134.field_4 = 9;
+                TRoboMessage arg134;
+                arg134.param1 = commander->_commandID;
+                arg134.param3 = 0;
+                arg134.param2 = 0;
+                arg134.msgID = 9;
                 arg134.unit = commander;
-                arg134.field_14 = 40;
+                arg134.priority = 40;
 
                 placeMessage(&arg134);
 
@@ -3547,13 +3547,13 @@ void NC_STACK_yparobo::checkCommander()
                              realbact->_parent )
                             realbact = realbact->_parent;
 
-                        robo_arg134 arg134;
-                        arg134.field_8 = 0;
-                        arg134.field_10 = 0;
-                        arg134.field_C = 0;
-                        arg134.field_4 = 19;
+                        TRoboMessage arg134;
+                        arg134.param1 = 0;
+                        arg134.param3 = 0;
+                        arg134.param2 = 0;
+                        arg134.msgID = 19;
                         arg134.unit = realbact;
-                        arg134.field_14 = 34;
+                        arg134.priority = 34;
                         placeMessage(&arg134);
                         break;
                     }
@@ -3594,13 +3594,13 @@ void NC_STACK_yparobo::checkDanger()
     {
         if ( !(_roboState & ROBOSTATE_DANGER) && _roboState & ROBOSTATE_PLAYERROBO )
         {
-            robo_arg134 arg134;
-            arg134.field_4 = 13;
-            arg134.field_8 = v12;
-            arg134.field_10 = 0;
-            arg134.field_C = 0;
+            TRoboMessage arg134;
+            arg134.msgID = 13;
+            arg134.param1 = v12;
+            arg134.param3 = 0;
+            arg134.param2 = 0;
             arg134.unit = this;
-            arg134.field_14 = 99;
+            arg134.priority = 99;
 
             placeMessage(&arg134);
         }
@@ -4175,7 +4175,7 @@ void NC_STACK_yparobo::AI_checkWorld(update_msg *arg)
             v6 = 0;
     }
 
-    robo_arg128 arg128;
+    TCommanderSearch arg128;
 
     if ( _roboEpConquer && v6 )
     {
@@ -4203,7 +4203,7 @@ void NC_STACK_yparobo::AI_checkWorld(update_msg *arg)
 
                     FindMatchingCommander(&arg128);
 
-                    if ( !arg128.comm_bacto )
+                    if ( !arg128.found_comm )
                     {
                         _roboConqValue = v12;
                         _roboConqCellID = _roboConqCellIndex;
@@ -4248,7 +4248,7 @@ void NC_STACK_yparobo::AI_checkWorld(update_msg *arg)
             arg128.prim_comm_id = v91;
             FindMatchingCommander(&arg128);
 
-            if ( !arg128.comm_bacto )
+            if ( !arg128.found_comm )
             {
                 _roboEnemyValue = v17;
                 _roboEnemyCommandID = v91;
@@ -4283,14 +4283,14 @@ void NC_STACK_yparobo::AI_checkWorld(update_msg *arg)
 
         if ( v22 > _roboDangerValue )
         {
-            robo_arg128 arg128_1;
+            TCommanderSearch arg128_1;
             arg128_1.flags = 2;
             arg128_1.tgType = BACT_TGT_TYPE_UNIT;
             arg128_1.prim_comm_id = v91;
 
             FindMatchingCommander(&arg128_1);
 
-            if ( !arg128_1.comm_bacto )
+            if ( !arg128_1.found_comm )
             {
                 _roboDangerValue = v22;
                 _roboDangerCommandID = v91;
@@ -4533,14 +4533,14 @@ void NC_STACK_yparobo::AI_checkWorld(update_msg *arg)
 
                 if ( v81 > _roboExploreValue )
                 {
-                    robo_arg128 arg128_1;
+                    TCommanderSearch arg128_1;
                     arg128_1.tgType = BACT_TGT_TYPE_CELL;
                     arg128_1.flags = 2;
                     arg128_1.tgt_pos = World::SectorIDToCenterPos3(pt);
 
                     FindMatchingCommander(&arg128_1);
 
-                    if ( !arg128_1.comm_bacto )
+                    if ( !arg128_1.found_comm )
                     {
                         _roboExploreValue = v81;
                         _roboExploreCellID = _roboExploreCellIndex;
@@ -4739,20 +4739,20 @@ void NC_STACK_yparobo::Move(move_msg *arg)
 
     vec3d v51(0.0, 0.0, 0.0);
     if ( !(arg->flag & 1) )
-        v51 = arg->vec * _thraction;
+        v51 = arg->thrustDir * _thraction;
 
     vec3d v57 = v63 + v51 - _fly_dir * (_fly_dir_length * _airconst) + v52;
 
     if ( v57.length() > 0.0 )
     {
-        vec3d v67 = _fly_dir * _fly_dir_length + v57 * (arg->field_0 / _mass);
+        vec3d v67 = _fly_dir * _fly_dir_length + v57 * (arg->period / _mass);
 
         _fly_dir_length = v67.normalise();
         _fly_dir = v67;
     }
 
     if ( fabs(_fly_dir_length) > 0.1 )
-        _position += _fly_dir * (_fly_dir_length * arg->field_0 * 6.0);
+        _position += _fly_dir * (_fly_dir_length * arg->period * 6.0);
 
     CorrectPositionInLevelBox(NULL);
 
@@ -4760,9 +4760,9 @@ void NC_STACK_yparobo::Move(move_msg *arg)
     {
         if (gun.gun_obj)
         {
-            bact_arg80 arg80;
+            TUnitPlacement arg80;
             arg80.pos = _position + _rotation.Transpose().Transform( gun.pos );
-            arg80.field_C = 4;
+            arg80.flags = 4;
 
             gun.gun_obj->SetPosition(&arg80);
         }
@@ -4875,26 +4875,26 @@ void NC_STACK_yparobo::Die()
         {
             if ( !(_status_flg & BACT_STFLAG_CLEAN) )
             {
-                robo_arg134 arg134;
-                arg134.field_4 = 12;
-                arg134.field_8 = 0;
-                arg134.field_10 = 0;
-                arg134.field_C = 0;
+                TRoboMessage arg134;
+                arg134.msgID = 12;
+                arg134.param1 = 0;
+                arg134.param3 = 0;
+                arg134.param2 = 0;
                 arg134.unit = this;
-                arg134.field_14 = 100;
+                arg134.priority = 100;
 
                 placeMessage(&arg134);
             }
         }
         else
         {
-            robo_arg134 arg134;
-            arg134.field_4 = 11;
-            arg134.field_8 = _owner;
-            arg134.field_10 = 0;
-            arg134.field_C = 0;
+            TRoboMessage arg134;
+            arg134.msgID = 11;
+            arg134.param1 = _owner;
+            arg134.param3 = 0;
+            arg134.param2 = 0;
             arg134.unit = _killer;
-            arg134.field_14 = 50;
+            arg134.priority = 50;
 
             placeMessage(&arg134);
         }
@@ -4922,7 +4922,7 @@ void NC_STACK_yparobo::Die()
     }
 }
 
-size_t NC_STACK_yparobo::SetPosition(bact_arg80 *arg)
+size_t NC_STACK_yparobo::SetPosition(TUnitPlacement *arg)
 {
     int v5 = NC_STACK_ypabact::SetPosition(arg);
     if ( !v5 )
@@ -4934,9 +4934,9 @@ size_t NC_STACK_yparobo::SetPosition(bact_arg80 *arg)
     {
         if (gun.gun_obj)
         {
-            bact_arg80 v11;
+            TUnitPlacement v11;
             v11.pos = _position + _rotation.Transpose().Transform(gun.pos);
-            v11.field_C = 4;
+            v11.flags = 4;
 
             gun.gun_obj->SetPosition(&v11);
         }
@@ -5221,7 +5221,7 @@ void NC_STACK_yparobo::Renew()
 
     _roboGuns.clear();
     
-    _roboAttackers.fill( robo_t1() );
+    _roboAttackers.fill( TRoboAttackSlot() );
 
     _commandID = nextCommandID;
 
@@ -5340,9 +5340,9 @@ void NC_STACK_yparobo::DeadTimeUpdate(update_msg *arg)
     }
 }
 
-void NC_STACK_yparobo::FindMatchingCommander(robo_arg128 *arg)
+void NC_STACK_yparobo::FindMatchingCommander(TCommanderSearch *arg)
 {
-    arg->comm_bacto = NULL;
+    arg->found_comm = NULL;
     arg->comm_bact = NULL;
 
     for ( NC_STACK_ypabact* &node : _kidList )
@@ -5356,7 +5356,7 @@ void NC_STACK_yparobo::FindMatchingCommander(robo_arg128 *arg)
                 if ( arg->comm_id == node->_commandID )
                 {
                     arg->comm_bact = node;
-                    arg->comm_bacto = node;
+                    arg->found_comm = node;
                     v7 = 1;
                 }
                 else
@@ -5394,7 +5394,7 @@ void NC_STACK_yparobo::FindMatchingCommander(robo_arg128 *arg)
                             || (arg->tgType == BACT_TGT_TYPE_CELL && rbtg == tgsec) )
                     {
                         arg->comm_bact = node;
-                        arg->comm_bacto = node;
+                        arg->found_comm = node;
                     }
                 }
                 v21 = 0;
@@ -5428,7 +5428,7 @@ void NC_STACK_yparobo::FindMatchingCommander(robo_arg128 *arg)
                     if ( POW2(arg->distance) > POW2(tx - arg->tgt_pos.x) + POW2(ty - arg->tgt_pos.z) )
                     {
                         arg->comm_bact = node;
-                        arg->comm_bacto = node;
+                        arg->found_comm = node;
 
                         v26 = 1;
                     }
@@ -5588,11 +5588,11 @@ bool NC_STACK_yparobo::MakeSquad(const std::vector<int> &VhclIDS, vec3d pos, boo
 
 
 
-int NC_STACK_yparobo::ShouldPlaceMessage(robo_arg134 *arg)
+int NC_STACK_yparobo::ShouldPlaceMessage(TRoboMessage *arg)
 {
     int v2 = 1;
 
-    switch(arg->field_4)
+    switch(arg->msgID)
     {
     case 1:
     {
@@ -5608,15 +5608,15 @@ int NC_STACK_yparobo::ShouldPlaceMessage(robo_arg134 *arg)
     case 2:
     case 3:
     case 4:
-        if ( arg->field_8 == lastRoboMsgByType[ arg->field_4 ].field_0 && arg->field_C == lastRoboMsgByType[ arg->field_4 ].field_4 )
+        if ( arg->param1 == lastRoboMsgByType[ arg->msgID ].param1 && arg->param2 == lastRoboMsgByType[ arg->msgID ].param2 )
             v2 = 0;
         else
             v2 = 1;
         break;
 
     case 6:
-        v2 = (_clock - lastEnemyHostFoundMsgTime[ arg->field_8 ] > 45000) || lastEnemyHostFoundMsgTime[ arg->field_8 ] == 0;
-        lastEnemyHostFoundMsgTime[ arg->field_8 ] = _clock;
+        v2 = (_clock - lastEnemyHostFoundMsgTime[ arg->param1 ] > 45000) || lastEnemyHostFoundMsgTime[ arg->param1 ] == 0;
+        lastEnemyHostFoundMsgTime[ arg->param1 ] = _clock;
         break;
 
     case 7:
@@ -5634,7 +5634,7 @@ int NC_STACK_yparobo::ShouldPlaceMessage(robo_arg134 *arg)
     case 9:
     case 10:
     case 13:
-        if ( arg->field_8 == lastRoboMsgByType[arg->field_4].field_0 )
+        if ( arg->param1 == lastRoboMsgByType[arg->msgID].param1 )
             v2 = 0;
         else
             v2 = 1;
@@ -5655,9 +5655,9 @@ int NC_STACK_yparobo::ShouldPlaceMessage(robo_arg134 *arg)
 
     case 18:
     case 40:
-        if ( (_clock - lastRoboMsgByType[ arg->field_4 ].field_10) > arg->field_8 )
+        if ( (_clock - lastRoboMsgByType[ arg->msgID ].lastTime) > arg->param1 )
         {
-            lastRoboMsgByType[ arg->field_4 ].field_10 = _clock;
+            lastRoboMsgByType[ arg->msgID ].lastTime = _clock;
             v2 = 1;
         }
         else
@@ -5671,28 +5671,28 @@ int NC_STACK_yparobo::ShouldPlaceMessage(robo_arg134 *arg)
 
     if ( v2 )
     {
-        lastRoboMsgByType[arg->field_4].field_0 = arg->field_8;
-        lastRoboMsgByType[arg->field_4].field_4 = arg->field_C;
-        lastRoboMsgByType[arg->field_4].field_8 = arg->field_10;
+        lastRoboMsgByType[arg->msgID].param1 = arg->param1;
+        lastRoboMsgByType[arg->msgID].param2 = arg->param2;
+        lastRoboMsgByType[arg->msgID].param3 = arg->param3;
     }
 
     return v2;
 }
 
-int NC_STACK_yparobo::placeMessage(robo_arg134 *arg)
+int NC_STACK_yparobo::placeMessage(TRoboMessage *arg)
 {
-    if ( arg->unit && arg->unit->_bact_type == BACT_TYPES_GUN && arg->field_4 != 7 && arg->field_4 != 19 && arg->field_4 != 6 )
+    if ( arg->unit && arg->unit->_bact_type == BACT_TYPES_GUN && arg->msgID != 7 && arg->msgID != 19 && arg->msgID != 6 )
         return 0;
 
     if ( !ShouldPlaceMessage(arg) )
         return 0;
 
     TInfoMessage v8;
-    v8.Priority = arg->field_14;
+    v8.Priority = arg->priority;
     v8.unit = arg->unit;
-    v8.MsgID = arg->field_4;
+    v8.MsgID = arg->msgID;
     
-    switch ( arg->field_4 )
+    switch ( arg->msgID )
     {
     case 2:
         v8.txt = Locale::Text::Feedback(Locale::FEEDBACK_SECTCONQ);
@@ -6299,8 +6299,8 @@ NC_STACK_yparobo::NC_STACK_yparobo()
 
     for (auto &t : _roboAttackers)
     {
-        t.field_0 = 0;
-        t.field_4 = 0;
+        t.squadCommandID = 0;
+        t.targetCommandID = 0;
     }
 
     _roboAttackersTime = 0;

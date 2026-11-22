@@ -104,9 +104,9 @@ void NC_STACK_ypatank::AI_layer3(update_msg *arg)
     {
         if ( !(_status_flg & BACT_STFLAG_LAND) )
         {
-            bact_arg86 arg86;
-            arg86.field_one = 1;
-            arg86.field_two = arg->frameTime;
+            TCrashLandStep arg86;
+            arg86.flags = 1;
+            arg86.frameTime = arg->frameTime;
 
             CrashOrLand(&arg86);
             break;
@@ -303,7 +303,7 @@ void NC_STACK_ypatank::AI_layer3(update_msg *arg)
                 {
                     move_msg arg74;
                     arg74.flag = 0;
-                    arg74.field_0 = v244;
+                    arg74.period = v244;
 
                     Move(&arg74);
                 }
@@ -600,7 +600,7 @@ void NC_STACK_ypatank::AI_layer3(update_msg *arg)
             }
         }
 
-        bact_arg75 arg75;
+        TFightTarget arg75;
         arg75.fperiod = v244;
         arg75.g_time = _clock;
 
@@ -655,8 +655,8 @@ void NC_STACK_ypatank::AI_layer3(update_msg *arg)
     {
         if ( _clock - _newtarget_time > 500 )
         {
-            bact_arg110 arg110;
-            bact_arg110 arg110_1;
+            TTargetAssess arg110;
+            TTargetAssess arg110_1;
 
             arg110.tgType = _secndTtype;
             arg110.priority = 1;
@@ -749,9 +749,9 @@ void NC_STACK_ypatank::AI_layer3(update_msg *arg)
         }
         else
         {
-            bact_arg86 arg86;
-            arg86.field_one = 1;
-            arg86.field_two = arg->frameTime;
+            TCrashLandStep arg86;
+            arg86.flags = 1;
+            arg86.frameTime = arg->frameTime;
 
             CrashOrLand(&arg86);
         }
@@ -902,14 +902,14 @@ void NC_STACK_ypatank::User_layer(update_msg *arg)
         if ( v89 > 0.0001 )
             v67 /= v89;
 
-        bact_arg79 arg79;
-        bact_arg106 arg106;
+        TMissileLaunch arg79;
+        TAimQuery arg106;
 
         arg79.tgt_pos = v67;
         arg79.tgType = BACT_TGT_TYPE_DRCT;
 
-        arg106.field_4 = v67;
-        arg106.field_0 = 5;
+        arg106.aim_dir = v67;
+        arg106.flags = 5;
 
         if ( UserTargeting(&arg106) )
         {
@@ -963,10 +963,10 @@ void NC_STACK_ypatank::User_layer(update_msg *arg)
                     SetState(&arg78);
                 }
 
-                bact_arg105 arg105;
-                arg105.field_0 = v67;
-                arg105.field_C = v90;
-                arg105.field_10 = _clock;
+                TMinigunShot arg105;
+                arg105.dir = v67;
+                arg105.period = v90;
+                arg105.gTime = _clock;
 
                 FireMinigun(&arg105);
             }
@@ -1003,7 +1003,7 @@ void NC_STACK_ypatank::User_layer(update_msg *arg)
                 arg74.flag = 0;
             }
 
-            arg74.field_0 = v90;
+            arg74.period = v90;
 
             if ( _status_flg & BACT_STFLAG_MOVE )
                 Move(&arg74);
@@ -1029,9 +1029,9 @@ void NC_STACK_ypatank::User_layer(update_msg *arg)
         }
         else
         {
-            bact_arg86 arg86;
-            arg86.field_one = 1;
-            arg86.field_two = arg->frameTime;
+            TCrashLandStep arg86;
+            arg86.flags = 1;
+            arg86.frameTime = arg->frameTime;
 
             CrashOrLand(&arg86);
         }
@@ -1073,7 +1073,7 @@ void NC_STACK_ypatank::Move(move_msg *arg)
 
     if ( v45 > 0.0 )
     {
-        vec3d v37 = _fly_dir * _fly_dir_length + v40 * ( arg->field_0 / _mass );
+        vec3d v37 = _fly_dir * _fly_dir_length + v40 * ( arg->period / _mass );
 
         float v42 = v37.length();
 
@@ -1093,7 +1093,7 @@ void NC_STACK_ypatank::Move(move_msg *arg)
         }
     }
 
-    _position += _fly_dir * (_fly_dir_length * arg->field_0 * 6.0);
+    _position += _fly_dir * (_fly_dir_length * arg->period * 6.0);
 
     CorrectPositionInLevelBox(NULL);
 
@@ -1117,11 +1117,11 @@ void NC_STACK_ypatank::Move(move_msg *arg)
         _soundcarrier.Sounds[0].Pitch += (float)(_soundcarrier.Sounds[0].PSample->SampleRate + _soundcarrier.Sounds[0].Pitch) * v49;
 }
 
-size_t NC_STACK_ypatank::SetPosition(bact_arg80 *arg)
+size_t NC_STACK_ypatank::SetPosition(TUnitPlacement *arg)
 {
     if ( NC_STACK_ypabact::SetPosition(arg) )
     {
-        if ( arg->field_C & 1 )
+        if ( arg->flags & 1 )
         {
             TRayIntersection arg136;
             arg136.stPos = _position.X0Z() - vec3d::OY(30000.0);
@@ -1145,7 +1145,7 @@ size_t NC_STACK_ypatank::SetPosition(bact_arg80 *arg)
     return 0;
 }
 
-void NC_STACK_ypatank::ApplyImpulse(bact_arg83 *arg)
+void NC_STACK_ypatank::ApplyImpulse(TImpulse *arg)
 {
     float v30 = 500.0 / _mass;
 
@@ -1157,7 +1157,7 @@ void NC_STACK_ypatank::ApplyImpulse(bact_arg83 *arg)
 
     if ( v32 <= 1.0 )
     {
-        v27 = arg->pos2;
+        v27 = arg->dir;
         v32 = 1.0;
     }
     else
@@ -1584,13 +1584,13 @@ size_t NC_STACK_ypatank::CollisionWithBact(int arg)
     return NC_STACK_ypabact::CollisionWithBact(arg);
 }
 
-void NC_STACK_ypatank::Recoil(bact_arg88 *arg)
+void NC_STACK_ypatank::Recoil(TCollisionNormal *arg)
 {
     if ( !(_status_flg & BACT_STFLAG_LAND) )
     {
         NC_STACK_ypabact::Recoil(arg);
 
-        _fly_dir = _fly_dir * _fly_dir_length - arg->pos1 * 5.0;
+        _fly_dir = _fly_dir * _fly_dir_length - arg->normal * 5.0;
 
         _fly_dir_length = _fly_dir.length();
 
@@ -1606,7 +1606,7 @@ void NC_STACK_ypatank::Renew()
     _tankWaitCount = 0;
 }
 
-size_t NC_STACK_ypatank::CheckFireAI(bact_arg101 *arg)
+size_t NC_STACK_ypatank::CheckFireAI(TFireCheck *arg)
 {
     vec3d v34 = arg->pos - _position;
 
@@ -1629,7 +1629,7 @@ size_t NC_STACK_ypatank::CheckFireAI(bact_arg101 *arg)
 
     if ( arg149.isect )
     {
-        if ( arg->unkn == 2 )
+        if ( arg->tgType == 2 )
         {
             NC_STACK_ypabact *v15;
 
@@ -1729,7 +1729,7 @@ size_t NC_STACK_ypatank::CheckFireAI(bact_arg101 *arg)
         v38 = 0.0;
     }
 
-    if ( arg->unkn == 2 )
+    if ( arg->tgType == 2 )
     {
         if ( v43 )
         {

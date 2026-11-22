@@ -159,10 +159,10 @@ struct newMaster_msg
     World::RefBactList *list;
 };
 
-struct bact_arg80
+struct TUnitPlacement
 {
     vec3d pos;
-    int field_C;
+    int flags;
 };
 
 struct setState_msg
@@ -202,97 +202,97 @@ struct setTarget_msg
     vec3d tgt_pos;
 };
 
-struct bact_arg124
+struct TPathRequest
 {
     vec2d from;
     vec2d to;
     int16_t steps_cnt;
-    int16_t field_12;
+    int16_t tgt_type;
     vec3d waypoints[32];
 };
 
-struct bact_arg84
+struct TEnergyChange
 {
     int energy;
     NC_STACK_ypabact *unit;
 };
 
-struct bact_arg88
+struct TCollisionNormal
 {
-    vec3d pos1;
+    vec3d normal;
 };
 
-struct bact_arg94
+struct TFormationSlot
 {
-    int field_0;
-    vec3d pos1;
+    int slot;
+    vec3d pos;
     //vec3d pos2;
 };
 
 struct move_msg
 {
-    float field_0;
-    vec3d vec;
+    float period;
+    vec3d thrustDir;
     int flag;
 };
 
-struct bact_arg81
+struct TSummaryQuery
 {
     int enrg_type;
     int enrg_sum;
 };
 
-struct bact_arg109
+struct TReorgOrder
 {
-    int field_0;
-    NC_STACK_ypabact *field_4;
+    int mode;
+    NC_STACK_ypabact *unit;
 };
 
-struct bact_arg92
+struct TForcesRatio
 {
     vec3d pos;
-    int energ1;
-    int energ2;
-    int field_14;
+    int ownEnergy;
+    int enemyEnergy;
+    int flags;
 };
 
-struct bact_hudi
+struct THudVisor
 {
-    int field_0;
-    int field_4;
-    float field_8;
-    float field_C;
-    float field_10;
-    float field_14;
-    NC_STACK_ypabact *field_18;
+    int mgunSight;
+    int weaponSight;
+    float mgunX;
+    float mgunY;
+    float weaponX;
+    float weaponY;
+    NC_STACK_ypabact *target;
 
-    bact_hudi()
+    THudVisor()
     {
-        field_0 = 0;
-        field_4 = 0;
-        field_8 = 0.0;
-        field_C = 0.0;
-        field_10 = 0.0;
-        field_14 = 0.0;
-        field_18 = NULL;
+        mgunSight = 0;
+        weaponSight = 0;
+        mgunX = 0.0;
+        mgunY = 0.0;
+        weaponX = 0.0;
+        weaponY = 0.0;
+        target = NULL;
     }
 };
 
-struct bact_arg105
+struct TMinigunShot
 {
-    vec3d field_0;
-    float field_C;
-    int field_10;
+    vec3d dir;
+    float period;
+    int gTime;
 };
 
-struct bact_arg106
+struct TAimQuery
 {
-    int field_0;
-    vec3d field_4;
+    int flags;
+    vec3d aim_dir;
     NC_STACK_ypabact *ret_bact;
 };
 
-struct bact_arg79
+struct TMissileLaunch
 {
     vec3d direction;
     vec3d start_point;
@@ -304,7 +304,7 @@ struct bact_arg79
     int flags;
 };
 
-struct bact_arg75
+struct TFightTarget
 {
     vec3d pos;
     BactTarget target;
@@ -313,30 +313,30 @@ struct bact_arg75
     int g_time;
 };
 
-struct bact_arg110
+struct TTargetAssess
 {
     int tgType;
     int priority;
 };
 
-struct bact_arg86
+struct TCrashLandStep
 {
-    int field_one;
-    int field_two;
+    int flags;
+    int frameTime;
 };
 
-struct bact_arg101
+struct TFireCheck
 {
     vec3d pos;
-    int unkn;
+    int tgType;
     float radius;
 };
 
-struct bact_arg83
+struct TImpulse
 {
     int energ;
     vec3d pos;
-    vec3d pos2;
+    vec3d dir;
     float force;
     float mass;
 };
@@ -385,37 +385,37 @@ public:
     virtual void AddSubject(NC_STACK_ypabact *kid);
     virtual void SetNewMaster(newMaster_msg *arg);
     virtual void Move(move_msg *arg);
-    virtual void FightWithBact(bact_arg75 *arg);
-    virtual void FightWithSect(bact_arg75 *arg);
+    virtual void FightWithBact(TFightTarget *arg);
+    virtual void FightWithSect(TFightTarget *arg);
     virtual void Die();
     virtual void SetState(setState_msg *arg);
-    virtual size_t LaunchMissile(bact_arg79 *arg);
-    virtual size_t SetPosition(bact_arg80 *arg);
-    virtual void GetSummary(bact_arg81 *arg);
+    virtual size_t LaunchMissile(TMissileLaunch *arg);
+    virtual size_t SetPosition(TUnitPlacement *arg);
+    virtual void GetSummary(TSummaryQuery *arg);
     virtual void EnergyInteract(update_msg *arg);
-    virtual void ApplyImpulse(bact_arg83 *arg);
-    virtual void ModifyEnergy(bact_arg84 *arg);
+    virtual void ApplyImpulse(TImpulse *arg);
+    virtual void ModifyEnergy(TEnergyChange *arg);
     virtual bool IsFastAlong(vec3d *arg);
-    virtual size_t CrashOrLand(bact_arg86 *arg);
+    virtual size_t CrashOrLand(TCrashLandStep *arg);
     virtual size_t CollisionWithBact(int arg);
-    virtual void Recoil(bact_arg88 *arg);
+    virtual void Recoil(TCollisionNormal *arg);
     virtual NC_STACK_ypabact *GetSectorTarget(Common::Point CellId) const;
     virtual void GetBestSectorPart(vec3d *arg);
-    virtual void GetForcesRatio(bact_arg92 *arg);
-    virtual void GetFormationPosition(bact_arg94 *arg);
+    virtual void GetForcesRatio(TForcesRatio *arg);
+    virtual void GetFormationPosition(TFormationSlot *arg);
     virtual void Renew();
     virtual void HandBrake(update_msg *arg);
     virtual void CreationTimeUpdate(update_msg *arg);
     virtual size_t IsDestroyed();
-    virtual size_t CheckFireAI(bact_arg101 *arg);
+    virtual size_t CheckFireAI(TFireCheck *arg);
     virtual void MarkSectorsForView();
     virtual void StuckFree(update_msg *arg);
-    virtual size_t FireMinigun(bact_arg105 *arg);
-    virtual size_t UserTargeting(bact_arg106 *arg);
+    virtual size_t FireMinigun(TMinigunShot *arg);
+    virtual size_t UserTargeting(TAimQuery *arg);
     virtual void HandleVisChildrens(int *arg);
     virtual bool GetFightMotivation(float *arg);
-    virtual void ReorganizeGroup(bact_arg109 *arg);
-    virtual size_t TargetAssess(bact_arg110 *arg);
+    virtual void ReorganizeGroup(TReorgOrder *arg);
+    virtual size_t TargetAssess(TTargetAssess *arg);
     virtual bool TestTargetSector(const NC_STACK_ypabact *) const { return true; };
     virtual void BeamingTimeUpdate(update_msg *arg);
     virtual void StartDestFXByType(uint8_t arg);
@@ -429,8 +429,8 @@ public:
     virtual void DeadTimeUpdate(update_msg *arg);
     virtual void NetInterpolateMotion(update_msg *arg);
     virtual void NetExtrapolateMotion(update_msg *arg);
-    virtual size_t PathFinder(bact_arg124 *arg);
-    virtual size_t SetPath(bact_arg124 *arg);
+    virtual size_t PathFinder(TPathRequest *arg);
+    virtual size_t SetPath(TPathRequest *arg);
     
     virtual bool IsHidden() const;
     virtual bool IsHiddenFor(uint8_t owner) const;

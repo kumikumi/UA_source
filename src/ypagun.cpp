@@ -288,7 +288,7 @@ void NC_STACK_ypagun::AI_layer3(update_msg *arg)
         if ( fabs(y_delta) > 0.001 )
             _rotation = mat3x3::RotateX(y_delta * 0.3) * _rotation;
 
-        bact_arg75 arg75;
+        TFightTarget arg75;
         arg75.fperiod = fTime;
         arg75.g_time = _clock;
         arg75.target.pbact = _secndT.pbact;
@@ -371,13 +371,13 @@ void NC_STACK_ypagun::User_layer(update_msg *arg)
                 }
             }
 
-            bact_arg79 arg79;
+            TMissileLaunch arg79;
             arg79.tgType = BACT_TGT_TYPE_CELL;
             arg79.tgt_pos = _position + _rotation.AxisZ() * (World::CVSectorLength * 3.0);
 
-            bact_arg106 arg106;
-            arg106.field_4 = _rotation.AxisZ();
-            arg106.field_0 = 5;
+            TAimQuery arg106;
+            arg106.aim_dir = _rotation.AxisZ();
+            arg106.flags = 5;
 
             if ( UserTargeting(&arg106) )
             {
@@ -413,10 +413,10 @@ void NC_STACK_ypagun::User_layer(update_msg *arg)
                         SetState(&arg78);
                     }
 
-                    bact_arg105 arg105;
-                    arg105.field_0 = _rotation.AxisZ();
-                    arg105.field_C = fTime;
-                    arg105.field_10 = _clock;
+                    TMinigunShot arg105;
+                    arg105.dir = _rotation.AxisZ();
+                    arg105.period = fTime;
+                    arg105.gTime = _clock;
 
                     FireMinigun(&arg105);
 
@@ -480,7 +480,7 @@ void NC_STACK_ypagun::User_layer(update_msg *arg)
         DeadTimeUpdate(arg);
 }
 
-void NC_STACK_ypagun::FightWithBact(bact_arg75 *arg)
+void NC_STACK_ypagun::FightWithBact(TFightTarget *arg)
 {
     vec3d vTgt = arg->target.pbact->_position - _position;
 
@@ -495,7 +495,7 @@ void NC_STACK_ypagun::FightWithBact(bact_arg75 *arg)
     {
         if ( _gunType == GUN_TYPE_REAL )
         {
-            bact_arg79 arg79;
+            TMissileLaunch arg79;
             arg79.direction = vTgt;
             arg79.start_point = _fire_pos;
             arg79.tgType = BACT_TGT_TYPE_UNIT;
@@ -528,10 +528,10 @@ void NC_STACK_ypagun::FightWithBact(bact_arg75 *arg)
                 SetState(&arg78);
             }
 
-            bact_arg105 arg105;
-            arg105.field_C = arg->fperiod;
-            arg105.field_10 = arg->g_time;
-            arg105.field_0 = _rotation.AxisZ();
+            TMinigunShot arg105;
+            arg105.period = arg->fperiod;
+            arg105.gTime = arg->g_time;
+            arg105.dir = _rotation.AxisZ();
 
             FireMinigun(&arg105);
         }
@@ -567,7 +567,7 @@ void NC_STACK_ypagun::Die()
     }
 }
 
-size_t NC_STACK_ypagun::SetPosition(bact_arg80 *arg)
+size_t NC_STACK_ypagun::SetPosition(TUnitPlacement *arg)
 {
     if ( !NC_STACK_ypabact::SetPosition(arg) )
         return 0;
@@ -590,7 +590,7 @@ size_t NC_STACK_ypagun::SetPosition(bact_arg80 *arg)
 
         SetGunBasis(vec3d(0, 0, 1.0), false);
     }
-    else if ( !(arg->field_C & 4) )
+    else if ( !(arg->flags & 4) )
     {
         _position.y = arg->pos.y + _pSector->height;
     }

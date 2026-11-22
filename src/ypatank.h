@@ -34,12 +34,12 @@ public:
     virtual void AI_layer3(update_msg *arg);
     virtual void User_layer(update_msg *arg);
     virtual void Move(move_msg *arg);
-    virtual size_t SetPosition(bact_arg80 *arg);
-    virtual void ApplyImpulse(bact_arg83 *arg);
+    virtual size_t SetPosition(TUnitPlacement *arg);
+    virtual void ApplyImpulse(TImpulse *arg);
     virtual size_t CollisionWithBact(int arg);
-    virtual void Recoil(bact_arg88 *arg);
+    virtual void Recoil(TCollisionNormal *arg);
     virtual void Renew();
-    virtual size_t CheckFireAI(bact_arg101 *arg);
+    virtual size_t CheckFireAI(TFireCheck *arg);
     virtual bool TestTargetSector(const NC_STACK_ypabact * cel_unit) const override;
     virtual void CorrectPositionOnLand();
     virtual int AlignVehicleAI(float dtime, vec3d *pNormal);

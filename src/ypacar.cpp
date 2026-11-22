@@ -404,16 +404,16 @@ void NC_STACK_ypacar::User_layer(update_msg *arg)
         if ( _gun_angle_user > 0.8 )
             _gun_angle_user = 0.8;
 
-        bact_arg79 arg79;
+        TMissileLaunch arg79;
         arg79.tgType = BACT_TGT_TYPE_DRCT;
         arg79.tgt_pos = _rotation.AxisZ();
 
         float corW, corH;
         GFX::Engine.getAspectCorrection(corW, corH, true);
 
-        bact_arg106 arg106;
-        arg106.field_0 = 5;
-        arg106.field_4 = _rotation.AxisZ() - vec3d::OY(_gun_angle_user * corH);
+        TAimQuery arg106;
+        arg106.flags = 5;
+        arg106.aim_dir = _rotation.AxisZ() - vec3d::OY(_gun_angle_user * corH);
 
         if ( UserTargeting(&arg106) )
         {
@@ -474,10 +474,10 @@ void NC_STACK_ypacar::User_layer(update_msg *arg)
                     SetState(&arg78);
                 }
 
-                bact_arg105 arg105;
-                arg105.field_0 = _rotation.AxisZ() - _rotation.AxisY() * _gun_angle_user * corH;
-                arg105.field_C = v78;
-                arg105.field_10 = _clock;
+                TMinigunShot arg105;
+                arg105.dir = _rotation.AxisZ() - _rotation.AxisY() * _gun_angle_user * corH;
+                arg105.period = v78;
+                arg105.gTime = _clock;
 
                 FireMinigun(&arg105);
             }
@@ -514,7 +514,7 @@ void NC_STACK_ypacar::User_layer(update_msg *arg)
             }
 
             arg74.flag = 0;
-            arg74.field_0 = v78;
+            arg74.period = v78;
 
             if ( _status_flg & BACT_STFLAG_MOVE )
                 Move(&arg74);
@@ -549,9 +549,9 @@ void NC_STACK_ypacar::User_layer(update_msg *arg)
         }
         else
         {
-            bact_arg86 arg86;
-            arg86.field_one = 1;
-            arg86.field_two = arg->frameTime;
+            TCrashLandStep arg86;
+            arg86.flags = 1;
+            arg86.frameTime = arg->frameTime;
 
             CrashOrLand(&arg86);
         }

@@ -8,13 +8,13 @@
 
 class NC_STACK_yparobo;
 
-struct robo_t1
+struct TRoboAttackSlot
 {
-    uint32_t field_0 = 0;
-    uint32_t field_4 = 0;
+    uint32_t squadCommandID = 0;
+    uint32_t targetCommandID = 0;
 };
 
-struct robo_arg128
+struct TCommanderSearch
 {
     int flags;
     BactTarget tgt;
@@ -24,26 +24,26 @@ struct robo_arg128
     uint32_t comm_id;
     float distance;
     NC_STACK_ypabact *comm_bact;
-    NC_STACK_ypabact *comm_bacto;
+    NC_STACK_ypabact *found_comm;
 };
 
-struct robo_arg134
+struct TRoboMessage
 {
     NC_STACK_ypabact *unit;
-    int field_4;
-    int field_8;
-    int field_C;
-    int field_10;
-    int field_14;
+    int msgID;
+    int param1;
+    int param2;
+    int param3;
+    int priority;
 };
 
-struct robo_t2
+struct TLastRoboMessage
 {
-    int field_0;
-    int field_4;
-    int field_8;
+    int param1;
+    int param2;
+    int param3;
     int field_C;
-    int field_10;
+    int lastTime;
     int field_14;
     int field_18;
 };
@@ -75,16 +75,16 @@ public:
     virtual void User_layer(update_msg *arg);
     virtual void Move(move_msg *arg);
     virtual void Die();
-    virtual size_t SetPosition(bact_arg80 *arg);
+    virtual size_t SetPosition(TUnitPlacement *arg);
     virtual void EnergyInteract(update_msg *arg);
     virtual void Renew();
     virtual void HandBrake(update_msg *);
     virtual void CorrectPositionOnLand();
     virtual void DeadTimeUpdate(update_msg *arg);
-    virtual void FindMatchingCommander(robo_arg128 *arg);
+    virtual void FindMatchingCommander(TCommanderSearch *arg);
     virtual size_t GetTargetByCommandID(setTarget_msg *arg);
     virtual bool MakeSquad(const std::vector<int> &VhclIDS, vec3d pos, bool usable);
-    virtual int placeMessage(robo_arg134 *arg);
+    virtual int placeMessage(TRoboMessage *arg);
 
     NC_STACK_yparobo();
     virtual ~NC_STACK_yparobo() {};
@@ -277,14 +277,14 @@ protected:
     int RateAreaControl(const Common::Point &cellId);
     float RateEnemyTarget(NC_STACK_ypabact *bctnd);
     
-    int ShouldPlaceMessage(robo_arg134 *arg);
+    int ShouldPlaceMessage(TRoboMessage *arg);
     
     void ClearSquadSecondaryTargets(NC_STACK_ypabact *bact);
     void CopyWaypointsToSquad(NC_STACK_ypabact *bact);
     
     int IsCommanderClosestToTarget(NC_STACK_ypabact *bact);
     void SendSquadAgainstEnemyRobo(NC_STACK_ypabact *unit1, NC_STACK_ypabact *unit2);
-    void UpdateRoboAttackSquad(NC_STACK_ypabact *unit, robo_t1 *rbt);
+    void UpdateRoboAttackSquad(NC_STACK_ypabact *unit, TRoboAttackSlot *rbt);
     int SendSquadToPosition(NC_STACK_ypabact *bact, float a2, float a3);
     int SendSquadToUnit(NC_STACK_ypabact *bact, NC_STACK_ypabact *bact2);
     
@@ -425,7 +425,7 @@ public:
     vec3d _roboBeamPos;
     int _roboBeamFXTime;
     
-    std::array<robo_t1, 16> _roboAttackers;
+    std::array<TRoboAttackSlot, 16> _roboAttackers;
     int _roboAttackersTime;
     int _roboAttackersClearTime; //FIX IT
 };

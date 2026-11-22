@@ -3625,9 +3625,9 @@ void MakeUserUnitCommander(NC_STACK_ypaworld *yw)
     {
         if ( yw->_userUnit->_bact_type != BACT_TYPES_ROBO && yw->_userUnit->_bact_type != BACT_TYPES_MISSLE && yw->_userUnit->_bact_type != BACT_TYPES_GUN )
         {
-            bact_arg109 v5;
-            v5.field_0 = 2;
-            v5.field_4 = yw->_userUnit->_parent;
+            TReorgOrder v5;
+            v5.mode = 2;
+            v5.unit = yw->_userUnit->_parent;
 
             yw->_userUnit->ReorganizeGroup(&v5);
         }
@@ -5441,17 +5441,17 @@ void SquadManagerDropUnit(NC_STACK_ypaworld *yw, TClickBoxInf *winpt)
                         NC_STACK_ypabact *itbact = *it;
                         it++;
 
-                        bact_arg109 arg109;
+                        TReorgOrder arg109;
 
                         if ( v3 )
                         {
-                            arg109.field_4 = itbact;
-                            arg109.field_0 = 4;
+                            arg109.unit = itbact;
+                            arg109.mode = 4;
                         }
                         else
                         {
-                            arg109.field_4 = NULL;
-                            arg109.field_0 = 3;
+                            arg109.unit = NULL;
+                            arg109.mode = 3;
 
                             v3 = itbact;
                         }
@@ -5462,9 +5462,9 @@ void SquadManagerDropUnit(NC_STACK_ypaworld *yw, TClickBoxInf *winpt)
         }
         else
         {
-            bact_arg109 arg109;
-            arg109.field_4 = NULL;
-            arg109.field_0 = 3;
+            TReorgOrder arg109;
+            arg109.unit = NULL;
+            arg109.mode = 3;
 
             squadron_manager.field_2BC->ReorganizeGroup(&arg109);
         }
@@ -5496,26 +5496,26 @@ void SquadManagerDropUnit(NC_STACK_ypaworld *yw, TClickBoxInf *winpt)
                             NC_STACK_ypabact *itbact = *it;
                             it++;
 
-                            bact_arg109 arg109;
-                            arg109.field_0 = 1;
-                            arg109.field_4 = v6;
+                            TReorgOrder arg109;
+                            arg109.mode = 1;
+                            arg109.unit = v6;
                             itbact->ReorganizeGroup(&arg109);
                         }
                     }
                 }
                 else
                 {
-                    bact_arg109 arg109;
-                    arg109.field_0 = 1;
-                    arg109.field_4 = v6;
+                    TReorgOrder arg109;
+                    arg109.mode = 1;
+                    arg109.unit = v6;
                     squadron_manager.field_2BC->ReorganizeGroup(&arg109);
                 }
             }
             else
             {
-                bact_arg109 arg109;
-                arg109.field_0 = 4;
-                arg109.field_4 = squadron_manager.field_2BC;
+                TReorgOrder arg109;
+                arg109.mode = 4;
+                arg109.unit = squadron_manager.field_2BC;
                 v6->ReorganizeGroup(&arg109);
             }
             yw->_activeCmdrID = v6->_commandID;
@@ -5846,9 +5846,9 @@ void RoboMapMakeSquadFromBox(NC_STACK_ypaworld *yw)
                                     {
                                         if ( bct->_bact_type != BACT_TYPES_ROBO )
                                         {
-                                            bact_arg109 arg109;
-                                            arg109.field_4 = bct;
-                                            arg109.field_0 = 4;
+                                            TReorgOrder arg109;
+                                            arg109.unit = bct;
+                                            arg109.mode = 4;
 
                                             v13->ReorganizeGroup(&arg109);
 
@@ -5866,9 +5866,9 @@ void RoboMapMakeSquadFromBox(NC_STACK_ypaworld *yw)
                                         {
                                             v13 = bct;
 
-                                            bact_arg109 arg109;
-                                            arg109.field_4 = NULL;
-                                            arg109.field_0 = 3;
+                                            TReorgOrder arg109;
+                                            arg109.unit = NULL;
+                                            arg109.mode = 3;
 
                                             v13->ReorganizeGroup(&arg109);
 
@@ -8745,13 +8745,13 @@ void yw_RenderHUDCompass(NC_STACK_ypaworld *yw, THudState *wis)
         }
     }
 
-    if ( yw->_guiVisor.field_18 )
+    if ( yw->_guiVisor.target )
     {
         SDL_Color a11 = yw->GetColor(23);
         SDL_Color v50 = yw->GetColor(32);
 
-        float v45 = yw->_guiVisor.field_18->_position.x - yw->_userUnit->_position.x;
-        float v46 = yw->_guiVisor.field_18->_position.z - yw->_userUnit->_position.z;
+        float v45 = yw->_guiVisor.target->_position.x - yw->_userUnit->_position.x;
+        float v46 = yw->_guiVisor.target->_position.z - yw->_userUnit->_position.z;
 
         float v81 = v45 * yy + v46 * xx;
         float v79 = v45 * -xx + v46 * yy;
@@ -9151,8 +9151,8 @@ void DrawHud(NC_STACK_ypaworld *yw)
         yw_RenderUnitLifeBar(yw, &buf, yw->_bactOnMouse);
     }
 
-    if ( yw->_guiVisor.field_18 )
-        yw_RenderUnitLifeBar(yw, &buf, yw->_guiVisor.field_18);
+    if ( yw->_guiVisor.target )
+        yw_RenderUnitLifeBar(yw, &buf, yw->_guiVisor.target);
 
     yw_RenderOverlayCursors(yw, &buf);
 
@@ -9160,7 +9160,7 @@ void DrawHud(NC_STACK_ypaworld *yw)
 
     GFX::Engine.ProcessDrawSeq(buf);
 
-    yw->_guiVisor.field_18 = NULL;
+    yw->_guiVisor.target = NULL;
 }
 
 
@@ -9241,27 +9241,27 @@ void yw_RenderHUDTarget(NC_STACK_ypaworld *yw, THudState *wis)
 
         if ( vhcl->wpn_wireframe_1 )
             wpn_wure = vhcl->wpn_wireframe_1->GetSkelet();
-        else if ( yw->_guiVisor.field_4 == 2)
+        else if ( yw->_guiVisor.weaponSight == 2)
             wpn_wure = wis->sklts_intern[5];
-        else if ( yw->_guiVisor.field_4 == 3 )
+        else if ( yw->_guiVisor.weaponSight == 3 )
             wpn_wure = wis->sklts_intern[6];
-        else if ( yw->_guiVisor.field_4 == 4 )
+        else if ( yw->_guiVisor.weaponSight == 4 )
             wpn_wure = wis->sklts_intern[7];
 
         if ( vhcl->wpn_wireframe_2 )
             wpn_wure2 = vhcl->wpn_wireframe_2->GetSkelet();
-        else if ( yw->_guiVisor.field_4 == 2)
+        else if ( yw->_guiVisor.weaponSight == 2)
             wpn_wure2 = wis->sklts_intern[9];
-        else if ( yw->_guiVisor.field_4 == 3 )
+        else if ( yw->_guiVisor.weaponSight == 3 )
             wpn_wure2 = wis->sklts_intern[10];
-        else if ( yw->_guiVisor.field_4 == 4 )
+        else if ( yw->_guiVisor.weaponSight == 4 )
             wpn_wure2 = wis->sklts_intern[11];
 
-        if ( yw->_guiVisor.field_18 )
+        if ( yw->_guiVisor.target )
         {
-            if ( yw->_guiVisor.field_18 != wis->target )
+            if ( yw->_guiVisor.target != wis->target )
             {
-                wis->target = yw->_guiVisor.field_18;
+                wis->target = yw->_guiVisor.target;
                 wis->target_time = yw->_timeStamp;
             }
         }
@@ -9276,7 +9276,7 @@ void yw_RenderHUDTarget(NC_STACK_ypaworld *yw, THudState *wis)
             yw_RenderVector2D(yw, hud_wure, 0.0, 0.0, 1.0, 0.0, 0.0, 1.0, 0.99, 0.99, v14, NULL, NULL, true);
         }
 
-        if ( yw->_guiVisor.field_0 )
+        if ( yw->_guiVisor.mgunSight )
         {
             if ( mg_wure )
             {
@@ -9304,11 +9304,11 @@ void yw_RenderHUDTarget(NC_STACK_ypaworld *yw, THudState *wis)
                 v19->cl2_g = v15.g;
                 v19->cl2_b = v15.b;
 
-                yw_RenderVector2D(yw, mg_wure, yw->_guiVisor.field_8, yw->_guiVisor.field_C, 1.0, 0.0, 0.0, 1.0, a9, 0.4, v16, func, NULL, true);
+                yw_RenderVector2D(yw, mg_wure, yw->_guiVisor.mgunX, yw->_guiVisor.mgunY, 1.0, 0.0, 0.0, 1.0, a9, 0.4, v16, func, NULL, true);
             }
         }
 
-        if ( yw->_guiVisor.field_4 )
+        if ( yw->_guiVisor.weaponSight )
         {
             float v51[2];
             wis_color_func func;
@@ -9316,7 +9316,7 @@ void yw_RenderHUDTarget(NC_STACK_ypaworld *yw, THudState *wis)
             SDL_Color a11;
             SDL_Color v27;
 
-            if ( yw->_guiVisor.field_18 )
+            if ( yw->_guiVisor.target )
             {
                 for (int i = 0; i < 2; i++)
                 {
@@ -9359,15 +9359,15 @@ void yw_RenderHUDTarget(NC_STACK_ypaworld *yw, THudState *wis)
             {
                 float v77, v78;
 
-                if ( yw->_guiVisor.field_18 )
+                if ( yw->_guiVisor.target )
                 {
-                    v77 = (yw->_guiVisor.field_10 - yw->_guiVisor.field_8) * v51[i] + yw->_guiVisor.field_8;
-                    v78 = (yw->_guiVisor.field_14 - yw->_guiVisor.field_C) * v51[i] + yw->_guiVisor.field_C;
+                    v77 = (yw->_guiVisor.weaponX - yw->_guiVisor.mgunX) * v51[i] + yw->_guiVisor.mgunX;
+                    v78 = (yw->_guiVisor.weaponY - yw->_guiVisor.mgunY) * v51[i] + yw->_guiVisor.mgunY;
                 }
                 else
                 {
-                    v77 = yw->_guiVisor.field_10;
-                    v78 = yw->_guiVisor.field_14;
+                    v77 = yw->_guiVisor.weaponX;
+                    v78 = yw->_guiVisor.weaponY;
                 }
 
                 float v80 = v51[i] * -0.23 + 0.4;

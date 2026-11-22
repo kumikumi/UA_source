@@ -1915,7 +1915,7 @@ public:
     virtual void IntersectLongRay(TRayIntersection *arg);
     virtual void FindUnitOnRay(TUnitRayQuery *arg);
     virtual void DeleteLevel();
-    virtual void SetHudVisor(bact_hudi *arg);
+    virtual void SetHudVisor(THudVisor *arg);
     virtual bool InitGameShell(UserData *usr);
     virtual void DeinitGameShell();
     virtual bool CreateTitleControls();
@@ -2614,7 +2614,7 @@ public:
     TGameRecorder *_replayPlayer = NULL; // For play replay
     TGameRecorder *_replayRecorder = NULL; // For record replay
     
-    bact_hudi _guiVisor;
+    THudVisor _guiVisor;
     
     std::vector<TMapGem> _techUpgrades; // tech upgrades in level
     int32_t _upgradeId = 0;

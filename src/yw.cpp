@@ -444,8 +444,8 @@ bool NC_STACK_ypaworld::SimulationStep(TUpdateArgs *arg)
     if ( _replayRecorder->do_record )
         recorder_update_time(this, arg->DTime);
 
-    _guiVisor.field_0 = 0;
-    _guiVisor.field_4 = 0;
+    _guiVisor.mgunSight = 0;
+    _guiVisor.weaponSight = 0;
 
     _ownerOldCellUserUnit = _userUnit->_pSector->owner;
 
@@ -927,17 +927,17 @@ void SpawnBuildingExplosions(NC_STACK_ypaworld *yw, const cellArea &cell, int bl
 
                 yw->AddToUnitsList(boom);
 
-                bact_arg83 arg83;
+                TImpulse arg83;
                 arg83.pos = arg146.pos;
                 arg83.energ = 40000;
-                arg83.pos2.x = fx.Position.x;
-                arg83.pos2.y = -150.0;
-                arg83.pos2.z = fx.Position.z;
+                arg83.dir.x = fx.Position.x;
+                arg83.dir.y = -150.0;
+                arg83.dir.z = fx.Position.z;
 
-                float tmp = arg83.pos2.length();
+                float tmp = arg83.dir.length();
 
                 if ( tmp > 0.1 )
-                    arg83.pos2 /= tmp;
+                    arg83.dir /= tmp;
 
                 arg83.force = 30.0;
                 arg83.mass = 50.0;
@@ -1317,11 +1317,11 @@ void NC_STACK_ypaworld::MoveToDeadCache(NC_STACK_ypabact *bacto)
 
     bacto->SetNewMaster(&cache);
 
-    bact_arg80 v6;
+    TUnitPlacement v6;
     v6.pos.x = 600.0;
     v6.pos.y = -50000.0;
     v6.pos.z = -600.0;
-    v6.field_C = 2;
+    v6.flags = 2;
 
     bacto->SetPosition(&v6);
 
@@ -1507,9 +1507,9 @@ NC_STACK_ypabact * NC_STACK_ypaworld::CreateVehicle(TUnitSpawn *vhcl_id)
 
         bacto->SetParameters(vhcl.initParams);
 
-        bact_arg80 arg80;
+        TUnitPlacement arg80;
         arg80.pos = vhcl_id->pos;
-        arg80.field_C = 0;
+        arg80.flags = 0;
         bacto->SetPosition(&arg80);
 
         setState_msg arg119;
@@ -1673,10 +1673,10 @@ NC_STACK_ypamissile * NC_STACK_ypaworld::CreateWeapon(TUnitSpawn *arg)
 
     wobj->SetParameters(wproto.initParams);
 
-    bact_arg80 arg80;
+    TUnitPlacement arg80;
 
     arg80.pos = arg->pos;
-    arg80.field_C = 1;
+    arg80.flags = 1;
 
     wobj->SetPosition(&arg80);
 
@@ -2101,7 +2101,7 @@ void NC_STACK_ypaworld::DeleteLevel()
 }
 
 
-void NC_STACK_ypaworld::SetHudVisor(bact_hudi *arg)
+void NC_STACK_ypaworld::SetHudVisor(THudVisor *arg)
 {
     _guiVisor = *arg;
 }
@@ -5745,8 +5745,8 @@ void NC_STACK_ypaworld::PlayReplayFrame(TUpdateArgs *arg)
 
     UpdateCommanderList();
 
-    _guiVisor.field_0 = 0;
-    _guiVisor.field_4 = 0;
+    _guiVisor.mgunSight = 0;
+    _guiVisor.weaponSight = 0;
 
     if ( repl->play_state != 1 )
         AdvanceReplay(repl, arg->DTime);

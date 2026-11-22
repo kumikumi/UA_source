@@ -1584,13 +1584,13 @@ size_t yw_handleNormMsg(NC_STACK_ypaworld *yw, windp_recvMsg *msg, std::string *
 
             if ( hst->_owner == ddMsg->killerOwner && fndBact->IsParentMyRobo() && !sft && !(fndBact->_status_flg & BACT_STFLAG_NOMSG) )
             {
-                robo_arg134 rarg134;
+                TRoboMessage rarg134;
                 rarg134.unit = fndBact->_killer;
-                rarg134.field_4 = 5;
-                rarg134.field_8 = sft;
-                rarg134.field_C = sft;
-                rarg134.field_10 = sft;
-                rarg134.field_14 = 36;
+                rarg134.msgID = 5;
+                rarg134.param1 = sft;
+                rarg134.param2 = sft;
+                rarg134.param3 = sft;
+                rarg134.priority = 36;
 
                 NC_STACK_yparobo *hstt = dynamic_cast<NC_STACK_yparobo *>(host_node);
                 if (hstt)
@@ -2445,10 +2445,10 @@ size_t yw_handleNormMsg(NC_STACK_ypaworld *yw, windp_recvMsg *msg, std::string *
         if ( !yw->GetSectorInfo(&secInfo) )
             break;
 
-        bact_arg83 impls;
+        TImpulse impls;
         impls.pos = impMsg->pos;
         impls.energ = impMsg->impulse;
-        impls.pos2 = impMsg->dir;
+        impls.dir = impMsg->dir;
         impls.force = impMsg->dir_len;
         impls.mass = impMsg->mass;
 
@@ -2485,7 +2485,7 @@ size_t yw_handleNormMsg(NC_STACK_ypaworld *yw, windp_recvMsg *msg, std::string *
         if ( bhost != yw->_userRobo )
             break;
 
-        robo_arg134 rarg134;
+        TRoboMessage rarg134;
         if ( lgMsg->sender )
         {
             rarg134.unit = NetGetBactByID(bhost, lgMsg->sender);
@@ -2498,11 +2498,11 @@ size_t yw_handleNormMsg(NC_STACK_ypaworld *yw, windp_recvMsg *msg, std::string *
             rarg134.unit = NULL;
         }
 
-        rarg134.field_14 = lgMsg->pri;
-        rarg134.field_4 = lgMsg->id;
-        rarg134.field_8 = lgMsg->pr1;
-        rarg134.field_C = lgMsg->pr2;
-        rarg134.field_10 = lgMsg->pr3;
+        rarg134.priority = lgMsg->pri;
+        rarg134.msgID = lgMsg->id;
+        rarg134.param1 = lgMsg->pr1;
+        rarg134.param2 = lgMsg->pr2;
+        rarg134.param3 = lgMsg->pr3;
 
         NC_STACK_yparobo *rbo = dynamic_cast<NC_STACK_yparobo *>(bhost);
         if (rbo)

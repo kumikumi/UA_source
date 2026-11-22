@@ -377,14 +377,14 @@ void NC_STACK_ypaflyer::AI_layer3(update_msg *arg)
 
         int v18 = 0;
 
-        bact_arg88 arg88;
-        arg88.pos1 = 0;
+        TCollisionNormal arg88;
+        arg88.normal = 0;
 
         if ( arg136.isect )
         {
             if ( v89 + v91 > arg136.tVal * 300.0 )
             {
-                arg88.pos1 = arg136.skel->polygons[arg136.polyID].Normal();
+                arg88.normal = arg136.skel->polygons[arg136.polyID].Normal();
 
                 v18++;
             }
@@ -394,7 +394,7 @@ void NC_STACK_ypaflyer::AI_layer3(update_msg *arg)
         {
             if ( v89 + v91 > arg136_1.tVal * 300.0 )
             {
-                arg88.pos1 += arg136_1.skel->polygons[arg136_1.polyID].Normal();
+                arg88.normal += arg136_1.skel->polygons[arg136_1.polyID].Normal();
 
                 v18++;
             }
@@ -404,7 +404,7 @@ void NC_STACK_ypaflyer::AI_layer3(update_msg *arg)
         {
             if ( v89 + v91 > arg136_2.tVal * 300.0 )
             {
-                arg88.pos1 += arg136_2.skel->polygons[arg136_2.polyID].Normal();
+                arg88.normal += arg136_2.skel->polygons[arg136_2.polyID].Normal();
 
                 v18++;
             }
@@ -412,7 +412,7 @@ void NC_STACK_ypaflyer::AI_layer3(update_msg *arg)
 
         if ( v18 )
         {
-            arg88.pos1 /= (float)v18;
+            arg88.normal /= (float)v18;
 
             Recoil(&arg88);
         }
@@ -505,7 +505,7 @@ void NC_STACK_ypaflyer::AI_layer3(update_msg *arg)
 
         if ( arg136_3.isect && arg136_3.tVal * _height < _radius && _fly_dir.y > 0.0 )
         {
-            arg88.pos1 = arg136_3.skel->polygons[arg136_3.polyID].Normal();
+            arg88.normal = arg136_3.skel->polygons[arg136_3.polyID].Normal();
 
             Recoil(&arg88);
         }
@@ -544,14 +544,14 @@ void NC_STACK_ypaflyer::AI_layer3(update_msg *arg)
 
         move_msg arg74;
         arg74.flag = 0;
-        arg74.field_0 = a2a;
+        arg74.period = a2a;
 
         Move(&arg74);
 
         PitchAndBank(a2a, a3, 0);
 
 
-        bact_arg75 arg75;
+        TFightTarget arg75;
         arg75.fperiod = a2a;
         arg75.g_time = _clock;
 
@@ -614,11 +614,11 @@ void NC_STACK_ypaflyer::AI_layer3(update_msg *arg)
 
         if ( _clock - _newtarget_time > 500 )
         {
-            bact_arg110 arg110;
+            TTargetAssess arg110;
             arg110.tgType = _secndTtype;
             arg110.priority = 1;
 
-            bact_arg110 arg110_1;
+            TTargetAssess arg110_1;
             arg110_1.tgType = _primTtype;
             arg110_1.priority = 0;
 
@@ -688,9 +688,9 @@ void NC_STACK_ypaflyer::AI_layer3(update_msg *arg)
             }
             else
             {
-                bact_arg86 arg86;
-                arg86.field_one = 0;
-                arg86.field_two = arg->frameTime;
+                TCrashLandStep arg86;
+                arg86.flags = 0;
+                arg86.frameTime = arg->frameTime;
 
                 CrashOrLand(&arg86);
             }
@@ -850,13 +850,13 @@ void NC_STACK_ypaflyer::User_layer(update_msg *arg)
         if ( _flyerBoost > v72 )
             _flyerBoost = v72;
 
-        bact_arg79 arg79;
+        TMissileLaunch arg79;
         arg79.tgType = BACT_TGT_TYPE_DRCT;
         arg79.tgt_pos = _rotation.AxisZ();
 
-        bact_arg106 arg106;
-        arg106.field_0 = 5;
-        arg106.field_4 = _rotation.AxisZ();
+        TAimQuery arg106;
+        arg106.flags = 5;
+        arg106.aim_dir = _rotation.AxisZ();
 
         if ( UserTargeting(&arg106) )
         {
@@ -909,11 +909,11 @@ void NC_STACK_ypaflyer::User_layer(update_msg *arg)
                     SetState(&arg78);
                 }
 
-                bact_arg105 arg105;
+                TMinigunShot arg105;
 
-                arg105.field_0 = _rotation.AxisZ();
-                arg105.field_C = a2;
-                arg105.field_10 = _clock;
+                arg105.dir = _rotation.AxisZ();
+                arg105.period = a2;
+                arg105.gTime = _clock;
 
                 FireMinigun(&arg105);
             }
@@ -925,7 +925,7 @@ void NC_STACK_ypaflyer::User_layer(update_msg *arg)
         if ( _status_flg & BACT_STFLAG_LAND )
         {
             move_msg arg74;
-            arg74.field_0 = a2;
+            arg74.period = a2;
             arg74.flag = 0;
 
             Move(&arg74);
@@ -941,7 +941,7 @@ void NC_STACK_ypaflyer::User_layer(update_msg *arg)
                 int v67 = 0;
 
                 move_msg arg74;
-                arg74.field_0 = a2;
+                arg74.period = a2;
                 arg74.flag = 0;
 
                 Move(&arg74);
@@ -964,11 +964,11 @@ void NC_STACK_ypaflyer::User_layer(update_msg *arg)
                     for (int j = arg137.coll_count - 1; j >= 0; j--)
                         tmp += arg137.collisions[ j ].normal;
 
-                    bact_arg88 arg88;
+                    TCollisionNormal arg88;
                     if ( tmp.normalise() != 0.0 )
-                        arg88.pos1 = tmp;
+                        arg88.normal = tmp;
                     else
-                        arg88.pos1 = _fly_dir;
+                        arg88.normal = _fly_dir;
 
                     Recoil(&arg88);
 
@@ -988,8 +988,8 @@ void NC_STACK_ypaflyer::User_layer(update_msg *arg)
 
                     if ( arg136.isect )
                     {
-                        bact_arg88 arg88;
-                        arg88.pos1 = arg136.skel->polygons[ arg136.polyID ].Normal();
+                        TCollisionNormal arg88;
+                        arg88.normal = arg136.skel->polygons[ arg136.polyID ].Normal();
 
                         Recoil(&arg88);
 
@@ -1066,7 +1066,7 @@ void NC_STACK_ypaflyer::Move(move_msg *arg)
     if ( v33 > 0.0 )
     {
         //vec3d tmp3 = bact->fly_dir * bact->fly_dir_length + tmp2 * (v33 / bact->mass * arg->field_0) / v33; //(arg->field_0 / bact->mass);
-        vec3d tmp3 = _fly_dir * _fly_dir_length + tmp2 * (arg->field_0 / _mass);
+        vec3d tmp3 = _fly_dir * _fly_dir_length + tmp2 * (arg->period / _mass);
 
         _fly_dir_length = tmp3.length();
 
@@ -1075,7 +1075,7 @@ void NC_STACK_ypaflyer::Move(move_msg *arg)
     }
 
     if ( _fly_dir_length > 1.5 )
-        _position += _fly_dir * _fly_dir_length * arg->field_0 * 6.0;
+        _position += _fly_dir * _fly_dir_length * arg->period * 6.0;
 
     CorrectPositionInLevelBox(NULL);
 
@@ -1099,7 +1099,7 @@ void NC_STACK_ypaflyer::Move(move_msg *arg)
         _soundcarrier.Sounds[0].Pitch += (_soundcarrier.Sounds[0].PSample->SampleRate + _soundcarrier.Sounds[0].Pitch) * v49;
 }
 
-size_t NC_STACK_ypaflyer::SetPosition(bact_arg80 *arg)
+size_t NC_STACK_ypaflyer::SetPosition(TUnitPlacement *arg)
 {
     if ( !NC_STACK_ypabact::SetPosition(arg) )
         return 0;

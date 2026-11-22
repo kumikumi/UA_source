@@ -401,7 +401,7 @@ bool NC_STACK_ypamissile::TubeCollisionTest()
                                     v92 = ceil(v46 / v47); //Missile damage (ceil for less damage)
                                     if ( v92 )
                                     {
-                                        bact_arg84 arg84;
+                                        TEnergyChange arg84;
                                         arg84.energy = -v92;
                                         arg84.unit = _mislEmitter;
 
@@ -509,28 +509,28 @@ void NC_STACK_ypamissile::AI_layer3(update_msg *arg)
             switch ( _mislType )
             {
             case MISL_BOMB:
-                arg74.field_0 = v38;
+                arg74.period = v38;
                 arg74.flag = 1;
                 Move(&arg74);
                 break;
 
             case MISL_DIRECT:
-                arg74.field_0 = v38;
+                arg74.period = v38;
                 arg74.flag = 0;
-                arg74.vec = CalcForceVector();
+                arg74.thrustDir = CalcForceVector();
                 Move(&arg74);
                 break;
 
             case MISL_TARGETED:
-                arg74.field_0 = v38;
+                arg74.period = v38;
                 arg74.flag = 0;
-                arg74.vec = CalcForceVector();
+                arg74.thrustDir = CalcForceVector();
                 Move(&arg74);
                 break;
 
             case MISL_GRENADE:
-                arg74.field_0 = v38;
-                arg74.vec = _fly_dir;
+                arg74.period = v38;
+                arg74.thrustDir = _fly_dir;
                 arg74.flag = 0;
 
                 Move(&arg74);
@@ -680,7 +680,7 @@ void NC_STACK_ypamissile::Move(move_msg *arg)
     vec3d v26(0.0, 0.0, 0.0);
 
     if ( !(arg->flag & 1) )
-        v26 = arg->vec * _thraction;
+        v26 = arg->thrustDir * _thraction;
 
     vec3d vec1 = vec3d(0.0, v8, 0.0) + v26 - _fly_dir * (_fly_dir_length * _airconst);
 
@@ -688,7 +688,7 @@ void NC_STACK_ypamissile::Move(move_msg *arg)
 
     if ( v33 > 0.0 )
     {
-        vec3d v36 = _fly_dir * _fly_dir_length + vec1 * (v33 / _mass * arg->field_0);
+        vec3d v36 = _fly_dir * _fly_dir_length + vec1 * (v33 / _mass * arg->period);
 
         float v32 = v36.length();
 
@@ -700,7 +700,7 @@ void NC_STACK_ypamissile::Move(move_msg *arg)
         _fly_dir_length = v32;
     }
 
-    _position += _fly_dir * (_fly_dir_length * arg->field_0 * 6.0);
+    _position += _fly_dir * (_fly_dir_length * arg->period * 6.0);
 
     CorrectPositionInLevelBox(NULL);
 }
@@ -799,10 +799,10 @@ void NC_STACK_ypamissile::ResetViewing()
 
 void NC_STACK_ypamissile::Impact()
 {
-    bact_arg83 arg83;
+    TImpulse arg83;
     arg83.energ = _energy;
     arg83.pos = _position;
-    arg83.pos2 = _fly_dir;
+    arg83.dir = _fly_dir;
     arg83.force = _fly_dir_length;
     arg83.mass = _mass;
 

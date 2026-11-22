@@ -12,9 +12,9 @@ public:
     virtual size_t SetParameters(IDVList &stak) override;
     virtual void AI_layer3(update_msg *arg);
     virtual void User_layer(update_msg *arg);
-    virtual void FightWithBact(bact_arg75 *arg);
+    virtual void FightWithBact(TFightTarget *arg);
     virtual void Die();
-    virtual size_t SetPosition(bact_arg80 *arg);
+    virtual size_t SetPosition(TUnitPlacement *arg);
     virtual void EnergyInteract(update_msg *arg);
     virtual void Renew();
     virtual bool TestTargetSector(const NC_STACK_ypabact *) const override;

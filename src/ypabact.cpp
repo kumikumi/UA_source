@@ -412,7 +412,7 @@ void NC_STACK_ypabact::CopyTargetOf(NC_STACK_ypabact *unit)
     }
     else
     {
-        bact_arg124 arg125;
+        TPathRequest arg125;
 
         if ( tgType == BACT_TGT_TYPE_UNIT )
         {
@@ -425,7 +425,7 @@ void NC_STACK_ypabact::CopyTargetOf(NC_STACK_ypabact *unit)
 
         arg125.steps_cnt = 32;
         arg125.from = _position.XZ();
-        arg125.field_12 = 1;
+        arg125.tgt_type = 1;
 
         SetPath(&arg125);
 
@@ -1019,13 +1019,13 @@ void NC_STACK_ypabact::AI_layer1(update_msg *arg)
                     }
                     else
                     {
-                        bact_arg94 v35;
-                        v35.field_0 = unitId;
+                        TFormationSlot v35;
+                        v35.slot = unitId;
                         GetFormationPosition(&v35);
 
                         v36.tgt_type = BACT_TGT_TYPE_FRMT;
                         v36.priority = 0;
-                        v36.tgt_pos = v35.pos1;
+                        v36.tgt_pos = v35.pos;
                     }
 
                     node->SetTarget(&v36);
@@ -1149,13 +1149,13 @@ void NC_STACK_ypabact::AI_layer2(update_msg *arg)
                         _fe_cmdID = enemy->_commandID;
                         _fe_time = _clock;
 
-                        robo_arg134 arg134;
-                        arg134.field_4 = 7;
-                        arg134.field_8 = enemy->_commandID;
-                        arg134.field_C = 0;
-                        arg134.field_10 = 0;
+                        TRoboMessage arg134;
+                        arg134.msgID = 7;
+                        arg134.param1 = enemy->_commandID;
+                        arg134.param2 = 0;
+                        arg134.param3 = 0;
                         arg134.unit = this;
-                        arg134.field_14 = 46;
+                        arg134.priority = 46;
 
                         _host_station->placeMessage(&arg134);
                     }
@@ -1469,14 +1469,14 @@ void NC_STACK_ypabact::AI_layer3(update_msg *arg)
 
         int v18 = 0;
 
-        bact_arg88 arg88;
-        arg88.pos1 = vec3d(0.0, 0.0, 0.0);
+        TCollisionNormal arg88;
+        arg88.normal = vec3d(0.0, 0.0, 0.0);
 
         if ( arg136.isect )
         {
             if ( len + v79 > arg136.tVal * 300.0 )
             {
-                arg88.pos1 = arg136.skel->polygons[arg136.polyID].Normal();
+                arg88.normal = arg136.skel->polygons[arg136.polyID].Normal();
                 v18++;
             }
         }
@@ -1485,7 +1485,7 @@ void NC_STACK_ypabact::AI_layer3(update_msg *arg)
         {
             if ( len + v79 > arg136_1.tVal * 300.0 )
             {
-                arg88.pos1 += arg136_1.skel->polygons[arg136_1.polyID].Normal();
+                arg88.normal += arg136_1.skel->polygons[arg136_1.polyID].Normal();
                 v18++;
             }
         }
@@ -1494,7 +1494,7 @@ void NC_STACK_ypabact::AI_layer3(update_msg *arg)
         {
             if ( len + v79 > arg136_2.tVal * 300.0 )
             {
-                arg88.pos1 += arg136_2.skel->polygons[arg136_2.polyID].Normal();
+                arg88.normal += arg136_2.skel->polygons[arg136_2.polyID].Normal();
                 v18++;
             }
         }
@@ -1588,7 +1588,7 @@ void NC_STACK_ypabact::AI_layer3(update_msg *arg)
         {
             if ( arg136_3.tVal * _height < _radius && _fly_dir.y > 0.0 )
             {
-                arg88.pos1 += arg136_3.skel->polygons[arg136_3.polyID].Normal();
+                arg88.normal += arg136_3.skel->polygons[arg136_3.polyID].Normal();
 
                 v18++;
             }
@@ -1598,7 +1598,7 @@ void NC_STACK_ypabact::AI_layer3(update_msg *arg)
         {
             float v29 = v18;
 
-            arg88.pos1 /= v29;
+            arg88.normal /= v29;
 
             Recoil(&arg88);
         }
@@ -1642,13 +1642,13 @@ void NC_STACK_ypabact::AI_layer3(update_msg *arg)
 
         move_msg arg74;
         arg74.flag = 0;
-        arg74.field_0 = arg->frameTime / 1000.0;
+        arg74.period = arg->frameTime / 1000.0;
 
         Move(&arg74);
 
         TurnToFlyDirection(this, arg->frameTime);
 
-        bact_arg75 arg75;
+        TFightTarget arg75;
 
         arg75.fperiod = v75;
         arg75.g_time = _clock;
@@ -1710,7 +1710,7 @@ void NC_STACK_ypabact::AI_layer3(update_msg *arg)
         {
             _newtarget_time = _clock;
 
-            bact_arg110 arg110;
+            TTargetAssess arg110;
             arg110.tgType = _secndTtype;
             arg110.priority = 1;
 
@@ -1776,9 +1776,9 @@ void NC_STACK_ypabact::AI_layer3(update_msg *arg)
             }
             else
             {
-                bact_arg86 v65;
-                v65.field_one = 0;
-                v65.field_two = arg->frameTime;
+                TCrashLandStep v65;
+                v65.flags = 0;
+                v65.frameTime = arg->frameTime;
 
                 CrashOrLand(&v65);
             }
@@ -1999,14 +1999,14 @@ void NC_STACK_ypabact::User_layer(update_msg *arg)
                 _thraction = 0;
         }
 
-        bact_arg79 v61;
+        TMissileLaunch v61;
 
         v61.tgType = BACT_TGT_TYPE_DRCT;
         v61.tgt_pos = _rotation.AxisZ();
 
-        bact_arg106 v64;
-        v64.field_0 = 5;
-        v64.field_4 = _rotation.AxisZ();
+        TAimQuery v64;
+        v64.flags = 5;
+        v64.aim_dir = _rotation.AxisZ();
 
         if ( UserTargeting(&v64) )
         {
@@ -2057,11 +2057,11 @@ void NC_STACK_ypabact::User_layer(update_msg *arg)
                     SetState(&arg78);
                 }
 
-                bact_arg105 arg105;
+                TMinigunShot arg105;
 
-                arg105.field_0 = _rotation.AxisZ();
-                arg105.field_C = v106;
-                arg105.field_10 = _clock;
+                arg105.dir = _rotation.AxisZ();
+                arg105.period = v106;
+                arg105.gTime = _clock;
 
                 FireMinigun(&arg105);
             }
@@ -2078,7 +2078,7 @@ void NC_STACK_ypabact::User_layer(update_msg *arg)
         {
             move_msg arg74;
             arg74.flag = 0;
-            arg74.field_0 = v106;
+            arg74.period = v106;
 
             Move(&arg74);
         }
@@ -2092,7 +2092,7 @@ void NC_STACK_ypabact::User_layer(update_msg *arg)
             {
                 move_msg arg74;
                 arg74.flag = 0;
-                arg74.field_0 = v106;
+                arg74.period = v106;
 
                 Move(&arg74);
 
@@ -2119,13 +2119,13 @@ void NC_STACK_ypabact::User_layer(update_msg *arg)
                         v81 += v31->normal;
                     }
 
-                    bact_arg88 arg88;
+                    TCollisionNormal arg88;
 
                     float ln = v81.length();
                     if ( ln != 0.0 )
-                        arg88.pos1 = v81 / ln;
+                        arg88.normal = v81 / ln;
                     else
-                        arg88.pos1 = _fly_dir;
+                        arg88.normal = _fly_dir;
 
 
 
@@ -2145,8 +2145,8 @@ void NC_STACK_ypabact::User_layer(update_msg *arg)
 
                     if ( arg136.isect )
                     {
-                        bact_arg88 arg88;
-                        arg88.pos1 = arg136.skel->polygons[arg136.polyID].Normal();
+                        TCollisionNormal arg88;
+                        arg88.normal = arg136.skel->polygons[arg136.polyID].Normal();
 
                         Recoil(&arg88);
 
@@ -2250,7 +2250,7 @@ void NC_STACK_ypabact::Move(move_msg *arg)
     if ( len > 0.0 )
     {
         //vec3d v42 = bact->fly_dir * bact->fly_dir_length + (v41 / len) * (len / bact->mass * arg->field_0);
-        vec3d v42 = _fly_dir * _fly_dir_length + v41 * (arg->field_0 / _mass);
+        vec3d v42 = _fly_dir * _fly_dir_length + v41 * (arg->period / _mass);
 
         _fly_dir_length = v42.length();
 
@@ -2259,7 +2259,7 @@ void NC_STACK_ypabact::Move(move_msg *arg)
     }
 
     if ( fabs(_fly_dir_length) > 0.1 )
-        _position += _fly_dir * (_fly_dir_length * arg->field_0 * 6.0);
+        _position += _fly_dir * (_fly_dir_length * arg->period * 6.0);
 
     CorrectPositionInLevelBox(NULL);
 
@@ -2284,7 +2284,7 @@ void NC_STACK_ypabact::Move(move_msg *arg)
         _soundcarrier.Sounds[0].Pitch += (_soundcarrier.Sounds[0].PSample->SampleRate + _soundcarrier.Sounds[0].Pitch) * v43;
 }
 
-void NC_STACK_ypabact::FightWithBact(bact_arg75 *arg)
+void NC_STACK_ypabact::FightWithBact(TFightTarget *arg)
 {
     constexpr float CurSectrLen = 1.1 * World::CVSectorLength;
     
@@ -2293,7 +2293,7 @@ void NC_STACK_ypabact::FightWithBact(bact_arg75 *arg)
     vec3d v40 = arg->target.pbact->_position - _position;
     float v45 = v40.normalise();
 
-    bact_arg110 arg110;
+    TTargetAssess arg110;
 
     vec3d *foePos;
     bool isSecTarget = false;
@@ -2432,9 +2432,9 @@ void NC_STACK_ypabact::FightWithBact(bact_arg75 *arg)
         
         case TA_FIGHT:
         {
-            bact_arg101 arg101;
+            TFireCheck arg101;
             arg101.pos = arg->target.pbact->_position;
-            arg101.unkn = 2;
+            arg101.tgType = 2;
             arg101.radius = arg->target.pbact->_radius;
 
             if ( CheckFireAI(&arg101) )
@@ -2446,7 +2446,7 @@ void NC_STACK_ypabact::FightWithBact(bact_arg75 *arg)
 
                 vec3d rotZ = _rotation.AxisZ();
 
-                bact_arg79 arg79;
+                TMissileLaunch arg79;
 
                 arg79.direction.x = rotZ.x;
 
@@ -2495,11 +2495,11 @@ void NC_STACK_ypabact::FightWithBact(bact_arg75 *arg)
                     SetState(&arg78);
                 }
 
-                bact_arg105 arg105;
+                TMinigunShot arg105;
 
-                arg105.field_C = arg->fperiod;
-                arg105.field_10 = _clock;
-                arg105.field_0 = _rotation.AxisZ();
+                arg105.period = arg->fperiod;
+                arg105.gTime = _clock;
+                arg105.dir = _rotation.AxisZ();
 
                 FireMinigun(&arg105);
             }
@@ -2547,13 +2547,13 @@ void NC_STACK_ypabact::FightWithBact(bact_arg75 *arg)
 
                 if ( (IsParentMyRobo() && _host_station == a4) && _status != BACT_STATUS_IDLE && !(_status_flg & BACT_STFLAG_ESCAPE) )
                 {
-                    robo_arg134 arg134;
+                    TRoboMessage arg134;
                     arg134.unit = this;
-                    arg134.field_4 = 1;
-                    arg134.field_10 = 0;
-                    arg134.field_C = 0;
-                    arg134.field_8 = 0;
-                    arg134.field_14 = 32;
+                    arg134.msgID = 1;
+                    arg134.param3 = 0;
+                    arg134.param2 = 0;
+                    arg134.param1 = 0;
+                    arg134.priority = 32;
 
                     _host_station->placeMessage(&arg134);
                 }
@@ -2575,7 +2575,7 @@ void NC_STACK_ypabact::FightWithBact(bact_arg75 *arg)
     }
 }
 
-void NC_STACK_ypabact::FightWithSect(bact_arg75 *arg)
+void NC_STACK_ypabact::FightWithSect(TFightTarget *arg)
 {
     constexpr float CurSectrLen = 1.1 * World::CVSectorLength;
     
@@ -2584,7 +2584,7 @@ void NC_STACK_ypabact::FightWithSect(bact_arg75 *arg)
 
     vec3d *cellPos;
 
-    bact_arg110 arg110;
+    TTargetAssess arg110;
 
     if ( _secndT.pcell == arg->target.pcell )
     {
@@ -2686,16 +2686,16 @@ void NC_STACK_ypabact::FightWithSect(bact_arg75 *arg)
             {
                 if ( v65 )
                 {
-                    robo_arg134 arg134;
+                    TRoboMessage arg134;
                     
                     Common::Point tmp = World::PositionToSectorID(_primTpos);
 
                     arg134.unit = this;
-                    arg134.field_4 = 4;
-                    arg134.field_8 = tmp.x;
-                    arg134.field_C = tmp.y;
-                    arg134.field_14 = 18;
-                    arg134.field_10 = 0;
+                    arg134.msgID = 4;
+                    arg134.param1 = tmp.x;
+                    arg134.param2 = tmp.y;
+                    arg134.priority = 18;
+                    arg134.param3 = 0;
 
                     _host_station->placeMessage(&arg134);
                 }
@@ -2715,16 +2715,16 @@ void NC_STACK_ypabact::FightWithSect(bact_arg75 *arg)
             {
                 if ( v65 )
                 {
-                    robo_arg134 arg134;
+                    TRoboMessage arg134;
                     
                     Common::Point tmp = World::PositionToSectorID(_sencdTpos);
 
                     arg134.unit = this;
-                    arg134.field_4 = 4;
-                    arg134.field_8 = tmp.x;
-                    arg134.field_10 = 0;
-                    arg134.field_14 = 18;
-                    arg134.field_C = tmp.y;
+                    arg134.msgID = 4;
+                    arg134.param1 = tmp.x;
+                    arg134.param3 = 0;
+                    arg134.priority = 18;
+                    arg134.param2 = tmp.y;
 
                     _host_station->placeMessage(&arg134);
                 }
@@ -2752,16 +2752,16 @@ void NC_STACK_ypabact::FightWithSect(bact_arg75 *arg)
                 {
                     if ( !(_status_flg & BACT_STFLAG_FIGHT_P) && v65 && _secndT.pcell != _primT.pcell )
                     {
-                        robo_arg134 arg134;
+                        TRoboMessage arg134;
                         
                         Common::Point tmp = World::PositionToSectorID(_primTpos);
 
-                        arg134.field_4 = 3;
-                        arg134.field_8 = tmp.x;
-                        arg134.field_C = tmp.y;
+                        arg134.msgID = 3;
+                        arg134.param1 = tmp.x;
+                        arg134.param2 = tmp.y;
                         arg134.unit = this;
-                        arg134.field_10 = 0;
-                        arg134.field_14 = 20;
+                        arg134.param3 = 0;
+                        arg134.priority = 20;
 
                         _host_station->placeMessage(&arg134);
                     }
@@ -2780,16 +2780,16 @@ void NC_STACK_ypabact::FightWithSect(bact_arg75 *arg)
                 {
                     if ( v65 && !(_status_flg & BACT_STFLAG_FIGHT_S) )
                     {
-                        robo_arg134 arg134;
+                        TRoboMessage arg134;
                         
                         Common::Point tmp = World::PositionToSectorID(_sencdTpos);
 
-                        arg134.field_4 = 3;
-                        arg134.field_8 = tmp.x;
-                        arg134.field_C = tmp.y;
+                        arg134.msgID = 3;
+                        arg134.param1 = tmp.x;
+                        arg134.param2 = tmp.y;
                         arg134.unit = this;
-                        arg134.field_10 = 0;
-                        arg134.field_14 = 20;
+                        arg134.param3 = 0;
+                        arg134.priority = 20;
 
                         _host_station->placeMessage(&arg134);
                     }
@@ -2802,8 +2802,8 @@ void NC_STACK_ypabact::FightWithSect(bact_arg75 *arg)
                 arg->pos = _sencdTpos;
             }
 
-            bact_arg101 arg101;
-            arg101.unkn = 1;
+            TFireCheck arg101;
+            arg101.tgType = 1;
             arg101.pos = arg->pos;
 
             if ( CheckFireAI(&arg101) )
@@ -2820,7 +2820,7 @@ void NC_STACK_ypabact::FightWithSect(bact_arg75 *arg)
                 else
                     _status_flg |= BACT_STFLAG_FIGHT_P;
 
-                bact_arg79 arg79;
+                TMissileLaunch arg79;
 
                 arg79.direction = -(_position + _fire_pos - arg->pos) / v60;
                 arg79.tgType = BACT_TGT_TYPE_CELL;
@@ -2857,15 +2857,15 @@ void NC_STACK_ypabact::FightWithSect(bact_arg75 *arg)
 
                 if ( v65 && _secndT.pcell != _primT.pcell )
                 {
-                    robo_arg134 arg134;
+                    TRoboMessage arg134;
                     
                     Common::Point tmp = World::PositionToSectorID(_sencdTpos);
 
-                    arg134.field_4 = 2;
-                    arg134.field_8 = tmp.x;
-                    arg134.field_C = tmp.y;
-                    arg134.field_10 = 0;
-                    arg134.field_14 = 22;
+                    arg134.msgID = 2;
+                    arg134.param1 = tmp.x;
+                    arg134.param2 = tmp.y;
+                    arg134.param3 = 0;
+                    arg134.priority = 22;
                     arg134.unit = this;
 
                     _host_station->placeMessage(&arg134);
@@ -2885,14 +2885,14 @@ void NC_STACK_ypabact::FightWithSect(bact_arg75 *arg)
 
                 if ( v65 && _status != BACT_STATUS_IDLE )
                 {
-                    robo_arg134 arg134;
+                    TRoboMessage arg134;
 
-                    arg134.field_10 = 0;
-                    arg134.field_C = 0;
-                    arg134.field_8 = 0;
+                    arg134.param3 = 0;
+                    arg134.param2 = 0;
+                    arg134.param1 = 0;
                     arg134.unit = this;
-                    arg134.field_4 = 1;
-                    arg134.field_14 = 32;
+                    arg134.msgID = 1;
+                    arg134.priority = 32;
 
                     _host_station->placeMessage(&arg134);
                 }
@@ -3043,7 +3043,7 @@ void NC_STACK_ypabact::Die()
 
     if ( !deputy && IsParentMyRobo()&& !(_status_flg & BACT_STFLAG_NOMSG) )
     {
-        robo_arg134 v53;
+        TRoboMessage v53;
 
         if ( v76 == _host_station )
         {
@@ -3051,18 +3051,18 @@ void NC_STACK_ypabact::Die()
             {
                 if ( _weapon != -1 || -1 != _mgun )
                 {
-                    v53.field_14 = 80;
-                    v53.field_4 = 31;
+                    v53.priority = 80;
+                    v53.msgID = 31;
                 }
                 else
                 {
-                    v53.field_14 = 80;
-                    v53.field_4 = 32;
+                    v53.priority = 80;
+                    v53.msgID = 32;
                 }
 
-                v53.field_10 = 0;
-                v53.field_C = 0;
-                v53.field_8 = 0;
+                v53.param3 = 0;
+                v53.param2 = 0;
+                v53.param1 = 0;
                 v53.unit = this;
 
                 _host_station->placeMessage(&v53);
@@ -3071,12 +3071,12 @@ void NC_STACK_ypabact::Die()
             {
                 if ( !(_status_flg & BACT_STFLAG_CLEAN) )
                 {
-                    v53.field_8 = _commandID;
+                    v53.param1 = _commandID;
                     v53.unit = this;
-                    v53.field_10 = 0;
-                    v53.field_14 = 44;
-                    v53.field_C = 0;
-                    v53.field_4 = 8;
+                    v53.param3 = 0;
+                    v53.priority = 44;
+                    v53.param2 = 0;
+                    v53.msgID = 8;
 
                     _host_station->placeMessage(&v53);
                 }
@@ -3086,12 +3086,12 @@ void NC_STACK_ypabact::Die()
         {
             if ( _killer && v76 == _killer->_host_station )
             {
-                v53.field_4 = 5;
+                v53.msgID = 5;
                 v53.unit = _killer;
-                v53.field_8 = _primT_cmdID;
-                v53.field_10 = 0;
-                v53.field_C = 0;
-                v53.field_14 = 36;
+                v53.param1 = _primT_cmdID;
+                v53.param3 = 0;
+                v53.param2 = 0;
+                v53.priority = 36;
 
                 _host_station->placeMessage(&v53);
             }
@@ -3230,7 +3230,7 @@ void NC_STACK_ypabact::SetState(setState_msg *arg)
     }
 }
 
-size_t NC_STACK_ypabact::LaunchMissile(bact_arg79 *arg)
+size_t NC_STACK_ypabact::LaunchMissile(TMissileLaunch *arg)
 {
     NC_STACK_ypamissile *wobj = NULL;
 
@@ -3440,7 +3440,7 @@ size_t NC_STACK_ypabact::LaunchMissile(bact_arg79 *arg)
             wobj->setBACT_viewer(true);
         }
 
-        bact_arg84 arg84;
+        TEnergyChange arg84;
         arg84.unit = _parent;
         arg84.energy = -2 * _energy_max;
 
@@ -3449,7 +3449,7 @@ size_t NC_STACK_ypabact::LaunchMissile(bact_arg79 *arg)
     return 1;
 }
 
-size_t NC_STACK_ypabact::SetPosition(bact_arg80 *arg)
+size_t NC_STACK_ypabact::SetPosition(TUnitPlacement *arg)
 {
     TSectorInfo sect_info;
 
@@ -3468,13 +3468,13 @@ size_t NC_STACK_ypabact::SetPosition(bact_arg80 *arg)
     _position = arg->pos;
     _cellId = sect_info.CellId;
 
-    if ( !(arg->field_C & 2) )
+    if ( !(arg->flags & 2) )
         CorrectPositionInLevelBox(NULL);
 
     return 1;
 }
 
-void NC_STACK_ypabact::GetSummary(bact_arg81 *arg)
+void NC_STACK_ypabact::GetSummary(TSummaryQuery *arg)
 {
     for ( NC_STACK_ypabact* &node : _kidList )
         node->GetSummary(arg);
@@ -3545,7 +3545,7 @@ void NC_STACK_ypabact::EnergyInteract(update_msg *arg)
     }
 }
 
-void NC_STACK_ypabact::ApplyImpulse(bact_arg83 *arg)
+void NC_STACK_ypabact::ApplyImpulse(TImpulse *arg)
 {
     float v81 = 50.0 / _mass;
     float v79 = arg->energ * 0.0004;
@@ -3556,14 +3556,14 @@ void NC_STACK_ypabact::ApplyImpulse(bact_arg83 *arg)
 
     if ( distance <= _radius )
     {
-        vec3d v63 = (arg->pos2 * (2.5 * arg->mass * arg->force) + _fly_dir * _mass * _fly_dir_length) / (_mass + arg->mass);
+        vec3d v63 = (arg->dir * (2.5 * arg->mass * arg->force) + _fly_dir * _mass * _fly_dir_length) / (_mass + arg->mass);
 
         _fly_dir_length = v63.normalise();
 
         if ( _fly_dir_length > 0.0 )
             _fly_dir = v63;
 
-        v60 = arg->pos2;
+        v60 = arg->dir;
 
         distance = 1.0;
     }
@@ -3604,7 +3604,7 @@ void NC_STACK_ypabact::ApplyImpulse(bact_arg83 *arg)
     }
 }
 
-void NC_STACK_ypabact::ModifyEnergy(bact_arg84 *arg)
+void NC_STACK_ypabact::ModifyEnergy(TEnergyChange *arg)
 {
     if (_world && (_oflags & BACT_OFLAG_VIEWER))
     {
@@ -3755,7 +3755,7 @@ void AnimateScaleFX(NC_STACK_ypabact *bact, int a2)
     }
 }
 
-size_t NC_STACK_ypabact::CrashOrLand(bact_arg86 *arg)
+size_t NC_STACK_ypabact::CrashOrLand(TCrashLandStep *arg)
 {
     TSphereContact v58[10];
 
@@ -3763,7 +3763,7 @@ size_t NC_STACK_ypabact::CrashOrLand(bact_arg86 *arg)
 
     if ( _status_flg & BACT_STFLAG_SEFFECT )
     {
-        AnimateScaleFX(this, arg->field_two);
+        AnimateScaleFX(this, arg->frameTime);
     }
     else
     {
@@ -3786,9 +3786,9 @@ size_t NC_STACK_ypabact::CrashOrLand(bact_arg86 *arg)
 
         vec3d vaxis = vec3d( -_rotation.m12, 0.0, _rotation.m10 );
 
-        float v94 = arg->field_two / 1000.0;
+        float v94 = arg->frameTime / 1000.0;
 
-        if ( vaxis.normalise() > 0.001 && !(arg->field_one & 1) )
+        if ( vaxis.normalise() > 0.001 && !(arg->flags & 1) )
         {
             float angle = clp_acos( _rotation.m11 );
             float maxrot = _maxrot * v94;
@@ -3802,7 +3802,7 @@ size_t NC_STACK_ypabact::CrashOrLand(bact_arg86 *arg)
             }
         }
 
-        if ( arg->field_one & 2 )
+        if ( arg->flags & 2 )
         {
             float v18 = fabs(_fly_dir_length) * v94 * 0.08;
 
@@ -3811,7 +3811,7 @@ size_t NC_STACK_ypabact::CrashOrLand(bact_arg86 *arg)
 
         if ( !(_status_flg & BACT_STFLAG_LAND) )
         {
-            if ( arg->field_one & 1 )
+            if ( arg->flags & 1 )
                 _airconst = 0;
             else
                 _airconst = 500.0;
@@ -3821,7 +3821,7 @@ size_t NC_STACK_ypabact::CrashOrLand(bact_arg86 *arg)
 
                 move_msg v66;
 
-                v66.field_0 = v94;
+                v66.period = v94;
                 v66.flag = 1;
 
                 Move(&v66);
@@ -3830,7 +3830,7 @@ size_t NC_STACK_ypabact::CrashOrLand(bact_arg86 *arg)
 
                 if ( _oflags & BACT_OFLAG_BACTCOLL )
                 {
-                    if ( CollisionWithBact(arg->field_two) )
+                    if ( CollisionWithBact(arg->frameTime) )
                     {
                         if ( _bact_type == BACT_TYPES_TANK || _bact_type == BACT_TYPES_CAR )
                         {
@@ -3871,24 +3871,24 @@ size_t NC_STACK_ypabact::CrashOrLand(bact_arg86 *arg)
                                 v24 = 1;
                         }
 
-                        bact_arg88 arg88;
+                        TCollisionNormal arg88;
                         vec3d a2a;
 
                         float lnn = v98.length();
 
                         if ( lnn != 0.0 )
                         {
-                            arg88.pos1 = v98 / lnn;
+                            arg88.normal = v98 / lnn;
 
-                            a2a = arg88.pos1;
+                            a2a = arg88.normal;
                         }
                         else
                         {
                             a2a = _fly_dir;
-                            arg88.pos1 = _fly_dir;
+                            arg88.normal = _fly_dir;
                         }
 
-                        if ( arg->field_one & 1 )
+                        if ( arg->flags & 1 )
                         {
                             _energy -= fabs(_fly_dir_length) * 10.0;
 
@@ -3971,13 +3971,13 @@ size_t NC_STACK_ypabact::CrashOrLand(bact_arg86 *arg)
 
                     if ( arg136.isect )
                     {
-                        bact_arg88 arg88;
+                        TCollisionNormal arg88;
 
-                        arg88.pos1 = arg136.skel->polygons[arg136.polyID].Normal();
+                        arg88.normal = arg136.skel->polygons[arg136.polyID].Normal();
 
-                        vec3d a2a = arg88.pos1;
+                        vec3d a2a = arg88.normal;
 
-                        if ( arg->field_one & 1 )
+                        if ( arg->flags & 1 )
                         {
                             _energy -= fabs(_fly_dir_length) * 10.0;
 
@@ -4233,8 +4233,8 @@ size_t NC_STACK_ypabact::CollisionWithBact(int arg)
     if ( v26 < 0.0001)
         return 0;
 
-    bact_arg88 v33;
-    v33.pos1 = toCollisionCenter / v26;
+    TCollisionNormal v33;
+    v33.normal = toCollisionCenter / v26;
 
     // FIX MY MATH
     // toCollisionCenter should be normalised?
@@ -4274,19 +4274,19 @@ size_t NC_STACK_ypabact::CollisionWithBact(int arg)
     return 1;
 }
 
-void NC_STACK_ypabact::Recoil(bact_arg88 *arg)
+void NC_STACK_ypabact::Recoil(TCollisionNormal *arg)
 {
     if ( !(_status_flg & BACT_STFLAG_LAND) )
     {
-        if ( _fly_dir.dot(arg->pos1) >= 0.0 )
+        if ( _fly_dir.dot(arg->normal) >= 0.0 )
         {
             if ( _fly_dir_length != 0.0 )
             {
                 _position = _old_pos;
 
-                float v4 = _fly_dir.dot(arg->pos1) * 2.0;
+                float v4 = _fly_dir.dot(arg->normal) * 2.0;
 
-                _fly_dir -= arg->pos1 * v4;
+                _fly_dir -= arg->normal * v4;
 
                 _fly_dir_length *= 25.0 / (fabs(_fly_dir_length) + 10.0);
             }
@@ -4498,14 +4498,14 @@ void NC_STACK_ypabact::GetBestSectorPart(vec3d *arg)
     }
 }
 
-void NC_STACK_ypabact::GetForcesRatio(bact_arg92 *arg)
+void NC_STACK_ypabact::GetForcesRatio(TForcesRatio *arg)
 {
     TSectorInfo arg130;
 
-    arg->energ1 = 0;
-    arg->energ2 = 0;
+    arg->ownEnergy = 0;
+    arg->enemyEnergy = 0;
 
-    if ( arg->field_14 & 1 )
+    if ( arg->flags & 1 )
     {
         arg130.pos_x = _position.x;
         arg130.pos_z = _position.z;
@@ -4537,9 +4537,9 @@ void NC_STACK_ypabact::GetForcesRatio(bact_arg92 *arg)
                              cl_unit->_bact_type != BACT_TYPES_MISSLE )
                         {
                             if ( cl_unit->_owner == _owner )
-                                arg->energ1 += cl_unit->_energy;
+                                arg->ownEnergy += cl_unit->_energy;
                             else
-                                arg->energ2 += cl_unit->_energy;
+                                arg->enemyEnergy += cl_unit->_energy;
                         }
                     }
                 }
@@ -4562,9 +4562,9 @@ void NC_STACK_ypabact::GetForcesRatio(bact_arg92 *arg)
                              cl_unit->_bact_type != BACT_TYPES_MISSLE )
                         {
                             if ( cl_unit->_owner == _owner )
-                                arg->energ1 += cl_unit->_energy;
+                                arg->ownEnergy += cl_unit->_energy;
                             else
-                                arg->energ2 += cl_unit->_energy;
+                                arg->enemyEnergy += cl_unit->_energy;
                         }
                     }
                 }
@@ -4587,9 +4587,9 @@ void NC_STACK_ypabact::GetForcesRatio(bact_arg92 *arg)
                              cl_unit->_bact_type != BACT_TYPES_MISSLE )
                         {
                             if ( cl_unit->_owner == _owner )
-                                arg->energ1 += cl_unit->_energy;
+                                arg->ownEnergy += cl_unit->_energy;
                             else
-                                arg->energ2 += cl_unit->_energy;
+                                arg->enemyEnergy += cl_unit->_energy;
                         }
                     }
                 }
@@ -4612,9 +4612,9 @@ void NC_STACK_ypabact::GetForcesRatio(bact_arg92 *arg)
                              cl_unit->_bact_type != BACT_TYPES_MISSLE )
                         {
                             if ( cl_unit->_owner == _owner )
-                                arg->energ1 += cl_unit->_energy;
+                                arg->ownEnergy += cl_unit->_energy;
                             else
-                                arg->energ2 += cl_unit->_energy;
+                                arg->enemyEnergy += cl_unit->_energy;
                         }
                     }
                 }
@@ -4633,9 +4633,9 @@ void NC_STACK_ypabact::GetForcesRatio(bact_arg92 *arg)
                              cl_unit->_bact_type != BACT_TYPES_MISSLE )
                         {
                             if ( cl_unit->_owner == _owner )
-                                arg->energ1 += cl_unit->_energy;
+                                arg->ownEnergy += cl_unit->_energy;
                             else
-                                arg->energ2 += cl_unit->_energy;
+                                arg->enemyEnergy += cl_unit->_energy;
                         }
                     }
                 }
@@ -4657,9 +4657,9 @@ void NC_STACK_ypabact::GetForcesRatio(bact_arg92 *arg)
                              cl_unit->_bact_type != BACT_TYPES_MISSLE )
                         {
                             if ( cl_unit->_owner == _owner )
-                                arg->energ1 += cl_unit->_energy;
+                                arg->ownEnergy += cl_unit->_energy;
                             else
-                                arg->energ2 += cl_unit->_energy;
+                                arg->enemyEnergy += cl_unit->_energy;
                         }
                     }
                 }
@@ -4682,9 +4682,9 @@ void NC_STACK_ypabact::GetForcesRatio(bact_arg92 *arg)
                              cl_unit->_bact_type != BACT_TYPES_MISSLE )
                         {
                             if ( cl_unit->_owner == _owner )
-                                arg->energ1 += cl_unit->_energy;
+                                arg->ownEnergy += cl_unit->_energy;
                             else
-                                arg->energ2 += cl_unit->_energy;
+                                arg->enemyEnergy += cl_unit->_energy;
                         }
                     }
                 }
@@ -4707,9 +4707,9 @@ void NC_STACK_ypabact::GetForcesRatio(bact_arg92 *arg)
                              cl_unit->_bact_type != BACT_TYPES_MISSLE )
                         {
                             if ( cl_unit->_owner == _owner )
-                                arg->energ1 += cl_unit->_energy;
+                                arg->ownEnergy += cl_unit->_energy;
                             else
-                                arg->energ2 += cl_unit->_energy;
+                                arg->enemyEnergy += cl_unit->_energy;
                         }
                     }
                 }
@@ -4732,16 +4732,16 @@ void NC_STACK_ypabact::GetForcesRatio(bact_arg92 *arg)
                              cl_unit->_bact_type != BACT_TYPES_MISSLE )
                         {
                             if ( cl_unit->_owner == _owner )
-                                arg->energ1 += cl_unit->_energy;
+                                arg->ownEnergy += cl_unit->_energy;
                             else
-                                arg->energ2 += cl_unit->_energy;
+                                arg->enemyEnergy += cl_unit->_energy;
                         }
                     }
                 }
             }
         }
 
-        if ( !(arg->field_14 & 2) )
+        if ( !(arg->flags & 2) )
         {
             int v33 = 0;
 
@@ -4759,35 +4759,35 @@ void NC_STACK_ypabact::GetForcesRatio(bact_arg92 *arg)
 
             if ( cell->owner == _owner )
             {
-                if ( arg->field_14 & 4 )
-                    arg->energ1 += v33 * 120;
+                if ( arg->flags & 4 )
+                    arg->ownEnergy += v33 * 120;
             }
             else
             {
-                arg->energ2 += v33 * 120;
+                arg->enemyEnergy += v33 * 120;
             }
         }
     }
 }
 
-void NC_STACK_ypabact::GetFormationPosition(bact_arg94 *arg)
+void NC_STACK_ypabact::GetFormationPosition(TFormationSlot *arg)
 {
     vec3d v2d = _rotation.AxisZ().X0Z();
     v2d.normalise();
 
-    arg->pos1 = _position - v2d * ( (arg->field_0 / 3 + 1) * 150.0 );
+    arg->pos = _position - v2d * ( (arg->slot / 3 + 1) * 150.0 );
 
-    int v6 = arg->field_0 % 3;
+    int v6 = arg->slot % 3;
 
     if ( v6 == 0 )
     {
-        arg->pos1.x += 100.0 * v2d.z;
-        arg->pos1.z += -100.0 * v2d.x;
+        arg->pos.x += 100.0 * v2d.z;
+        arg->pos.z += -100.0 * v2d.x;
     }
     else if ( v6 == 2 )
     {
-        arg->pos1.x += -100.0 * v2d.z;
-        arg->pos1.z += 100.0 * v2d.x;
+        arg->pos.x += -100.0 * v2d.z;
+        arg->pos.z += 100.0 * v2d.x;
     }
 
     // With y = 0
@@ -4940,10 +4940,10 @@ void NC_STACK_ypabact::CreationTimeUpdate(update_msg *arg)
 
         _status_flg &= ~BACT_STFLAG_SCALE;
 
-        bact_arg80 v24;
+        TUnitPlacement v24;
 
         v24.pos = _position;
-        v24.field_C = 0;
+        v24.flags = 0;
 
         SetPosition(&v24);
 
@@ -4954,13 +4954,13 @@ void NC_STACK_ypabact::CreationTimeUpdate(update_msg *arg)
 
             if ( IsParentMyRobo() )
             {
-                robo_arg134 v23;
+                TRoboMessage v23;
                 v23.unit = this;
-                v23.field_4 = 14;
-                v23.field_8 = 0;
-                v23.field_C = 0;
-                v23.field_10 = 0;
-                v23.field_14 = 26;
+                v23.msgID = 14;
+                v23.param1 = 0;
+                v23.param2 = 0;
+                v23.param3 = 0;
+                v23.priority = 26;
 
                 _host_station->placeMessage(&v23);
             }
@@ -4988,11 +4988,11 @@ size_t NC_STACK_ypabact::IsDestroyed()
     return (GetVP() == _vp_dead || GetVP() == _vp_genesis || GetVP() == _vp_megadeth) && _status == BACT_STATUS_DEAD;
 }
 
-size_t NC_STACK_ypabact::CheckFireAI(bact_arg101 *arg)
+size_t NC_STACK_ypabact::CheckFireAI(TFireCheck *arg)
 {
     vec3d tmp;
 
-    if ( arg->unkn == 2 )
+    if ( arg->tgType == 2 )
         tmp = arg->pos - _position;
     else
         tmp = arg->pos.X0Z() - _position.X0Z() + vec3d::OY(_height);
@@ -5025,7 +5025,7 @@ size_t NC_STACK_ypabact::CheckFireAI(bact_arg101 *arg)
         v36 = 2;
     }
 
-    if ( arg->unkn == 2 )
+    if ( arg->tgType == 2 )
     {
         float v32;
 
@@ -5253,7 +5253,7 @@ void NC_STACK_ypabact::StuckFree(update_msg *arg)
     }
 }
 
-size_t NC_STACK_ypabact::FireMinigun(bact_arg105 *arg)
+size_t NC_STACK_ypabact::FireMinigun(TMinigunShot *arg)
 {
     int a5 = 0;
 
@@ -5272,7 +5272,7 @@ size_t NC_STACK_ypabact::FireMinigun(bact_arg105 *arg)
     arg130.pos_x = _position.x;
     arg130.pos_z = _position.z;
 
-    vec2d tmp = _position.XZ() + arg->field_0.XZ() * 1000.0;
+    vec2d tmp = _position.XZ() + arg->dir.XZ() * 1000.0;
 
     _world->GetSectorInfo(&arg130);
 
@@ -5311,7 +5311,7 @@ size_t NC_STACK_ypabact::FireMinigun(bact_arg105 *arg)
     }
     else
     {
-        _energy -= _gun_power * arg->field_C / 300.0;
+        _energy -= _gun_power * arg->period / 300.0;
     }
 
     for(int i = 0; i < 3; i++)
@@ -5370,7 +5370,7 @@ size_t NC_STACK_ypabact::FireMinigun(bact_arg105 *arg)
 
                                     if ( v63.dot( _rotation.AxisZ() ) >= 0.3 )
                                     {
-                                        vec3d v33 = arg->field_0 * v63;
+                                        vec3d v33 = arg->dir * v63;
 
                                         float v111 = v63.length();
                                         float v110 = v33.length();
@@ -5387,17 +5387,17 @@ size_t NC_STACK_ypabact::FireMinigun(bact_arg105 *arg)
 
                                                     if ( cellUnit->getBACT_inputting() || cellUnit->getBACT_viewer() )
                                                     {
-                                                        float v39 = (_gun_power * arg->field_C) * (100.0 - (float)cellUnit->_shield);
+                                                        float v39 = (_gun_power * arg->period) * (100.0 - (float)cellUnit->_shield);
                                                         energ = (v39 * 0.004);
                                                     }
                                                     else
                                                     {
 
-                                                        float v41 = (_gun_power * arg->field_C) * (100.0 - (float)cellUnit->_shield);
+                                                        float v41 = (_gun_power * arg->period) * (100.0 - (float)cellUnit->_shield);
                                                         energ = v41 / 100;
                                                     }
 
-                                                    bact_arg84 v86;
+                                                    TEnergyChange v86;
                                                     v86.unit = this;
                                                     v86.energy = -energ;
 
@@ -5439,7 +5439,7 @@ size_t NC_STACK_ypabact::FireMinigun(bact_arg105 *arg)
         if ( v88 )
         {
             int v43 = _world->GetWeaponsProtos().at(_mgun).shot_time_user;
-            float v42 = arg->field_C * 1000.0;
+            float v42 = arg->period * 1000.0;
 
             if ( v43 <= v42 )
                 v45 = v42;
@@ -5449,7 +5449,7 @@ size_t NC_STACK_ypabact::FireMinigun(bact_arg105 *arg)
         else
         {
             int v47 = _world->GetWeaponsProtos().at(_mgun).shot_time;
-            float v46 = arg->field_C * 1000.0;
+            float v46 = arg->period * 1000.0;
 
             if ( v47 <= v46 )
                 v45 = v46;
@@ -5457,9 +5457,9 @@ size_t NC_STACK_ypabact::FireMinigun(bact_arg105 *arg)
                 v45 = v47;
         }
 
-        if ( arg->field_10 - _mgun_time > v45 )
+        if ( arg->gTime - _mgun_time > v45 )
         {
-            _mgun_time = arg->field_10;
+            _mgun_time = arg->gTime;
 
             int v55 = 0;
             int v96 = 0;
@@ -5481,7 +5481,7 @@ size_t NC_STACK_ypabact::FireMinigun(bact_arg105 *arg)
             else
             {
                 v59.stPos = _position;
-                v59.vect = arg->field_0 * 1000.0;
+                v59.vect = arg->dir * 1000.0;
                 v59.flags = 0;
 
                 _world->IntersectLongRay(&v59);
@@ -5542,7 +5542,7 @@ size_t NC_STACK_ypabact::FireMinigun(bact_arg105 *arg)
 
 void NC_STACK_ypabact::UpdateVisor(NC_STACK_ypabact *bact2, int a3)
 {
-    bact_hudi hudi;
+    THudVisor hudi;
 
     float v23;
     float v24;
@@ -5567,55 +5567,55 @@ void NC_STACK_ypabact::UpdateVisor(NC_STACK_ypabact *bact2, int a3)
             v23 = 0.0;
         }
 
-        hudi.field_18 = bact2;
+        hudi.target = bact2;
     }
     else
     {
         v23 = -_gun_leftright;
         v24 = -_gun_angle_user;
 
-        hudi.field_18 = NULL;
+        hudi.target = NULL;
     }
 
     if ( _mgun == -1 )
     {
-        hudi.field_0 = 0;
+        hudi.mgunSight = 0;
     }
     else
     {
-        hudi.field_0 = 1;
-        hudi.field_8 = -_gun_leftright;
-        hudi.field_C = -_gun_angle_user;
+        hudi.mgunSight = 1;
+        hudi.mgunX = -_gun_leftright;
+        hudi.mgunY = -_gun_angle_user;
     }
 
     if ( _weapon == -1 || a3 )
     {
-        hudi.field_4 = 0;
+        hudi.weaponSight = 0;
     }
     else
     {
         if ( _weapon_flags & 4 )
         {
-            hudi.field_4 = 4;
-            hudi.field_10 = v23;
-            hudi.field_14 = v24;
+            hudi.weaponSight = 4;
+            hudi.weaponX = v23;
+            hudi.weaponY = v24;
         }
         else
         {
             if ( (_weapon_flags & 4) || !(_weapon_flags & 2) )
-                hudi.field_4 = 2;
+                hudi.weaponSight = 2;
             else
-                hudi.field_4 = 3;
+                hudi.weaponSight = 3;
 
-            hudi.field_10 = -_gun_leftright;
-            hudi.field_14 = -_gun_angle_user;
+            hudi.weaponX = -_gun_leftright;
+            hudi.weaponY = -_gun_angle_user;
         }
     }
 
     _world->SetHudVisor(&hudi);
 }
 
-size_t NC_STACK_ypabact::UserTargeting(bact_arg106 *arg)
+size_t NC_STACK_ypabact::UserTargeting(TAimQuery *arg)
 {
     NC_STACK_ypabact *targeto = 0;
     float v56 = 0.0;
@@ -5686,11 +5686,11 @@ size_t NC_STACK_ypabact::UserTargeting(bact_arg106 *arg)
 
                                 if ( !v53 )
                                 {
-                                    if ( arg->field_0 & 2 || bct->_owner != _owner )
+                                    if ( arg->flags & 2 || bct->_owner != _owner )
                                     {
-                                        if ( arg->field_0 & 1 || bct->_owner == _owner || !bct->_owner )
+                                        if ( arg->flags & 1 || bct->_owner == _owner || !bct->_owner )
                                         {
-                                            if ( arg->field_0 & 4 || bct->_owner )
+                                            if ( arg->flags & 4 || bct->_owner )
                                             {
                                                 vec3d mv = bct->_position - _old_pos;
 
@@ -5698,7 +5698,7 @@ size_t NC_STACK_ypabact::UserTargeting(bact_arg106 *arg)
                                                 {
                                                     float mv_len = mv.length();
 
-                                                    vec3d mvd = arg->field_4 * mv;
+                                                    vec3d mvd = arg->aim_dir * mv;
 
                                                     float v59 = mv_len * 1000.0 * 0.0005 + 20.0;
                                                     float mvd_len = mvd.length();
@@ -5783,7 +5783,7 @@ bool NC_STACK_ypabact::GetFightMotivation(float *arg)
     if ( _aggr == 0 )
         return false;
 
-    bact_arg81 arg81;
+    TSummaryQuery arg81;
     arg81.enrg_sum = 0;
     arg81.enrg_type = 1;
 
@@ -5948,44 +5948,44 @@ void NC_STACK_ypabact::NetBroadcastReorder(NC_STACK_ypabact *bact2, int mode)
     }
 }
 
-void NC_STACK_ypabact::ReorganizeGroup(bact_arg109 *arg)
+void NC_STACK_ypabact::ReorganizeGroup(TReorgOrder *arg)
 {
-    switch ( arg->field_0 )
+    switch ( arg->mode )
     {
     case 1:
-        if ( arg->field_4 )
+        if ( arg->unit )
         {
-            if ( arg->field_4->_status == BACT_STATUS_DEAD )
+            if ( arg->unit->_status == BACT_STATUS_DEAD )
             {
                 ypa_log_out("ORG_NEWCHIEF: Dead master\n");
             }
-            else if ( arg->field_4 != _parent && arg->field_4 != this )
+            else if ( arg->unit != _parent && arg->unit != this )
             {
-                _commandID = arg->field_4->_commandID;
-                _aggr = arg->field_4->_aggr;
+                _commandID = arg->unit->_commandID;
+                _aggr = arg->unit->_aggr;
 
-                arg->field_4->AddSubject(this);
+                arg->unit->AddSubject(this);
 
                 while ( !_kidList.empty() )
                 {
                     NC_STACK_ypabact *kid = _kidList.front();
 
-                    kid->_aggr = arg->field_4->_aggr;
-                    kid->_commandID = arg->field_4->_commandID;
+                    kid->_aggr = arg->unit->_aggr;
+                    kid->_commandID = arg->unit->_commandID;
 
-                    arg->field_4->AddSubject(kid);
+                    arg->unit->AddSubject(kid);
                     
-                    kid->CopyTargetOf(arg->field_4);
+                    kid->CopyTargetOf(arg->unit);
                 }
 
-                CopyTargetOf(arg->field_4);
-                NetBroadcastReorder(arg->field_4, 1);
+                CopyTargetOf(arg->unit);
+                NetBroadcastReorder(arg->unit, 1);
             }
         }
         break;
 
     case 2:
-        if ( _host_station != _parent || arg->field_4 != this )
+        if ( _host_station != _parent || arg->unit != this )
         {
             if ( _status == BACT_STATUS_DEAD )
             {
@@ -5996,26 +5996,26 @@ void NC_STACK_ypabact::ReorganizeGroup(bact_arg109 *arg)
                 if ( _host_station != _parent && _host_station )
                     _host_station->AddSubject(this);
 
-                if ( arg->field_4 )
+                if ( arg->unit )
                 {
-                    CopyTargetOf(arg->field_4);
+                    CopyTargetOf(arg->unit);
 
-                    _aggr = arg->field_4->_aggr;
-                    _commandID = arg->field_4->_commandID;
+                    _aggr = arg->unit->_aggr;
+                    _commandID = arg->unit->_commandID;
 
-                    AddSubject(arg->field_4);
+                    AddSubject(arg->unit);
 
-                    while ( !arg->field_4->_kidList.empty() )
+                    while ( !arg->unit->_kidList.empty() )
                     {
-                        NC_STACK_ypabact *kid = arg->field_4->_kidList.front();
+                        NC_STACK_ypabact *kid = arg->unit->_kidList.front();
                         
                         AddSubject(kid);
-                        kid->_aggr = arg->field_4->_aggr;
+                        kid->_aggr = arg->unit->_aggr;
 
                         kid->CopyTargetOf(this);
                     }
 
-                    _commandID = arg->field_4->_commandID;
+                    _commandID = arg->unit->_commandID;
                     NetBroadcastReorder(this, 2);
                 }
                 else
@@ -6066,19 +6066,19 @@ void NC_STACK_ypabact::ReorganizeGroup(bact_arg109 *arg)
         break;
 
     case 4:
-        if ( arg->field_4->IsParentMyRobo() )
+        if ( arg->unit->IsParentMyRobo() )
         {
-            NC_STACK_ypabact *v19 = PassGroupToNewLeader(arg->field_4, 0);
+            NC_STACK_ypabact *v19 = PassGroupToNewLeader(arg->unit, 0);
 
             if ( v19 )
                 NetBroadcastReorder(v19, 14);
         }
 
-        AddSubject(arg->field_4);
+        AddSubject(arg->unit);
 
-        arg->field_4->_commandID = _commandID;
+        arg->unit->_commandID = _commandID;
 
-        arg->field_4->CopyTargetOf(this);
+        arg->unit->CopyTargetOf(this);
         NetBroadcastReorder(this, 4);
         break;
 
@@ -6173,7 +6173,7 @@ void NC_STACK_ypabact::DoTargetWaypoint()
     }
 }
 
-size_t NC_STACK_ypabact::TargetAssess(bact_arg110 *arg)
+size_t NC_STACK_ypabact::TargetAssess(TTargetAssess *arg)
 {
     bool primTgtDone = false;
     bool primTgtNear = false;
@@ -7282,9 +7282,9 @@ void NC_STACK_ypabact::DeadTimeUpdate(update_msg *arg)
     }
     else
     {
-        bact_arg86 arg86;
-        arg86.field_one = 3;
-        arg86.field_two = arg->frameTime;
+        TCrashLandStep arg86;
+        arg86.flags = 3;
+        arg86.frameTime = arg->frameTime;
 
         CrashOrLand(&arg86);
     }
@@ -7401,7 +7401,7 @@ void NC_STACK_ypabact::NetExtrapolateMotion(update_msg *upd)
     }
 }
 
-size_t NC_STACK_ypabact::PathFinder(bact_arg124 *arg)
+size_t NC_STACK_ypabact::PathFinder(TPathRequest *arg)
 {
     //path find for ground units (tank & car)
     int maxsteps = arg->steps_cnt;
@@ -7643,12 +7643,12 @@ void NC_STACK_ypabact::SetKidsPath(int beginWp)
     }
 }
 
-size_t NC_STACK_ypabact::SetPath(bact_arg124 *arg)
+size_t NC_STACK_ypabact::SetPath(TPathRequest *arg)
 {
     // path find caller for ground squads
     int maxsteps = arg->steps_cnt;
 
-    if ( arg->field_12 >= 2 || arg->field_12 != 1 )
+    if ( arg->tgt_type >= 2 || arg->tgt_type != 1 )
         return 0; //may be 1   CHECK IT
 
     if ( !PathFinder(arg) )
@@ -7686,11 +7686,11 @@ size_t NC_STACK_ypabact::SetPath(bact_arg124 *arg)
     {
         if ( (kidunit->_bact_type == BACT_TYPES_CAR || kidunit->_bact_type == BACT_TYPES_TANK) && _pSector != kidunit->_pSector )
         {
-            bact_arg124 arg125;
+            TPathRequest arg125;
             arg125.steps_cnt = maxsteps;
             arg125.from = kidunit->_position.XZ();
             arg125.to = arg->to;
-            arg125.field_12 = arg->field_12;
+            arg125.tgt_type = arg->tgt_type;
 
             kidunit->SetPath(&arg125);
         }

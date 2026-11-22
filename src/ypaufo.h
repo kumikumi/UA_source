@@ -13,7 +13,7 @@ public:
     virtual void AI_layer3(update_msg *arg);
     virtual void User_layer(update_msg *arg);
     virtual void Move(move_msg *arg);
-    virtual size_t SetPosition(bact_arg80 *arg);
+    virtual size_t SetPosition(TUnitPlacement *arg);
     virtual void Renew();
 
     NC_STACK_ypaufo() 

@@ -157,7 +157,7 @@ void NC_STACK_ypaufo::AI_layer3(update_msg *arg)
 
                 move_msg arg74;
                 arg74.flag = 0;
-                arg74.field_0 = v110;
+                arg74.period = v110;
 
                 Move(&arg74);
 
@@ -186,12 +186,12 @@ void NC_STACK_ypaufo::AI_layer3(update_msg *arg)
 
                 if ( (arg136_2.isect && arg136_2.tVal * 300.0 < _radius) || (arg136.isect && arg136.tVal * 300.0 < _radius) )
                 {
-                    bact_arg88 arg88;
+                    TCollisionNormal arg88;
 
                     if ( arg136_2.isect && arg136_2.tVal * 300.0 < _radius )
-                        arg88.pos1 = arg136_2.skel->polygons[arg136_2.polyID].Normal();
+                        arg88.normal = arg136_2.skel->polygons[arg136_2.polyID].Normal();
                     else
-                        arg88.pos1 = arg136.skel->polygons[arg136.polyID].Normal();
+                        arg88.normal = arg136.skel->polygons[arg136.polyID].Normal();
 
                     Recoil(&arg88);
                 }
@@ -292,7 +292,7 @@ void NC_STACK_ypaufo::AI_layer3(update_msg *arg)
                     }
                 }
 
-                bact_arg75 arg75;
+                TFightTarget arg75;
                 arg75.fperiod = v110;
                 arg75.g_time = _clock;
 
@@ -370,8 +370,8 @@ void NC_STACK_ypaufo::AI_layer3(update_msg *arg)
     {
         if ( _clock - _newtarget_time > 500 )
         {
-            bact_arg110 arg110;
-            bact_arg110 arg110_1;
+            TTargetAssess arg110;
+            TTargetAssess arg110_1;
 
             arg110.tgType = _secndTtype;
             arg110.priority = 1;
@@ -451,9 +451,9 @@ void NC_STACK_ypaufo::AI_layer3(update_msg *arg)
             }
             else
             {
-                bact_arg86 arg86;
-                arg86.field_one = 0;
-                arg86.field_two = arg->frameTime;
+                TCrashLandStep arg86;
+                arg86.flags = 0;
+                arg86.frameTime = arg->frameTime;
 
                 CrashOrLand(&arg86);
             }
@@ -619,14 +619,14 @@ void NC_STACK_ypaufo::User_layer(update_msg *arg)
                 _fly_dir_length = 0;
         }
 
-        bact_arg79 arg79;
+        TMissileLaunch arg79;
 
         arg79.tgType = BACT_TGT_TYPE_DRCT;
         arg79.tgt_pos = _rotation.AxisZ();
 
-        bact_arg106 arg106;
-        arg106.field_0 = 5;
-        arg106.field_4 = _rotation.AxisZ();
+        TAimQuery arg106;
+        arg106.flags = 5;
+        arg106.aim_dir = _rotation.AxisZ();
 
         if ( UserTargeting(&arg106) )
         {
@@ -715,11 +715,11 @@ void NC_STACK_ypaufo::User_layer(update_msg *arg)
                     SetState(&arg78);
                 }
 
-                bact_arg105 arg105;
+                TMinigunShot arg105;
 
-                arg105.field_0 = _rotation.AxisZ();
-                arg105.field_C = v88;
-                arg105.field_10 = _clock;
+                arg105.dir = _rotation.AxisZ();
+                arg105.period = v88;
+                arg105.gTime = _clock;
 
                 FireMinigun(&arg105);
             }
@@ -729,7 +729,7 @@ void NC_STACK_ypaufo::User_layer(update_msg *arg)
         {
             move_msg arg74;
             arg74.flag = 0;
-            arg74.field_0 = v88;
+            arg74.period = v88;
 
             Move(&arg74);
         }
@@ -741,7 +741,7 @@ void NC_STACK_ypaufo::User_layer(update_msg *arg)
             {
                 move_msg arg74;
                 arg74.flag = 0;
-                arg74.field_0 = v88;
+                arg74.period = v88;
 
                 Move(&arg74);
 
@@ -768,12 +768,12 @@ void NC_STACK_ypaufo::User_layer(update_msg *arg)
 
                     float v89 = v93.length();
 
-                    bact_arg88 arg88;
+                    TCollisionNormal arg88;
 
                     if ( v89 != 0.0 )
-                        arg88.pos1 = v93 / v89;
+                        arg88.normal = v93 / v89;
                     else
-                        arg88.pos1 = _fly_dir;
+                        arg88.normal = _fly_dir;
 
                     _thraction = 0;
 
@@ -796,9 +796,9 @@ void NC_STACK_ypaufo::User_layer(update_msg *arg)
                     {
                         _thraction = 0;
 
-                        bact_arg88 arg88;
+                        TCollisionNormal arg88;
 
-                        arg88.pos1 = arg136.skel->polygons[arg136.polyID].Normal();
+                        arg88.normal = arg136.skel->polygons[arg136.polyID].Normal();
 
                         Recoil(&arg88);
 
@@ -869,7 +869,7 @@ void NC_STACK_ypaufo::Move(move_msg *arg)
     float v52 = v45.length();
     if ( v52 > 0.0 )
     {
-        vec3d v42 = _fly_dir * _fly_dir_length + v45 * (arg->field_0 / _mass);
+        vec3d v42 = _fly_dir * _fly_dir_length + v45 * (arg->period / _mass);
 
         float v51 = v42.length();
         if ( v51 > 0.0 )
@@ -880,7 +880,7 @@ void NC_STACK_ypaufo::Move(move_msg *arg)
         _fly_dir_length = v51;
     }
 
-    vec3d a1v = _fly_dir * (_fly_dir_length * arg->field_0 * 6.0);
+    vec3d a1v = _fly_dir * (_fly_dir_length * arg->period * 6.0);
 
     if ( fabs(_fly_dir_length) > 0.1 )
         _position += a1v;
@@ -912,7 +912,7 @@ void NC_STACK_ypaufo::Move(move_msg *arg)
 
 }
 
-size_t NC_STACK_ypaufo::SetPosition(bact_arg80 *arg)
+size_t NC_STACK_ypaufo::SetPosition(TUnitPlacement *arg)
 {
     if ( !NC_STACK_ypabact::SetPosition(arg))
         return 0;

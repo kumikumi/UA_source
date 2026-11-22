@@ -2181,7 +2181,7 @@ void NC_STACK_ypaworld::DestroyAllGunsInSector(cellArea *cell)
 
         if ( v5 )
         {
-            bact_arg84 v8;
+            TEnergyChange v8;
             v8.energy = -22000000;
             v8.unit = NULL;
 
@@ -2721,13 +2721,13 @@ NC_STACK_ypabact * NC_STACK_ypaworld::FindStationByUnitGid(uint32_t bactid)
 
 void NC_STACK_ypaworld::RefreshUnitPRT(NC_STACK_ypabact *unit, NC_STACK_ypabact *robo, bool isRobo)
 {
-    bact_arg80 arg80;
+    TUnitPlacement arg80;
     arg80.pos = unit->_position;
 
     if ( unit->_bact_type == BACT_TYPES_GUN )
-        arg80.field_C = 4;
+        arg80.flags = 4;
     else
-        arg80.field_C = 0;
+        arg80.flags = 0;
 
     unit->SetPosition(&arg80);
 
@@ -3161,7 +3161,7 @@ void NC_STACK_ypaworld::KillUnitsInSuperBombRadius(uint8_t activate, float a5, f
 
                 if ( sqrt(POW2(v10) + POW2(v11)) < a7 )
                 {
-                    bact_arg84 arg84;
+                    TEnergyChange arg84;
                     arg84.energy = -22000000;
                     arg84.unit = NULL;
 
