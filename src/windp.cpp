@@ -1476,7 +1476,7 @@ void UserData::yw_NetPrintStartInfo()
 }
 
 
-void UserData::ypaworld_func151__sub7()
+void UserData::LogNetStatistics()
 {
 //  p_ypaworld->windp->windp_func91(v2);
     log_netlog("---------------- YPA Network Statistics -------------------\n\n");
@@ -1497,7 +1497,7 @@ void UserData::ypaworld_func151__sub7()
     log_netlog("\nthe session ended at timeindex %d\n", p_YW->_timeStamp / 1000);
     log_netlog("-----------------------------------------------------------\n");
 
-    dprintf("MAKE ME %s (multiplayer)\n", "ypaworld_func151__sub7");
+    dprintf("MAKE ME %s (multiplayer)\n", "LogNetStatistics");
 }
 
 

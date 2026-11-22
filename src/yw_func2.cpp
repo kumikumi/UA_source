@@ -627,7 +627,7 @@ void NC_STACK_ypaworld::PlayIntroMovie()
 
 
 
-void ypaworld_func156__sub1(UserData *usr)
+void CollectNetworkLevels(UserData *usr)
 {
     usr->mapDescriptions.clear();
     

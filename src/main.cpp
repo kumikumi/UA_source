@@ -333,9 +333,9 @@ int RunReplay(base_64arg *arg)
 {
     if ( (userdata.p_YW->_replayPlayer->field_74 - 3) <= userdata.p_YW->_replayPlayer->frame_id  &&  dword_513630 )
     {
-        ypaworld->ypaworld_func164();
+        ypaworld->StopReplay();
 
-        if ( !ypaworld->ypaworld_func162( PickReplayFile(arg->TimeStamp) ) )
+        if ( !ypaworld->StartReplay( PickReplayFile(arg->TimeStamp) ) )
         {
             GameScreenMode = GAME_SCREEN_MODE_MENU;
 
@@ -392,7 +392,7 @@ int RunReplay(base_64arg *arg)
     }
 
     if ( arg165.field_0 )
-        ypaworld->ypaworld_func165(&arg165);
+        ypaworld->ControlReplay(&arg165);
 
     return cont_play;
 }
@@ -401,7 +401,7 @@ int ProcessReplayFrame()
 {
     if ( !RunReplay(&world_update_arg) )
     {
-        ypaworld->ypaworld_func164();
+        ypaworld->StopReplay();
 
         if ( dword_513638 )
         {
@@ -461,7 +461,7 @@ int ProcessMenuFrame()
         v22.lvlID = userdata.envAction.params[0];
         v22.field_4 = 0;
 
-        if ( !ypaworld->ypaworld_func183(&v22) )
+        if ( !ypaworld->AdvancedCreateLevel(&v22) )
         {
             ypa_log_out("Sorry, unable to init this level!\n");
 
@@ -510,7 +510,7 @@ int ProcessMenuFrame()
 
         GameScreenMode = GAME_SCREEN_MODE_UNKNOWN;
 
-        if ( !ypaworld->ypaworld_func179(&v22) )
+        if ( !ypaworld->CreateNetLevel(&v22) )
         {
             ypa_log_out("Sorry, unable to init this level for network!\n");
             ypaworld->DeinitGameShell();
@@ -539,7 +539,7 @@ int ProcessMenuFrame()
 
         GameScreenMode = GAME_SCREEN_MODE_UNKNOWN;
 
-        if ( ypaworld->ypaworld_func162(repname) )
+        if ( ypaworld->StartReplay(repname) )
         {
             dword_513630 = 1;
             GameScreenMode = GAME_SCREEN_MODE_REPLAY;

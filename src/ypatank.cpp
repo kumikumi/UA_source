@@ -182,7 +182,7 @@ void NC_STACK_ypatank::AI_layer3(update_msg *arg)
                     }
                     arg136.flags = 1;
 
-                    _world->ypaworld_func136(&arg136);
+                    _world->IntersectRay(&arg136);
 
                     if ( !arg136.isect || arg136.skel->polygons[ arg136.polyID ].B > 0.6 )
                         _tankCollisionFlag &= ~(COLL_HILL_L | COLL_HILL_R);
@@ -205,7 +205,7 @@ void NC_STACK_ypatank::AI_layer3(update_msg *arg)
                         arg136.stPos = _position;
                         arg136.flags = 1;
 
-                        _world->ypaworld_func136(&arg136);
+                        _world->IntersectRay(&arg136);
 
                         if ( !arg136.isect || arg136.skel->polygons[ arg136.polyID ].B > 0.6 )
                             _tankCollisionFlag &= ~(COLL_WALL_L | COLL_WALL_R);
@@ -335,7 +335,7 @@ void NC_STACK_ypatank::AI_layer3(update_msg *arg)
 
             arg136.flags = 1;
 
-            _world->ypaworld_func136(&arg136);
+            _world->IntersectRay(&arg136);
 
             if ( arg136.isect )
             {
@@ -368,7 +368,7 @@ void NC_STACK_ypatank::AI_layer3(update_msg *arg)
                         arg136_2.vect = _rotation.AxisY() * 300.0;
                         arg136_2.flags = 1;
 
-                        _world->ypaworld_func136(&arg136_2);
+                        _world->IntersectRay(&arg136_2);
 
                         vec3d v187;
 
@@ -407,8 +407,8 @@ void NC_STACK_ypatank::AI_layer3(update_msg *arg)
                         arg136_3.stPos = _old_pos;
                         arg136_3.flags = 1;
 
-                        _world->ypaworld_func136(&arg136_1);
-                        _world->ypaworld_func136(&arg136_3);
+                        _world->IntersectRay(&arg136_1);
+                        _world->IntersectRay(&arg136_3);
 
                         bool v86 = arg136_1.isect && arg136_1.skel->polygons[ arg136_1.polyID ].B < 0.6;
                         bool v87 = arg136_3.isect && arg136_3.skel->polygons[ arg136_3.polyID ].B < 0.6;
@@ -504,7 +504,7 @@ void NC_STACK_ypatank::AI_layer3(update_msg *arg)
                     arg136.vect = (_rotation.AxisY() - _rotation.AxisZ()) * v223;
                     arg136.flags = 1;
 
-                    _world->ypaworld_func136(&arg136);
+                    _world->IntersectRay(&arg136);
 
                     if ( !arg136.isect || ( arg136.isect && arg136.tVal * v223 * 0.7 > (_overeof + 30.0) ) )
                     {
@@ -531,7 +531,7 @@ void NC_STACK_ypatank::AI_layer3(update_msg *arg)
                     arg136_4.vect = _rotation.AxisY() * 300.0;
                     arg136_4.flags = 1;
 
-                    _world->ypaworld_func136(&arg136_4);
+                    _world->IntersectRay(&arg136_4);
 
                     if ( alignRes == ALIGN_NORMAL )
                         v208 = -alignNorm;
@@ -1014,7 +1014,7 @@ void NC_STACK_ypatank::User_layer(update_msg *arg)
             arg136.vect = _position - _old_pos;
             arg136.flags = 0;
 
-            _world->ypaworld_func136(&arg136);
+            _world->IntersectRay(&arg136);
 
             if ( (a4 && CollisionWithBact(arg->frameTime)) || !arg136.isect ) // Check it
             {
@@ -1128,7 +1128,7 @@ size_t NC_STACK_ypatank::SetPosition(bact_arg80 *arg)
             arg136.vect = vec3d::OY(50000.0);
             arg136.flags = 0;
 
-            _world->ypaworld_func136(&arg136);
+            _world->IntersectRay(&arg136);
 
             if ( !arg136.isect )
                 return 0;
@@ -1172,7 +1172,7 @@ void NC_STACK_ypatank::ApplyImpulse(bact_arg83 *arg)
     arg136.vect = v24 - _position;
     arg136.flags = 0;
 
-    _world->ypaworld_func136(&arg136);
+    _world->IntersectRay(&arg136);
 
     if ( !arg136.isect )
         _position = v24;
@@ -1446,7 +1446,7 @@ size_t NC_STACK_ypatank::CollisionWithBact(int arg)
                             arg136.vect = v85 - v80[i]->_position;
                             arg136.flags = 0;
 
-                            _world->ypaworld_func136(&arg136);
+                            _world->IntersectRay(&arg136);
 
                             if ( !arg136.isect )
                             {
@@ -1522,7 +1522,7 @@ size_t NC_STACK_ypatank::CollisionWithBact(int arg)
                 arg180.field_C = v88.z;
                 arg180.effects_type = 5;
 
-                _world->ypaworld_func180(&arg180);
+                _world->FFeedback_Play(&arg180);
             }
             else
             {
@@ -1625,7 +1625,7 @@ size_t NC_STACK_ypatank::CheckFireAI(bact_arg101 *arg)
     arg149.vect = arg->pos - arg149.stPos;
     arg149.flags = 0;
 
-    _world->ypaworld_func149(&arg149);
+    _world->IntersectLongRay(&arg149);
 
     if ( arg149.isect )
     {
@@ -1813,7 +1813,7 @@ void NC_STACK_ypatank::CorrectPositionOnLand()
         arg136.vect = vec3d::OY( v6 * 2.0 );
         arg136.flags = 0;
 
-        _world->ypaworld_func136(&arg136);
+        _world->IntersectRay(&arg136);
 
         if ( arg136.isect )
             _position.y = arg136.isectPos.y - v6;
@@ -1849,7 +1849,7 @@ int NC_STACK_ypatank::AlignVehicleAI(float dtime, vec3d *pNormal)
     arg136.vect = vec3d::OY( _overeof + 110.0 );
     arg136.flags = 0;
 
-    _world->ypaworld_func136(&arg136);
+    _world->IntersectRay(&arg136);
 
     if ( !arg136.isect )
         return ALIGN_NONE;
@@ -1967,7 +1967,7 @@ int NC_STACK_ypatank::AlignVehicleUser(float dtime, const vec3d &oldDir)
         arg136_2.flags = 1;
     }
 
-    _world->ypaworld_func136(&arg136);
+    _world->IntersectRay(&arg136);
 
     if ( arg136.isect )
     {
@@ -1996,7 +1996,7 @@ int NC_STACK_ypatank::AlignVehicleUser(float dtime, const vec3d &oldDir)
                         arg180.field_C = arg136.isectPos.z;
                         arg180.effects_type = 5;
 
-                        _world->ypaworld_func180(&arg180);
+                        _world->FFeedback_Play(&arg180);
                     }
                 }
 
@@ -2024,7 +2024,7 @@ int NC_STACK_ypatank::AlignVehicleUser(float dtime, const vec3d &oldDir)
         v149 = 1;
     }
 
-    _world->ypaworld_func136(&arg136_1);
+    _world->IntersectRay(&arg136_1);
 
     if ( arg136_1.isect )
     {
@@ -2052,7 +2052,7 @@ int NC_STACK_ypatank::AlignVehicleUser(float dtime, const vec3d &oldDir)
                         arg180_3.effects_type = 5;
                         arg180_3.field_4 = 1.0;
 
-                        _world->ypaworld_func180(&arg180_3);
+                        _world->FFeedback_Play(&arg180_3);
                     }
                 }
                 if ( v172 >= 0.82 )
@@ -2079,7 +2079,7 @@ int NC_STACK_ypatank::AlignVehicleUser(float dtime, const vec3d &oldDir)
         v151 = 1;
     }
 
-    _world->ypaworld_func136(&arg136_2);
+    _world->IntersectRay(&arg136_2);
 
     if ( arg136_2.isect )
     {
@@ -2099,7 +2099,7 @@ int NC_STACK_ypatank::AlignVehicleUser(float dtime, const vec3d &oldDir)
                     arg180_1.field_C = arg136_2.isectPos.z;
                     arg180_1.effects_type = 5;
 
-                    _world->ypaworld_func180(&arg180_1);
+                    _world->FFeedback_Play(&arg180_1);
                 }
             }
 
@@ -2124,7 +2124,7 @@ int NC_STACK_ypatank::AlignVehicleUser(float dtime, const vec3d &oldDir)
             arg136_3.vect = _rotation.AxisZ() * _viewer_radius;
             arg136_3.flags = 0;
 
-            _world->ypaworld_func136(&arg136_3);
+            _world->IntersectRay(&arg136_3);
 
             if ( arg136_3.isect )
             {
@@ -2142,7 +2142,7 @@ int NC_STACK_ypatank::AlignVehicleUser(float dtime, const vec3d &oldDir)
                             arg180_2.field_8 = arg136_3.isectPos.x;
                             arg180_2.field_C = arg136_3.isectPos.z;
 
-                            _world->ypaworld_func180(&arg180_2);
+                            _world->FFeedback_Play(&arg180_2);
                         }
                     }
 
@@ -2211,7 +2211,7 @@ int NC_STACK_ypatank::AlignVehicleUser(float dtime, const vec3d &oldDir)
 
             arg136_4.flags = isViewer == 0;
 
-            _world->ypaworld_func136(&arg136_4);
+            _world->IntersectRay(&arg136_4);
 
             if ( !arg136_4.isect || (arg136_4.isect && arg136_4.skel->polygons[ arg136_4.polyID ].B < 0.6) )
             {

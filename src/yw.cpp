@@ -801,7 +801,7 @@ void ActivateNetWunderstein(NC_STACK_ypaworld *yw, cellArea *cell, int a3)
     cell->PurposeType = cellArea::PT_TECHDEACTIVE;
 }
 
-void ypaworld_func129__sub1(NC_STACK_ypaworld *yw, cellArea *cell, int a3)
+void RevokeTechUpgrade(NC_STACK_ypaworld *yw, cellArea *cell, int a3)
 {
     TMapGem &gem = yw->_techUpgrades[a3];
 
@@ -947,7 +947,7 @@ void SpawnBuildingExplosions(NC_STACK_ypaworld *yw, const cellArea &cell, int bl
     }
 }
 
-void ypaworld_func129__sub0(NC_STACK_ypaworld *yw, const cellArea &cell, yw_arg129 *arg)
+void WarnPowerStationAttacked(NC_STACK_ypaworld *yw, const cellArea &cell, yw_arg129 *arg)
 {
     if ( cell.PurposeType == cellArea::PT_POWERSTATION )
     {
@@ -973,7 +973,7 @@ void ypaworld_func129__sub0(NC_STACK_ypaworld *yw, const cellArea &cell, yw_arg1
 
 
 
-void NC_STACK_ypaworld::ypaworld_func129(yw_arg129 *arg)
+void NC_STACK_ypaworld::DamageSectorBuilding(yw_arg129 *arg)
 {
     Common::Point sec = World::PositionToSectorID( arg->pos );
     cellArea &cell = _cells.At(sec);
@@ -1051,7 +1051,7 @@ void NC_STACK_ypaworld::ypaworld_func129(yw_arg129 *arg)
 
             cell.buildings_health.At(bldX, bldY) = v34;
 
-            ypaworld_func129__sub0(this, cell, arg);
+            WarnPowerStationAttacked(this, cell, arg);
 
             CellCheckHealth(&cell, arg->OwnerID, arg->unit);
 
@@ -1077,7 +1077,7 @@ void NC_STACK_ypaworld::ypaworld_func129(yw_arg129 *arg)
                         v27 += hlth;
 
                     if ( !v27 )
-                        ypaworld_func129__sub1(this, &cell, cell.PurposeIndex);
+                        RevokeTechUpgrade(this, &cell, cell.PurposeIndex);
                 }
             }
         }
@@ -1104,7 +1104,7 @@ size_t NC_STACK_ypaworld::GetSectorInfo(yw_130arg *arg)
 }
 
 
-void NC_STACK_ypaworld::ypaworld_func131(NC_STACK_ypabact *bact)
+void NC_STACK_ypaworld::SetViewerUnit(NC_STACK_ypabact *bact)
 {
     _viewerBact = bact;
 
@@ -1123,7 +1123,7 @@ void NC_STACK_ypaworld::AddToUnitsList(NC_STACK_ypabact *bact)
 }
 
 
-void NC_STACK_ypaworld::ypaworld_func136(ypaworld_arg136 *arg)
+void NC_STACK_ypaworld::IntersectRay(ypaworld_arg136 *arg)
 {
     arg->tVal = 2.0;
     arg->isect = 0;
@@ -1181,7 +1181,7 @@ void NC_STACK_ypaworld::ypaworld_func136(ypaworld_arg136 *arg)
 }
 
 
-void NC_STACK_ypaworld::ypaworld_func137(ypaworld_arg137 *arg)
+void NC_STACK_ypaworld::FindSphereCollisions(ypaworld_arg137 *arg)
 {
     arg->coll_count = 0;
 
@@ -1254,7 +1254,7 @@ void NC_STACK_ypaworld::ypaworld_func137(ypaworld_arg137 *arg)
 
             arg->pos = pos - a6.pos;
 
-            ypaworld_func137__sub0(arg, a6);
+            CollideSphereWithSkeleton(arg, a6);
         }
     }
 }
@@ -1522,7 +1522,7 @@ NC_STACK_ypabact * NC_STACK_ypaworld::CreateVehicle(ypaworld_arg146 *vhcl_id)
 }
 
 
-NC_STACK_ypamissile * NC_STACK_ypaworld::ypaworld_func147(ypaworld_arg146 *arg)
+NC_STACK_ypamissile * NC_STACK_ypaworld::CreateWeapon(ypaworld_arg146 *arg)
 {
     if ( arg->vehicle_id > _weaponProtos.size() )
         return NULL;
@@ -1691,7 +1691,7 @@ NC_STACK_ypamissile * NC_STACK_ypaworld::ypaworld_func147(ypaworld_arg146 *arg)
 }
 
 
-size_t NC_STACK_ypaworld::ypaworld_func148(ypaworld_arg148 *arg)
+size_t NC_STACK_ypaworld::CreateBuilding(ypaworld_arg148 *arg)
 {
     if (  !arg->field_C 
        && !_allowMultiBuildLevel 
@@ -1745,7 +1745,7 @@ size_t NC_STACK_ypaworld::ypaworld_func148(ypaworld_arg148 *arg)
 }
 
 
-void NC_STACK_ypaworld::ypaworld_func149(ypaworld_arg136 *arg)
+void NC_STACK_ypaworld::IntersectLongRay(ypaworld_arg136 *arg)
 {
     arg->tVal = 2.0;
     arg->isect = 0;
@@ -1857,7 +1857,7 @@ void NC_STACK_ypaworld::ypaworld_func149(ypaworld_arg136 *arg)
 }
 
 
-void NC_STACK_ypaworld::ypaworld_func150(yw_arg150 *arg)
+void NC_STACK_ypaworld::FindUnitOnRay(yw_arg150 *arg)
 {
     arg->field_24 = NULL;
 
@@ -2000,7 +2000,7 @@ void NC_STACK_ypaworld::DeleteLevel()
         if ( !_GameShell->sentAQ )
             NetSendExitMsg(0);
 
-        _GameShell->ypaworld_func151__sub7();
+        _GameShell->LogNetStatistics();
         _GameShell->yw_netcleanup();
 
         _prepareDebrief = true;
@@ -2100,7 +2100,7 @@ void NC_STACK_ypaworld::DeleteLevel()
 }
 
 
-void NC_STACK_ypaworld::ypaworld_func153(bact_hudi *arg)
+void NC_STACK_ypaworld::SetHudVisor(bact_hudi *arg)
 {
     _guiVisor = *arg;
 }
@@ -4934,7 +4934,7 @@ bool NC_STACK_ypaworld::OpenGameShell()
         ypa_log_out("Warning: No Language selected, use default set\n");
     }
 
-    ypaworld_func156__sub1(_GameShell);
+    CollectNetworkLevels(_GameShell);
 
     if ( !GameShellInitBkg() )
     {
@@ -5592,7 +5592,7 @@ void NC_STACK_ypaworld::ShowMessage(yw_arg159 *arg)
 
 
 // Load Level
-size_t NC_STACK_ypaworld::ypaworld_func161(yw_arg161 *arg)
+size_t NC_STACK_ypaworld::CreateLevel(yw_arg161 *arg)
 {
     int ok = 0;
     TLevelDescription mapp;
@@ -5651,7 +5651,7 @@ size_t NC_STACK_ypaworld::ypaworld_func161(yw_arg161 *arg)
 }
 
 
-size_t NC_STACK_ypaworld::ypaworld_func162(const std::string &fname)
+size_t NC_STACK_ypaworld::StartReplay(const std::string &fname)
 {
     _replayPlayer = new TGameRecorder();
 
@@ -5694,13 +5694,13 @@ size_t NC_STACK_ypaworld::ypaworld_func162(const std::string &fname)
     arg161.field_4 = 1;
     arg161.lvlID = repl->level_id;
 
-    if ( !ypaworld_func161(&arg161) )
+    if ( !CreateLevel(&arg161) )
         return 0;
 
     if ( !recorder_create_camera() )
     {
         ypa_log_out("PLAYER ERROR: could not create virtual camera!\n");
-        ypaworld_func164();
+        StopReplay();
 
         return 0;
     }
@@ -5711,7 +5711,7 @@ size_t NC_STACK_ypaworld::ypaworld_func162(const std::string &fname)
     if ( !recorder_go_to_frame(repl, 0) )
     {
         ypa_log_out("PLAYER ERROR: could not position on 1st frame!\n");
-        ypaworld_func164();
+        StopReplay();
         return 0;
     }
 
@@ -5719,11 +5719,11 @@ size_t NC_STACK_ypaworld::ypaworld_func162(const std::string &fname)
 
     arg165.field_0 = 2;
     arg165.frame = 0;
-    ypaworld_func165(&arg165);
+    ControlReplay(&arg165);
 
     arg165.field_0 = 20;
     arg165.frame = 0;
-    ypaworld_func165(&arg165);
+    ControlReplay(&arg165);
 
     return 1;
 }
@@ -5803,7 +5803,7 @@ void NC_STACK_ypaworld::PlayReplayFrame(base_64arg *arg)
 
 
 
-void NC_STACK_ypaworld::ypaworld_func164()
+void NC_STACK_ypaworld::StopReplay()
 {
     if ( _replayPlayer )
     {
@@ -5817,7 +5817,7 @@ void NC_STACK_ypaworld::ypaworld_func164()
 }
 
 
-void NC_STACK_ypaworld::ypaworld_func165(yw_arg165 *arg)
+void NC_STACK_ypaworld::ControlReplay(yw_arg165 *arg)
 {
     TGameRecorder *repl = _replayPlayer;
 
@@ -6009,7 +6009,7 @@ void NC_STACK_ypaworld::UpdateGameShell()
 }
 
 
-size_t NC_STACK_ypaworld::ypaworld_func168(NC_STACK_ypabact *bact)
+size_t NC_STACK_ypaworld::BeamUnitThroughGate(NC_STACK_ypabact *bact)
 {
     if ( bact->_bact_type == BACT_TYPES_GUN || bact->_bact_type == BACT_TYPES_MISSLE )
         return 1;
@@ -6613,14 +6613,14 @@ size_t NC_STACK_ypaworld::ReloadLanguage()
 }
 
 
-void NC_STACK_ypaworld::ypaworld_func176(yw_arg176 *arg)
+void NC_STACK_ypaworld::GetReloadRatios(yw_arg176 *arg)
 {
     arg->field_4 = _reloadRatioClamped[arg->owner];
     arg->field_8 = _reloadRatioPositive[arg->owner];
 }
 
 
-void NC_STACK_ypaworld::ypaworld_func177(yw_arg177 *arg)
+void NC_STACK_ypaworld::HandleRoboDestroyed(yw_arg177 *arg)
 {
     //Reown sectors for new owner
 
@@ -6683,7 +6683,7 @@ void NC_STACK_ypaworld::ypaworld_func177(yw_arg177 *arg)
 //179 method in yw_net
 
 
-void NC_STACK_ypaworld::ypaworld_func180(yw_arg180 *arg)
+void NC_STACK_ypaworld::FFeedback_Play(yw_arg180 *arg)
 {
     if ( _shellConfIsParsed )
     {
@@ -6749,7 +6749,7 @@ bool NC_STACK_ypaworld::NetBroadcastMessage(uamessage_base *data, size_t dataSiz
     return _netDriver->Broadcast(data, dataSize, garantee);
 }
 
-int ypaworld_func183__sub0(int lvlID, const char *userName)
+int HasLevelFinSave(int lvlID, const char *userName)
 {
     FSMgr::FileHandle *fil = uaOpenFileAlloc( fmt::sprintf("save:%s/%d.fin", userName, lvlID) , "r");
 
@@ -6761,11 +6761,11 @@ int ypaworld_func183__sub0(int lvlID, const char *userName)
 }
 
 // Advanced Create Level
-size_t NC_STACK_ypaworld::ypaworld_func183(yw_arg161 *arg)
+size_t NC_STACK_ypaworld::AdvancedCreateLevel(yw_arg161 *arg)
 {
     int v6;
 
-    if ( _globalMapRegions.MapRegions[ arg->lvlID ].Status == TMapRegionInfo::STATUS_COMPLETED && ypaworld_func183__sub0(arg->lvlID, _GameShell->UserName.c_str()) )
+    if ( _globalMapRegions.MapRegions[ arg->lvlID ].Status == TMapRegionInfo::STATUS_COMPLETED && HasLevelFinSave(arg->lvlID, _GameShell->UserName.c_str()) )
     {
         std::string savename = fmt::sprintf("save:%s/%d.fin", _GameShell->UserName, arg->lvlID);
         v6 = LoadGame(savename);
@@ -6777,7 +6777,7 @@ size_t NC_STACK_ypaworld::ypaworld_func183(yw_arg161 *arg)
     }
     else
     {
-        v6 = ypaworld_func161(arg);
+        v6 = CreateLevel(arg);
 
         if ( !v6 )
             ypa_log_out("Warning: in YWM_ADVANCEDCREATELEVEL: YWM_CREATELEVEL %d failed!\n", arg->lvlID);
@@ -6906,7 +6906,7 @@ void NC_STACK_ypaworld::setYW_userVehicle(NC_STACK_ypabact *bact)
         FFeedback_VehicleChanged();
 
         if ( oldpBact )
-            ypaworld_func2__sub0__sub1(this, oldpBact, _userUnit);
+            RestoreWinStatus(this, oldpBact, _userUnit);
     }
 }
 

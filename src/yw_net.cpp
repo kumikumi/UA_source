@@ -543,7 +543,7 @@ void NC_STACK_ypaworld::yw_netApplyVhclDataE(NC_STACK_ypabact *bact, uamessage_v
                 v69.vect = bact->_rotation.AxisY() * 200.0;
                 v69.flags = 0;
 
-                ypaworld_func136(&v69);
+                IntersectRay(&v69);
 
                 if ( v69.isect )
                     bact->_position = v69.isectPos - bact->_rotation.AxisY() * bact->_overeof;
@@ -970,7 +970,7 @@ bool yw_netRecvUpdate(NC_STACK_ypaworld *yw, uamessage_update *msg, int owner)
             {
                 newMiss.pos = dat->pos;
                 newMiss.vehicle_id = dat->vhclID;
-                NC_STACK_ypamissile *tmp = yw->ypaworld_func147(&newMiss);
+                NC_STACK_ypamissile *tmp = yw->CreateWeapon(&newMiss);
 
                 if ( !tmp )
                 {
@@ -1345,7 +1345,7 @@ size_t yw_handleNormMsg(NC_STACK_ypaworld *yw, windp_recvMsg *msg, std::string *
         newWpn.pos = nwMsg->pos;
         newWpn.vehicle_id = nwMsg->type;
 
-        NC_STACK_ypamissile *weapo = yw->ypaworld_func147(&newWpn);
+        NC_STACK_ypamissile *weapo = yw->CreateWeapon(&newWpn);
 
         if ( !weapo )
         {
@@ -1760,7 +1760,7 @@ size_t yw_handleNormMsg(NC_STACK_ypaworld *yw, windp_recvMsg *msg, std::string *
         arg129.field_10 = seMsg->energy;
         arg129.OwnerID = seMsg->sectOwner;
 
-        yw->ypaworld_func129(&arg129);
+        yw->DamageSectorBuilding(&arg129);
     }
     break;
 
@@ -1781,7 +1781,7 @@ size_t yw_handleNormMsg(NC_STACK_ypaworld *yw, windp_recvMsg *msg, std::string *
             arg148.CellId = {sbMsg->sec_x, sbMsg->sec_y};
             arg148.field_18 = 0;
 
-            yw->ypaworld_func148(&arg148);
+            yw->CreateBuilding(&arg148);
         }
         else
         {
@@ -2134,7 +2134,7 @@ size_t yw_handleNormMsg(NC_STACK_ypaworld *yw, windp_recvMsg *msg, std::string *
         yw_arg177 arg177;
         arg177.field_4 = hdMsg->killerOwner;
         arg177.bact = bhost;
-        yw->ypaworld_func177(&arg177);
+        yw->HandleRoboDestroyed(&arg177);
     }
     break;
 
@@ -3531,7 +3531,7 @@ bool NC_STACK_ypaworld::yw_NetSetHostStations(const std::vector<MapRobo> &Robos)
         arg136.vect = vec3d::OY(50000.0);
         arg136.flags = 0;
 
-        ypaworld_func136(&arg136);
+        IntersectRay(&arg136);
 
         if ( arg136.isect )
             place.y += arg136.isectPos.y;
@@ -3611,7 +3611,7 @@ bool NC_STACK_ypaworld::yw_NetSetHostStations(const std::vector<MapRobo> &Robos)
 
 
 
-size_t NC_STACK_ypaworld::ypaworld_func179(yw_arg161 *arg)
+size_t NC_STACK_ypaworld::CreateNetLevel(yw_arg161 *arg)
 {
     bact_id = 0x10000;
     

@@ -563,7 +563,7 @@ void NC_STACK_ypamissile::AI_layer3(update_msg *arg)
             arg136.vect = _position - _old_pos;
             arg136.flags = 0;
 
-            _world->ypaworld_func136(&arg136);
+            _world->IntersectRay(&arg136);
 
             if ( arg136.isect )
             {

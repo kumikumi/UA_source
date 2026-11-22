@@ -180,9 +180,9 @@ void NC_STACK_ypaufo::AI_layer3(update_msg *arg)
                 arg136_2.flags = 0;
                 arg136.flags = 0;
 
-                _world->ypaworld_func136(&arg136);
+                _world->IntersectRay(&arg136);
 
-                _world->ypaworld_func136(&arg136_2);
+                _world->IntersectRay(&arg136_2);
 
                 if ( (arg136_2.isect && arg136_2.tVal * 300.0 < _radius) || (arg136.isect && arg136.tVal * 300.0 < _radius) )
                 {
@@ -444,7 +444,7 @@ void NC_STACK_ypaufo::AI_layer3(update_msg *arg)
                 arg136_1.vect = vec3d::OY(_overeof + 50.0);
                 arg136_1.flags = 0;
 
-                _world->ypaworld_func136(&arg136_1);
+                _world->IntersectRay(&arg136_1);
 
                 if ( arg136_1.isect )
                     _position.y = arg136_1.isectPos.y - _overeof;
@@ -517,7 +517,7 @@ void NC_STACK_ypaufo::User_layer(update_msg *arg)
 
             arg136.flags = 0;
 
-            _world->ypaworld_func136(&arg136);
+            _world->IntersectRay(&arg136);
 
             if ( !arg136.isect || _thraction != 0.0 || _ufoBoost > _mass * 9.80665 )
             {
@@ -753,7 +753,7 @@ void NC_STACK_ypaufo::User_layer(update_msg *arg)
                 arg137.coll_max = 10;
                 arg137.field_30 = 0;
 
-                _world->ypaworld_func137(&arg137);
+                _world->FindSphereCollisions(&arg137);
 
                 int v49 = 0;
 
@@ -790,7 +790,7 @@ void NC_STACK_ypaufo::User_layer(update_msg *arg)
 
                     arg136.flags = 0;
 
-                    _world->ypaworld_func136(&arg136);
+                    _world->IntersectRay(&arg136);
 
                     if ( arg136.isect )
                     {
@@ -827,7 +827,7 @@ void NC_STACK_ypaufo::User_layer(update_msg *arg)
                         arg180.field_8 = v93.x * 10.0 + _position.x;
                         arg180.field_C = v93.z * 10.0 + _position.z;
 
-                        _world->ypaworld_func180(&arg180);
+                        _world->FFeedback_Play(&arg180);
                     }
                 }
             }

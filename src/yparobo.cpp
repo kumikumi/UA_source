@@ -850,7 +850,7 @@ size_t NC_STACK_yparobo::checkCollisions(float a2)
             else
                 arg136.vect = vec3d::X0Z( (t.XZ() - tmp.XZ()) * 300.0 / v82 );
 
-            _world->ypaworld_func136(&arg136);
+            _world->IntersectRay(&arg136);
 
 
             if ( arg136.isect )
@@ -932,7 +932,7 @@ size_t NC_STACK_yparobo::checkCollisions(float a2)
             arg137.field_30 = 0;
             arg137.coll_max = 32;
 
-            _world->ypaworld_func137(&arg137);
+            _world->FindSphereCollisions(&arg137);
 
             if ( arg137.coll_count )
             {
@@ -1003,7 +1003,7 @@ size_t NC_STACK_yparobo::checkCollisions(float a2)
     arg136.vect = vec3d::OY( _height * 1.5 ) + _fly_dir.X0Z() * 100.0;
     arg136.flags = 0;
 
-    _world->ypaworld_func136(&arg136);
+    _world->IntersectRay(&arg136);
 
     if ( arg136.isect )
     {
@@ -1515,7 +1515,7 @@ void NC_STACK_yparobo::doUserCommands(update_msg *arg)
             arg148.field_C = 0;
             arg148.CellId = arg->target_Sect->CellId;
             arg148.field_18 = 0;
-            if ( _world->ypaworld_func148(&arg148) )
+            if ( _world->CreateBuilding(&arg148) )
             {
                 _roboEnergyLife -= arg->energy;
 
@@ -1862,7 +1862,7 @@ void NC_STACK_yparobo::buildRadar(update_msg *arg)
                     arg148.field_C = 0;
                     arg148.field_18 = 0;
 
-                    if ( _world->ypaworld_func148(&arg148) )
+                    if ( _world->CreateBuilding(&arg148) )
                     {
                         const World::TBuildingProto &proto = _world->GetBuildProtos().at(build_id);
 
@@ -1962,7 +1962,7 @@ void NC_STACK_yparobo::buildPower(update_msg *arg)
     {
         yw_arg176 arg176;
         arg176.owner = _owner;
-        _world->ypaworld_func176(&arg176);
+        _world->GetReloadRatios(&arg176);
 
         if ( _world->SectorAt( _roboBuildingCellID ).energy_power != 255 && ( arg176.field_4 >= 0.9 || arg176.field_4 <= 0.001) )
         {
@@ -2023,7 +2023,7 @@ void NC_STACK_yparobo::buildPower(update_msg *arg)
                         arg148.field_C = 0;
                         arg148.field_18 = 0;
 
-                        if ( _world->ypaworld_func148(&arg148) )
+                        if ( _world->CreateBuilding(&arg148) )
                         {
                             const World::TBuildingProto &proto = _world->GetBuildProtos().at(bldid);
 
@@ -2188,7 +2188,7 @@ void NC_STACK_yparobo::buildSafe(update_msg *arg)
                     arg148.field_C = 0;
                     arg148.field_18 = 0;
 
-                    if ( _world->ypaworld_func148(&arg148) )
+                    if ( _world->CreateBuilding(&arg148) )
                     {
                         const World::TBuildingProto &proto = _world->GetBuildProtos().at(build_id);
 
@@ -2643,7 +2643,7 @@ void NC_STACK_yparobo::buildConquer()
     arg136.vect = vec3d::OY(20000.0);
     arg136.flags = 0;
 
-    _world->ypaworld_func136(&arg136);
+    _world->IntersectRay(&arg136);
 
     if ( _pSector->height - arg136.isectPos.y >= 50.0 )
     {
@@ -2737,7 +2737,7 @@ void NC_STACK_yparobo::buildDefense()
         arg136.vect = vec3d::OY(20000.0);
         arg136.flags = 0;
 
-        _world->ypaworld_func136(&arg136);
+        _world->IntersectRay(&arg136);
 
         if ( _pSector->height - arg136.isectPos.y >= 50.0 )
         {
@@ -2822,7 +2822,7 @@ void NC_STACK_yparobo::buildRobo()
         arg136.vect = vec3d::OY(20000.0);
         arg136.flags = 0;
 
-        _world->ypaworld_func136(&arg136);
+        _world->IntersectRay(&arg136);
 
         if ( _pSector->height - arg136.isectPos.y >= 50.0 )
         {
@@ -2887,7 +2887,7 @@ void NC_STACK_yparobo::buildReconnoitre()
     arg136.vect = vec3d::OY(20000.0);
     arg136.flags = 0;
 
-    _world->ypaworld_func136(&arg136);
+    _world->IntersectRay(&arg136);
 
     if ( _pSector->height - arg136.isectPos.y >= 50.0 )
     {
@@ -4100,7 +4100,7 @@ int NC_STACK_yparobo::RateAreaControl(const Common::Point &cellId)
             yw_arg176 arg176;
             arg176.owner = cll.owner;
 
-            _world->ypaworld_func176(&arg176);
+            _world->GetReloadRatios(&arg176);
 
             float v15;
 
@@ -4349,7 +4349,7 @@ void NC_STACK_yparobo::AI_checkWorld(update_msg *arg)
 
     yw_arg176 v85;
     v85.owner = _owner;
-    _world->ypaworld_func176(&v85);
+    _world->GetReloadRatios(&v85);
 
     v6 = 1;
     if ( _roboNewAI )
@@ -4803,7 +4803,7 @@ void NC_STACK_yparobo::Die()
                 arg177.field_4 = _killer_owner;
                 arg177.bact = this;
 
-                _world->ypaworld_func177(&arg177); //Reown sectors for new owner
+                _world->HandleRoboDestroyed(&arg177); //Reown sectors for new owner
             }
         }
 
@@ -4965,7 +4965,7 @@ void NC_STACK_yparobo::EnergyInteract(update_msg *arg)
         yw_arg176 arg176;
         arg176.owner = _pSector->owner;
 
-        _world->ypaworld_func176(&arg176);
+        _world->GetReloadRatios(&arg176);
 
         float v64 = _pSector->energy_power;
 
@@ -5771,7 +5771,7 @@ void NC_STACK_yparobo::UpdateGateBeamOut()
 
             if ( !isNotViewBeaming )
             {
-                _world->ypaworld_func168(this);
+                _world->BeamUnitThroughGate(this);
 
                 vec3d tt = _position;
 

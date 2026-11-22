@@ -4862,7 +4862,7 @@ void EnergyPanelUpdateLayout(NC_STACK_ypaworld *yw)
         yw_arg176 arg176;
         arg176.owner = yw->_userRobo->_pSector->owner;
 
-        yw->ypaworld_func176(&arg176);
+        yw->GetReloadRatios(&arg176);
 
         int v32 = yw->_userRobo->_pSector->energy_power;
         int v33 = yw->_userRobo->_pSector->energy_power * arg176.field_4;
@@ -9836,7 +9836,7 @@ void DrawGameStatus(NC_STACK_ypaworld *yw)
 
 
 
-void ypaworld_func2__sub0__sub1(NC_STACK_ypaworld *yw, NC_STACK_ypabact *bact1, NC_STACK_ypabact *bact2)
+void RestoreWinStatus(NC_STACK_ypaworld *yw, NC_STACK_ypabact *bact1, NC_STACK_ypabact *bact2)
 {
     if ( bact2->_bact_type == BACT_TYPES_ROBO )
     {
@@ -10002,7 +10002,7 @@ int NC_STACK_ypaworld::yw_MouseFindCreationPoint(TClickBoxInf *winp)
                 arg149.vect = v37;
                 arg149.flags = 0;
 
-                ypaworld_func149(&arg149);
+                IntersectLongRay(&arg149);
 
                 if ( !arg149.isect )
                 {
@@ -10146,7 +10146,7 @@ int NC_STACK_ypaworld::UserActBeamCheck()
             arg136.stPos.x = _cellMouseIsectPos.x - j * 57.14285714285715;
             arg136.stPos.z = _cellMouseIsectPos.z - i * 57.14285714285715;
 
-            ypaworld_func136(&arg136);
+            IntersectRay(&arg136);
 
             if ( arg136.isect )
             {
@@ -10405,9 +10405,9 @@ void NC_STACK_ypaworld::yw_3D_MouseSelect(TClickBoxInf *winp)
     arg149.vect = arg150.field_18;
     arg149.flags = 0;
 
-    ypaworld_func149(&arg149);
+    IntersectLongRay(&arg149);
 
-    ypaworld_func150(&arg150);
+    FindUnitOnRay(&arg150);
 
     float v27, v28;
 

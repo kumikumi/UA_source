@@ -354,7 +354,7 @@ void NC_STACK_ypaflyer::AI_layer3(update_msg *arg)
             arg136_1.vect.y = arg136.vect.y;
             arg136_1.vect.z = arg136.vect.z * 0.93969 + arg136.vect.x * 0.34202;
 
-            _world->ypaworld_func136(&arg136_1);
+            _world->IntersectRay(&arg136_1);
         }
 
         ypaworld_arg136 arg136_2;
@@ -369,11 +369,11 @@ void NC_STACK_ypaflyer::AI_layer3(update_msg *arg)
             arg136_2.vect.y = arg136.vect.y;
             arg136_2.vect.z = arg136.vect.z * 0.93969 - arg136.vect.x * 0.34202;
 
-            _world->ypaworld_func136(&arg136_2);
+            _world->IntersectRay(&arg136_2);
         }
 
         if ( isViewer || !(_status_flg & (BACT_STFLAG_DODGE_LEFT | BACT_STFLAG_DODGE_RIGHT)) || (v90 && v82) )
-            _world->ypaworld_func136(&arg136);
+            _world->IntersectRay(&arg136);
 
         int v18 = 0;
 
@@ -481,7 +481,7 @@ void NC_STACK_ypaflyer::AI_layer3(update_msg *arg)
 
         arg136_3.flags = 0;
 
-        _world->ypaworld_func136(&arg136_3);
+        _world->IntersectRay(&arg136_3);
 
         if ( arg136_3.isect )
         {
@@ -681,7 +681,7 @@ void NC_STACK_ypaflyer::AI_layer3(update_msg *arg)
                 arg136_4.vect = vec3d::OY(_overeof + 50.0);
                 arg136_4.flags = 0;
 
-                _world->ypaworld_func136(&arg136_4);
+                _world->IntersectRay(&arg136_4);
 
                 if ( arg136_4.isect )
                     _position.y = arg136_4.isectPos.y - _overeof;
@@ -772,7 +772,7 @@ void NC_STACK_ypaflyer::User_layer(update_msg *arg)
             arg136.flags = 0;
             arg136.vect.y = v9 * 1.5;
 
-            _world->ypaworld_func136(&arg136);
+            _world->IntersectRay(&arg136);
 
             if ( arg136.isect && _thraction < _force * 0.001 && _flyerBoost <= _mass * 9.80665 )
             {
@@ -955,7 +955,7 @@ void NC_STACK_ypaflyer::User_layer(update_msg *arg)
                 arg137.field_30 = 0;
                 arg137.collisions = v43;
 
-                _world->ypaworld_func137(&arg137);
+                _world->FindSphereCollisions(&arg137);
 
                 if ( arg137.coll_count )
                 {
@@ -984,7 +984,7 @@ void NC_STACK_ypaflyer::User_layer(update_msg *arg)
                     arg136.vect = _position - _old_pos;
                     arg136.flags = 0;
 
-                    _world->ypaworld_func149(&arg136);
+                    _world->IntersectLongRay(&arg136);
 
                     if ( arg136.isect )
                     {
@@ -1018,7 +1018,7 @@ void NC_STACK_ypaflyer::User_layer(update_msg *arg)
                         arg180.field_8 = 10.0 * tmp.x + _position.x;
                         arg180.field_C = 10.0 * tmp.z + _position.z;
 
-                        _world->ypaworld_func180(&arg180);
+                        _world->FFeedback_Play(&arg180);
                     }
                 }
 

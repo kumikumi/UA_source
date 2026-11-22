@@ -437,7 +437,7 @@ bool NC_STACK_ypaworld::yw_createRobos(const std::vector<MapRobo> &Robos)
             v15.vehicle_id = roboInf.VhclID;
             v15.pos = roboInf.Pos;
 
-            ypaworld_func136(&v14);
+            IntersectRay(&v14);
 
             if ( v14.isect )
                 v15.pos.y += v14.isectPos.y;
@@ -552,7 +552,7 @@ bool NC_STACK_ypaworld::LoadBlgMap(const std::string &mapName)
                 arg148.field_18 = 0;
                 arg148.CellId = cell.CellId;
 
-                ypaworld_func148(&arg148);
+                CreateBuilding(&arg148);
             }
         }
     }
@@ -592,7 +592,7 @@ void NC_STACK_ypaworld::yw_InitSquads(const std::vector<MapSquad> &squads)
                 arg136.stPos.z = squad.Z;
                 arg136.vect = vec3d::OY(100000.0);
                 arg136.flags = 0;
-                ypaworld_func136(&arg136);
+                IntersectRay(&arg136);
 
                 if ( arg136.isect )
                     squadPos = arg136.isectPos - vec3d::OY(50.0);
@@ -657,7 +657,7 @@ void NC_STACK_ypaworld::InitBuddies()
             arg136.vect = vec3d::OY(100000.0);
             arg136.flags = 0;
 
-            ypaworld_func136(&arg136);
+            IntersectRay(&arg136);
 
             if ( arg136.isect )
                 squadPos.y = arg136.isectPos.y + -100.0;
@@ -695,7 +695,7 @@ void NC_STACK_ypaworld::yw_InitTechUpgradeBuildings()
                 arg148.field_C = 1;
                 arg148.field_18 = 0;
 
-                ypaworld_func148(&arg148);
+                CreateBuilding(&arg148);
             }
         }
 
@@ -719,7 +719,7 @@ void NC_STACK_ypaworld::InitGates()
         arg148.CellId = gate.CellId;
         arg148.field_18 = 0;
 
-        ypaworld_func148(&arg148);
+        CreateBuilding(&arg148);
 
         gate.PCell->PurposeType = cellArea::PT_GATECLOSED;
         gate.PCell->PurposeIndex = i;
@@ -749,7 +749,7 @@ void NC_STACK_ypaworld::InitSuperItems()
         arg148.CellId = sitem.CellId;
         arg148.field_18 = 0;
 
-        ypaworld_func148(&arg148);
+        CreateBuilding(&arg148);
 
         sitem.PCell->PurposeType = cellArea::PT_STOUDSON;
         sitem.PCell->PurposeIndex = i;
@@ -1654,7 +1654,7 @@ void NC_STACK_ypaworld::RenderSuperWave(vec2d pos, vec2d fromPos, baseRender_msg
                     v22.stPos.z = pos.y;
                     v22.flags = 0;
 
-                    ypaworld_func136(&v22);
+                    IntersectRay(&v22);
 
                     if ( v22.isect )
                     {
@@ -2223,7 +2223,7 @@ bool NC_STACK_ypaworld::BuildingConstructBegin(cellArea *cell, uint8_t buildID, 
     return true;
 }
 
-int ypaworld_func137__sub0__sub0(UAskeleton::Data *skl, int id, const vec3d &v, float r, vec3d &out)
+int StepTowardPolygonCentroid(UAskeleton::Data *skl, int id, const vec3d &v, float r, vec3d &out)
 {
     UAskeleton::Polygon &pg = skl->polygons[id];
     vec3d tmp(0.0, 0.0, 0.0);
@@ -2246,7 +2246,7 @@ int ypaworld_func137__sub0__sub0(UAskeleton::Data *skl, int id, const vec3d &v, 
     return 1;
 }
 
-void NC_STACK_ypaworld::ypaworld_func137__sub0(ypaworld_arg137 *arg, const TSectorCollision &a2)
+void NC_STACK_ypaworld::CollideSphereWithSkeleton(ypaworld_arg137 *arg, const TSectorCollision &a2)
 {
     for (size_t i = 0; i < a2.sklt->GetSkelet()->polygons.size(); i++)
     {
@@ -2268,7 +2268,7 @@ void NC_STACK_ypaworld::ypaworld_func137__sub0(ypaworld_arg137 *arg, const TSect
 
                 vec3d v18;
 
-                if ( ypaworld_func137__sub0__sub0(a2.sklt->GetSkelet(), i, tx, arg->radius, v18) )
+                if ( StepTowardPolygonCentroid(a2.sklt->GetSkelet(), i, tx, arg->radius, v18) )
                 {
                     if ( sub_44D36C(v18, i, a2.sklt) )
                         v27 = 1;
@@ -2583,7 +2583,7 @@ void NC_STACK_ypaworld::sub_4D12D8(int id, int a3)
     arg148.CellId = sitem.CellId;
     arg148.field_18 = 0;
 
-    ypaworld_func148(&arg148);
+    CreateBuilding(&arg148);
 
     sitem.PCell->PurposeType = cellArea::PT_STOUDSON;
     sitem.PCell->PurposeIndex = id;
@@ -2624,7 +2624,7 @@ void NC_STACK_ypaworld::sub_4D1594(int id)
     arg148.CellId = sitem.CellId;
     arg148.field_18 = 0;
 
-    ypaworld_func148(&arg148);
+    CreateBuilding(&arg148);
 
     sitem.PCell->PurposeType = cellArea::PT_STOUDSON;
     sitem.PCell->PurposeIndex = id;
@@ -2665,7 +2665,7 @@ void NC_STACK_ypaworld::sub_4D1444(int id)
     arg148.CellId = sitem.CellId;
     arg148.field_18 = 0;
 
-    ypaworld_func148(&arg148);
+    CreateBuilding(&arg148);
 
     sitem.PCell->PurposeType = cellArea::PT_STOUDSON;
     sitem.PCell->PurposeIndex = id;
@@ -2918,7 +2918,7 @@ void UpdateGates(NC_STACK_ypaworld *yw)
                 yw->ShowMessage(&arg159);
             }
 
-            yw->ypaworld_func148(&arg148);
+            yw->CreateBuilding(&arg148);
 
             gate.PCell->PurposeType = gateState;
             gate.PCell->PurposeIndex = i;
@@ -3016,7 +3016,7 @@ void NC_STACK_ypaworld::sub_4D16C4(int id)
     arg148.CellId = sitem.CellId;
     arg148.field_18 = 0;
 
-    ypaworld_func148(&arg148);
+    CreateBuilding(&arg148);
 
     sitem.PCell->PurposeType = cellArea::PT_STOUDSON;
     sitem.PCell->PurposeIndex = id;
@@ -3211,7 +3211,7 @@ void NC_STACK_ypaworld::UpdateSuperBombShockwave(int id)
                     arg129.OwnerID = sitem.ActivateOwner;
                     arg129.unit = 0;
 
-                    ypaworld_func129(&arg129);
+                    DamageSectorBuilding(&arg129);
 
                     _fxLimit = v12;
                 }
@@ -4159,7 +4159,7 @@ NC_STACK_ypabact *NC_STACK_ypaworld::recorder_newObject(trec_bct *oinf)
         arg147.vehicle_id = oinf->vhcl_id;
         arg147.pos = vec3d(0.0, 0.0, 0.0);
 
-        bacto = ypaworld_func147(&arg147);
+        bacto = CreateWeapon(&arg147);
     }
 
     if ( bacto )

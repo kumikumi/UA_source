@@ -44,7 +44,7 @@ void listLocaleDir(UserData *usr, const char *dirname);
 
 void PlayIntroMovie(NC_STACK_ypaworld *yw);
 
-void ypaworld_func156__sub1(UserData *usr);
+void CollectNetworkLevels(UserData *usr);
 
 
 
@@ -95,7 +95,7 @@ void splashScreen_OutText(NC_STACK_ypaworld *yw, const std::string &txt, int x, 
 
 
 void ypaworld_func2__sub0__sub0(NC_STACK_ypaworld *yw);
-void ypaworld_func2__sub0__sub1(NC_STACK_ypaworld *yw, NC_STACK_ypabact *bact1, NC_STACK_ypabact *bact2);
+void RestoreWinStatus(NC_STACK_ypaworld *yw, NC_STACK_ypabact *bact1, NC_STACK_ypabact *bact2);
 
 
 

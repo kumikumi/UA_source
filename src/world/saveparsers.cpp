@@ -637,7 +637,7 @@ bool SaveBuildingMapParser::IsScope(ScriptParser::Parser &parser, const std::str
                     arg148.field_C = 1;
                     arg148.CellId = cell.CellId;
 
-                    _o.ypaworld_func148(&arg148);
+                    _o.CreateBuilding(&arg148);
                 }
             }
         }
