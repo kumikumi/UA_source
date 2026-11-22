@@ -253,7 +253,7 @@ public:
     int getMasterVolume();
 
 
-    void startSound(TSndCarrier *a1, size_t);
+    void startSound(TSndCarrier *smpls, size_t id);
     void stopSound(TSndCarrier *smpls, size_t);
     void StopCarrier(TSndCarrier *smpls);
     void StopSource(TSoundSource *snd);
@@ -282,11 +282,11 @@ protected:
     float audio_rnd();
     void audio_InsertSoundSource(TSoundSource *smpl);
     int FindFragmentAt(TSoundSource *smpl, int elapsed, int *fragTime);
-    void SoundCarrierProcessSounds(TSndCarrier *smpls, float a2);
+    void SoundCarrierProcessSounds(TSndCarrier *smpls, float distance);
     void audio_InsertPalFX(TSoundSource *smpl);
-    void SoundCarrierProcessPFx(TSndCarrier *smpls, float a2);
+    void SoundCarrierProcessPFx(TSndCarrier *smpls, float distance);
     void InsertShakeFX(TSoundSource *smpl);
-    void SoundCarrierProcessShake(TSndCarrier *smpls, float a2);
+    void SoundCarrierProcessShake(TSndCarrier *smpls, float distance);
     void FreeEndedChannels();
     void AssignFreeChannels();
     void CalcPlayParams(TSoundSource *smpl);

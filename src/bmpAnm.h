@@ -94,7 +94,7 @@ public:
     static bool ReadTexCoords(FSMgr::iFileHandle *fil, ResBmpAnm *arg);
     static bool ReadFrameData(FSMgr::iFileHandle *fil, ResBmpAnm *arg);
     
-    static ResBmpAnm * ConstructBAnm(const std::string &className, std::vector<std::string> *bitmapNames, std::vector< std::vector<tUtV> >*texCoords, int a4, BAnmFrame *a5);
+    static ResBmpAnm * ConstructBAnm(const std::string &className, std::vector<std::string> *bitmapNames, std::vector< std::vector<tUtV> >*texCoords, int num, BAnmFrame *frames);
     
     static bool WriteToFile(ResBmpAnm *banm, const std::string &name, IFFile *iff);
     

@@ -1755,7 +1755,7 @@ int NC_STACK_yparobo::FindBestBldRadar()
     return id;
 }
 
-void NC_STACK_yparobo::GetBuildSiteApproachTarget(int sectID, setTarget_msg *parg67)
+void NC_STACK_yparobo::GetBuildSiteApproachTarget(int sectID, setTarget_msg *target)
 {
     Common::Point pt(sectID % _wrldSectors.x, sectID / _wrldSectors.x);
 
@@ -1779,9 +1779,9 @@ void NC_STACK_yparobo::GetBuildSiteApproachTarget(int sectID, setTarget_msg *par
             pt.y++;
     }
 
-    parg67->tgt_type = BACT_TGT_TYPE_CELL;
-    parg67->priority = 0;
-    parg67->tgt_pos = World::SectorIDToCenterPos3( pt );
+    target->tgt_type = BACT_TGT_TYPE_CELL;
+    target->priority = 0;
+    target->tgt_pos = World::SectorIDToCenterPos3( pt );
 }
 
 void NC_STACK_yparobo::buildRadar(update_msg *arg)

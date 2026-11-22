@@ -288,7 +288,7 @@ protected:
     void TurnRoboAboutOwnUpAxis(float angle);
     void TurnRoboAboutWorldUpAxis(float angle);
     
-    void GetBuildSiteApproachTarget(int a2, setTarget_msg *parg67);
+    void GetBuildSiteApproachTarget(int sectID, setTarget_msg *target);
     
     void UpdateViewerLookAngles(update_msg *arg);
     int FindBestBldPowerStation();

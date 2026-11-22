@@ -333,7 +333,7 @@ int yw_write_masks(NC_STACK_ypaworld *yw, FSMgr::FileHandle *fil);
 NC_STACK_bitmap * loadDisk_screen(NC_STACK_ypaworld *yw);
 void draw_splashScreen(NC_STACK_ypaworld *yw, NC_STACK_bitmap *splashScreen);
 
-void yw_RenderVector2D(NC_STACK_ypaworld *yw, UAskeleton::Data *wire, float a3, float a4, float a5, float a6, float a7, float a8, float a9, float a10, SDL_Color coloooor, wis_color_func color_func, wis_color_func color_func2, bool aspectCorrection = false);
+void yw_RenderVector2D(NC_STACK_ypaworld *yw, UAskeleton::Data *wire, float posX, float posY, float m00, float m01, float m10, float m11, float scaleX, float scaleY, SDL_Color coloooor, wis_color_func color_func, wis_color_func color_func2, bool aspectCorrection = false);
 void yw_debriefUpdate(NC_STACK_ypaworld *yw, TInputState *inpt);
 
 int ConfirmDialogGetState();
@@ -344,7 +344,6 @@ int recorder_go_to_frame(NC_STACK_ypaworld *yw, TGameRecorder *rcrd, int wanted_
 int recorder_open_replay(TGameRecorder *rcrd);
 void recorder_stoprec(NC_STACK_ypaworld *yw);
 
-void AdvanceReplay(NC_STACK_ypaworld *yw, TGameRecorder *rcrd, int a3);
 
 void AddChatMessage(NC_STACK_ypaworld *yw, const std::string &sender, const std::string &text);
 

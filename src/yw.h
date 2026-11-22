@@ -635,9 +635,9 @@ public:
         TMapDescription(int __id, const std::string &__pstring)
         : id(__id), pstring(__pstring) {};
         
-        static bool compare(const TMapDescription &a1, const TMapDescription &a2)
+        static bool compare(const TMapDescription &lhs, const TMapDescription &rhs)
         {
-            return StriCmp(a1.pstring, a2.pstring) > 0;
+            return StriCmp(lhs.pstring, rhs.pstring) > 0;
         }
     };
     
@@ -2085,7 +2085,7 @@ public:
     void FreeBriefDataSet();
     int CreateBriefingTextList();
     void RelayoutBriefingTextList();
-    void yw_ActivateWunderstein(cellArea *cell, int a3);
+    void yw_ActivateWunderstein(cellArea *cell, int gemid);
     void yw_InitTechUpgradeBuildings();
     
     void DoSectorsEnergyRecalc();
@@ -2234,7 +2234,7 @@ public:
     void recorder_world_to_frame(TGameRecorder *rcrd);
     void recorder_write_frame();
     NC_STACK_ypabact *recorder_newObject(trec_bct *oinf);
-    void AdvanceReplay(TGameRecorder *rcrd, int a3);
+    void AdvanceReplay(TGameRecorder *rcrd, int dTime);
     
     void SetShowingTooltip(int32_t id)
     {
@@ -2287,7 +2287,7 @@ public:
     void UpdatePowerEnergy();
     void PowerStationErase(cellArea *cell);
     void CellSetNewOwner(cellArea *cell, NC_STACK_ypabact *attacker, int newOwner);
-    void CellCheckHealth(cellArea *cell, int a5, NC_STACK_ypabact *attacker);
+    void CellCheckHealth(cellArea *cell, int newOwner, NC_STACK_ypabact *attacker);
     void InitBuddies();
     void InitSuperItems();
     bool LoadBlgMap(const std::string &mapName);
@@ -2319,7 +2319,7 @@ public:
     void CollideSphereWithSkeleton(TSphereCollisionQuery *arg, const TSectorCollision &sectorColl);    
     
     void VoiceMessageUpdate();
-    void VoiceMessagePlayFile(const std::string &flname, NC_STACK_ypabact *unit, int a5);
+    void VoiceMessagePlayFile(const std::string &flname, NC_STACK_ypabact *unit, int priority);
     void VoiceMessagePlayMsg(NC_STACK_ypabact *unit, int priority, int msgID);
     void VoiceMessageCalcPositionToUnit();
     
