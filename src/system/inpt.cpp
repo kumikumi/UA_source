@@ -255,12 +255,20 @@ void INPEngine::Deinit()
 void INPEngine::QueryInput(TInputState *state)
 {
     *state = TInputState();
+    state->Period = QueryTimer();
+    QueryEvents(state);
+}
 
+int INPEngine::QueryTimer()
+{
     if ( _timer )
-        state->Period = _timer->itimer_func64();
-    else
-        state->Period = 20;
+        return _timer->itimer_func64();
 
+    return 20;
+}
+
+void INPEngine::QueryEvents(TInputState *state)
+{
     if ( !_wimp.HasFocus || _wimp.HasFocus() )
     {
         if ( _keyboard.KeyboardQuery )

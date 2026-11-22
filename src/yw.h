@@ -1886,7 +1886,9 @@ public:
 public:
     virtual size_t Init(IDVList &stak);
     virtual size_t Deinit();
-    virtual size_t Process(base_64arg *arg);
+    bool PausedFrame(base_64arg *arg);
+    bool SimulationStep(base_64arg *arg);
+    void RenderFrame(base_64arg *arg);
     virtual void ypaworld_func129(yw_arg129 *arg);
     virtual size_t GetSectorInfo(yw_130arg *arg);
     virtual void ypaworld_func131(NC_STACK_ypabact *bact);

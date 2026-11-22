@@ -296,7 +296,17 @@ void UpdateViewerPosition(NC_STACK_ypaworld *yw)
     }
 }
 
-size_t NC_STACK_ypaworld::Process(base_64arg *arg)
+// While the game is paused: draws the paused screen and returns true, or
+// returns false when a key has ended the pause.
+bool NC_STACK_ypaworld::PausedFrame(base_64arg *arg)
+{
+    return HandlePause(this, arg) != 0;
+}
+
+// One step of the game: input, interface commands, network and units,
+// arg->DTime timer ticks long. Returns false when the frame should not be
+// drawn: while paused, or after a network game was aborted.
+bool NC_STACK_ypaworld::SimulationStep(base_64arg *arg)
 {
     extern GuiList gui_lstvw; //In yw_game_ui.cpp
     extern GuiList lstvw2; //In yw_game_ui.cpp
@@ -315,267 +325,227 @@ size_t NC_STACK_ypaworld::Process(base_64arg *arg)
         arg->field_8->HotKeyID = -1;
     }
 
-    if ( !HandlePause(this, arg) )
+    if ( HandlePause(this, arg) )
+        return false;
+
+    uint32_t v92 = profiler_begin();
+
+    _netChatSystem = false;
+
+    if ( _userUnit )
     {
-        uint32_t v92 = profiler_begin();
-
-        _netChatSystem = false;
-
-        if ( _screenShotSeq )
-        {
-            arg->TimeStamp -= arg->DTime;
-            arg->field_8->Period = 40;
-            arg->DTime = 40;
-            arg->TimeStamp += arg->DTime;
-        }
-
-        if ( _userUnit )
-        {
-            if ( _framesElapsed == 1 )
-            {
-                _viewerPosition = _userUnit->_position;
-                _viewerRotation = _userUnit->_rotation;
-            }
-
-            vec3d a3 = _userUnit->_fly_dir * _userUnit->_fly_dir_length;
-
-            SFXEngine::SFXe.BeginSoundFrame(arg->DTime, _viewerPosition, a3, _viewerRotation);
-        }
-
         if ( _framesElapsed == 1 )
         {
-            yw_arg159 arg159;
-            arg159.unit = _userRobo;
-            arg159.Priority = 128;
-            arg159.MsgID = 41;
-
-            ypaworld_func159(&arg159);
+            _viewerPosition = _userUnit->_position;
+            _viewerRotation = _userUnit->_rotation;
         }
 
-        UpdateReloadRatios(this);
-        UpdatePlayerInRoboGun(this);
+        vec3d a3 = _userUnit->_fly_dir * _userUnit->_fly_dir_length;
 
-        if ( !_doNotRender )
+        SFXEngine::SFXe.BeginSoundFrame(arg->DTime, _viewerPosition, a3, _viewerRotation);
+    }
+
+    if ( _framesElapsed == 1 )
+    {
+        yw_arg159 arg159;
+        arg159.unit = _userRobo;
+        arg159.Priority = 128;
+        arg159.MsgID = 41;
+
+        ypaworld_func159(&arg159);
+    }
+
+    UpdateReloadRatios(this);
+    UpdatePlayerInRoboGun(this);
+
+    if ( !_doNotRender )
+    {
+        PrepareUserInput(arg->field_8); //Precompute input (add mouse turn)
+
+        TClickBoxInf *winp = &arg->field_8->ClickInf;
+
+        if ( _mouseCursorHidden )
         {
-            PrepareUserInput(arg->field_8); //Precompute input (add mouse turn)
-
-            TClickBoxInf *winp = &arg->field_8->ClickInf;
-
-            if ( _mouseCursorHidden )
+            if ( winp->move.ScreenPos != _mouseCursorHidePos )
+                _mouseCursorHidden = false;
+        }
+        else
+        {
+            if ( arg->field_8->KbdLastHit != Input::KC_NONE )
             {
-                if ( winp->move.ScreenPos != _mouseCursorHidePos )
-                    _mouseCursorHidden = false;
+                if ( arg->field_8->KbdLastHit != Input::KC_LMB && arg->field_8->KbdLastHit != Input::KC_RMB && arg->field_8->KbdLastHit != Input::KC_MMB && !(arg->field_8->Buttons.Is(4)) )
+                {
+                    _mouseCursorHidden = true;
+                    _mouseCursorHidePos = winp->move.ScreenPos;
+                }
             }
+        }
+    }
+
+    _timeStamp += arg->DTime;
+    _frameTime = arg->DTime;
+    _framesElapsed++;
+
+    _updateMessage.user_action = World::DOACTION_0;
+    _updateMessage.gTime = _timeStamp;
+    _updateMessage.frameTime = arg->DTime;
+    _updateMessage.units_count = 0;
+    _updateMessage.inpt = arg->field_8;
+
+    HistoryEventAdd(World::History::Frame(_timeStamp));
+
+    uint32_t v22 = profiler_begin();
+    
+    if ( _isNetGame )
+        yw_NetMsgHndlLoop(this);
+
+    _profileVals[PFID_NETTIME] = profiler_end(v22);
+
+    if ( _isNetGame && _levelInfo.State == TLevelInfo::STATE_ABORTED )
+        return false;
+
+    uint32_t v23 = profiler_begin();
+
+    for (cellArea &cell : _cells)
+    {
+        cell.view_mask = cellArea::ViewMask(cell.owner);
+        cell.UnhideMask = 0;
+    }
+
+    for (NC_STACK_ypabact* &unit : _unitsList)
+        unit->MarkSectorsForView();
+
+    _profileVals[PFID_MARKTIME] = profiler_end(v23);
+
+    UpdateGunList(this);
+    UpdateVehicleList(this);
+    UpdateBuildingList(this);
+    UpdateCommanderList();
+    UpdateGates(this);
+    UpdateSuperItems();
+    BuildingConstructUpdate(arg->DTime);
+
+    if ( !_doNotRender )
+    {
+        uint32_t v33 = profiler_begin();
+
+        RoboMapFollowViewer(this);
+        HandleGuiInput(arg->field_8);
+
+        UpdateViewerPosition(this);
+
+        RoboMapUpdateLayout(this);
+        HandleWorldMouse(arg->field_8);
+
+        _profileVals[PFID_GUITIME] = profiler_end(v33);
+    }
+
+    if ( _doEnergyRecalc )
+        DoSectorsEnergyRecalc();
+
+    if ( _replayRecorder->do_record )
+        recorder_update_time(this, arg->DTime);
+
+    _guiVisor.field_0 = 0;
+    _guiVisor.field_4 = 0;
+
+    _ownerOldCellUserUnit = _userUnit->_pSector->owner;
+
+    uint32_t v37 = profiler_begin();
+    uint64_t simStart = System::PerfStats::Now();
+    
+    // Do user commands before any unit state can be changed
+    if (_userRobo)
+    {
+        if (_userRobo->_bact_type == BACT_TYPES_ROBO)
+            ((NC_STACK_yparobo *)_userRobo)->HandleUserCommands(&_updateMessage);
+    }
+
+    for ( NC_STACK_ypabact *unit : _unitsList.safe_iter() )
+    {
+        if (_isNetGame && unit != _userRobo && unit->_bact_type == BACT_TYPES_ROBO)
+            unit->NetUpdate(&_updateMessage);
+        else
+            unit->Update(&_updateMessage);
+
+        _updateMessage.units_count++;
+    }
+
+    System::Perf.AddTime(System::PerfStats::SEC_SIM, System::PerfStats::Now() - simStart);
+    _profileVals[PFID_UPDATETIME] = profiler_end(v37);
+
+    UpdateViewerPosition(this);
+
+    uint32_t v41 = profiler_begin();
+
+    if ( _isNetGame )
+    {
+        if ( arg->DTime == 1 )
+            _netFlushTimer -= 20;
+        else
+            _netFlushTimer -= arg->DTime;
+
+        if ( _netFlushTimer <= 0 )
+        {
+
+            uint32_t v44 = _netDriver->FlushBroadcastBuffer();
+
+            _GameShell->netsend_count += v44;
+
+            if ( !_GameShell->net_packet_min || v44 < _GameShell->net_packet_min )
+                _GameShell->net_packet_min = v44;
+
+            if ( v44 > _GameShell->net_packet_max )
+                _GameShell->net_packet_max = v44;
+
+            if ( v44 )
+                _GameShell->net_packet_cnt++;
+
+            if ( SPEED_DOWN_NET )
+                _netFlushTimer = 1500;
             else
-            {
-                if ( arg->field_8->KbdLastHit != Input::KC_NONE )
-                {
-                    if ( arg->field_8->KbdLastHit != Input::KC_LMB && arg->field_8->KbdLastHit != Input::KC_RMB && arg->field_8->KbdLastHit != Input::KC_MMB && !(arg->field_8->Buttons.Is(4)) )
-                    {
-                        _mouseCursorHidden = true;
-                        _mouseCursorHidePos = winp->move.ScreenPos;
-                    }
-                }
-            }
+                _netFlushTimer = _GameShell->flush_time_norm;
         }
+    }
+    _profileVals[PFID_NETTIME] += profiler_end(v41);
 
-        _timeStamp += arg->DTime;
-        _frameTime = arg->DTime;
-        _framesElapsed++;
-
-        _updateMessage.user_action = World::DOACTION_0;
-        _updateMessage.gTime = _timeStamp;
-        _updateMessage.frameTime = arg->DTime;
-        _updateMessage.units_count = 0;
-        _updateMessage.inpt = arg->field_8;
-        _FPS = 1024 / arg->DTime;
-        _profileVals[PFID_FPS] = _FPS;
-
-        HistoryEventAdd(World::History::Frame(_timeStamp));
-
-        uint32_t v22 = profiler_begin();
-        
-        if ( _isNetGame )
-            yw_NetMsgHndlLoop(this);
-
-        if ( !_isNetGame || _levelInfo.State != TLevelInfo::STATE_ABORTED )
+    if ( _userUnit )
+    {
+        if ( _GameShell )
         {
-            _profileVals[PFID_NETTIME] = profiler_end(v22);
+            _GameShell->samples1_info.Position = _userUnit->_position;
+            SFXEngine::SFXe.UpdateSoundCarrier(&_GameShell->samples1_info);
+        }
+    }
 
-            uint32_t v23 = profiler_begin();
-
-            for (cellArea &cell : _cells)
-            {
-                cell.view_mask = cellArea::ViewMask(cell.owner);
-                cell.UnhideMask = 0;
-            }
-
-            for (NC_STACK_ypabact* &unit : _unitsList)
-                unit->MarkSectorsForView();
-
-            _profileVals[PFID_MARKTIME] = profiler_end(v23);
-
-            if ( !_doNotRender )
-            {
-                GFX::Engine.BeginFrame();
-                /*_win3d->setRSTR_BGpen(0);
-                _win3d->raster_func192(NULL);*/
-            }
-
-            UpdateGunList(this);
-            UpdateVehicleList(this);
-            UpdateBuildingList(this);
-            UpdateCommanderList();
-            UpdateGates(this);
-            UpdateSuperItems();
-            BuildingConstructUpdate(arg->DTime);
-
-            if ( !_doNotRender )
-            {
-                uint32_t v33 = profiler_begin();
-
-                RoboMapFollowViewer(this);
-                HandleGuiInput(arg->field_8);
-
-                UpdateViewerPosition(this);
-
-                RoboMapUpdateLayout(this);
-                HandleWorldMouse(arg->field_8);
-
-                _profileVals[PFID_GUITIME] = profiler_end(v33);
-            }
-
-            if ( _doEnergyRecalc )
-                DoSectorsEnergyRecalc();
-
-            if ( _replayRecorder->do_record )
-                recorder_update_time(this, arg->DTime);
-
-            _guiVisor.field_0 = 0;
-            _guiVisor.field_4 = 0;
-
-            _ownerOldCellUserUnit = _userUnit->_pSector->owner;
-
-            uint32_t v37 = profiler_begin();
-            uint64_t simStart = System::PerfStats::Now();
-            
-            // Do user commands before any unit state can be changed
-            if (_userRobo)
-            {
-                if (_userRobo->_bact_type == BACT_TYPES_ROBO)
-                    ((NC_STACK_yparobo *)_userRobo)->HandleUserCommands(&_updateMessage);
-            }
-
-            for ( NC_STACK_ypabact *unit : _unitsList.safe_iter() )
-            {
-                if (_isNetGame && unit != _userRobo && unit->_bact_type == BACT_TYPES_ROBO)
-                    unit->NetUpdate(&_updateMessage);
-                else
-                    unit->Update(&_updateMessage);
-
-                _updateMessage.units_count++;
-            }
-
-            System::Perf.AddTime(System::PerfStats::SEC_SIM, System::PerfStats::Now() - simStart);
-            _profileVals[PFID_UPDATETIME] = profiler_end(v37);
-
-            UpdateViewerPosition(this);
-
-            uint32_t v41 = profiler_begin();
-
-            if ( _isNetGame )
-            {
-                if ( arg->DTime == 1 )
-                    _netFlushTimer -= 20;
-                else
-                    _netFlushTimer -= arg->DTime;
-
-                if ( _netFlushTimer <= 0 )
-                {
-
-                    uint32_t v44 = _netDriver->FlushBroadcastBuffer();
-
-                    _GameShell->netsend_count += v44;
-
-                    if ( !_GameShell->net_packet_min || v44 < _GameShell->net_packet_min )
-                        _GameShell->net_packet_min = v44;
-
-                    if ( v44 > _GameShell->net_packet_max )
-                        _GameShell->net_packet_max = v44;
-
-                    if ( v44 )
-                        _GameShell->net_packet_cnt++;
-
-                    if ( SPEED_DOWN_NET )
-                        _netFlushTimer = 1500;
-                    else
-                        _netFlushTimer = _GameShell->flush_time_norm;
-                }
-            }
-            _profileVals[PFID_NETTIME] += profiler_end(v41);
-
-            if ( _userUnit )
-            {
-                if ( _GameShell )
-                {
-                    _GameShell->samples1_info.Position = _userUnit->_position;
-                    SFXEngine::SFXe.UpdateSoundCarrier(&_GameShell->samples1_info);
-                }
-            }
-
-            //ypaworld_func64__sub22(this); // scene events
-            
-            if (_script)
-                _script->CallUpdate(_timeStamp, arg->DTime);
-                        
-            VoiceMessageUpdate(); // update sound messages
-
-            const mat3x3 &v57 = SFXEngine::SFXe.EndSoundFrame();
-            TF::TForm3D *v58 = TF::Engine.GetViewPoint();
-
-            v58->SclRot = v57 * v58->SclRot;
-
-            if ( _replayRecorder->do_record )
-                recorder_write_frame();
-
-            CheckEnemySectorEntered(this);
-
-            if ( !_doNotRender )
-            {
-                uint32_t v62 = profiler_begin();
-
-                if ( _userUnit->_cellId ) // if cell is not 0,0
-                {
-                    RenderGame(arg, 1);
-
-                    if ( _isNetGame )
-                        yw_NetDrawStats(this);
-                }
+    //ypaworld_func64__sub22(this); // scene events
+    
+    if (_script)
+        _script->CallUpdate(_timeStamp, arg->DTime);
                 
-                debug_info_draw(arg->field_8);
-                DrawPerfOverlay(arg->field_8);
+    VoiceMessageUpdate(); // update sound messages
 
-                GFX::Engine.EndFrame();
+    const mat3x3 &v57 = SFXEngine::SFXe.EndSoundFrame();
+    TF::TForm3D *v58 = TF::Engine.GetViewPoint();
 
-                _profileVals[PFID_RENDERTIME] = profiler_end(v62);
-            }
+    v58->SclRot = v57 * v58->SclRot;
 
-            FFeedback_Update(); // Do vibrate joystick
+    if ( _replayRecorder->do_record )
+        recorder_write_frame();
 
-            HandleSnapshotKeys(this, arg->field_8); // Snaps/ start/stop recording
+    CheckEnemySectorEntered(this);
 
-            _profileVals[PFID_FRAMETIME] = profiler_end(v92);
-            _profileVals[PFID_POLYGONS] = _polysDraw;
+    FFeedback_Update(); // Do vibrate joystick
 
-            ProfileCalcValues();
+    _profileVals[PFID_FRAMETIME] = profiler_end(v92);
 
-            if ( !_doNotRender )
-            {
-                if ( _netChatSystem )
-                {
-                    _doNotRender = true;
+    if ( !_doNotRender )
+    {
+        if ( _netChatSystem )
+        {
+            _doNotRender = true;
 
-                    dprintf("MAKE ME %s (multiplayer part Messaging)\n", "ypaworld_func64");
+            dprintf("MAKE ME %s (multiplayer part Messaging)\n", "ypaworld_func64");
 
 //          v66 = get_lang_string(650, "MESSAGE TO");
 //
@@ -595,26 +565,65 @@ size_t NC_STACK_ypaworld::Process(base_64arg *arg)
 //
 //          yw->win3d->windd_func322(&dlgBox);
 //
-                    _doNotRender = false;
+            _doNotRender = false;
 //
 //          if ( dlgBox.result )
 //            sub_4D9418(yw, dlgBox.result, yw->field_762E, yw->field_762A);
-                }
-            }
-
-            if ( !_helpURL.empty() )
-            {
-                const std::string help_link = _helpURL;
-                _helpURL.clear();
-
-                ypaworld_func185(&help_link); //launch online help
-            }
-
-            //exit(1);
         }
     }
 
-    return 1;
+    if ( !_helpURL.empty() )
+    {
+        const std::string help_link = _helpURL;
+        _helpURL.clear();
+
+        ypaworld_func185(&help_link); //launch online help
+    }
+
+    return true;
+}
+
+// Draws the world as the last simulation step left it. arg->DTime is the time
+// since the last frame, for what animates while drawing: particles and the
+// interface.
+void NC_STACK_ypaworld::RenderFrame(base_64arg *arg)
+{
+    if ( arg->DTime > 0 )
+        _FPS = 1024 / arg->DTime;
+
+    _profileVals[PFID_FPS] = _FPS;
+
+    // The interface animates by _frameTime while it is drawn
+    _frameTime = arg->DTime;
+
+    if ( !_doNotRender )
+    {
+        uint32_t v62 = profiler_begin();
+
+        GFX::Engine.BeginFrame();
+
+        if ( _userUnit->_cellId ) // if cell is not 0,0
+        {
+            RenderGame(arg, 1);
+
+            if ( _isNetGame )
+                yw_NetDrawStats(this);
+        }
+        
+        debug_info_draw(arg->field_8);
+        DrawPerfOverlay(arg->field_8);
+
+        GFX::Engine.EndFrame();
+
+        _profileVals[PFID_RENDERTIME] = profiler_end(v62);
+        _profileVals[PFID_FRAMETIME] += _profileVals[PFID_RENDERTIME];
+    }
+
+    HandleSnapshotKeys(this, arg->field_8); // Snaps/ start/stop recording
+
+    _profileVals[PFID_POLYGONS] = _polysDraw;
+
+    ProfileCalcValues();
 }
 
 void sub_47C1EC(NC_STACK_ypaworld *yw, TMapGem *gemProt, int *a3, int *a4)

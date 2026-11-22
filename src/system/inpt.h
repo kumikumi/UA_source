@@ -327,7 +327,14 @@ public:
     int Init();
     void Deinit();
 
+    // Time since the last call (Period) and the input since the last query.
     void QueryInput(TInputState *state);
+
+    // Time in timer ticks (1/1024 s) since the last call.
+    int QueryTimer();
+
+    // Input since the last query into a cleared state, leaving Period as it is.
+    void QueryEvents(TInputState *state);
     
     void AddClickBoxFront(ClickBox *box);
     void AddClickBoxBack(ClickBox *box);

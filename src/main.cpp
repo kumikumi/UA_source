@@ -65,9 +65,140 @@ enum GAME_SCREEN_MODE {
 GAME_SCREEN_MODE GameScreenMode;
 UserData userdata;
 
-int ProcessGameplayFrame()
+// The game advances in fixed steps, so how units behave does not depend on
+// the frame rate. 60 steps per second is the rate the port ran at while it
+// was capped to 60 fps. The original game had no fixed step: each frame
+// advanced it by the time the frame took, plus one tick, at whatever frame
+// rate the machine managed.
+static const int32_t SimStepsPerSecond = 60;
+
+// Step length in timer ticks (1/1024 s): 17 at 60 steps per second.
+static const int32_t SimStepTicks = 1024 / SimStepsPerSecond;
+
+// At most this many steps per frame. A machine that cannot keep up makes the
+// game run slower, instead of frames growing longer as they catch up.
+static const int32_t SimMaxStepsPerFrame = 4;
+
+static int32_t simPendingTicks = 0;   // Time not simulated yet
+static TInputState lastStepInput;      // Input of the last simulation step
+
+// Drops the one-time events of an input state, leaving what is held down.
+static void ClearInputEvents(TInputState *inpt)
 {
-    ypaworld->Process(&world_update_arg);
+    inpt->KbdLastHit = Input::KC_NONE;
+    inpt->HotKeyID = -1;
+    inpt->chr = 0;
+    inpt->ClickInf.flag &= ~(TClickBoxInf::FLAG_LM_DOWN | TClickBoxInf::FLAG_LM_UP |
+                             TClickBoxInf::FLAG_RM_DOWN | TClickBoxInf::FLAG_RM_UP |
+                             TClickBoxInf::FLAG_MM_DOWN | TClickBoxInf::FLAG_MM_UP |
+                             TClickBoxInf::FLAG_BTN_DOWN | TClickBoxInf::FLAG_BTN_UP |
+                             TClickBoxInf::FLAG_DBL_CLICK);
+}
+
+// Runs the simulation steps that are due and draws a frame. frameTicks is the
+// real time since the last frame. timeFrozen holds the game nearly still, as
+// while waiting for network players.
+int ProcessGameplayFrame(int32_t frameTicks, bool timeFrozen)
+{
+    bool draw = true;
+    bool stepped = false;
+    TInputState renderInput;
+
+    if ( ypaworld->_gamePaused )
+    {
+        // The paused screen keeps drawing, and time runs for its blinking.
+        // A key ends the pause; it does not also act in the game.
+        input_states = TInputState();
+        Input::Engine.QueryEvents(&input_states);
+        input_states.Period = frameTicks;
+
+        world_update_arg.DTime = frameTicks;
+        world_update_arg.TimeStamp += frameTicks;
+        world_update_arg.field_8 = &input_states;
+
+        draw = false;
+        simPendingTicks = 0;
+
+        if ( !ypaworld->PausedFrame(&world_update_arg) )
+            draw = true; // The pause ended, draw the game again
+    }
+    else
+    {
+        int32_t stepTicks = SimStepTicks;
+
+        if ( timeFrozen )
+        {
+            // One step of 2 ticks per frame, as in the original: the network
+            // keeps running while the game stands nearly still.
+            stepTicks = 2;
+            simPendingTicks = stepTicks;
+        }
+        else
+        {
+            // Screenshot sequences advance the game 40 ticks per picture
+            if ( ypaworld->_screenShotSeq )
+                frameTicks = 40;
+
+            simPendingTicks += frameTicks;
+
+            if ( simPendingTicks > SimMaxStepsPerFrame * SimStepTicks )
+                simPendingTicks = SimMaxStepsPerFrame * SimStepTicks;
+
+            // A level is not drawn before its first step
+            if ( ypaworld->_framesElapsed == 0 )
+                simPendingTicks = SimStepTicks;
+        }
+
+        while ( simPendingTicks >= stepTicks )
+        {
+            simPendingTicks -= stepTicks;
+
+            input_states = TInputState();
+            Input::Engine.QueryEvents(&input_states);
+            input_states.Period = stepTicks;
+
+            // Only the first step of a frame can have new key presses and
+            // clicks; the frame's own keys (F9, F10, screenshots) see those.
+            if ( !stepped )
+                renderInput = input_states;
+
+            stepped = true;
+
+            world_update_arg.DTime = stepTicks;
+            world_update_arg.TimeStamp += stepTicks;
+            world_update_arg.field_8 = &input_states;
+
+            draw = ypaworld->SimulationStep(&world_update_arg);
+
+            lastStepInput = input_states;
+
+            // Stop at a pause, or when the level ends, restarts, saves or loads
+            // (handled below). STATE_PAUSED is the in-game menu: it runs on.
+            int state = ypaworld->GetLevelInfo().State;
+
+            if ( !draw || ypaworld->_gamePaused ||
+                 (state != TLevelInfo::STATE_PLAYING && state != TLevelInfo::STATE_PAUSED) )
+            {
+                simPendingTicks = 0;
+                break;
+            }
+        }
+    }
+
+    if ( draw )
+    {
+        if ( !stepped )
+        {
+            renderInput = lastStepInput;
+            ClearInputEvents(&renderInput);
+        }
+
+        base_64arg renderArg = world_update_arg;
+        renderArg.DTime = frameTicks;
+        renderArg.field_8 = &renderInput;
+
+        ypaworld->RenderFrame(&renderArg);
+    }
 
     const TLevelInfo &levelInfo = ypaworld->GetLevelInfo();
 
@@ -430,8 +561,19 @@ int ProcessNextFrame()
 {
     ypaworld->UpdateScreenSize();
 
+    // Gameplay reads input and advances time once per simulation step, in
+    // ProcessGameplayFrame, so here it only takes the time since the last frame
+    bool gameplay = ( GameScreenMode == GAME_SCREEN_MODE_GAME );
+
     input_states = TInputState();
-    Input::Engine.QueryInput(&input_states);
+
+    if ( gameplay )
+        input_states.Period = Input::Engine.QueryTimer();
+    else
+        Input::Engine.QueryInput(&input_states);
+
+    int32_t frameTicks = input_states.Period;
+    bool timeFrozen = userdata.ResetInputPeriod;
 
     if ( userdata.ResetInputPeriod )
     {
@@ -441,10 +583,13 @@ int ProcessNextFrame()
 
     input_states.Period++;
     
-    world_update_arg.DTime = input_states.Period;
     world_update_arg.field_8 = &input_states;
 
-    world_update_arg.TimeStamp += input_states.Period;
+    if ( !gameplay )
+    {
+        world_update_arg.DTime = input_states.Period;
+        world_update_arg.TimeStamp += input_states.Period;
+    }
     
 
     // If mouse captured, enable releative mouse control
@@ -461,7 +606,7 @@ int ProcessNextFrame()
     }
     else if ( GameScreenMode == GAME_SCREEN_MODE_GAME )
     {
-        return ProcessGameplayFrame();
+        return ProcessGameplayFrame(frameTicks, timeFrozen);
     }
     else if ( GameScreenMode == GAME_SCREEN_MODE_REPLAY )
     {
