@@ -5664,19 +5664,17 @@ size_t NC_STACK_ypaworld::StartReplay(const std::string &fname)
 {
     _replayPlayer = new TGameRecorder();
 
-    // TODO(bug): new never returns NULL. When recorder_open_replay or CreateLevel fails
-    // below, _replayPlayer stays allocated and non-NULL, and the menu caller
-    // in main.cpp does not call StopReplay, so it leaks.
-    if ( !_replayPlayer )
-        return 0;
-
     TGameRecorder *repl = _replayPlayer;
 
     repl->filename = fname;
     _timeStamp = 0;
 
     if ( !recorder_open_replay(repl) )
+    {
+        delete _replayPlayer;
+        _replayPlayer = NULL;
         return 0;
+    }
 
     while ( repl->mfile.parse() != IFFile::IFF_ERR_EOC )
     {
@@ -5707,7 +5705,11 @@ size_t NC_STACK_ypaworld::StartReplay(const std::string &fname)
     loadReq.lvlID = repl->level_id;
 
     if ( !CreateLevel(&loadReq) )
+    {
+        delete _replayPlayer;
+        _replayPlayer = NULL;
         return 0;
+    }
 
     if ( !recorder_create_camera() )
     {
