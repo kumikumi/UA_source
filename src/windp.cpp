@@ -1539,7 +1539,7 @@ void CreateNetGameWindow(NC_STACK_ypaworld *yw)
 }
 
 //netgui update
-void ypaworld_func64__sub7__sub5(NC_STACK_ypaworld *yw, TInputState *inpt)
+void NetGameWindowHandleInput(NC_STACK_ypaworld *yw, TInputState *inpt)
 {
-    dprintf("MAKE ME %s (multiplayer)\n", "ypaworld_func64__sub7__sub5");
+    dprintf("MAKE ME %s (multiplayer)\n", "NetGameWindowHandleInput");
 }

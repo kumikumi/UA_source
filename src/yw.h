@@ -2222,10 +2222,10 @@ public:
     NC_STACK_ypabact *GetLastMsgSender();
     
     void HandleGuiInput(TInputState *inpt);
-    void ypaworld_func64__sub7__sub4(TInputState *inpt);
-    void ypaworld_func64__sub7__sub4__sub0(int a2);
-    void ypaworld_func64__sub7__sub3__sub4(NC_STACK_ypabact *bact);
-    bool ypaworld_func64__sub7__sub3__sub2();
+    void ConfirmDialogHandleInput(TInputState *inpt);
+    void ConfirmDialogLayoutItems(int a2);
+    void SquadManagerShowStatusTooltip(NC_STACK_ypabact *bact);
+    bool SquadManagerIsDragValid();
     
     void yw_MouseSelect(TInputState *arg);
     void ComputeMouseSelectFlags(TInputState *arg);
@@ -2239,7 +2239,7 @@ public:
     void UpdateActionEnergyCost();
     float sub_4498F4();
     
-    int ypaworld_func64__sub7__sub3__sub1(TClickBoxInf *winpt);
+    int SquadManagerBeginDrag(TClickBoxInf *winpt);
     void yw_SMAN_MouseSelect(TClickBoxInf *winp);
     void SquadManager_InputHandle(TInputState *inpt);
     NC_STACK_ypabact * sub_4C7B0C(int sqid, int a3);
@@ -2288,7 +2288,7 @@ public:
     int UserActBeamCheck();
     int UserActBuildCheck();
     int sb_0x4d3d44(TClickBoxInf *winp);
-    void ypaworld_func64__sub7__sub6(TInputState *inpt);
+    void ExitMenuHandleInput(TInputState *inpt);
     
     int yw_MouseFindCreationPoint(TClickBoxInf *winp);
     
