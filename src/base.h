@@ -27,7 +27,6 @@ struct TObjectRenderParams
     int frameTime;
     TF::TForm3D *ViewTForm;
     TF::TForm3D *OwnerTForm;
-    NC_STACK_skeleton *OBJ_SKELETON;
     UAskeleton::Data *sklt;
     float minZ;
     float maxZ;
@@ -69,7 +68,6 @@ struct TUpdateArgs
     int DTime = 0;
     TInputState *Input = NULL;
     int AdeCount = 0;
-    int field_10 = 0;
 };
 
 

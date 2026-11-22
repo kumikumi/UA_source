@@ -175,10 +175,8 @@ public:
     int windowGroupX = 0;
     int unitGroupX = 0;
     int toolGroupX = 0;
-    int field_914 = 0;
     int buttonsY = 0;
     int pressedBtns = 0;
-    int field_920 = 0;
 };
 
 struct TInfoLogMsg

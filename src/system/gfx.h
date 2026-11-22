@@ -76,14 +76,6 @@ struct tUtV
 };
 
 
-struct windd_arg256
-{
-    int sort_id;
-    int width;
-    int height;
-    char name[32];
-};
-
 
 
 namespace GFX

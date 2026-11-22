@@ -80,7 +80,6 @@ public:
         int xpos;
         int ypos;
         int width;
-        int field_10;
         std::string caption;
         std::string caption2;
         int downCode;

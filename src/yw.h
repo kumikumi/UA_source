@@ -1700,15 +1700,6 @@ struct TSectorDesc
 
 
 
-struct yw_arg172
-{
-    const char *usertxt;
-    const char *field_4;
-    int UsageFlags;
-    UserData *usr;
-    int InitGameShell;
-};
-
 
 struct TLevelLoadRequest
 {
@@ -1759,9 +1750,7 @@ struct TSphereContact
 
 struct TSphereCollisionQuery
 {
-    int field_0;
     vec3d pos;
-    int field_10;
     vec3d dir;
     float radius;
     TSphereContact *collisions;
@@ -1791,7 +1780,6 @@ struct TBuildingPlacement
 
 struct TSectorDamage
 {
-    int field_0;
     vec3d pos;
     int energy;
     int OwnerID;
@@ -1822,9 +1810,7 @@ struct TRoboDestroyed
 struct TUnitRayQuery
 {
     NC_STACK_ypabact *unit;
-    int field_4;
     vec3d pos;
-    int field_14;
     vec3d vect;
     NC_STACK_ypabact *hitUnit;
     float distance;

@@ -2474,7 +2474,6 @@ int CreateBottomBar(NC_STACK_ypaworld *yw)
 
     SetBottomBarLayout(yw);
 
-    bzda.field_914 = 1;
     bzda.buttonsY = 0;
     bzda.flags = 0;
     bzda.buttons.resize(11);

@@ -23,7 +23,6 @@ struct TCommanderSearch
     uint32_t prim_comm_id;
     uint32_t comm_id;
     float distance;
-    NC_STACK_ypabact *comm_bact;
     NC_STACK_ypabact *found_comm;
 };
 
@@ -42,10 +41,7 @@ struct TLastRoboMessage
     int param1;
     int param2;
     int param3;
-    int field_C;
     int lastTime;
-    int field_14;
-    int field_18;
 };
 
 struct robo_loct1

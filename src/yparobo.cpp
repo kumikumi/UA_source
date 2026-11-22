@@ -5343,7 +5343,6 @@ void NC_STACK_yparobo::DeadTimeUpdate(update_msg *arg)
 void NC_STACK_yparobo::FindMatchingCommander(TCommanderSearch *arg)
 {
     arg->found_comm = NULL;
-    arg->comm_bact = NULL;
 
     for ( NC_STACK_ypabact* &node : _kidList )
     {
@@ -5355,7 +5354,6 @@ void NC_STACK_yparobo::FindMatchingCommander(TCommanderSearch *arg)
             {
                 if ( arg->comm_id == node->_commandID )
                 {
-                    arg->comm_bact = node;
                     arg->found_comm = node;
                     v7 = 1;
                 }
@@ -5393,7 +5391,6 @@ void NC_STACK_yparobo::FindMatchingCommander(TCommanderSearch *arg)
                             || (arg->tgType == BACT_TGT_TYPE_UNIT && arg->prim_comm_id != 0 && v16 == arg->prim_comm_id)
                             || (arg->tgType == BACT_TGT_TYPE_CELL && rbtg == tgsec) )
                     {
-                        arg->comm_bact = node;
                         arg->found_comm = node;
                     }
                 }
@@ -5427,7 +5424,6 @@ void NC_STACK_yparobo::FindMatchingCommander(TCommanderSearch *arg)
                     }
                     if ( POW2(arg->distance) > POW2(tx - arg->tgt_pos.x) + POW2(ty - arg->tgt_pos.z) )
                     {
-                        arg->comm_bact = node;
                         arg->found_comm = node;
 
                         v26 = 1;

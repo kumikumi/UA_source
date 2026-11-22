@@ -136,7 +136,6 @@ struct TVhclProto
     int model_id = 0;
     uint8_t disable_enable_bitmask = 0;
     int8_t weapon = 0;
-    int field_4 = 0;
     int8_t mgun = 0;
     uint8_t type_icon = 0;
     std::string name;
@@ -155,7 +154,6 @@ struct TVhclProto
     int16_t max_speed = 0;
     int shield = 0;
     int energy = 0;
-    int field_1D79 = 0;
     float adist_sector = 0.0;
     float adist_bact = 0.0;
     float sdist_sector = 0.0;
@@ -330,8 +328,6 @@ struct TRoboProto
 {
     vec3d viewer;
     mat3x3 matrix;
-    int field_30 = 0;
-    int field_34 = 0;
     float robo_viewer_max_up = 0.0;
     float robo_viewer_max_down = 0.0;
     float robo_viewer_max_side = 0.0;
@@ -351,8 +347,6 @@ struct TRoboProto
     {
         viewer = b.viewer;
         matrix = b.matrix;
-        field_30 = b.field_30;
-        field_34 = b.field_34;
         robo_viewer_max_up = b.robo_viewer_max_up;
         robo_viewer_max_down = b.robo_viewer_max_down;
         robo_viewer_max_side = b.robo_viewer_max_side;
@@ -365,8 +359,6 @@ struct TRoboProto
     {
         viewer = b.viewer;
         matrix = b.matrix;
-        field_30 = b.field_30;
-        field_34 = b.field_34;
         robo_viewer_max_up = b.robo_viewer_max_up;
         robo_viewer_max_down = b.robo_viewer_max_down;
         robo_viewer_max_side = b.robo_viewer_max_side;
