@@ -359,7 +359,7 @@ void NC_STACK_winp::OnMouseUp(Common::Point pos, int btn, int clkNum)
 void NC_STACK_winp::OnMouseMove(Common::Point pos, Common::Point rel)
 {
     _mPos = pos;
-    _mMoveQuery = rel;
+    _mMoveQuery += rel; // Several motion events can arrive between queries
 }
 
 

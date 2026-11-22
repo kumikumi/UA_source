@@ -88,7 +88,7 @@ protected:
 
     static Common::Point _mPos;
     static Common::Point _mMove;
-    static Common::Point _mMoveQuery; // Read on event and null it on query
+    static Common::Point _mMoveQuery; // Added up on events and nulled on query
 
     static Common::Point _mLDpos;
     static Common::Point _mRDpos;
