@@ -1449,6 +1449,14 @@ NC_STACK_ypabact *NC_STACK_ypaworld::yw_createUnit( int model_id)
         }
     }
 
+    // Take the unit out of the cache right away, like a newly created one.
+    // Setting the new unit's state can create further units (destruction and
+    // creation effects) before the caller puts it into a list, and those must
+    // not get this same object again: it would be reinitialized while its own
+    // effects are being started.
+    if ( bacto )
+        bacto->_kidRef.Detach();
+
     if ( !bacto )
     {
         bacto = Nucleus::CTFInit<NC_STACK_ypabact>(unit_classes_names[model_id], 
