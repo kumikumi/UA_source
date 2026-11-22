@@ -119,7 +119,6 @@ enum RFLAGS
     RFLAGS_FALLOFF   =      (1 << 7),
     RFLAGS_IGNORE_FALLOFF = (1 << 8),
     RFLAGS_COMPUTED_COLOR = (1 << 9),
-    RFLAGS_DISABLE_ZWRITE = (1 << 10),
 };    
 
 struct __attribute__((packed)) TGLColor

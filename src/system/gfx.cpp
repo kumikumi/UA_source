@@ -1006,6 +1006,7 @@ void GFXEngine::RenderingMeshOld(TRenderNode *nod)
     _states.DstBlend = GL_ZERO;
     _states.TexBlend = 0; //REPLACE
     _states.AlphaBlend = false;
+    _states.DepthTest = true;
     _states.Zwrite = true;
     _states.Tex = 0;
     _states.LinearFilter = (_filter != 0);
@@ -1083,6 +1084,10 @@ void GFXEngine::RenderingMeshOld(TRenderNode *nod)
 
     if (flags & RFLAGS_SKY)
     {
+        // The sky is a backdrop drawn before everything else, so it must
+        // never hide geometry, however far away that geometry is.
+        _states.DepthTest = false;
+        _states.Zwrite = false;
         _states.Fog = false;
         _states.Shaded = true;
     }
@@ -1133,9 +1138,6 @@ void GFXEngine::RenderingMeshOld(TRenderNode *nod)
     if (flags & RFLAGS_COMPUTED_COLOR)
         useComputedColor = true;
     
-    if (flags & RFLAGS_DISABLE_ZWRITE)
-        _states.Zwrite = false;
-
     SetRenderStates(0);
 
     SetModelViewMatrix( nod->TForm );
@@ -1179,6 +1181,7 @@ void GFXEngine::RenderingMesh(TRenderNode *nod)
     _states.DstBlend = GL_ZERO;
     _states.TexBlend = 0; //REPLACE
     _states.AlphaBlend = false;
+    _states.DepthTest = true;
     _states.Zwrite = true;
     _states.Tex = 0;
     _states.LinearFilter = (_filter != 0);
@@ -1254,6 +1257,10 @@ void GFXEngine::RenderingMesh(TRenderNode *nod)
 
     if (flags & RFLAGS_SKY)
     {
+        // The sky is a backdrop drawn before everything else, so it must
+        // never hide geometry, however far away that geometry is.
+        _states.DepthTest = false;
+        _states.Zwrite = false;
         _states.Fog = false;
         _states.Shaded = true;
     }
@@ -1277,9 +1284,6 @@ void GFXEngine::RenderingMesh(TRenderNode *nod)
         _states.AFogLength = System::IniConf::GfxSkyLength.Get<int>();
     }
     
-    if (flags & RFLAGS_DISABLE_ZWRITE)
-        _states.Zwrite = false;
-
     _states.DataBuf = nod->Mesh->glDataBuf;
     _states.IndexBuf = nod->Mesh->glIndexBuf;
     
