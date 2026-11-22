@@ -2683,7 +2683,7 @@ void ypaworld_func158__confirm_draw(UserData *usr)
     }
 }
 
-void ypaworld_func158__sub3(NC_STACK_ypaworld *yw, UserData *usr)
+void DrawGameShellControls(NC_STACK_ypaworld *yw, UserData *usr)
 {
     switch ( usr->EnvMode )
     {

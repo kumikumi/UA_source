@@ -446,7 +446,7 @@ size_t NC_STACK_ypaworld::Process(base_64arg *arg)
 
                 sub_445230(this);
 
-                ypaworld_func64__sub14(this);
+                RoboMapUpdateLayout(this);
                 ypaworld_func64__sub21(arg->field_8);
 
                 _profileVals[PFID_GUITIME] = profiler_end(v33);
@@ -5332,7 +5332,7 @@ void NC_STACK_ypaworld::ProcessGameShell()
 
     draw_tooltip(this);
 
-    ypaworld_func158__sub3(this, _GameShell);
+    DrawGameShellControls(this, _GameShell);
 
     if ( _isNetGame )
     {

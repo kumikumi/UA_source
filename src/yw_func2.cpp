@@ -583,7 +583,7 @@ void listLocaleDir(UserData *usr, const char *dirname)
         usr->default_lang_dll = deflng;
 }
 
-void UserData::sub_46A7F8()
+void UserData::CloseSaveLoadMenu()
 {
     disk_button->HideScreen();
 
@@ -3101,7 +3101,7 @@ void UserData::GameShellUiHandleInput()
             else
             {
                 if ( Input->KbdLastHit == Input::KC_ESCAPE )
-                    sub_46A7F8();
+                    CloseSaveLoadMenu();
 
                 if ( Input->HotKeyID == 43 )
                     p_YW->_helpURL = Locale::Text::Help(Locale::HELP_SAVEGAME);
@@ -3136,7 +3136,7 @@ void UserData::GameShellUiHandleInput()
 
         if ( r.code == 103 )
         {
-            sub_46A7F8();
+            CloseSaveLoadMenu();
         }
         else if ( r.code == 1160 )
         {
@@ -3243,7 +3243,7 @@ void UserData::GameShellUiHandleInput()
                 diskScreenMode = 0;
             }
             else
-                sub_46A7F8();
+                CloseSaveLoadMenu();
         }
         else if (r.code == 1250)
         {

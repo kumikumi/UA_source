@@ -1596,7 +1596,7 @@ void sb_0x4f8f64(NC_STACK_ypaworld *yw)
     GFX::Engine.ProcessDrawSeq(robo_map.t1_cmdbuf_3);
 }
 
-void sub_4C157C(NC_STACK_ypaworld *yw)
+void RoboMapCalcScrollThumbs(NC_STACK_ypaworld *yw)
 {
     float v1 = (robo_map.h - robo_map.field_250) * robo_map.field_1E4;
     float v3 = (robo_map.w - robo_map.field_24C) * robo_map.field_1E0;
@@ -1664,7 +1664,7 @@ void sub_4C157C(NC_STACK_ypaworld *yw)
     robo_map.field_1D6 = v19;
 }
 
-void sub_4C0C00(NC_STACK_ypaworld *yw)
+void RoboMapLayoutFrame(NC_STACK_ypaworld *yw)
 {
     int v20 = robo_map.x - (yw->_screenSize.x / 2);
     int v21 = robo_map.y - (yw->_screenSize.y / 2);
@@ -1738,7 +1738,7 @@ void sub_4C0C00(NC_STACK_ypaworld *yw)
     FontUA::set_end(&robo_map.cmdCommands);
 }
 
-void sub_4C0FEC(NC_STACK_ypaworld *yw)
+void RoboMapLayoutHScroll(NC_STACK_ypaworld *yw)
 {
     int v1 = robo_map.x - (yw->_screenSize.x / 2);
     int v3 = robo_map.y + robo_map.h - robo_map.field_240 - (yw->_screenSize.y / 2);
@@ -1798,7 +1798,7 @@ void sub_4C0FEC(NC_STACK_ypaworld *yw)
     FontUA::set_end(&robo_map.t1_cmdbuf_2);
 }
 
-void sub_4C1214(NC_STACK_ypaworld *yw)
+void RoboMapLayoutVScroll(NC_STACK_ypaworld *yw)
 {
     int v2 = robo_map.x + robo_map.w - robo_map.field_248 - (yw->_screenSize.x / 2);
     int v3 = robo_map.y + robo_map.field_23C - (yw->_screenSize.y / 2);
@@ -2220,7 +2220,7 @@ void sb_0x4f6650(NC_STACK_ypaworld *yw, CmdStream *cmdbuf, int x, int y)
     FontUA::set_end(cmdbuf);
 }
 
-void sub_4C1814(NC_STACK_ypaworld *yw, int a2, int a3)
+void RoboMapClampView(NC_STACK_ypaworld *yw, int a2, int a3)
 {
     float v15 = yw->_mapSize.x * World::CVSectorLength;
     float v12 = yw->_mapSize.y * World::CVSectorLength;
@@ -2368,12 +2368,12 @@ void  CreateRoboMap(NC_STACK_ypaworld *yw)
     robo_map.field_20C = robo_map.field_210;
     robo_map.field_20E = robo_map.field_212;
 
-    sub_4C157C(yw);
-    sub_4C0C00(yw);
-    sub_4C0FEC(yw);
-    sub_4C1214(yw);
+    RoboMapCalcScrollThumbs(yw);
+    RoboMapLayoutFrame(yw);
+    RoboMapLayoutHScroll(yw);
+    RoboMapLayoutVScroll(yw);
     MapRoboUpdateMapInt(yw);
-    sub_4C1814(yw, robo_map.field_1CC - robo_map.field_244, robo_map.field_1D2);
+    RoboMapClampView(yw, robo_map.field_1CC - robo_map.field_244, robo_map.field_1D2);
 }
 
 
@@ -5596,7 +5596,7 @@ int NC_STACK_ypaworld::ypaworld_func64__sub7__sub3__sub1(TClickBoxInf *winpt)
             robo_map.field_1ED = 0;
             robo_map.field_1DC = v5->_position.z;
 
-            sub_4C1814(this, robo_map.field_1CC - robo_map.field_244, robo_map.field_1D2);
+            RoboMapClampView(this, robo_map.field_1CC - robo_map.field_244, robo_map.field_1D2);
         }
     }
 
@@ -7155,15 +7155,15 @@ void NC_STACK_ypaworld::sub_4C40AC()
     _lastMsgSender = GetLastMsgSender();
 }
 
-void ypaworld_func64__sub14(NC_STACK_ypaworld *yw)
+void RoboMapUpdateLayout(NC_STACK_ypaworld *yw)
 {
     if ( robo_map.IsOpen() )
     {
-        sub_4C157C(yw);
-        sub_4C1814(yw, robo_map.field_1CC - robo_map.field_244, robo_map.field_1D2);
-        sub_4C0C00(yw);
-        sub_4C0FEC(yw);
-        sub_4C1214(yw);
+        RoboMapCalcScrollThumbs(yw);
+        RoboMapClampView(yw, robo_map.field_1CC - robo_map.field_244, robo_map.field_1D2);
+        RoboMapLayoutFrame(yw);
+        RoboMapLayoutHScroll(yw);
+        RoboMapLayoutVScroll(yw);
         MapRoboUpdateMapInt(yw);
     }
 }
@@ -7179,7 +7179,7 @@ void ypaworld_func64__sub8(NC_STACK_ypaworld *yw)
                 robo_map.field_1D8 = yw->_viewerBact->_position.x;
                 robo_map.field_1DC = yw->_viewerBact->_position.z;
 
-                sub_4C1814(yw, robo_map.field_1CC - robo_map.field_244, robo_map.field_1D2);
+                RoboMapClampView(yw, robo_map.field_1CC - robo_map.field_244, robo_map.field_1D2);
             }
         }
         robo_map.field_1E8 &= 0xFFFFFF1F;

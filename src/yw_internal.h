@@ -66,7 +66,7 @@ int sub_44A97C(NC_STACK_ypaworld *yw, NC_STACK_base *base);
 
 NC_STACK_bitmap * sub_44816C(NC_STACK_bitmap *src, const char *name);
 
-void ypaworld_func158__sub3(NC_STACK_ypaworld *yw, UserData *usr);
+void DrawGameShellControls(NC_STACK_ypaworld *yw, UserData *usr);
 
 void sub_46D0F8(const std::string &path);
 
@@ -277,7 +277,7 @@ struct debrif_t1
 
 void ypaworld_func64__sub7(NC_STACK_ypaworld *yw, TInputState *inpt);
 void ypaworld_func64__sub8(NC_STACK_ypaworld *yw);
-void ypaworld_func64__sub14(NC_STACK_ypaworld *yw);
+void RoboMapUpdateLayout(NC_STACK_ypaworld *yw);
 
 void ypaworld_func64__sub15(NC_STACK_ypaworld *yw);
 void ypaworld_func64__sub16(NC_STACK_ypaworld *yw);

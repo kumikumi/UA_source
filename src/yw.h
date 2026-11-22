@@ -795,7 +795,7 @@ public:
     void InputConfigRestoreDefault();
     void sub_46C5F0();
     void  UpdateSelected3DDevFromList();
-    void sub_46A7F8();
+    void CloseSaveLoadMenu();
     void ShowAbout();
     
     bool SaveBuildProtoState();
