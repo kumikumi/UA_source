@@ -292,7 +292,6 @@ protected:
     void TurnRoboAboutOwnUpAxis(float angle);
     void TurnRoboAboutWorldUpAxis(float angle);
     
-    cellArea * yparobo_func0__sub0();
     void GetBuildSiteApproachTarget(int a2, setTarget_msg *parg67);
     
     void UpdateViewerLookAngles(update_msg *arg);

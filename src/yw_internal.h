@@ -63,7 +63,6 @@ int yw_parse_subSect(NC_STACK_ypaworld *yw, FSMgr::FileHandle *fil);
 int yw_parse_sektor(NC_STACK_ypaworld *yw, FSMgr::FileHandle *fil);
 int SetupFillerModels(NC_STACK_ypaworld *yw, NC_STACK_base *base);
 
-NC_STACK_bitmap * sub_44816C(NC_STACK_bitmap *src, const char *name);
 
 void DrawGameShellControls(NC_STACK_ypaworld *yw, UserData *usr);
 
@@ -94,7 +93,6 @@ int GUI_Open(NC_STACK_ypaworld *yw);
 void splashScreen_OutText(NC_STACK_ypaworld *yw, const std::string &txt, int x, int y);
 
 
-void ypaworld_func2__sub0__sub0(NC_STACK_ypaworld *yw);
 void RestoreWinStatus(NC_STACK_ypaworld *yw, NC_STACK_ypabact *bact1, NC_STACK_ypabact *bact2);
 
 
@@ -283,7 +281,6 @@ void UpdateGunList(NC_STACK_ypaworld *yw);
 void UpdateVehicleList(NC_STACK_ypaworld *yw);
 void UpdateBuildingList(NC_STACK_ypaworld *yw);
 
-int sub_47B388(int a1, const std::string &a2);
 
 void DrawGameMessages(NC_STACK_ypaworld *yw);
 
@@ -333,10 +330,7 @@ int yw_write_superbomb(NC_STACK_ypaworld *yw, FSMgr::FileHandle *fil);
 int yw_write_history(NC_STACK_ypaworld *yw, FSMgr::FileHandle *fil);
 int yw_write_masks(NC_STACK_ypaworld *yw, FSMgr::FileHandle *fil);
 
-void sub_471AB8(NC_STACK_ypaworld *yw);
-void sub_47DB04(NC_STACK_ypaworld *yw, char a2);
 
-void ypaworld_func151__sub1(NC_STACK_ypaworld *yw);
 
 NC_STACK_bitmap * loadDisk_screen(NC_STACK_ypaworld *yw);
 void draw_splashScreen(NC_STACK_ypaworld *yw, NC_STACK_bitmap *splashScreen);

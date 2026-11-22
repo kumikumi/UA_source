@@ -274,7 +274,7 @@ size_t NC_STACK_ypaworld::Init(IDVList &stak)
 size_t NC_STACK_ypaworld::Deinit()
 {
     FreeGameDataCursors();
-    dprintf("MAKE ME %s\n","ypaworld_func1");
+    dprintf("MAKE ME %s\n","NC_STACK_ypaworld::Deinit");
     return NC_STACK_nucleus::Deinit();
 }
 
@@ -547,7 +547,7 @@ bool NC_STACK_ypaworld::SimulationStep(base_64arg *arg)
         {
             _doNotRender = true;
 
-            dprintf("MAKE ME %s (multiplayer part Messaging)\n", "ypaworld_func64");
+            dprintf("MAKE ME %s (multiplayer part Messaging)\n", "SimulationStep");
 
 //          v66 = get_lang_string(650, "MESSAGE TO");
 //

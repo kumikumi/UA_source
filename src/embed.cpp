@@ -13,7 +13,7 @@
 // Create embed resource node and fill rsrc field data
 size_t NC_STACK_embed::Init(IDVList &)
 {
-    dprintf("MAKE ME %s\n","embed_func0");
+    dprintf("MAKE ME %s\n","NC_STACK_embed::Init");
     return 0;
 }
 

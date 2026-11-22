@@ -224,7 +224,7 @@ bool NC_STACK_ypamissile::TubeCollisionTest()
         if ( i == 0 || pCells[i] != pCells[i - 1] )
         {
             if (pCells[i] == NULL)
-                ypa_log_out("ypamissile_func70__sub0 NULL sector i = %d, 621: %f %f 62D: %f %f \n", i, _position.x, _position.z, _old_pos.x, _old_pos.z);
+                ypa_log_out("TubeCollisionTest NULL sector i = %d, 621: %f %f 62D: %f %f \n", i, _position.x, _position.z, _old_pos.x, _old_pos.z);
 
             for ( NC_STACK_ypabact* &bct : pCells[i]->unitsList )
             {
