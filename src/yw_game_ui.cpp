@@ -1436,7 +1436,7 @@ void sb_0x4f8f64__sub0(NC_STACK_ypaworld *yw, CmdStream *cur)
         FontUA::store_u8(cur, 75);
 }
 
-void sb_0x4f8f64(NC_STACK_ypaworld *yw)
+void RoboMapDrawOverlay(NC_STACK_ypaworld *yw)
 {
     int v41 = 0;
 
@@ -2313,7 +2313,7 @@ void  CreateRoboMap(NC_STACK_ypaworld *yw)
     robo_map.cmdCommands.reserve(512);
     robo_map.cmdInclude = {&robo_map.t1_cmdbuf_1, &robo_map.t1_cmdbuf_2, &robo_map.t1_cmdbuf_3};
 
-    robo_map.postDraw = sb_0x4f8f64;
+    robo_map.postDraw = RoboMapDrawOverlay;
 
     if ( yw->_userRobo )
     {
