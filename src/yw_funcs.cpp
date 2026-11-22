@@ -986,8 +986,6 @@ int NC_STACK_ypaworld::yw_LoadSet(int setID)
 
     std::string oldRsrc = Common::Env.SetPrefix("rsrc", "data:mc2res");
 
-    GFX::Engine.display_func271(NULL);
-
     _colsubSkeleton = Nucleus::CInit<NC_STACK_sklt>({{NC_STACK_rsrc::RSRC_ATT_NAME, std::string("skeleton/colsub.sklt")}});
     if ( !_colsubSkeleton )
     {
@@ -1568,7 +1566,6 @@ bool NC_STACK_ypaworld::InitBriefing(int lvlid)
     if ( !CreateBriefingTextList() )
         return false;
 
-    GFX::Engine.display_func271(NULL);
     //_win3d->raster_func192(NULL);
 
     TLevelInfo backup = _levelInfo;

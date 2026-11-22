@@ -271,7 +271,7 @@ Common::Point RoboMapWorldToScreen(vec2d in)
 
 void RoboMapDrawWorldLine(float a3, float a4, float a5, float a6, SDL_Color a7)
 {
-    GFX::Engine.raster_func217(a7);
+    GFX::Engine.SetPen(a7);
     GFX::Engine.DrawClippedLineCentered( Common::Line( RoboMapWorldToScreen({a3, a4}), RoboMapWorldToScreen({a5, a6}) )  );
 }
 
@@ -577,7 +577,7 @@ void RoboMapDrawLines(NC_STACK_ypaworld *yw)
             int wh = yw->_screenSize.x / 2;
             int hh = yw->_screenSize.y / 2;
 
-            GFX::Engine.raster_func217( yw->GetColor(12) );
+            GFX::Engine.SetPen( yw->GetColor(12) );
             
             GFX::Engine.DrawClippedLineCentered( {dword_516510 - wh,
                                          dword_516514 - hh,
@@ -8086,7 +8086,7 @@ void yw_RenderVector2D(NC_STACK_ypaworld *yw, UAskeleton::Data *wire, float posX
 
     if ( wire )
     {
-        GFX::Engine.raster_func217(coloooor);
+        GFX::Engine.SetPen(coloooor);
 
         for (size_t i = 0; i < wire->POO.size(); i++)
         {
@@ -8116,7 +8116,7 @@ void yw_RenderVector2D(NC_STACK_ypaworld *yw, UAskeleton::Data *wire, float posX
 
                     color_func(yw,  v29.x1 - posX,   v29.y1 - posY,   v29.x2 - posX,   v29.y2 - posY, &v32, &v31);
 
-                    GFX::Engine.raster_func217(v32);
+                    GFX::Engine.SetPen(v32);
                 }
                 else if ( color_func2 )
                 {
@@ -8126,7 +8126,7 @@ void yw_RenderVector2D(NC_STACK_ypaworld *yw, UAskeleton::Data *wire, float posX
                     color_func2(yw, v29.x1, v29.y1, v29.x2, v29.y2, &v34, &v33);
 
 
-                    GFX::Engine.raster_func217(v34);
+                    GFX::Engine.SetPen(v34);
                 }
 
                 GFX::Engine.DrawClippedLineNormalized(v29);

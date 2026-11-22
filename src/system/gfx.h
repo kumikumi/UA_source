@@ -567,7 +567,6 @@ public:
     virtual void SetClipCentered(const Common::Rect &arg);
     virtual void BeginScene();
     virtual void EndScene();
-    virtual size_t raster_func217(SDL_Color color);
     virtual void DrawMaskedBitmapNormalized(rstr_218_arg *arg);
     virtual void SetInverseClipCentered(const Common::Rect &arg);
     virtual void BeginFrame();
@@ -576,7 +575,6 @@ public:
 
     virtual bool AllocTexture(ResBitmap *arg);
     virtual void FreeTexture(ResBitmap *arg);
-    virtual void display_func271(IDVPair *stak);
     virtual void SaveScreenshot(const std::string & screenName);
     virtual void BeginSystemDialog(IDVPair *);
     virtual void EndSystemDialog(IDVPair *);

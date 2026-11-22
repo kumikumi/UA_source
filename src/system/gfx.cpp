@@ -1752,14 +1752,6 @@ void GFXEngine::EndScene()
     _renderNodesCache.Rewind();
 }
 
-size_t GFXEngine::raster_func217(SDL_Color color)
-{
-    //if ( !ColorCmp(color, Color(255, 255, 255, 255) ) )
-    _field_4 = color;
-
-    return 0;
-}
-
 void GFXEngine::DrawMaskedBitmapNormalized(rstr_218_arg *arg)
 {
     Common::Rect sRect( (arg->rect1.left + 1.0) * (arg->bitm_intern->width / 2),
@@ -1914,11 +1906,6 @@ void GFXEngine::FreeTexture(ResBitmap *bitm)
         glDeleteTextures(1, &bitm->hwTex);
 
     bitm->hwTex = 0;
-}
-
-void GFXEngine::display_func271(IDVPair *stak)
-{
-
 }
 
 void GFXEngine::WriteScreenshotPPM(FSMgr::FileHandle *fil)
