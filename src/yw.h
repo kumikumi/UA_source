@@ -1888,7 +1888,11 @@ public:
     virtual size_t Deinit();
     bool PausedFrame(base_64arg *arg);
     bool SimulationStep(base_64arg *arg);
-    void RenderFrame(base_64arg *arg);
+    void RenderFrame(base_64arg *arg, float stepFraction);
+
+    void SaveUnitTransforms();
+    void InterpolateUnitTransforms(float stepFraction);
+    void RestoreUnitTransforms();
     virtual void ypaworld_func129(yw_arg129 *arg);
     virtual size_t GetSectorInfo(yw_130arg *arg);
     virtual void ypaworld_func131(NC_STACK_ypabact *bact);
@@ -2481,6 +2485,21 @@ public:
     int32_t _timeStamp = 0;
     int32_t _frameTime = 0;
     uint32_t _framesElapsed = 0;
+
+    uint32_t _simStep = 0; // Simulation steps since start, for interpolation
+
+    struct TSavedTForm
+    {
+        TF::TForm3D *TForm;
+        vec3d Pos;
+        mat3x3 SclRot;
+    };
+    std::vector<TSavedTForm> _steppedTForms; // Step transforms while drawing
+
+    // The camera at the start of the last step
+    TF::TForm3D *_prevView = NULL;
+    vec3d _prevViewPos;
+    mat3x3 _prevViewSclRot;
     
     std::string _buildDate; 
     

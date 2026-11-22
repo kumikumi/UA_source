@@ -328,6 +328,8 @@ bool NC_STACK_ypaworld::SimulationStep(base_64arg *arg)
     if ( HandlePause(this, arg) )
         return false;
 
+    SaveUnitTransforms();
+
     uint32_t v92 = profiler_begin();
 
     _netChatSystem = false;
@@ -583,10 +585,97 @@ bool NC_STACK_ypaworld::SimulationStep(base_64arg *arg)
     return true;
 }
 
-// Draws the world as the last simulation step left it. arg->DTime is the time
-// since the last frame, for what animates while drawing: particles and the
-// interface.
-void NC_STACK_ypaworld::RenderFrame(base_64arg *arg)
+// Units that move further than this in one step, as when beamed, are drawn
+// where they ended up instead of in between.
+static const double MaxInterpolatedMove = 300.0;
+
+// Whether a transform changed too much in one step to draw it in between: it
+// moved too far, or turned more than about 30 degrees, as the camera does
+// when the player switches to another unit.
+static bool IsStepJump(const vec3d &pos0, const mat3x3 &rot0, const vec3d &pos1, const mat3x3 &rot1)
+{
+    if ( (pos1 - pos0).length() > MaxInterpolatedMove )
+        return true;
+
+    return (rot1.AxisY() - rot0.AxisY()).length() > 0.5 ||
+           (rot1.AxisZ() - rot0.AxisZ()).length() > 0.5;
+}
+
+// Remembers every unit's transform at the start of a simulation step, so it
+// can be drawn between there and where the step leaves it.
+void NC_STACK_ypaworld::SaveUnitTransforms()
+{
+    _simStep++;
+
+    // The camera is a transform of its own, which the viewer unit fills in
+    _prevView = TF::Engine.GetViewPoint();
+
+    if ( _prevView )
+    {
+        _prevViewPos = _prevView->Pos;
+        _prevViewSclRot = _prevView->SclRot;
+    }
+
+    for (cellArea &cell : _cells)
+    {
+        for (NC_STACK_ypabact *unit : cell.unitsList)
+        {
+            unit->_prevTFormPos = unit->_tForm.Pos;
+            unit->_prevTFormSclRot = unit->_tForm.SclRot;
+            unit->_prevStep = _simStep;
+        }
+    }
+}
+
+// Moves every unit and the camera stepFraction of the way through the last
+// step, from where they started it towards where they ended it, until
+// RestoreUnitTransforms.
+void NC_STACK_ypaworld::InterpolateUnitTransforms(float stepFraction)
+{
+    _steppedTForms.clear();
+
+    auto blend = [this, stepFraction](TF::TForm3D *tf, const vec3d &pos0, const mat3x3 &sclRot0)
+    {
+        if ( IsStepJump(pos0, sclRot0, tf->Pos, tf->SclRot) )
+            return;
+
+        _steppedTForms.push_back({tf, tf->Pos, tf->SclRot});
+
+        // Blending the matrices keeps scale exact. Turns within one step are
+        // small enough that the blend stays a rotation.
+        tf->Pos = pos0 + (tf->Pos - pos0) * stepFraction;
+        tf->SclRot = sclRot0 * (1.0 - stepFraction) + tf->SclRot * stepFraction;
+    };
+
+    for (cellArea &cell : _cells)
+    {
+        for (NC_STACK_ypabact *unit : cell.unitsList)
+        {
+            if ( unit->_prevStep == _simStep ) // Else it appeared during the step
+                blend(&unit->_tForm, unit->_prevTFormPos, unit->_prevTFormSclRot);
+        }
+    }
+
+    if ( _prevView && _prevView == TF::Engine.GetViewPoint() )
+        blend(_prevView, _prevViewPos, _prevViewSclRot);
+}
+
+// Puts back the transforms of the last step, for the simulation to go on from.
+void NC_STACK_ypaworld::RestoreUnitTransforms()
+{
+    for (const TSavedTForm &saved : _steppedTForms)
+    {
+        saved.TForm->Pos = saved.Pos;
+        saved.TForm->SclRot = saved.SclRot;
+    }
+
+    _steppedTForms.clear();
+}
+
+// Draws the world stepFraction of the way through the last simulation step.
+// arg->DTime is the time since the last frame, for what animates while
+// drawing: particles and the interface.
+void NC_STACK_ypaworld::RenderFrame(base_64arg *arg, float stepFraction)
 {
     if ( arg->DTime > 0 )
         _FPS = 1024 / arg->DTime;
@@ -602,6 +691,8 @@ void NC_STACK_ypaworld::RenderFrame(base_64arg *arg)
 
         GFX::Engine.BeginFrame();
 
+        InterpolateUnitTransforms(stepFraction);
+
         if ( _userUnit->_cellId ) // if cell is not 0,0
         {
             RenderGame(arg, 1);
@@ -609,6 +700,8 @@ void NC_STACK_ypaworld::RenderFrame(base_64arg *arg)
             if ( _isNetGame )
                 yw_NetDrawStats(this);
         }
+
+        RestoreUnitTransforms();
         
         debug_info_draw(arg->field_8);
         DrawPerfOverlay(arg->field_8);

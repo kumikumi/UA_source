@@ -104,6 +104,10 @@ int ProcessGameplayFrame(int32_t frameTicks, bool timeFrozen)
     bool stepped = false;
     TInputState renderInput;
 
+    // How far into the last step to draw. Frames that do not step normally
+    // (pause, waiting for the network) draw where the last step ended.
+    float stepFraction = 1.0;
+
     if ( ypaworld->_gamePaused )
     {
         // The paused screen keeps drawing, and time runs for its blinking.
@@ -183,6 +187,12 @@ int ProcessGameplayFrame(int32_t frameTicks, bool timeFrozen)
                 break;
             }
         }
+
+        // The time left over is how far into the next step real time is, so
+        // draw that far between the last two steps. This shows the game up to
+        // one step late, in exchange for smooth motion at any frame rate.
+        if ( !timeFrozen )
+            stepFraction = (float)simPendingTicks / (float)stepTicks;
     }
 
     if ( draw )
@@ -197,7 +207,7 @@ int ProcessGameplayFrame(int32_t frameTicks, bool timeFrozen)
         renderArg.DTime = frameTicks;
         renderArg.field_8 = &renderInput;
 
-        ypaworld->RenderFrame(&renderArg);
+        ypaworld->RenderFrame(&renderArg, stepFraction);
     }
 
     const TLevelInfo &levelInfo = ypaworld->GetLevelInfo();

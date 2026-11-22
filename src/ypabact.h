@@ -678,6 +678,13 @@ public:
 //    float pos_y_cntr;
 
     TF::TForm3D _tForm;
+
+    // _tForm at the start of the simulation step _prevStep, for drawing
+    // between steps (NC_STACK_ypaworld::InterpolateUnitTransforms)
+    vec3d _prevTFormPos;
+    mat3x3 _prevTFormSclRot;
+    uint32_t _prevStep = 0;
+
     int _clock;           // local time
     int _AI_time1;
     int _AI_time2;
