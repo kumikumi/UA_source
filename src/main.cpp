@@ -132,6 +132,11 @@ int ProcessGameplayFrame(int32_t frameTicks, bool timeFrozen)
 
         if ( timeFrozen )
         {
+            // TODO(multiplayer): Network games have not been played since the
+            // simulation moved to fixed steps. Check this freeze while waiting
+            // for players, and that remote units still move smoothly between
+            // network updates.
+
             // One step of 2 ticks per frame, as in the original: the network
             // keeps running while the game stands nearly still.
             stepTicks = 2;

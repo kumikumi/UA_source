@@ -7377,6 +7377,10 @@ void NC_STACK_ypabact::NetExtrapolateMotion(update_msg *upd)
             }
         }
 
+        // TODO(multiplayer): Probably a decompile slip. This replaces the
+        // position with one step's movement, so a remote unit would jump near
+        // the map origin; NetInterpolateMotion moves with "+=". Check against
+        // the original before relying on network play.
         if (_bact_type != BACT_TYPES_GUN || hgun)
             _position = spd * ftime * 6.0;
 

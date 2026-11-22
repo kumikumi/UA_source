@@ -482,6 +482,11 @@ bool NC_STACK_ypaworld::SimulationStep(base_64arg *arg)
 
     if ( _isNetGame )
     {
+        // TODO(multiplayer): Meant for frames with time frozen, but neither
+        // the original (which added a tick to every frame) nor the fixed steps
+        // ever give a step of 1 tick. While waiting for players, steps are 2
+        // ticks, so the flush timer runs down slowly. Check how often the
+        // original flushed then.
         if ( arg->DTime == 1 )
             _netFlushTimer -= 20;
         else
