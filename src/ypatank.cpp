@@ -168,7 +168,7 @@ void NC_STACK_ypatank::AI_layer3(update_msg *arg)
                      _tankCollisionAngle == 0.0 && 
                      _tankCollisionWay == 0.0 )
                 {
-                    ypaworld_arg136 arg136;
+                    TRayIntersection arg136;
 
                     if ( _tankCollisionFlag & COLL_HILL_L )
                     {
@@ -195,7 +195,7 @@ void NC_STACK_ypatank::AI_layer3(update_msg *arg)
                 {
                     if ( _tankCollisionAngle == 0.0 && _tankCollisionWay == 0.0 )
                     {
-                        ypaworld_arg136 arg136;
+                        TRayIntersection arg136;
 
                         if ( _tankCollisionFlag & COLL_WALL_L )
                             arg136.vect = -_rotation.AxisX() * 150.0;
@@ -322,7 +322,7 @@ void NC_STACK_ypatank::AI_layer3(update_msg *arg)
                 _thraction = 0;
             }
 
-            ypaworld_arg136 arg136;
+            TRayIntersection arg136;
             arg136.stPos = _old_pos;
             arg136.vect = _position - _old_pos;
 
@@ -363,7 +363,7 @@ void NC_STACK_ypatank::AI_layer3(update_msg *arg)
                         _status_flg &= ~BACT_STFLAG_MOVE;
                         _position = _old_pos;
 
-                        ypaworld_arg136 arg136_2;
+                        TRayIntersection arg136_2;
                         arg136_2.stPos = _position;
                         arg136_2.vect = _rotation.AxisY() * 300.0;
                         arg136_2.flags = 1;
@@ -392,8 +392,8 @@ void NC_STACK_ypatank::AI_layer3(update_msg *arg)
                         else
                             tmpLn = 0.0;
 
-                        ypaworld_arg136 arg136_1;
-                        ypaworld_arg136 arg136_3;
+                        TRayIntersection arg136_1;
+                        TRayIntersection arg136_3;
 
                         arg136_1.vect.x = _tankCollisionVector.z * 150.0 * tmpLn;
                         arg136_1.vect.y = 0;
@@ -525,7 +525,7 @@ void NC_STACK_ypatank::AI_layer3(update_msg *arg)
                     if ( arg136.isect )
                         v208 = -arg136.skel->polygons[ arg136.polyID ].Normal();
 
-                    ypaworld_arg136 arg136_4;
+                    TRayIntersection arg136_4;
 
                     arg136_4.stPos = _position;
                     arg136_4.vect = _rotation.AxisY() * 300.0;
@@ -1008,7 +1008,7 @@ void NC_STACK_ypatank::User_layer(update_msg *arg)
             if ( _status_flg & BACT_STFLAG_MOVE )
                 Move(&arg74);
 
-            ypaworld_arg136 arg136;
+            TRayIntersection arg136;
 
             arg136.stPos = _old_pos;
             arg136.vect = _position - _old_pos;
@@ -1123,7 +1123,7 @@ size_t NC_STACK_ypatank::SetPosition(bact_arg80 *arg)
     {
         if ( arg->field_C & 1 )
         {
-            ypaworld_arg136 arg136;
+            TRayIntersection arg136;
             arg136.stPos = _position.X0Z() - vec3d::OY(30000.0);
             arg136.vect = vec3d::OY(50000.0);
             arg136.flags = 0;
@@ -1167,7 +1167,7 @@ void NC_STACK_ypatank::ApplyImpulse(bact_arg83 *arg)
 
     vec3d v24 = _position + vec3d(v27.x, -v27.y, v27.z);
 
-    ypaworld_arg136 arg136;
+    TRayIntersection arg136;
     arg136.stPos = _position;
     arg136.vect = v24 - _position;
     arg136.flags = 0;
@@ -1254,7 +1254,7 @@ size_t NC_STACK_ypatank::CollisionWithBact(int arg)
         else
             v104 = 0.82;
 
-        yw_130arg arg130;
+        TSectorInfo arg130;
         arg130.pos_x = _position.x;
         arg130.pos_z = _position.z;
 
@@ -1280,7 +1280,7 @@ size_t NC_STACK_ypatank::CollisionWithBact(int arg)
                     && v12 != this )
             {
 
-                World::rbcolls *v96 = v12->getBACT_collNodes();
+                World::TRoboCollSet *v96 = v12->getBACT_collNodes();
 
                 int v110;
 
@@ -1441,7 +1441,7 @@ size_t NC_STACK_ypatank::CollisionWithBact(int arg)
                         {
                             vec3d v85 = v78[i] * v127 + v80[i]->_position;
 
-                            ypaworld_arg136 arg136;
+                            TRayIntersection arg136;
                             arg136.stPos = v80[i]->_position;
                             arg136.vect = v85 - v80[i]->_position;
                             arg136.flags = 0;
@@ -1515,11 +1515,11 @@ size_t NC_STACK_ypatank::CollisionWithBact(int arg)
                     _status_flg |= BACT_STFLAG_BCRASH;
                 }
 
-                yw_arg180 arg180;
+                TFFeedbackEffect arg180;
 
-                arg180.field_4 = 1.0;
-                arg180.field_8 = v88.x;
-                arg180.field_C = v88.z;
+                arg180.strength = 1.0;
+                arg180.pos_x = v88.x;
+                arg180.pos_z = v88.z;
                 arg180.effects_type = 5;
 
                 _world->FFeedback_Play(&arg180);
@@ -1619,7 +1619,7 @@ size_t NC_STACK_ypatank::CheckFireAI(bact_arg101 *arg)
 
     _tankExpectTgt = true;
 
-    ypaworld_arg136 arg149;
+    TRayIntersection arg149;
 
     arg149.stPos = _position;
     arg149.vect = arg->pos - arg149.stPos;
@@ -1646,8 +1646,8 @@ size_t NC_STACK_ypatank::CheckFireAI(bact_arg101 *arg)
         }
         else
         {
-            yw_130arg arg130;
-            yw_130arg arg130_1;
+            TSectorInfo arg130;
+            TSectorInfo arg130_1;
 
             arg130.pos_x = arg->pos.x;
             arg130.pos_z = arg->pos.z;
@@ -1771,7 +1771,7 @@ bool NC_STACK_ypatank::TestTargetSector(const NC_STACK_ypabact * tgt) const
     }
     else
     {
-        yw_130arg arg130;
+        TSectorInfo arg130;
         arg130.pos_x = _position.x;
         arg130.pos_z = tgt->_position.z;
 
@@ -1808,7 +1808,7 @@ void NC_STACK_ypatank::CorrectPositionOnLand()
         else
             v6 = _overeof;
 
-        ypaworld_arg136 arg136;
+        TRayIntersection arg136;
         arg136.stPos = _position;
         arg136.vect = vec3d::OY( v6 * 2.0 );
         arg136.flags = 0;
@@ -1844,7 +1844,7 @@ int NC_STACK_ypatank::AlignVehicleAI(float dtime, vec3d *pNormal)
     else
         v5 = _overeof;
 
-    ypaworld_arg136 arg136;
+    TRayIntersection arg136;
     arg136.stPos = _rotation.AxisY() * v5 + _position - vec3d::OY(50.0);
     arg136.vect = vec3d::OY( _overeof + 110.0 );
     arg136.flags = 0;
@@ -1940,9 +1940,9 @@ int NC_STACK_ypatank::AlignVehicleUser(float dtime, const vec3d &oldDir)
     v123.y += _viewer_overeof;
     v133.y += _viewer_overeof;
 
-    ypaworld_arg136 arg136;
-    ypaworld_arg136 arg136_1;
-    ypaworld_arg136 arg136_2;
+    TRayIntersection arg136;
+    TRayIntersection arg136_1;
+    TRayIntersection arg136_2;
 
     arg136.stPos = _position - vec3d::OY(v152 * _viewer_radius);
     arg136_1.stPos = _position - vec3d::OY(v152 * _viewer_radius);
@@ -1990,10 +1990,10 @@ int NC_STACK_ypatank::AlignVehicleUser(float dtime, const vec3d &oldDir)
                     {
                         SFXEngine::SFXe.startSound(&_soundcarrier, 5);
 
-                        yw_arg180 arg180;
-                        arg180.field_4 = 1.0;
-                        arg180.field_8 = arg136.isectPos.x;
-                        arg180.field_C = arg136.isectPos.z;
+                        TFFeedbackEffect arg180;
+                        arg180.strength = 1.0;
+                        arg180.pos_x = arg136.isectPos.x;
+                        arg180.pos_z = arg136.isectPos.z;
                         arg180.effects_type = 5;
 
                         _world->FFeedback_Play(&arg180);
@@ -2046,11 +2046,11 @@ int NC_STACK_ypatank::AlignVehicleUser(float dtime, const vec3d &oldDir)
                     {
                         SFXEngine::SFXe.startSound(&_soundcarrier, 5);
 
-                        yw_arg180 arg180_3;
-                        arg180_3.field_8 = arg136_1.isectPos.x;
-                        arg180_3.field_C = arg136_1.isectPos.z;
+                        TFFeedbackEffect arg180_3;
+                        arg180_3.pos_x = arg136_1.isectPos.x;
+                        arg180_3.pos_z = arg136_1.isectPos.z;
                         arg180_3.effects_type = 5;
-                        arg180_3.field_4 = 1.0;
+                        arg180_3.strength = 1.0;
 
                         _world->FFeedback_Play(&arg180_3);
                     }
@@ -2093,10 +2093,10 @@ int NC_STACK_ypatank::AlignVehicleUser(float dtime, const vec3d &oldDir)
                 {
                     SFXEngine::SFXe.startSound(&_soundcarrier, 5);
 
-                    yw_arg180 arg180_1;
-                    arg180_1.field_4 = 1.0;
-                    arg180_1.field_8 = arg136_2.isectPos.x;
-                    arg180_1.field_C = arg136_2.isectPos.z;
+                    TFFeedbackEffect arg180_1;
+                    arg180_1.strength = 1.0;
+                    arg180_1.pos_x = arg136_2.isectPos.x;
+                    arg180_1.pos_z = arg136_2.isectPos.z;
                     arg180_1.effects_type = 5;
 
                     _world->FFeedback_Play(&arg180_1);
@@ -2119,7 +2119,7 @@ int NC_STACK_ypatank::AlignVehicleUser(float dtime, const vec3d &oldDir)
     {
         if ( v156 > 0.0 )
         {
-            ypaworld_arg136 arg136_3;
+            TRayIntersection arg136_3;
             arg136_3.stPos = _position;
             arg136_3.vect = _rotation.AxisZ() * _viewer_radius;
             arg136_3.flags = 0;
@@ -2136,11 +2136,11 @@ int NC_STACK_ypatank::AlignVehicleUser(float dtime, const vec3d &oldDir)
                         {
                             SFXEngine::SFXe.startSound(&_soundcarrier, 5);
 
-                            yw_arg180 arg180_2;
+                            TFFeedbackEffect arg180_2;
                             arg180_2.effects_type = 5;
-                            arg180_2.field_4 = 1.0;
-                            arg180_2.field_8 = arg136_3.isectPos.x;
-                            arg180_2.field_C = arg136_3.isectPos.z;
+                            arg180_2.strength = 1.0;
+                            arg180_2.pos_x = arg136_3.isectPos.x;
+                            arg180_2.pos_z = arg136_3.isectPos.z;
 
                             _world->FFeedback_Play(&arg180_2);
                         }
@@ -2205,7 +2205,7 @@ int NC_STACK_ypatank::AlignVehicleUser(float dtime, const vec3d &oldDir)
         {
             float v92 = _viewer_overeof * v155 * 0.8;
 
-            ypaworld_arg136 arg136_4;
+            TRayIntersection arg136_4;
             arg136_4.stPos = _position - vec3d::OY(v92);
             arg136_4.vect = vec3d::OY( v92 * 2.0 );
 

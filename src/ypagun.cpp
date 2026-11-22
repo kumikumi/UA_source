@@ -118,7 +118,7 @@ size_t NC_STACK_ypagun::SetParameters(IDVList &stak)
 
 bool NC_STACK_ypagun::CheckPedestal()
 {
-    ypaworld_arg136 arg136;
+    TRayIntersection arg136;
     arg136.stPos = _position;
     arg136.vect.x = 0;
 
@@ -574,7 +574,7 @@ size_t NC_STACK_ypagun::SetPosition(bact_arg80 *arg)
 
     if ( _gunFlags & GUN_FLAGS_GROUND )
     {
-        ypaworld_arg136 arg136;
+        TRayIntersection arg136;
         arg136.stPos.x = arg->pos.x;
         arg136.stPos.y = arg->pos.y + -10000.0;
         arg136.stPos.z = arg->pos.z;

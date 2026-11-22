@@ -15,7 +15,7 @@
 #endif // GLOBAL
 
 EXTR TInputState input_states;
-EXTR base_64arg world_update_arg;
+EXTR TUpdateArgs world_update_arg;
 
 EXTR NC_STACK_ypaworld *ypaworld;
 

@@ -428,12 +428,12 @@ bool NC_STACK_ypaworld::yw_createRobos(const std::vector<MapRobo> &Robos)
 
         for ( const MapRobo &roboInf : Robos)
         {
-            ypaworld_arg136 v14;
+            TRayIntersection v14;
             v14.stPos = vec3d::X0Z(roboInf.Pos) - vec3d::OY(30000.0);
             v14.vect = vec3d::OY(50000.0);
             v14.flags = 0;
 
-            ypaworld_arg146 v15;
+            TUnitSpawn v15;
             v15.vehicle_id = roboInf.VhclID;
             v15.pos = roboInf.Pos;
 
@@ -544,12 +544,12 @@ bool NC_STACK_ypaworld::LoadBlgMap(const std::string &mapName)
             
             if (blg && cell.owner)
             {
-                ypaworld_arg148 arg148;
+                TBuildingPlacement arg148;
 
                 arg148.owner = cell.owner;
                 arg148.blg_ID = blg;
-                arg148.field_C = 1;
-                arg148.field_18 = 0;
+                arg148.instant = 1;
+                arg148.flags = 0;
                 arg148.CellId = cell.CellId;
 
                 CreateBuilding(&arg148);
@@ -586,7 +586,7 @@ void NC_STACK_ypaworld::yw_InitSquads(const std::vector<MapSquad> &squads)
             {
                 vec3d squadPos;
 
-                ypaworld_arg136 arg136;
+                TRayIntersection arg136;
                 arg136.stPos.x = squad.X;
                 arg136.stPos.y = -50000.0;
                 arg136.stPos.z = squad.Z;
@@ -598,7 +598,7 @@ void NC_STACK_ypaworld::yw_InitSquads(const std::vector<MapSquad> &squads)
                     squadPos = arg136.isectPos - vec3d::OY(50.0);
                 else
                 {
-                    yw_130arg sect_info;
+                    TSectorInfo sect_info;
                     sect_info.pos_x = squad.X;
                     sect_info.pos_z = squad.Z;
 
@@ -652,7 +652,7 @@ void NC_STACK_ypaworld::InitBuddies()
                                         0.0,
                                         cos(squad_sn * 1.745) * 500.0 );
 
-            ypaworld_arg136 arg136;
+            TRayIntersection arg136;
             arg136.stPos = squadPos.X0Z() + vec3d(0.5, -50000.0, 0.75);
             arg136.vect = vec3d::OY(100000.0);
             arg136.flags = 0;
@@ -688,12 +688,12 @@ void NC_STACK_ypaworld::yw_InitTechUpgradeBuildings()
         {
             if ( cell.PurposeType != cellArea::PT_BUILDINGS || gem.BuildingID != cell.PurposeIndex )
             {
-                ypaworld_arg148 arg148;
+                TBuildingPlacement arg148;
                 arg148.owner = cell.owner;
                 arg148.blg_ID = gem.BuildingID;
                 arg148.CellId = gem.CellId;
-                arg148.field_C = 1;
-                arg148.field_18 = 0;
+                arg148.instant = 1;
+                arg148.flags = 0;
 
                 CreateBuilding(&arg148);
             }
@@ -712,12 +712,12 @@ void NC_STACK_ypaworld::InitGates()
 
         gate.PCell = &_cells(gate.CellId);
 
-        ypaworld_arg148 arg148;
+        TBuildingPlacement arg148;
         arg148.owner = gate.PCell->owner;
         arg148.blg_ID = gate.ClosedBldID;
-        arg148.field_C = 1;
+        arg148.instant = 1;
         arg148.CellId = gate.CellId;
-        arg148.field_18 = 0;
+        arg148.flags = 0;
 
         CreateBuilding(&arg148);
 
@@ -742,12 +742,12 @@ void NC_STACK_ypaworld::InitSuperItems()
         
         sitem.PCell = &_cells(sitem.CellId);
 
-        ypaworld_arg148 arg148;
+        TBuildingPlacement arg148;
         arg148.owner = sitem.PCell->owner;
         arg148.blg_ID = sitem.InactiveBldID;
-        arg148.field_C = 1;
+        arg148.instant = 1;
         arg148.CellId = sitem.CellId;
-        arg148.field_18 = 0;
+        arg148.flags = 0;
 
         CreateBuilding(&arg148);
 
@@ -835,7 +835,7 @@ void NC_STACK_ypaworld::CellSetNewOwner(cellArea *cell, NC_STACK_ypabact *a5, in
             {
                 if ( a5 )
                 {
-                    yw_arg159 v21;
+                    TInfoMessage v21;
                     v21.unit = a5;
                     v21.Priority = 78;
                     v21.MsgID = 45;
@@ -845,7 +845,7 @@ void NC_STACK_ypaworld::CellSetNewOwner(cellArea *cell, NC_STACK_ypabact *a5, in
             }
             else if ( cell->owner == _userRobo->_owner )
             {
-                yw_arg159 v24;
+                TInfoMessage v24;
                 v24.unit = NULL;
                 v24.Priority = 78;
                 v24.MsgID = 67;
@@ -863,7 +863,7 @@ void NC_STACK_ypaworld::CellSetNewOwner(cellArea *cell, NC_STACK_ypabact *a5, in
                     {
                         if ( _userRobo->_owner == newOwner )
                         {
-                            yw_arg159 v23;
+                            TInfoMessage v23;
                             v23.unit = NULL;
                             v23.Priority = 80;
                             v23.MsgID = 82;
@@ -872,7 +872,7 @@ void NC_STACK_ypaworld::CellSetNewOwner(cellArea *cell, NC_STACK_ypabact *a5, in
                         }
                         else if ( _userRobo->_owner == cell->owner )
                         {
-                            yw_arg159 v22;
+                            TInfoMessage v22;
                             v22.unit = NULL;
                             v22.Priority = 80;
                             v22.MsgID = 81;
@@ -1276,7 +1276,7 @@ int IsPointInSkeletonPolygon(const vec3d &v, int id, NC_STACK_skeleton *skeleton
     return v7;
 }
 
-void NC_STACK_ypaworld::IntersectRaySkeleton(ypaworld_arg136 *arg, const TSectorCollision &loc)
+void NC_STACK_ypaworld::IntersectRaySkeleton(TRayIntersection *arg, const TSectorCollision &loc)
 {
     UAskeleton::Data *skel = loc.sklt->GetSkelet();
     for ( size_t i = 0; i < skel->polygons.size(); i++)
@@ -1647,7 +1647,7 @@ void NC_STACK_ypaworld::RenderSuperWave(vec2d pos, vec2d fromPos, baseRender_msg
                 }
                 else
                 {
-                    ypaworld_arg136 v22;
+                    TRayIntersection v22;
                     v22.vect = vec3d::OY(50000.0);
                     v22.stPos.x = pos.x;
                     v22.stPos.y = -25000.0;
@@ -1846,7 +1846,7 @@ void NC_STACK_ypaworld::RenderFillers(baseRender_msg *arg)
     }
 }
 
-void NC_STACK_ypaworld::RenderGame(base_64arg *bs64, int a2)
+void NC_STACK_ypaworld::RenderGame(TUpdateArgs *bs64, int a2)
 {
     if ( !_viewerBact )
         return;
@@ -1920,7 +1920,7 @@ void NC_STACK_ypaworld::RenderGame(base_64arg *bs64, int a2)
 
     RenderFillers(&rndrs);
 
-    bs64->field_C = rndrs.adeCount;
+    bs64->AdeCount = rndrs.adeCount;
 
     _polysCount = rndrs.adeCount;
     _polysDraw = 7777;
@@ -2073,7 +2073,7 @@ void NC_STACK_ypaworld::PlaceBuilding(const Common::Point &cellId, int ownerid2,
                     if ( !GunProto.VhclID )
                         break;
 
-                    ypaworld_arg146 v33;
+                    TUnitSpawn v33;
                     v33.vehicle_id = GunProto.VhclID;
                     v33.pos = GunProto.Pos + World::SectorIDToCenterPos3( cellId );
 
@@ -2246,7 +2246,7 @@ int StepTowardPolygonCentroid(UAskeleton::Data *skl, int id, const vec3d &v, flo
     return 1;
 }
 
-void NC_STACK_ypaworld::CollideSphereWithSkeleton(ypaworld_arg137 *arg, const TSectorCollision &a2)
+void NC_STACK_ypaworld::CollideSphereWithSkeleton(TSphereCollisionQuery *arg, const TSectorCollision &a2)
 {
     for (size_t i = 0; i < a2.sklt->GetSkelet()->polygons.size(); i++)
     {
@@ -2254,7 +2254,7 @@ void NC_STACK_ypaworld::CollideSphereWithSkeleton(ypaworld_arg137 *arg, const TS
 
         vec3d t0 = tria.Normal();
 
-        float v9 = t0.dot( arg->pos2 );
+        float v9 = t0.dot( arg->dir );
 
         if ( v9 > 0.0 )
         {
@@ -2283,7 +2283,7 @@ void NC_STACK_ypaworld::CollideSphereWithSkeleton(ypaworld_arg137 *arg, const TS
                         int pos = arg->coll_count;
 
                         arg->collisions[pos].pos1 = a2.pos + tx;
-                        arg->collisions[pos].pos2 = tria.Normal();
+                        arg->collisions[pos].normal = tria.Normal();
 
                         arg->coll_count++;
                     }
@@ -2345,7 +2345,7 @@ void NC_STACK_ypaworld::BuildingConstructUpdate(int dtime)
             {
                 if ( _buildProtos[ bldProc.BuildID ].ModelID )
                 {
-                    yw_arg159 arg159;
+                    TInfoMessage arg159;
 
                     arg159.unit = _userRobo;
                     arg159.Priority = 65;
@@ -2576,19 +2576,19 @@ void NC_STACK_ypaworld::ActivateSuperItem(int id, int a3)
         sitem.CountDown = sitem.TimerValue;
     }
 
-    ypaworld_arg148 arg148;
+    TBuildingPlacement arg148;
     arg148.owner = sitem.PCell->owner;
     arg148.blg_ID = sitem.ActiveBldID;
-    arg148.field_C = 1;
+    arg148.instant = 1;
     arg148.CellId = sitem.CellId;
-    arg148.field_18 = 0;
+    arg148.flags = 0;
 
     CreateBuilding(&arg148);
 
     sitem.PCell->PurposeType = cellArea::PT_STOUDSON;
     sitem.PCell->PurposeIndex = id;
 
-    yw_arg159 arg159;
+    TInfoMessage arg159;
     arg159.unit = 0;
     arg159.Priority = 94;
 
@@ -2617,19 +2617,19 @@ void NC_STACK_ypaworld::StopSuperItem(int id)
 
     sitem.State = TMapSuperItem::STATE_STOPPED;
 
-    ypaworld_arg148 arg148;
+    TBuildingPlacement arg148;
     arg148.owner = sitem.PCell->owner;
     arg148.blg_ID = sitem.InactiveBldID;
-    arg148.field_C = 1;
+    arg148.instant = 1;
     arg148.CellId = sitem.CellId;
-    arg148.field_18 = 0;
+    arg148.flags = 0;
 
     CreateBuilding(&arg148);
 
     sitem.PCell->PurposeType = cellArea::PT_STOUDSON;
     sitem.PCell->PurposeIndex = id;
 
-    yw_arg159 arg159;
+    TInfoMessage arg159;
     arg159.unit = 0;
     arg159.Priority = 93;
 
@@ -2658,12 +2658,12 @@ void NC_STACK_ypaworld::TriggerSuperItem(int id)
     sitem.State = TMapSuperItem::STATE_TRIGGED;
     sitem.TriggerTime = _timeStamp;
 
-    ypaworld_arg148 arg148;
+    TBuildingPlacement arg148;
     arg148.owner = sitem.PCell->owner;
     arg148.blg_ID = sitem.TriggerBldID;
-    arg148.field_C = 1;
+    arg148.instant = 1;
     arg148.CellId = sitem.CellId;
-    arg148.field_18 = 0;
+    arg148.flags = 0;
 
     CreateBuilding(&arg148);
 
@@ -2672,7 +2672,7 @@ void NC_STACK_ypaworld::TriggerSuperItem(int id)
 
     sitem.LastRadius = 0;
 
-    yw_arg159 arg159;
+    TInfoMessage arg159;
     arg159.Priority = 95;
     arg159.unit = 0;
 
@@ -2791,14 +2791,14 @@ void NC_STACK_ypaworld::RefreshUnitPRT(NC_STACK_ypabact *unit, NC_STACK_ypabact 
 }
 
 
-int HandlePause(NC_STACK_ypaworld *yw, base_64arg *arg)
+int HandlePause(NC_STACK_ypaworld *yw, TUpdateArgs *arg)
 {
     if ( yw->_isNetGame )
         return 0;
 
     if ( !yw->_gamePaused )
     {
-        if ( arg->field_8->HotKeyID == 32 || arg->field_8->KbdLastHit == Input::KC_PAUSE )
+        if ( arg->Input->HotKeyID == 32 || arg->Input->KbdLastHit == Input::KC_PAUSE )
         {
             yw->_gamePaused = true;
             yw->_gamePausedTimeStamp = arg->TimeStamp;
@@ -2806,7 +2806,7 @@ int HandlePause(NC_STACK_ypaworld *yw, base_64arg *arg)
         return 0;
     }
 
-    if ( arg->field_8->KbdLastHit != Input::KC_NONE )
+    if ( arg->Input->KbdLastHit != Input::KC_NONE )
     {
         yw->_gamePaused = false;
         arg->TimeStamp = yw->_gamePausedTimeStamp;
@@ -2895,11 +2895,11 @@ void UpdateGates(NC_STACK_ypaworld *yw)
 
         if ( gate.PCell->PurposeType != gateState )
         {
-            ypaworld_arg148 arg148;
+            TBuildingPlacement arg148;
             arg148.owner = gate.PCell->owner;
-            arg148.field_C = 1;
+            arg148.instant = 1;
             arg148.CellId = gate.CellId;
-            arg148.field_18 = 0;
+            arg148.flags = 0;
 
             if ( gateState == cellArea::PT_GATEOPENED )
             {
@@ -2909,7 +2909,7 @@ void UpdateGates(NC_STACK_ypaworld *yw)
             {
                 arg148.blg_ID = gate.ClosedBldID;
 
-                yw_arg159 arg159;
+                TInfoMessage arg159;
                 arg159.unit = 0;
                 arg159.Priority = 65;
                 arg159.txt = Locale::Text::Feedback(Locale::FEEDBACK_GATECLOSE);
@@ -2941,7 +2941,7 @@ void UpdateGates(NC_STACK_ypaworld *yw)
             {
                 if ( yw->_timeStamp - yw->_msgTimestampGates > 60000 )
                 {
-                    yw_arg159 arg159_1;
+                    TInfoMessage arg159_1;
                     arg159_1.unit = 0;
                     arg159_1.Priority = 49;
                     arg159_1.txt = Locale::Text::Feedback(Locale::FEEDBACK_GATEOPEN);
@@ -2955,7 +2955,7 @@ void UpdateGates(NC_STACK_ypaworld *yw)
             {
                 if ( yw->_timeStamp - yw->_msgTimestampGates > 40000 )
                 {
-                    yw_arg159 arg159_2;
+                    TInfoMessage arg159_2;
                     arg159_2.unit = 0;
                     arg159_2.Priority = 10;
                     arg159_2.txt = Locale::Text::Feedback(Locale::FEEDBACK_GATEFULL);
@@ -3009,19 +3009,19 @@ void NC_STACK_ypaworld::DeactivateSuperItem(int id)
     sitem.ActivateOwner = 0;
     sitem.CountDown = 0;
 
-    ypaworld_arg148 arg148;
+    TBuildingPlacement arg148;
     arg148.owner = sitem.PCell->owner;
     arg148.blg_ID = sitem.InactiveBldID;
-    arg148.field_C = 1;
+    arg148.instant = 1;
     arg148.CellId = sitem.CellId;
-    arg148.field_18 = 0;
+    arg148.flags = 0;
 
     CreateBuilding(&arg148);
 
     sitem.PCell->PurposeType = cellArea::PT_STOUDSON;
     sitem.PCell->PurposeIndex = id;
 
-    yw_arg159 arg159;
+    TInfoMessage arg159;
     arg159.unit = NULL;
     arg159.Priority = 92;
 
@@ -3203,11 +3203,11 @@ void NC_STACK_ypaworld::UpdateSuperBombShockwave(int id)
 
                     _fxLimit = 2;
 
-                    yw_arg129 arg129;
+                    TSectorDamage arg129;
                     arg129.pos.x = v26;
                     arg129.pos.y = sitem.PCell->height;
                     arg129.pos.z = v21;
-                    arg129.field_10 = 200000;
+                    arg129.energy = 200000;
                     arg129.OwnerID = sitem.ActivateOwner;
                     arg129.unit = 0;
 
@@ -3324,7 +3324,7 @@ void CheckEnemySectorEntered(NC_STACK_ypaworld *yw)
             {
                 if ( yw->_timeStamp - yw->_msgTimestampEnemySector > 10000 )
                 {
-                    yw_arg159 arg159;
+                    TInfoMessage arg159;
                     arg159.unit = yw->_userUnit;
                     arg159.Priority = 24;
                     arg159.txt = Locale::Text::Feedback(Locale::FEEDBACK_ESECTENTER);
@@ -3575,7 +3575,7 @@ int recorder_startrec(NC_STACK_ypaworld *yw)
     TGameRecorder *rcrd = yw->_replayRecorder;
 
     rcrd->do_record = 0;
-    rcrd->field_40 = 0;
+    rcrd->frame_timer = 0;
     rcrd->seqn++;
     rcrd->level_id = yw->_levelInfo.LevelID;
     rcrd->frame_id = 0;
@@ -3619,7 +3619,7 @@ void HandleSnapshotKeys(NC_STACK_ypaworld *yw, TInputState *inpt)
     {
         TakeScreenshot(yw);
 
-        yw_arg159 info_msg;
+        TInfoMessage info_msg;
         info_msg.txt = "Screenshot saved.";
         info_msg.unit = NULL;
         info_msg.Priority = 100;
@@ -3635,7 +3635,7 @@ void HandleSnapshotKeys(NC_STACK_ypaworld *yw, TInputState *inpt)
         {
             yw->_screenShotSeq = false;
 
-            yw_arg159 info_msg;
+            TInfoMessage info_msg;
             info_msg.txt = "Screenshotting: stopped.";
             info_msg.unit = NULL;
             info_msg.Priority = 100;
@@ -3654,7 +3654,7 @@ void HandleSnapshotKeys(NC_STACK_ypaworld *yw, TInputState *inpt)
         yw->_screenShotSeq = true;
         yw->_screenShotSeqId++;
 
-        yw_arg159 info_msg;
+        TInfoMessage info_msg;
         info_msg.txt = "Screenshotting: started.";
         info_msg.unit = NULL;
         info_msg.Priority = 100;
@@ -3669,7 +3669,7 @@ void HandleSnapshotKeys(NC_STACK_ypaworld *yw, TInputState *inpt)
         {
             recorder_stoprec(yw);
 
-            yw_arg159 info_msg;
+            TInfoMessage info_msg;
             info_msg.txt = "Replay recordering: stopped.";
             info_msg.unit = NULL;
             info_msg.Priority = 100;
@@ -3685,7 +3685,7 @@ void HandleSnapshotKeys(NC_STACK_ypaworld *yw, TInputState *inpt)
         {
             recorder_startrec(yw);
 
-            yw_arg159 info_msg;
+            TInfoMessage info_msg;
             info_msg.txt = "Replay recordering: started.";
             info_msg.unit = NULL;
             info_msg.Priority = 100;
@@ -3699,7 +3699,7 @@ void HandleSnapshotKeys(NC_STACK_ypaworld *yw, TInputState *inpt)
 void recorder_update_time(NC_STACK_ypaworld *yw, int dtime)
 {
     yw->_replayRecorder->time += dtime;
-    yw->_replayRecorder->field_40 -= dtime;
+    yw->_replayRecorder->frame_timer -= dtime;
 }
 
 
@@ -3910,7 +3910,7 @@ void NC_STACK_ypaworld::recorder_write_frame()
 {
     TGameRecorder *rcrd = _replayRecorder;
 
-    if ( rcrd->field_40 < 0 )
+    if ( rcrd->frame_timer < 0 )
     {
         recorder_world_to_frame(rcrd);
         rcrd->ctrl_bact_id = _userUnit->_gid;
@@ -3991,7 +3991,7 @@ void NC_STACK_ypaworld::recorder_write_frame()
         rcrd->mfile.popChunk();
 
         //rcrd->field_34 = 0;
-        rcrd->field_40 += 250;
+        rcrd->frame_timer += 250;
         rcrd->frame_id += 1;
     }
 }
@@ -4058,7 +4058,7 @@ void recorder_read_framedata(TGameRecorder *rcrd)
         switch ( v3.TAG )
         {
         case TAG_FLSH:
-            rcrd->field_78 |= 1;
+            rcrd->frame_flags |= 1;
             rcrd->mfile.parse();
             break;
 
@@ -4124,7 +4124,7 @@ NC_STACK_ypabact *NC_STACK_ypaworld::recorder_newObject(trec_bct *oinf)
     {
         if ( oinf->vhcl_id )
         {
-            ypaworld_arg146 arg146;
+            TUnitSpawn arg146;
             arg146.vehicle_id = oinf->vhcl_id;
             arg146.pos = vec3d(0.0, 0.0, 0.0);
 
@@ -4155,7 +4155,7 @@ NC_STACK_ypabact *NC_STACK_ypaworld::recorder_newObject(trec_bct *oinf)
     }
     else
     {
-        ypaworld_arg146 arg147;
+        TUnitSpawn arg147;
         arg147.vehicle_id = oinf->vhcl_id;
         arg147.pos = vec3d(0.0, 0.0, 0.0);
 
@@ -4176,7 +4176,7 @@ NC_STACK_ypabact *NC_STACK_ypaworld::recorder_newObject(trec_bct *oinf)
 
 void NC_STACK_ypaworld::recorder_set_bact_pos(NC_STACK_ypabact *bact, const vec3d &pos)
 {
-    yw_130arg arg130;
+    TSectorInfo arg130;
     arg130.pos_x = pos.x;
     arg130.pos_z = pos.z;
 
@@ -4372,8 +4372,8 @@ int NC_STACK_ypaworld::recorder_go_to_frame(TGameRecorder *rcrd, int wanted_fram
 
     if ( frame_id >= 0 )
     {
-        if ( frame_id >= rcrd->field_74 )
-            frame_id = rcrd->field_74 - 1;
+        if ( frame_id >= rcrd->frame_count )
+            frame_id = rcrd->frame_count - 1;
     }
     else
     {
@@ -4415,9 +4415,9 @@ void NC_STACK_ypaworld::AdvanceReplay(TGameRecorder *rcrd, int dTime)
 {
     if ( dTime )
     {
-        rcrd->field_78 &= 0xFFFFFFFE;
+        rcrd->frame_flags &= 0xFFFFFFFE;
 
-        while ( rcrd->field_74 - 1 != rcrd->frame_id  &&  (int32_t)(dTime + _timeStamp) > rcrd->time )
+        while ( rcrd->frame_count - 1 != rcrd->frame_id  &&  (int32_t)(dTime + _timeStamp) > rcrd->time )
         {
             if ( rcrd->mfile.parse() != IFFile::IFF_ERR_EOF )
             {
@@ -4427,13 +4427,13 @@ void NC_STACK_ypaworld::AdvanceReplay(TGameRecorder *rcrd, int dTime)
         }
 
 
-        if ( rcrd->field_74 - 1 == rcrd->frame_id )
+        if ( rcrd->frame_count - 1 == rcrd->frame_id )
         {
             recorder_go_to_frame(rcrd, 0);
         }
         else
         {
-            if ( rcrd->field_78 & 1 )
+            if ( rcrd->frame_flags & 1 )
             {
                 _timeStamp = rcrd->time;
                 recorder_updateObjectList(rcrd, 1.0, dTime);
@@ -4468,8 +4468,8 @@ void ReplayCameraMove(NC_STACK_ypaworld *yw, float fperiod, TInputState *inpt)
         v18 /= v17;
     }
 
-    rcrd->field_44.z += v15 * v18;
-    rcrd->field_44.x += v15 * v20;
+    rcrd->camera_pos.z += v15 * v18;
+    rcrd->camera_pos.x += v15 * v20;
 
     float v21 = rcrd->rotation_matrix.m00;
     float v19 = rcrd->rotation_matrix.m02;
@@ -4481,9 +4481,9 @@ void ReplayCameraMove(NC_STACK_ypaworld *yw, float fperiod, TInputState *inpt)
         v19 /= v16;
     }
 
-    rcrd->field_44.y += v14;
-    rcrd->field_44.z += v19 * v13;
-    rcrd->field_44.x += v21 * v13;
+    rcrd->camera_pos.y += v14;
+    rcrd->camera_pos.z += v19 * v13;
+    rcrd->camera_pos.x += v21 * v13;
 }
 
 void ReplayCameraTurn(NC_STACK_ypaworld *yw, float fperiod, TInputState *inpt)
@@ -4525,18 +4525,18 @@ void NC_STACK_ypaworld::CameraPrepareRender(TGameRecorder *rcrd, NC_STACK_ypabac
     if ( _mouseGrabbed )
         ReplayCameraTurn(this, fperiod, inpt);
 
-    if ( rcrd->field_80 == 16 )
+    if ( rcrd->camera_mode == 16 )
     {
-        recorder_set_bact_pos(bact, rcrd->field_44);
+        recorder_set_bact_pos(bact, rcrd->camera_pos);
         bact->_rotation = rcrd->rotation_matrix;
     }
-    else if ( rcrd->field_80 == 18 )
+    else if ( rcrd->camera_mode == 18 )
     {
         for ( NC_STACK_ypabact * &unit : _userRobo->GetKidList() )
         {
-            if ( rcrd->field_84 == unit->_gid )
+            if ( rcrd->camera_unit_id == unit->_gid )
             {
-                vec3d v35 = unit->_position + unit->_rotation.Transpose().Transform(rcrd->field_44);
+                vec3d v35 = unit->_position + unit->_rotation.Transpose().Transform(rcrd->camera_pos);
                 recorder_set_bact_pos(bact, v35);
 
                 bact->_rotation = rcrd->rotation_matrix * unit->_rotation;
@@ -4544,13 +4544,13 @@ void NC_STACK_ypaworld::CameraPrepareRender(TGameRecorder *rcrd, NC_STACK_ypabac
             }
         } 
     }
-    else if ( rcrd->field_80 == 20 )
+    else if ( rcrd->camera_mode == 20 )
     {
         for ( NC_STACK_ypabact * &unit : _userRobo->GetKidList() )
         {
             if ( rcrd->ctrl_bact_id == unit->_gid )
             {
-                vec3d a3a = unit->_position + unit->_rotation.Transpose().Transform(rcrd->field_44);
+                vec3d a3a = unit->_position + unit->_rotation.Transpose().Transform(rcrd->camera_pos);
                 recorder_set_bact_pos(bact, a3a);
 
                 bact->_rotation = rcrd->rotation_matrix * unit->_rotation;

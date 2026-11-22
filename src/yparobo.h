@@ -187,7 +187,7 @@ public:
     virtual void setROBO_robDelay(int);
     virtual void setROBO_recDelay(int);
 
-    virtual World::rbcolls *getBACT_collNodes()
+    virtual World::TRoboCollSet *getBACT_collNodes()
     { return &_roboColls; }
     
     virtual int getROBO_epConquer();
@@ -307,7 +307,7 @@ public:
 
     
     float _roboFlotage;
-    World::rbcolls _roboColls;
+    World::TRoboCollSet _roboColls;
     float _roboYPos;
 
     uint8_t _roboWFlags;

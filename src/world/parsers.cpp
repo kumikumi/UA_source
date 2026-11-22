@@ -531,11 +531,11 @@ int VhclProtoParser::Handle(ScriptParser::Parser &parser, const std::string &p1,
         }
 
         if ( _vhcl->model_id == BACT_TYPES_BACT )
-            _vhcl->field_1D6F = (_vhcl->force * 0.6) / _vhcl->airconst;
+            _vhcl->max_speed = (_vhcl->force * 0.6) / _vhcl->airconst;
         else
-            _vhcl->field_1D6F = (_vhcl->force) / _vhcl->airconst;
+            _vhcl->max_speed = (_vhcl->force) / _vhcl->airconst;
 
-        _vhcl->field_1D6D = (_vhcl->field_1D6F / 10) * 1200.0;
+        _vhcl->max_speed_disp = (_vhcl->max_speed / 10) * 1200.0;
 
         return ScriptParser::RESULT_SCOPE_END;
     }

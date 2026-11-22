@@ -101,8 +101,8 @@ void NC_STACK_ypacar::DoKamikaze()
 
         for (int j = 0; j <= v4; j++)
         {
-            yw_arg129 arg120;
-            arg120.field_10 = exp( sqrt( POW2(i) + POW2(j) ) * (World::CVSectorLength * -2.8) / World::CVSectorLength ) * _carBlast;
+            TSectorDamage arg120;
+            arg120.energy = exp( sqrt( POW2(i) + POW2(j) ) * (World::CVSectorLength * -2.8) / World::CVSectorLength ) * _carBlast;
             arg120.pos = vec3d(i, 0, j) * 300.0 + _position.X0Z();
             arg120.unit = this;
 
@@ -205,9 +205,9 @@ void NC_STACK_ypacar::DoKamikaze()
                             {
                                 if ( !v63 )
                                 {
-                                    yw_arg177 arg177;
+                                    TRoboDestroyed arg177;
                                     arg177.bact = v19;
-                                    arg177.field_4 = _owner;
+                                    arg177.killerOwner = _owner;
 
                                     _world->HandleRoboDestroyed(&arg177);
                                 }
@@ -525,7 +525,7 @@ void NC_STACK_ypacar::User_layer(update_msg *arg)
             }
             else
             {
-                ypaworld_arg136 arg136;
+                TRayIntersection arg136;
 
                 arg136.stPos = _old_pos;
                 arg136.vect = _position - _old_pos;
@@ -567,7 +567,7 @@ int NC_STACK_ypacar::AlignVehicleAI(float dtime, vec3d *pNormal)
     else
         v5 = _overeof;
 
-    ypaworld_arg136 arg136;
+    TRayIntersection arg136;
     arg136.stPos = _rotation.AxisY() * v5 + _position - vec3d::OY(50.0);
     arg136.vect = vec3d::OY( _overeof + 110.0 );
     arg136.flags = 0;
@@ -700,7 +700,7 @@ int NC_STACK_ypacar::AlignVehicleUser(float dtime, const vec3d &oldDir)
     t2 += vec3d::OY(_viewer_overeof);
     t3 += vec3d::OY(_viewer_overeof);
 
-    ypaworld_arg136 arg136, arg136_1, arg136_2;
+    TRayIntersection arg136, arg136_1, arg136_2;
 
     arg136.stPos = _position - vec3d::OY(v162 * _viewer_radius);
     arg136.vect = (t1 - arg136.stPos) * v166;
@@ -748,12 +748,12 @@ int NC_STACK_ypacar::AlignVehicleUser(float dtime, const vec3d &oldDir)
 
                     if ( v149 )
                     {
-                        yw_arg180 arg180;
+                        TFFeedbackEffect arg180;
 
-                        arg180.field_8 = arg136.isectPos.x;
-                        arg180.field_C = arg136.isectPos.z;
+                        arg180.pos_x = arg136.isectPos.x;
+                        arg180.pos_z = arg136.isectPos.z;
                         arg180.effects_type = 5;
-                        arg180.field_4 = 1.0;
+                        arg180.strength = 1.0;
 
                         _world->FFeedback_Play(&arg180);
                     }
@@ -806,10 +806,10 @@ int NC_STACK_ypacar::AlignVehicleUser(float dtime, const vec3d &oldDir)
 
                     if ( v149 )
                     {
-                        yw_arg180 arg180;
-                        arg180.field_4 = 1.0;
-                        arg180.field_8 = arg136_1.isectPos.x;
-                        arg180.field_C = arg136_1.isectPos.z;
+                        TFFeedbackEffect arg180;
+                        arg180.strength = 1.0;
+                        arg180.pos_x = arg136_1.isectPos.x;
+                        arg180.pos_z = arg136_1.isectPos.z;
                         arg180.effects_type = 5;
 
                         _world->FFeedback_Play(&arg180);
@@ -848,10 +848,10 @@ int NC_STACK_ypacar::AlignVehicleUser(float dtime, const vec3d &oldDir)
 
                 if ( v149 )
                 {
-                    yw_arg180 arg180;
-                    arg180.field_4 = 1.0;
-                    arg180.field_8 = arg136_2.isectPos.x;
-                    arg180.field_C = arg136_2.isectPos.z;
+                    TFFeedbackEffect arg180;
+                    arg180.strength = 1.0;
+                    arg180.pos_x = arg136_2.isectPos.x;
+                    arg180.pos_z = arg136_2.isectPos.z;
                     arg180.effects_type = 5;
 
                     _world->FFeedback_Play(&arg180);
@@ -871,7 +871,7 @@ int NC_STACK_ypacar::AlignVehicleUser(float dtime, const vec3d &oldDir)
     {
         if ( v167 > 0.0 )
         {
-            ypaworld_arg136 arg136_3;
+            TRayIntersection arg136_3;
             arg136_3.stPos = _position;
 
             arg136_3.vect = _rotation.AxisZ() * _viewer_radius;
@@ -890,10 +890,10 @@ int NC_STACK_ypacar::AlignVehicleUser(float dtime, const vec3d &oldDir)
 
                         if ( v149 )
                         {
-                            yw_arg180 arg180;
-                            arg180.field_4 = 1.0;
-                            arg180.field_8 = arg136_3.isectPos.x;
-                            arg180.field_C = arg136_3.isectPos.z;
+                            TFFeedbackEffect arg180;
+                            arg180.strength = 1.0;
+                            arg180.pos_x = arg136_3.isectPos.x;
+                            arg180.pos_z = arg136_3.isectPos.z;
                             arg180.effects_type = 5;
 
                             _world->FFeedback_Play(&arg180);
@@ -968,7 +968,7 @@ int NC_STACK_ypacar::AlignVehicleUser(float dtime, const vec3d &oldDir)
 
     float v90 = _viewer_overeof * v166 * 0.8;
 
-    ypaworld_arg136 arg136_4;
+    TRayIntersection arg136_4;
     arg136_4.stPos = _position - vec3d::OY(v90);
     arg136_4.vect = vec3d::OY(v90 * 2.0);
     arg136_4.flags = 0;

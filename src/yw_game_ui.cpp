@@ -2741,32 +2741,32 @@ void CreateConfirmWindow(NC_STACK_ypaworld *yw)
 // Sizes the HUD's vector graphics relative to the screen.
 void SetHudLayout(NC_STACK_ypaworld *yw)
 {
-    sklt_wis *wis = &yw->_hud;
+    THudState *wis = &yw->_hud;
 
     float CW, CH;
     GFX::Engine.getAspectCorrection(CW, CH, false);
 
     if ( yw->_screenSize.x >= 512 )
     {
-        wis->field_9E = 8;
-        wis->field_96 = 28;
-        wis->field_92 = (float)yw->_guiTiles[0]->h / ((float)yw->_screenSize.y * CH);
-        wis->field_8E = wis->field_92 * 14.0;
-        wis->field_9A = 28;
+        wis->bar_segments = 8;
+        wis->label_width = 28;
+        wis->line_height = (float)yw->_guiTiles[0]->h / ((float)yw->_screenSize.y * CH);
+        wis->info_height = wis->line_height * 14.0;
+        wis->value_width = 28;
     }
     else
     {
-        wis->field_9E = 6;
-        wis->field_96 = 18;
-        wis->field_92 = (float)yw->_guiTiles[0]->h * 1.5 / ((float)yw->_screenSize.y * CH);
-        wis->field_8E = wis->field_92 * 18.0;
-        wis->field_9A = 18;
+        wis->bar_segments = 6;
+        wis->label_width = 18;
+        wis->line_height = (float)yw->_guiTiles[0]->h * 1.5 / ((float)yw->_screenSize.y * CH);
+        wis->info_height = wis->line_height * 18.0;
+        wis->value_width = 18;
     }
 
-    wis->field_72 = 0;
-    wis->field_8A = (float)(yw->_guiTiles[51]->map[1].w * wis->field_9E + wis->field_9A + wis->field_96) / ((float)yw->_screenSize.x * CW);
+    wis->color_fx = 0;
+    wis->bar_width = (float)(yw->_guiTiles[51]->map[1].w * wis->bar_segments + wis->value_width + wis->label_width) / ((float)yw->_screenSize.x * CW);
 
-    wis->field_72 = 1;
+    wis->color_fx = 1;
 }
 
 void LoadHud(NC_STACK_ypaworld *yw)
@@ -2789,11 +2789,11 @@ void LoadHud(NC_STACK_ypaworld *yw)
         "wireless/triangle.sklt"
     };
 
-    sklt_wis *wis = &yw->_hud;
+    THudState *wis = &yw->_hud;
 
-    *wis = sklt_wis();
+    *wis = THudState();
 
-    wis->field_0 = 1;
+    wis->visible = 1;
 
     Common::Env.SetPrefix("rsrc", "data:");
 
@@ -3813,10 +3813,10 @@ int BottomBarHandleHotkeys(NC_STACK_ypaworld *yw, TInputState *inpt)
     case 25:
         if ( yw->_userUnit != yw->_userRobo )
         {
-            if ( yw->_hud.field_0 )
-                yw->_hud.field_0 = 0;
+            if ( yw->_hud.visible )
+                yw->_hud.visible = 0;
             else
-                yw->_hud.field_0 = 1;
+                yw->_hud.visible = 1;
         }
         break;
 
@@ -4134,7 +4134,7 @@ void CloseExitMenu(NC_STACK_ypaworld *yw)
 
 void NC_STACK_ypaworld::SituationAnalyzer()
 {
-    yw_arg159 v38;
+    TInfoMessage v38;
     v38.txt = World::GameAnalyzer::Analyze(this);
     v38.unit = 0;
     v38.Priority = 100;
@@ -4187,7 +4187,7 @@ void NotifyReturnToHostStation(NC_STACK_ypaworld *yw)
 {
     if ( yw->_timeStamp - yw->_msgTimestampHSReturn > 35000 )
     {
-        yw_arg159 arg159;
+        TInfoMessage arg159;
         arg159.unit = yw->_userRobo;
         arg159.Priority = 10;
         arg159.MsgID = 39;
@@ -4204,7 +4204,7 @@ void SwitchControlToUnit(NC_STACK_ypaworld *yw, NC_STACK_ypabact *bact1, NC_STAC
     {
         if ( bact1->_status != BACT_STATUS_CREATE && bact1->_status != BACT_STATUS_DEAD && bact1->_status != BACT_STATUS_BEAM )
         {
-            yw->_hud.field_76 = yw->_timeStamp;
+            yw->_hud.switch_time = yw->_timeStamp;
 
             bact2->setBACT_viewer(false);
             bact2->setBACT_inputting(false);
@@ -4227,7 +4227,7 @@ void SwitchControlToUnit(NC_STACK_ypaworld *yw, NC_STACK_ypabact *bact1, NC_STAC
             }
             else
             {
-                yw_arg159 arg159;
+                TInfoMessage arg159;
                 arg159.unit = yw->_userUnit;
                 arg159.Priority = 33;
                 arg159.MsgID = 17;
@@ -4859,18 +4859,18 @@ void EnergyPanelUpdateLayout(NC_STACK_ypaworld *yw)
 
         int v36 = yw->_userRobo->_energy_max;
 
-        yw_arg176 arg176;
+        TReloadRatios arg176;
         arg176.owner = yw->_userRobo->_pSector->owner;
 
         yw->GetReloadRatios(&arg176);
 
         int v32 = yw->_userRobo->_pSector->energy_power;
-        int v33 = yw->_userRobo->_pSector->energy_power * arg176.field_4;
+        int v33 = yw->_userRobo->_pSector->energy_power * arg176.ratioClamped;
 
         int idx = robo->getROBO_absReload();
 
         int v11 = 10 * idx / 100;
-        int v38 = 10 * ( idx * arg176.field_4 ) / 100;
+        int v38 = 10 * ( idx * arg176.ratioClamped ) / 100;
 
         int v13, v34, v37, v35;
 
@@ -4907,7 +4907,7 @@ void EnergyPanelUpdateLayout(NC_STACK_ypaworld *yw)
 
         int x = (up_panel.field_1D4 & 0xFFFF) + v3;
 
-        EnergyPanelDrawReloadGauge(yw, &up_panel.cmdCommands, x, y, v13, v32, v38, v11, arg176.field_4);
+        EnergyPanelDrawReloadGauge(yw, &up_panel.cmdCommands, x, y, v13, v32, v38, v11, arg176.ratioClamped);
 
         int v18 = v41 + x;
         EnergyPanelDrawMainGauge(yw, &up_panel.cmdCommands, v18, y, a4, v34, yw->_userRobo->_energy, v36);
@@ -6489,7 +6489,7 @@ void NC_STACK_ypaworld::ExitMenuHandleInput(TInputState *inpt)
         {
             if ( _levelInfo.State == TLevelInfo::STATE_SAVE )
             {
-                yw_arg159 v18;
+                TInfoMessage v18;
                 v18.unit = 0;
                 v18.Priority = 10;
                 v18.txt = Locale::Text::Feedback(Locale::FEEDBACK_GAMESAVED);
@@ -8049,7 +8049,7 @@ void DrawGameMessages(NC_STACK_ypaworld *yw)
 
 void wis_color(NC_STACK_ypaworld *yw, float x1, float y1, float x2, float y2, SDL_Color *out1, SDL_Color *out2)
 {
-    float v7 = yw->_hud.field_86 * 2.0 + -1.5;
+    float v7 = yw->_hud.pulse_phase * 2.0 + -1.5;
 
     float v18 = fabs(v7 - x1);
     float v17 = fabs(v7 - x2);
@@ -8135,7 +8135,7 @@ void yw_RenderVector2D(NC_STACK_ypaworld *yw, UAskeleton::Data *wire, float posX
     }
 }
 
-void yw_RenderInfoVehicleWire(NC_STACK_ypaworld *yw, sklt_wis *wis, World::TVhclProto *vhcl, float a4, float a5, float a6)
+void yw_RenderInfoVehicleWire(NC_STACK_ypaworld *yw, THudState *wis, World::TVhclProto *vhcl, float a4, float a5, float a6)
 {
     SDL_Color color_25 = yw->GetColor(25);
     SDL_Color color_34 = yw->GetColor(34);
@@ -8144,7 +8144,7 @@ void yw_RenderInfoVehicleWire(NC_STACK_ypaworld *yw, sklt_wis *wis, World::TVhcl
 
     wis_color_func func = NULL;
 
-    if ( wis->field_72 )
+    if ( wis->color_fx )
         func = wis_color;
 
     if ( vhcl->wireframe )
@@ -8152,7 +8152,7 @@ void yw_RenderInfoVehicleWire(NC_STACK_ypaworld *yw, sklt_wis *wis, World::TVhcl
 
     if ( wairufureimu )
     {
-        float v15 = wis->field_92 * 6.0 * 0.8;
+        float v15 = wis->line_height * 6.0 * 0.8;
 
         float a9 = 0.1;
 
@@ -8172,7 +8172,7 @@ void yw_RenderInfoVehicleWire(NC_STACK_ypaworld *yw, sklt_wis *wis, World::TVhcl
 
 
 
-void RenderInfoBar(NC_STACK_ypaworld *yw, sklt_wis *wis, CmdStream *cur, float x, float y, int value, int maxval, int valCH, int valBG, const std::string &txt1, const std::string &txt2, int flag = 0)
+void RenderInfoBar(NC_STACK_ypaworld *yw, THudState *wis, CmdStream *cur, float x, float y, int value, int maxval, int valCH, int valBG, const std::string &txt1, const std::string &txt2, int flag = 0)
 {
     int wnd_xpos = 0;
     int wnd_xpos2 = 0;
@@ -8194,16 +8194,16 @@ void RenderInfoBar(NC_STACK_ypaworld *yw, sklt_wis *wis, CmdStream *cur, float x
     int v51 = (yw->_screenSize.x / 2) * x;
     int v50 = (yw->_screenSize.y / 2) * y;
 
-    int v49 = yw->_guiTiles[51]->map[valCH].w * wis->field_9E;
+    int v49 = yw->_guiTiles[51]->map[valCH].w * wis->bar_segments;
 
 
     FontUA::set_txtColor(cur, yw->_iniColors[65].r, yw->_iniColors[65].g, yw->_iniColors[65].b);
 
-    v51 -= (wis->field_9A + wis->field_96 + v49) / 2;
+    v51 -= (wis->value_width + wis->label_width + v49) / 2;
 
     if ( !txt1.empty() )
     {
-        int v19 = (wis->field_96 / 2) + v51;
+        int v19 = (wis->label_width / 2) + v51;
         int v20 = v50;
 
         if ( !wnd_vis || v19 <= wnd_xpos || v19 >= wnd_xpos2 || v20 <= wnd_ypos || v20 >= wnd_ypos2 )
@@ -8219,7 +8219,7 @@ void RenderInfoBar(NC_STACK_ypaworld *yw, sklt_wis *wis, CmdStream *cur, float x
 
     FontUA::select_tileset(cur, 51);
 
-    v51 += wis->field_96;
+    v51 += wis->label_width;
 
     FontUA::set_center_xpos(cur, v51);
     FontUA::set_center_ypos(cur, v50 - (yw->_guiTiles[51]->h / 2));
@@ -8227,9 +8227,9 @@ void RenderInfoBar(NC_STACK_ypaworld *yw, sklt_wis *wis, CmdStream *cur, float x
     int v29 = v51 + (yw->_guiTiles[51]->map[1].w / 2);
     int v30 = v50 + (yw->_guiTiles[51]->h >> 1);
 
-    for (int i = 1; i <= wis->field_9E; i++)
+    for (int i = 1; i <= wis->bar_segments; i++)
     {
-        int v35 = i * (maxval / wis->field_9E) - (maxval / wis->field_9E) / 2;
+        int v35 = i * (maxval / wis->bar_segments) - (maxval / wis->bar_segments) / 2;
 
         if ( !wnd_vis || v29 <= wnd_xpos || v29 >= wnd_xpos2 || v30 <= wnd_ypos || v30 >= wnd_ypos2 )
         {
@@ -8252,11 +8252,11 @@ void RenderInfoBar(NC_STACK_ypaworld *yw, sklt_wis *wis, CmdStream *cur, float x
         v29 += yw->_guiTiles[51]->map[1].w;
     }
 
-    v51 += wis->field_9A + v49;
+    v51 += wis->value_width + v49;
 
     if ( !txt2.empty() )
     {
-        int v37 = v51 - (wis->field_9A / 2);
+        int v37 = v51 - (wis->value_width / 2);
         int v38 = v50;
 
         if ( !wnd_vis || v37 <= wnd_xpos || v37 >= wnd_xpos2 || v38 <= wnd_ypos || v38 >= wnd_ypos2 )
@@ -8271,7 +8271,7 @@ void RenderInfoBar(NC_STACK_ypaworld *yw, sklt_wis *wis, CmdStream *cur, float x
     }
 }
 
-void yw_RenderInfoLifebar(NC_STACK_ypaworld *yw, sklt_wis *wis, CmdStream *cur, NC_STACK_ypabact *bact, World::TVhclProto *vhcl, float xpos, float ypos)
+void yw_RenderInfoLifebar(NC_STACK_ypaworld *yw, THudState *wis, CmdStream *cur, NC_STACK_ypabact *bact, World::TVhclProto *vhcl, float xpos, float ypos)
 {
     int a6a;
     int v10;
@@ -8291,7 +8291,7 @@ void yw_RenderInfoLifebar(NC_STACK_ypaworld *yw, sklt_wis *wis, CmdStream *cur, 
 }
 
 
-void yw_RenderInfoShieldbar(NC_STACK_ypaworld *yw, sklt_wis *wis, CmdStream *cur, NC_STACK_ypabact *bact, World::TVhclProto *vhcl, float xpos, float ypos)
+void yw_RenderInfoShieldbar(NC_STACK_ypaworld *yw, THudState *wis, CmdStream *cur, NC_STACK_ypabact *bact, World::TVhclProto *vhcl, float xpos, float ypos)
 {
     int v10;
 
@@ -8305,19 +8305,19 @@ void yw_RenderInfoShieldbar(NC_STACK_ypaworld *yw, sklt_wis *wis, CmdStream *cur
 
 
 
-void yw_RenderInfoVehicleName(NC_STACK_ypaworld *yw, sklt_wis *wis, CmdStream *cur, const std::string &name, float xpos, float ypos)
+void yw_RenderInfoVehicleName(NC_STACK_ypaworld *yw, THudState *wis, CmdStream *cur, const std::string &name, float xpos, float ypos)
 {
     int v29 = (yw->_screenSize.x / 2) * xpos;
     int v33 = (yw->_screenSize.y / 2) * ypos;
 
-    int v31 = yw->_screenSize.x * wis->field_8A;
+    int v31 = yw->_screenSize.x * wis->bar_width;
 
     SDL_Color v21 = yw->GetColor(25);
     SDL_Color a11 = yw->GetColor(34);
 
     wis_color_func a13;
 
-    if ( wis->field_72 )
+    if ( wis->color_fx )
         a13 = wis_color;
     else
         a13 = NULL;
@@ -8365,20 +8365,20 @@ void yw_RenderInfoVehicleName(NC_STACK_ypaworld *yw, sklt_wis *wis, CmdStream *c
 
         float a4 = (1.0 / (float)yw->_screenSize.y) * 2.0 + ypos;
 
-        float a10 = wis->field_92 * 1.2;
+        float a10 = wis->line_height * 1.2;
 
-        yw_RenderVector2D(yw, wis->sklts_intern[2], xpos, a4, 1.0, 0.0, 0.0, 1.0, wis->field_8A, a10, a11, NULL, a13, true);
+        yw_RenderVector2D(yw, wis->sklts_intern[2], xpos, a4, 1.0, 0.0, 0.0, 1.0, wis->bar_width, a10, a11, NULL, a13, true);
     }
 }
 
 
-void yw_RenderInfoWeaponWire(NC_STACK_ypaworld *yw, sklt_wis *wis, World::TWeapProto *wpn, float xpos, float ypos)
+void yw_RenderInfoWeaponWire(NC_STACK_ypaworld *yw, THudState *wis, World::TWeapProto *wpn, float xpos, float ypos)
 {
     UAskeleton::Data *wairufureimu = NULL;
 
     wis_color_func func;
 
-    if ( wis->field_72 )
+    if ( wis->color_fx )
         func = wis_color;
     else
         func = NULL;
@@ -8405,7 +8405,7 @@ void yw_RenderInfoWeaponWire(NC_STACK_ypaworld *yw, sklt_wis *wis, World::TWeapP
     }
 }
 
-void yw_RenderInfoReloadbar(NC_STACK_ypaworld *yw, sklt_wis *wis, CmdStream *cur, NC_STACK_ypabact *bact, World::TWeapProto *wpn, float xpos, float ypos)
+void yw_RenderInfoReloadbar(NC_STACK_ypaworld *yw, THudState *wis, CmdStream *cur, NC_STACK_ypabact *bact, World::TWeapProto *wpn, float xpos, float ypos)
 {
     if ( wpn )
     {
@@ -8441,7 +8441,7 @@ void yw_RenderInfoReloadbar(NC_STACK_ypaworld *yw, sklt_wis *wis, CmdStream *cur
     }
 }
 
-void yw_RenderInfoWeaponInf(NC_STACK_ypaworld *yw, sklt_wis *wis, CmdStream *cur, NC_STACK_ypabact *bact, World::TVhclProto *vhcl, World::TWeapProto *weap, float xpos, float ypos)
+void yw_RenderInfoWeaponInf(NC_STACK_ypaworld *yw, THudState *wis, CmdStream *cur, NC_STACK_ypabact *bact, World::TVhclProto *vhcl, World::TWeapProto *weap, float xpos, float ypos)
 {
     if ( weap )
     {
@@ -8457,7 +8457,7 @@ void yw_RenderInfoWeaponInf(NC_STACK_ypaworld *yw, sklt_wis *wis, CmdStream *cur
 }
 
 
-void yw_RenderHUDInfo(NC_STACK_ypaworld *yw, sklt_wis *wis, CmdStream *cur, float xpos, float ypos, NC_STACK_ypabact *bact, int vhclid, int flag)
+void yw_RenderHUDInfo(NC_STACK_ypaworld *yw, THudState *wis, CmdStream *cur, float xpos, float ypos, NC_STACK_ypabact *bact, int vhclid, int flag)
 {
 //  yw->GetColor(25);
 //  yw->GetColor(34);
@@ -8482,7 +8482,7 @@ void yw_RenderHUDInfo(NC_STACK_ypaworld *yw, sklt_wis *wis, CmdStream *cur, floa
 
     if ( flag & 0x10 )
     {
-        a6a = (yw->_timeStamp - wis->field_76 - 200) / 180.0;
+        a6a = (yw->_timeStamp - wis->switch_time - 200) / 180.0;
 
         if ( a6a <= 0.0 )
             return;
@@ -8509,16 +8509,16 @@ void yw_RenderHUDInfo(NC_STACK_ypaworld *yw, sklt_wis *wis, CmdStream *cur, floa
         yw_RenderInfoVehicleWire(yw, wis, vhcl, xpos, ypos, a6a);
 
     if ( v11 )
-        yw_RenderInfoLifebar(yw, wis, cur, bact, vhcl, xpos,   wis->field_92 * 7.0 + ypos  );
+        yw_RenderInfoLifebar(yw, wis, cur, bact, vhcl, xpos,   wis->line_height * 7.0 + ypos  );
 
     if ( v22 )
-        yw_RenderInfoShieldbar(yw, wis, cur, bact, vhcl, xpos,   wis->field_92 * 9.0 + ypos  );
+        yw_RenderInfoShieldbar(yw, wis, cur, bact, vhcl, xpos,   wis->line_height * 9.0 + ypos  );
 
     if ( v25 )
     {
         if ( vhcl->model_id != BACT_TYPES_GUN )
         {
-            float v15 = wis->field_92 * 12.0 + ypos;
+            float v15 = wis->line_height * 12.0 + ypos;
 
             yw_RenderInfoVehicleName(yw, wis, cur, yw->GetVehicleName(*vhcl), xpos, v15);
         }
@@ -8528,21 +8528,21 @@ void yw_RenderHUDInfo(NC_STACK_ypaworld *yw, sklt_wis *wis, CmdStream *cur, floa
     {
         if ( v23 )
         {
-            yw_RenderInfoWeaponWire(yw, wis, weap, xpos,   ypos - wis->field_92 * 9.0);
+            yw_RenderInfoWeaponWire(yw, wis, weap, xpos,   ypos - wis->line_height * 9.0);
 
-            yw_RenderInfoReloadbar(yw, wis, cur, bact, weap, xpos,  ypos - wis->field_92 * 7.0);
+            yw_RenderInfoReloadbar(yw, wis, cur, bact, weap, xpos,  ypos - wis->line_height * 7.0);
 
-            yw_RenderInfoWeaponInf(yw, wis, cur, bact, vhcl, weap, xpos,  ypos - wis->field_92 * 9.0);
+            yw_RenderInfoWeaponInf(yw, wis, cur, bact, vhcl, weap, xpos,  ypos - wis->line_height * 9.0);
         }
     }
 }
 
-void DrawTechUpgradeBuildingName(NC_STACK_ypaworld *yw, sklt_wis *wis, CmdStream *cur, float a4, float a5, int bldId, int a7)
+void DrawTechUpgradeBuildingName(NC_STACK_ypaworld *yw, THudState *wis, CmdStream *cur, float a4, float a5, int bldId, int a7)
 {
     //yw->GetColor(25);
     //yw->GetColor(34);
 
-    if ( !(a7 & 0x10) || (yw->_timeStamp - wis->field_76 - 200) / 180.0 > 0.0 )
+    if ( !(a7 & 0x10) || (yw->_timeStamp - wis->switch_time - 200) / 180.0 > 0.0 )
     {
         if ( yw->_timeStamp / 200 & 1 )
         {
@@ -8562,7 +8562,7 @@ int DrawTechUpgrade(NC_STACK_ypaworld *yw)
     //Tech update draw
     GFX::Engine.SetClipNormalized( Common::FRect(-1.0, -1.0, 1.0, 1.0) );
 
-    sklt_wis *wis = &yw->_hud;
+    THudState *wis = &yw->_hud;
 
     CmdStream buf;
     buf.reserve(1024);
@@ -8593,7 +8593,7 @@ int DrawTechUpgrade(NC_STACK_ypaworld *yw)
             return 0;
     }
 
-    wis->field_86 = 1.0;
+    wis->pulse_phase = 1.0;
 
     int v10 = yw->_techUpgrades[ yw->_upgradeId ].Type;
 
@@ -8621,7 +8621,7 @@ int DrawTechUpgrade(NC_STACK_ypaworld *yw)
 
 void wis_color2(NC_STACK_ypaworld *yw, float x1, float y1, float x2, float y2, SDL_Color *out1, SDL_Color *out2)
 {
-    float v7 = yw->_hud.field_86 * 6.28;
+    float v7 = yw->_hud.pulse_phase * 6.28;
 
     float v24 = cos(v7);
     float v22 = sin(v7);
@@ -8655,13 +8655,13 @@ void wis_color2(NC_STACK_ypaworld *yw, float x1, float y1, float x2, float y2, S
 
 
 
-void yw_RenderHUDCompass(NC_STACK_ypaworld *yw, sklt_wis *wis)
+void yw_RenderHUDCompass(NC_STACK_ypaworld *yw, THudState *wis)
 {
-    float v90 = (yw->_timeStamp - wis->field_76) / 180.0;
+    float v90 = (yw->_timeStamp - wis->switch_time) / 180.0;
 
     wis_color_func func = NULL;
 
-    if ( wis->field_72 )
+    if ( wis->color_fx )
         func = wis_color2;
 
     float xx = yw->_viewerRotation.m02;
@@ -8866,7 +8866,7 @@ void yw_RenderHUDVectorGFX(NC_STACK_ypaworld *yw, CmdStream *cur)
 
     GFX::Engine.SetInverseClipCentered(v7);
 
-    sklt_wis *wis = &yw->_hud;
+    THudState *wis = &yw->_hud;
 
     yw_RenderHUDCompass(yw, wis);
 
@@ -9121,26 +9121,26 @@ void DrawHud(NC_STACK_ypaworld *yw)
             FontUA::FormateCenteredSkipableItem(yw->_guiTiles[15], &buf, msg, yw->_screenSize.x);
         }
     }
-    else if ( yw->_userUnit != yw->_userRobo && yw->_hud.field_0 )
+    else if ( yw->_userUnit != yw->_userRobo && yw->_hud.visible )
     {
         yw_RenderHUDRadare(yw);
 
         if ( yw->_userUnit->_energy >= yw->_userUnit->_energy_max )
         {
-            yw->_hud.field_82 = 3000;
+            yw->_hud.pulse_period = 3000;
         }
         else
         {
-            yw->_hud.field_82 = 3000 * yw->_userUnit->_energy / yw->_userUnit->_energy_max;
+            yw->_hud.pulse_period = 3000 * yw->_userUnit->_energy / yw->_userUnit->_energy_max;
 
-            if ( yw->_hud.field_82 < 200 )
-                yw->_hud.field_82 = 200;
+            if ( yw->_hud.pulse_period < 200 )
+                yw->_hud.pulse_period = 200;
         }
 
-        yw->_hud.field_86 += (float)yw->_frameTime / (float)yw->_hud.field_82;
+        yw->_hud.pulse_phase += (float)yw->_frameTime / (float)yw->_hud.pulse_period;
 
-        if ( yw->_hud.field_86 >= 1.0 )
-            yw->_hud.field_86 = 0;
+        if ( yw->_hud.pulse_phase >= 1.0 )
+            yw->_hud.pulse_phase = 0;
 
         yw_RenderHUDVectorGFX(yw, &buf);
     }
@@ -9167,7 +9167,7 @@ void DrawHud(NC_STACK_ypaworld *yw)
 
 void HudColorRadialPulse(NC_STACK_ypaworld *yw, float x1, float y1, float x2, float y2, SDL_Color *out1, SDL_Color *out2)
 {
-    float v15 = yw->_hud.field_86 * 2.0 - 1.0;
+    float v15 = yw->_hud.pulse_phase * 2.0 - 1.0;
 
     float v17 = fabs( v15 - sqrt(POW2(x1) + POW2(y1)) );
     float v16 = fabs( v15 - sqrt(POW2(x2) + POW2(y2)) );
@@ -9198,7 +9198,7 @@ void HudColorTimeBlend(NC_STACK_ypaworld *yw, float x1, float y1, float x2, floa
     int v7 = yw->_timeStamp % 300;
     float v9 = v7 / 30000.0;
 
-    sklt_wis *v8 = &yw->_hud;
+    THudState *v8 = &yw->_hud;
 
     int v10 = (v8->cl2_g - v8->cl1_g) * v9 + v8->cl1_g;
     int v11 = (v8->cl2_r - v8->cl1_r) * v9 + v8->cl1_r;
@@ -9211,14 +9211,14 @@ void HudColorTimeBlend(NC_STACK_ypaworld *yw, float x1, float y1, float x2, floa
     *out2 = GFX::Engine.Color(v13, v15, v16);
 }
 
-void yw_RenderHUDTarget(NC_STACK_ypaworld *yw, sklt_wis *wis)
+void yw_RenderHUDTarget(NC_STACK_ypaworld *yw, THudState *wis)
 {
     UAskeleton::Data *mg_wure = NULL;
     UAskeleton::Data *hud_wure = NULL;
     UAskeleton::Data *wpn_wure = NULL;
     UAskeleton::Data *wpn_wure2 = NULL;
 
-    float v86 = (yw->_timeStamp - wis->field_76 - 350) / 200.0;
+    float v86 = (yw->_timeStamp - wis->switch_time - 350) / 200.0;
 
     if ( v86 > 0.0 )
     {
@@ -9259,15 +9259,15 @@ void yw_RenderHUDTarget(NC_STACK_ypaworld *yw, sklt_wis *wis)
 
         if ( yw->_guiVisor.field_18 )
         {
-            if ( yw->_guiVisor.field_18 != wis->field_7E )
+            if ( yw->_guiVisor.field_18 != wis->target )
             {
-                wis->field_7E = yw->_guiVisor.field_18;
-                wis->field_7A = yw->_timeStamp;
+                wis->target = yw->_guiVisor.field_18;
+                wis->target_time = yw->_timeStamp;
             }
         }
         else
         {
-            wis->field_7E = NULL;
+            wis->target = NULL;
         }
 
         if ( hud_wure )
@@ -9290,12 +9290,12 @@ void yw_RenderHUDTarget(NC_STACK_ypaworld *yw, sklt_wis *wis)
 
                 wis_color_func func;
 
-                if ( wis->field_72 )
+                if ( wis->color_fx )
                     func = HudColorRadialPulse;
                 else
                     func = NULL;
 
-                sklt_wis *v19 = &yw->_hud;
+                THudState *v19 = &yw->_hud;
 
                 v19->cl1_r = v16.r;
                 v19->cl1_g = v16.g;
@@ -9320,7 +9320,7 @@ void yw_RenderHUDTarget(NC_STACK_ypaworld *yw, sklt_wis *wis)
             {
                 for (int i = 0; i < 2; i++)
                 {
-                    v51[i] = (yw->_timeStamp - wis->field_7A) / 200.0;
+                    v51[i] = (yw->_timeStamp - wis->target_time) / 200.0;
 
                     if ( v51[i] > 1.0 )
                         v51[i] = 1.0;
@@ -9329,7 +9329,7 @@ void yw_RenderHUDTarget(NC_STACK_ypaworld *yw, sklt_wis *wis)
                 a11 = yw->GetColor(27);
                 v27 = yw->GetColor(36);
 
-                if ( wis->field_72 )
+                if ( wis->color_fx )
                     func = HudColorTimeBlend;
                 else
                     func = NULL;
@@ -9342,7 +9342,7 @@ void yw_RenderHUDTarget(NC_STACK_ypaworld *yw, sklt_wis *wis)
                 v27 = yw->GetColor(28);
                 a11 = yw->GetColor(37);
 
-                if ( wis->field_72 )
+                if ( wis->color_fx )
                     func = HudColorRadialPulse;
                 else
                     func = NULL;
@@ -9384,7 +9384,7 @@ void yw_RenderHUDTarget(NC_STACK_ypaworld *yw, sklt_wis *wis)
                 }
                 else if ( v51[i] >= 1.0 )
                 {
-                    v85 = (yw->_timeStamp - wis->field_7A) * 0.001 * 6.282;
+                    v85 = (yw->_timeStamp - wis->target_time) * 0.001 * 6.282;
                 }
                 else
                 {
@@ -9997,7 +9997,7 @@ int NC_STACK_ypaworld::yw_MouseFindCreationPoint(TClickBoxInf *winp)
 
                 vec3d v37 = corrected.Transpose().Transform(v55);
 
-                ypaworld_arg136 arg149;
+                TRayIntersection arg149;
                 arg149.stPos = _viewerPosition;
                 arg149.vect = v37;
                 arg149.flags = 0;
@@ -10132,7 +10132,7 @@ int NC_STACK_ypaworld::UserActBeamCheck()
     float v20 = 100000.0;
     float v19 = -100000.0;
 
-    ypaworld_arg136 arg136;
+    TRayIntersection arg136;
     arg136.vect.x = 0;
     arg136.vect.y = 50000.0;
     arg136.vect.z = 0;
@@ -10394,15 +10394,15 @@ void NC_STACK_ypaworld::yw_3D_MouseSelect(TClickBoxInf *winp)
 {
     UpdateMouseVector(winp);
 
-    yw_arg150 arg150;
-    arg150.field_24 = NULL;
+    TUnitRayQuery arg150;
+    arg150.hitUnit = NULL;
     arg150.pos = _viewerPosition;
-    arg150.field_18 = _mouseVector * _normalVizLimit;
+    arg150.vect = _mouseVector * _normalVizLimit;
     arg150.unit = _viewerBact;
 
-    ypaworld_arg136 arg149;
+    TRayIntersection arg149;
     arg149.stPos = arg150.pos;
-    arg149.vect = arg150.field_18;
+    arg149.vect = arg150.vect;
     arg149.flags = 0;
 
     IntersectLongRay(&arg149);
@@ -10420,11 +10420,11 @@ void NC_STACK_ypaworld::yw_3D_MouseSelect(TClickBoxInf *winp)
         v27 = _mouseSelDistance;
     }
 
-    if ( arg150.field_24 )
+    if ( arg150.hitUnit )
     {
         _guiActFlags |= 0x20;
 
-        _mouseSelDistance = arg150.field_28;
+        _mouseSelDistance = arg150.distance;
 
         v28 = _mouseSelDistance;
     }
@@ -10455,13 +10455,13 @@ void NC_STACK_ypaworld::yw_3D_MouseSelect(TClickBoxInf *winp)
     {
         int v20 = 0;
 
-        if ( arg150.field_24->_status == BACT_STATUS_CREATE || arg150.field_24->_status == BACT_STATUS_DEAD || arg150.field_24->_status == BACT_STATUS_BEAM || arg150.field_24->_bact_type == BACT_TYPES_MISSLE )
+        if ( arg150.hitUnit->_status == BACT_STATUS_CREATE || arg150.hitUnit->_status == BACT_STATUS_DEAD || arg150.hitUnit->_status == BACT_STATUS_BEAM || arg150.hitUnit->_bact_type == BACT_TYPES_MISSLE )
             v20 = 1;
 
         if ( v20 )
             _guiActFlags &= ~0x20;
         else
-            _bactOnMouse = arg150.field_24;
+            _bactOnMouse = arg150.hitUnit;
     }
 }
 

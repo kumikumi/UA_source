@@ -328,7 +328,7 @@ void NC_STACK_ypaflyer::AI_layer3(update_msg *arg)
 
         //printf(" %f %f %f\n", bact->field_639.x, bact->field_639.y, bact->field_639.z);
 
-        ypaworld_arg136 arg136;
+        TRayIntersection arg136;
         arg136.isect = 0;
         arg136.flags = 0;
         arg136.stPos = _old_pos;
@@ -341,7 +341,7 @@ void NC_STACK_ypaflyer::AI_layer3(update_msg *arg)
         else
             arg136.vect *= 300.0 / v89;
 
-        ypaworld_arg136 arg136_1;
+        TRayIntersection arg136_1;
 
         arg136_1.isect = 0;
         arg136_1.flags = 0;
@@ -357,7 +357,7 @@ void NC_STACK_ypaflyer::AI_layer3(update_msg *arg)
             _world->IntersectRay(&arg136_1);
         }
 
-        ypaworld_arg136 arg136_2;
+        TRayIntersection arg136_2;
 
         arg136_2.isect = 0;
         arg136_2.flags = 0;
@@ -447,7 +447,7 @@ void NC_STACK_ypaflyer::AI_layer3(update_msg *arg)
                 _status_flg |= BACT_STFLAG_DODGE_LEFT;
         }
 
-        ypaworld_arg136 arg136_3;
+        TRayIntersection arg136_3;
 
         arg136_3.stPos = _old_pos;
 
@@ -676,7 +676,7 @@ void NC_STACK_ypaflyer::AI_layer3(update_msg *arg)
 
                 SetState(&arg78);
 
-                ypaworld_arg136 arg136_4;
+                TRayIntersection arg136_4;
                 arg136_4.stPos = _position;
                 arg136_4.vect = vec3d::OY(_overeof + 50.0);
                 arg136_4.flags = 0;
@@ -756,7 +756,7 @@ void NC_STACK_ypaflyer::User_layer(update_msg *arg)
         }
         else
         {
-            ypaworld_arg136 arg136;
+            TRayIntersection arg136;
 
             arg136.stPos = _position;
             arg136.vect.z = 0;
@@ -934,7 +934,7 @@ void NC_STACK_ypaflyer::User_layer(update_msg *arg)
         {
             vec3d tmp(0.0, 0.0, 0.0);
 
-            yw_137col v43[10];
+            TSphereContact v43[10];
 
             for (int i = 3; i >= 0; i--)
             {
@@ -946,13 +946,13 @@ void NC_STACK_ypaflyer::User_layer(update_msg *arg)
 
                 Move(&arg74);
 
-                ypaworld_arg137 arg137;
+                TSphereCollisionQuery arg137;
 
                 arg137.pos = _position + _rotation.AxisZ() * 0.5 * _viewer_radius;
-                arg137.pos2 = _fly_dir;
+                arg137.dir = _fly_dir;
                 arg137.radius = _viewer_radius;
                 arg137.coll_max = 10;
-                arg137.field_30 = 0;
+                arg137.flags = 0;
                 arg137.collisions = v43;
 
                 _world->FindSphereCollisions(&arg137);
@@ -962,7 +962,7 @@ void NC_STACK_ypaflyer::User_layer(update_msg *arg)
                     tmp = vec3d(0.0, 0.0, 0.0);
 
                     for (int j = arg137.coll_count - 1; j >= 0; j--)
-                        tmp += arg137.collisions[ j ].pos2;
+                        tmp += arg137.collisions[ j ].normal;
 
                     bact_arg88 arg88;
                     if ( tmp.normalise() != 0.0 )
@@ -979,7 +979,7 @@ void NC_STACK_ypaflyer::User_layer(update_msg *arg)
 
                 if ( !v67 )
                 {
-                    ypaworld_arg136 arg136;
+                    TRayIntersection arg136;
                     arg136.stPos = _old_pos;
                     arg136.vect = _position - _old_pos;
                     arg136.flags = 0;
@@ -1011,12 +1011,12 @@ void NC_STACK_ypaflyer::User_layer(update_msg *arg)
 
                         SFXEngine::SFXe.startSound(&_soundcarrier, 5);
 
-                        yw_arg180 arg180;
+                        TFFeedbackEffect arg180;
 
                         arg180.effects_type = 5;
-                        arg180.field_4 = 1.0;
-                        arg180.field_8 = 10.0 * tmp.x + _position.x;
-                        arg180.field_C = 10.0 * tmp.z + _position.z;
+                        arg180.strength = 1.0;
+                        arg180.pos_x = 10.0 * tmp.x + _position.x;
+                        arg180.pos_z = 10.0 * tmp.z + _position.z;
 
                         _world->FFeedback_Play(&arg180);
                     }

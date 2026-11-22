@@ -191,7 +191,7 @@ bool NC_STACK_ypamissile::TubeCollisionTest()
     if ( !a5 )
         a5 = getBACT_viewer();
 
-    yw_130arg arg130;
+    TSectorInfo arg130;
     arg130.pos_x = _old_pos.x;
     arg130.pos_z = _old_pos.z;
     _world->GetSectorInfo(&arg130);
@@ -269,7 +269,7 @@ bool NC_STACK_ypamissile::TubeCollisionTest()
                 if ( _mislType == MISL_BOMB && bct->_position.y < _mislStartHeight )
                     continue;
 
-                World::rbcolls *v82 = bct->getBACT_collNodes();
+                World::TRoboCollSet *v82 = bct->getBACT_collNodes();
 
                 int v7;
                 if ( v82 )
@@ -491,11 +491,11 @@ void NC_STACK_ypamissile::AI_layer3(update_msg *arg)
             {
                 if ( _world->_userRobo->_owner == _owner || !_world->_isNetGame )
                 {
-                    yw_arg129 v25;
+                    TSectorDamage v25;
 
                     v25.pos.x = _fly_dir.x * 5.0 + _position.x;
                     v25.pos.z = _fly_dir.z * 5.0 + _position.z;
-                    v25.field_10 = _energy;
+                    v25.energy = _energy;
                     v25.unit = _mislEmitter;
 
                     ChangeSectorEnergy(&v25);
@@ -558,7 +558,7 @@ void NC_STACK_ypamissile::AI_layer3(update_msg *arg)
             if ( _mislType == MISL_INTERNAL )
                 return;
             
-            ypaworld_arg136 arg136;
+            TRayIntersection arg136;
             arg136.stPos = _old_pos;
             arg136.vect = _position - _old_pos;
             arg136.flags = 0;
@@ -593,11 +593,11 @@ void NC_STACK_ypamissile::AI_layer3(update_msg *arg)
                     {
                         if ( _world->_userRobo->_owner == _owner || !_world->_isNetGame )
                         {
-                            yw_arg129 v25;
+                            TSectorDamage v25;
 
                             v25.pos.x = _fly_dir.x * 5.0 + _position.x;
                             v25.pos.z = _fly_dir.z * 5.0 + _position.z;
-                            v25.field_10 = _energy;
+                            v25.energy = _energy;
                             v25.unit = _mislEmitter;
 
                             ChangeSectorEnergy(&v25);

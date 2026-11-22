@@ -63,12 +63,12 @@ struct baseRender_msg
 };
 
 
-struct base_64arg
+struct TUpdateArgs
 {
     int TimeStamp = 0;
     int DTime = 0;
-    TInputState *field_8 = NULL;
-    int field_C = 0;
+    TInputState *Input = NULL;
+    int AdeCount = 0;
     int field_10 = 0;
 };
 

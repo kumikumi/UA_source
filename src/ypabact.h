@@ -17,7 +17,7 @@ class NC_STACK_ypamissile;
 
 class NC_STACK_ypaworld;
 
-struct yw_arg129;
+struct TSectorDamage;
 
 struct cellArea;
 
@@ -425,7 +425,7 @@ public:
     virtual void NetPredictMotion(update_msg *arg);
     virtual void Release();
     virtual size_t SetStateInternal(setState_msg *arg);
-    virtual void ChangeSectorEnergy(yw_arg129 *arg);
+    virtual void ChangeSectorEnergy(TSectorDamage *arg);
     virtual void DeadTimeUpdate(update_msg *arg);
     virtual void NetInterpolateMotion(update_msg *arg);
     virtual void NetExtrapolateMotion(update_msg *arg);
@@ -513,7 +513,7 @@ public:
     virtual int getBACT_aggression() const
     { return _aggr; }
     
-    virtual World::rbcolls *getBACT_collNodes()
+    virtual World::TRoboCollSet *getBACT_collNodes()
     { return NULL; }
     
     virtual bool getBACT_extraViewer() const

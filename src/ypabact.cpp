@@ -503,7 +503,7 @@ size_t NC_STACK_ypabact::SetParameters(IDVList &stak)
 
 void NC_STACK_ypabact::FixSectorFall()
 {
-    ypaworld_arg136 arg136;
+    TRayIntersection arg136;
     arg136.stPos = vec3d(_position.x, -30000.0, _position.z);
     arg136.vect = vec3d(0.0, 50000.0, 0.0);
     arg136.flags = 0;
@@ -569,7 +569,7 @@ void NC_STACK_ypabact::Update(update_msg *arg)
     static TF::TForm3D bact_cam;
     TF::Engine.SetViewPoint(&bact_cam);
 
-    yw_130arg sect_info;
+    TSectorInfo sect_info;
     sect_info.pos_x = _position.x;
     sect_info.pos_z = _position.z;
 
@@ -725,7 +725,7 @@ void NC_STACK_ypabact::Render(baseRender_msg *arg)
 void NC_STACK_ypabact::SetTarget(setTarget_msg *arg)
 {
     _assess_time = 0;
-    yw_130arg arg130;
+    TSectorInfo arg130;
     
     constexpr float CurSectrLength = World::CVSectorLength + 10.0;
 
@@ -1419,7 +1419,7 @@ void NC_STACK_ypabact::AI_layer3(update_msg *arg)
             break;
         }
 
-        ypaworld_arg136 arg136;
+        TRayIntersection arg136;
 
         arg136.isect = false;
         arg136.stPos = _old_pos;
@@ -1436,7 +1436,7 @@ void NC_STACK_ypabact::AI_layer3(update_msg *arg)
         arg136.isect = false;
         arg136.flags = 0;
 
-        ypaworld_arg136 arg136_1;
+        TRayIntersection arg136_1;
         arg136_1.isect = false;
         arg136_1.flags = 0;
 
@@ -1450,7 +1450,7 @@ void NC_STACK_ypabact::AI_layer3(update_msg *arg)
             _world->IntersectRay(&arg136_1);
         }
 
-        ypaworld_arg136 arg136_2;
+        TRayIntersection arg136_2;
         arg136_2.isect = false;
         arg136_2.flags = 0;
 
@@ -1539,7 +1539,7 @@ void NC_STACK_ypabact::AI_layer3(update_msg *arg)
             v88 = 10.0;
 
 
-        ypaworld_arg136 arg136_3;
+        TRayIntersection arg136_3;
 
         arg136_3.vect.x = (_fly_dir.x * 200.0 * _fly_dir_length) / (v21 / v88);
 
@@ -1764,7 +1764,7 @@ void NC_STACK_ypabact::AI_layer3(update_msg *arg)
                 arg78.newStatus = BACT_STATUS_IDLE;
                 SetState(&arg78);
 
-                ypaworld_arg136 v52;
+                TRayIntersection v52;
                 v52.stPos = _position;
                 v52.vect = vec3d(0.0, _overeof + 50.0, 0.0);
                 v52.flags = 0;
@@ -1837,7 +1837,7 @@ void NC_STACK_ypabact::User_layer(update_msg *arg)
         }
         else
         {
-            ypaworld_arg136 arg136;
+            TRayIntersection arg136;
 
             arg136.stPos = _position;
             arg136.vect = vec3d(0.0, 0.0, 0.0);
@@ -2086,7 +2086,7 @@ void NC_STACK_ypabact::User_layer(update_msg *arg)
         {
             vec3d v81(0.0, 0.0, 0.0);
 
-            yw_137col v43[10];
+            TSphereContact v43[10];
 
             for (int i = 3; i >= 0; i--)
             {
@@ -2098,12 +2098,12 @@ void NC_STACK_ypabact::User_layer(update_msg *arg)
 
                 int v50 = 0;
 
-                ypaworld_arg137 arg137;
+                TSphereCollisionQuery arg137;
                 arg137.pos = _position;
-                arg137.pos2 = _fly_dir;
+                arg137.dir = _fly_dir;
                 arg137.radius = 32.0;
                 arg137.collisions = v43;
-                arg137.field_30 = 0;
+                arg137.flags = 0;
                 arg137.coll_max = 10;
 
                 _world->FindSphereCollisions(&arg137);
@@ -2114,9 +2114,9 @@ void NC_STACK_ypabact::User_layer(update_msg *arg)
 
                     for (int j = arg137.coll_count - 1; j >= 0; j--)
                     {
-                        yw_137col *v31 = &arg137.collisions[ j ];
+                        TSphereContact *v31 = &arg137.collisions[ j ];
 
-                        v81 += v31->pos2;
+                        v81 += v31->normal;
                     }
 
                     bact_arg88 arg88;
@@ -2136,7 +2136,7 @@ void NC_STACK_ypabact::User_layer(update_msg *arg)
 
                 if ( !v50 )
                 {
-                    ypaworld_arg136 arg136;
+                    TRayIntersection arg136;
                     arg136.stPos = _old_pos;
                     arg136.vect = _position - _old_pos;
                     arg136.flags = 0;
@@ -2168,11 +2168,11 @@ void NC_STACK_ypabact::User_layer(update_msg *arg)
 
                         SFXEngine::SFXe.startSound(&_soundcarrier, 5);
 
-                        yw_arg180 arg180;
+                        TFFeedbackEffect arg180;
                         arg180.effects_type = 5;
-                        arg180.field_4 = 1.0;
-                        arg180.field_8 = v81.x * 10.0 + _position.x;
-                        arg180.field_C = v81.z * 10.0 + _position.z;
+                        arg180.strength = 1.0;
+                        arg180.pos_x = v81.x * 10.0 + _position.x;
+                        arg180.pos_z = v81.z * 10.0 + _position.z;
 
                         _world->FFeedback_Play(&arg180);
                     }
@@ -3265,7 +3265,7 @@ size_t NC_STACK_ypabact::LaunchMissile(bact_arg79 *arg)
 
     if ( _oflags & BACT_OFLAG_USERINPT )
     {
-        yw_arg180 v26;
+        TFFeedbackEffect v26;
 
         if ( wproto._weaponFlags & 2 )
             v26.effects_type = 0;
@@ -3296,7 +3296,7 @@ size_t NC_STACK_ypabact::LaunchMissile(bact_arg79 *arg)
             v37 = (i * 2) * v14 / (v13 - 1) - v14;
         }
 
-        ypaworld_arg146 arg147;
+        TUnitSpawn arg147;
         arg147.vehicle_id = arg->weapon;
         arg147.pos = _position + _rotation.Transpose().Transform( vec3d(v37, arg->start_point.y, arg->start_point.z) );
 
@@ -3451,7 +3451,7 @@ size_t NC_STACK_ypabact::LaunchMissile(bact_arg79 *arg)
 
 size_t NC_STACK_ypabact::SetPosition(bact_arg80 *arg)
 {
-    yw_130arg sect_info;
+    TSectorInfo sect_info;
 
     sect_info.pos_x = arg->pos.x;
     sect_info.pos_z = arg->pos.z;
@@ -3522,14 +3522,14 @@ void NC_STACK_ypabact::EnergyInteract(update_msg *arg)
         {
             _energy_time = _clock;
 
-            yw_arg176 arg176;
+            TReloadRatios arg176;
             arg176.owner = _pSector->owner;
 
             _world->GetReloadRatios(&arg176);
 
             float v14 = v16 / 1000.0;
 
-            float denerg = _energy_max * v14 * _pSector->energy_power * arg176.field_4 / 7000.0;
+            float denerg = _energy_max * v14 * _pSector->energy_power * arg176.ratioClamped / 7000.0;
 
             if ( _owner == _pSector->owner )
                 _energy += denerg;
@@ -3757,7 +3757,7 @@ void AnimateScaleFX(NC_STACK_ypabact *bact, int a2)
 
 size_t NC_STACK_ypabact::CrashOrLand(bact_arg86 *arg)
 {
-    yw_137col v58[10];
+    TSphereContact v58[10];
 
     int v85 = 0;
 
@@ -3844,12 +3844,12 @@ size_t NC_STACK_ypabact::CrashOrLand(bact_arg86 *arg)
 
                 if ( _oflags & BACT_OFLAG_VIEWER )
                 {
-                    ypaworld_arg137 arg137;
+                    TSphereCollisionQuery arg137;
                     arg137.pos = _fly_dir * _fly_dir_length * v94 * 6.0 + _position;
-                    arg137.pos2 = _fly_dir;
+                    arg137.dir = _fly_dir;
                     arg137.radius = v84;
                     arg137.collisions = v58;
-                    arg137.field_30 = 0;
+                    arg137.flags = 0;
                     arg137.coll_max = 10;
 
                     _world->FindSphereCollisions(&arg137);
@@ -3863,9 +3863,9 @@ size_t NC_STACK_ypabact::CrashOrLand(bact_arg86 *arg)
 
                         for (int j = arg137.coll_count - 1; j >= 0; j--)
                         {
-                            yw_137col *v25 = &arg137.collisions[ j ];
+                            TSphereContact *v25 = &arg137.collisions[ j ];
 
-                            v98 += v25->pos2;
+                            v98 += v25->normal;
 
                             if ( v98.y > 0.6 )
                                 v24 = 1;
@@ -3907,12 +3907,12 @@ size_t NC_STACK_ypabact::CrashOrLand(bact_arg86 *arg)
                                 if ( fabs(_fly_dir_length) > 7.0 )
                                     SFXEngine::SFXe.startSound(&_soundcarrier, 5);
 
-                                yw_arg180 arg180_1;
+                                TFFeedbackEffect arg180_1;
 
                                 arg180_1.effects_type = 5;
-                                arg180_1.field_4 = 1.0;
-                                arg180_1.field_8 = v98.x * 10.0 + _position.x;
-                                arg180_1.field_C = v98.z * 10.0 + _position.z;
+                                arg180_1.strength = 1.0;
+                                arg180_1.pos_x = v98.x * 10.0 + _position.x;
+                                arg180_1.pos_z = v98.z * 10.0 + _position.z;
 
                                 _world->FFeedback_Play(&arg180_1);
                             }
@@ -3962,7 +3962,7 @@ size_t NC_STACK_ypabact::CrashOrLand(bact_arg86 *arg)
 
                 if ( !v85 )
                 {
-                    ypaworld_arg136 arg136;
+                    TRayIntersection arg136;
                     arg136.stPos = _old_pos;
                     arg136.vect = _position - _old_pos + vec3d(0.0, v90, 0.0);
                     arg136.flags = 0;
@@ -3996,12 +3996,12 @@ size_t NC_STACK_ypabact::CrashOrLand(bact_arg86 *arg)
                                 if ( fabs(_fly_dir_length) > 7.0 )
                                     SFXEngine::SFXe.startSound(&_soundcarrier, 5);
 
-                                yw_arg180 arg180;
+                                TFFeedbackEffect arg180;
 
                                 arg180.effects_type = 5;
-                                arg180.field_4 = 1.0;
-                                arg180.field_8 = a2a.x * 10.0 + _position.x;
-                                arg180.field_C = a2a.z * 10.0 + _position.z;
+                                arg180.strength = 1.0;
+                                arg180.pos_x = a2a.x * 10.0 + _position.x;
+                                arg180.pos_z = a2a.z * 10.0 + _position.z;
 
                                 _world->FFeedback_Play(&arg180);
                             }
@@ -4126,7 +4126,7 @@ size_t NC_STACK_ypabact::CollisionWithBact(int arg)
 
     int v49 = 0;
 
-    World::rbcolls *v46 = getBACT_collNodes();
+    World::TRoboCollSet *v46 = getBACT_collNodes();
 
     if ( _fly_dir_length == 0.0 )
         return 0;
@@ -4135,7 +4135,7 @@ size_t NC_STACK_ypabact::CollisionWithBact(int arg)
 
     int v45 = 0;
 
-    World::rbcolls *v55;
+    World::TRoboCollSet *v55;
 
     for ( NC_STACK_ypabact* &bnode : _pSector->unitsList )
     {
@@ -4251,10 +4251,10 @@ size_t NC_STACK_ypabact::CollisionWithBact(int arg)
 
             _status_flg |= BACT_STFLAG_BCRASH;
 
-            yw_arg180 v40;
-            v40.field_4 = 1.0;
-            v40.field_8 = collisionCenter.x;
-            v40.field_C = collisionCenter.z;
+            TFFeedbackEffect v40;
+            v40.strength = 1.0;
+            v40.pos_x = collisionCenter.x;
+            v40.pos_z = collisionCenter.z;
             v40.effects_type = 5;
 
             _world->FFeedback_Play(&v40);
@@ -4467,7 +4467,7 @@ NC_STACK_ypabact * NC_STACK_ypabact::GetSectorTarget(Common::Point CellId) const
 
 void NC_STACK_ypabact::GetBestSectorPart(vec3d *arg)
 {
-    yw_130arg arg130;
+    TSectorInfo arg130;
     arg130.pos_x = arg->x;
     arg130.pos_z = arg->z;
 
@@ -4500,7 +4500,7 @@ void NC_STACK_ypabact::GetBestSectorPart(vec3d *arg)
 
 void NC_STACK_ypabact::GetForcesRatio(bact_arg92 *arg)
 {
-    yw_130arg arg130;
+    TSectorInfo arg130;
 
     arg->energ1 = 0;
     arg->energ2 = 0;
@@ -5236,7 +5236,7 @@ void NC_STACK_ypabact::StuckFree(update_msg *arg)
 
                     _rotation = mat3x3::RotateY(0.1) * _rotation;
 
-                    ypaworld_arg136 arg136;
+                    TRayIntersection arg136;
                     arg136.stPos = _old_pos;
                     arg136.vect = _position - _old_pos;
                     arg136.flags = 1;
@@ -5268,7 +5268,7 @@ size_t NC_STACK_ypabact::FireMinigun(bact_arg105 *arg)
     float v121 = 0.0;
     vec3d v66;
 
-    yw_130arg arg130;
+    TSectorInfo arg130;
     arg130.pos_x = _position.x;
     arg130.pos_z = _position.z;
 
@@ -5334,7 +5334,7 @@ size_t NC_STACK_ypabact::FireMinigun(bact_arg105 *arg)
                         if ( (_oflags & BACT_OFLAG_USERINPT || cellUnit->_owner != _owner) && (!v107 || cellUnit != _host_station) )
                         {
 
-                            World::rbcolls *v93 = cellUnit->getBACT_collNodes();
+                            World::TRoboCollSet *v93 = cellUnit->getBACT_collNodes();
 
                             int v109;
                             if ( v93 )
@@ -5464,7 +5464,7 @@ size_t NC_STACK_ypabact::FireMinigun(bact_arg105 *arg)
             int v55 = 0;
             int v96 = 0;
 
-            ypaworld_arg136 v59;
+            TRayIntersection v59;
 
             vec3d v80;
 
@@ -5501,7 +5501,7 @@ size_t NC_STACK_ypabact::FireMinigun(bact_arg105 *arg)
 
             if ( v55 )
             {
-                ypaworld_arg146 arg147;
+                TUnitSpawn arg147;
                 arg147.pos = v80;
                 arg147.vehicle_id = _mgun;
 
@@ -5631,7 +5631,7 @@ size_t NC_STACK_ypabact::UserTargeting(bact_arg106 *arg)
 
     if ( _weapon != -1 && !a3a )
     {
-        yw_130arg arg130;
+        TSectorInfo arg130;
         arg130.pos_x = _position.x;
         arg130.pos_z = _position.z;
 
@@ -6451,7 +6451,7 @@ void NC_STACK_ypabact::BeamingTimeUpdate(update_msg *arg)
 
 void NC_STACK_ypabact::StartDestFX(const World::DestFX &fx)
 {
-    ypaworld_arg146 arg146;
+    TUnitSpawn arg146;
 
     arg146.pos = _position;
     arg146.vehicle_id = fx.ModelID;
@@ -6533,14 +6533,14 @@ void NC_STACK_ypabact::CorrectPositionOnLand()
     else
         radius = 32.0;
 
-    yw_137col coltmp[10];
+    TSphereContact coltmp[10];
 
-    ypaworld_arg137 arg137;
+    TSphereCollisionQuery arg137;
     arg137.pos = _position;
-    arg137.pos2 = _rotation.AxisX();
+    arg137.dir = _rotation.AxisX();
     arg137.coll_max = 10;
     arg137.radius = radius;
-    arg137.field_30 = 0;
+    arg137.flags = 0;
     arg137.collisions = coltmp;
 
     _world->FindSphereCollisions(&arg137);
@@ -6551,13 +6551,13 @@ void NC_STACK_ypabact::CorrectPositionOnLand()
 
     for (int i = arg137.coll_count - 1; i >= 0; i-- )
     {
-        yw_137col *clsn = &arg137.collisions[i];
+        TSphereContact *clsn = &arg137.collisions[i];
 
-        if ( clsn->pos2.y < 0.6 )
+        if ( clsn->normal.y < 0.6 )
         {
             vec3d tmp2 = _position - clsn->pos1;
 
-            tmp += clsn->pos2;
+            tmp += clsn->normal;
 
             float v36 = radius - tmp2.length();
 
@@ -6572,23 +6572,23 @@ void NC_STACK_ypabact::CorrectPositionOnLand()
         radius = 32.0;
 
     arg137.pos = _position;
-    arg137.pos2 = -_rotation.AxisX();
+    arg137.dir = -_rotation.AxisX();
     arg137.coll_max = 10;
     arg137.radius = radius;
-    arg137.field_30 = 0;
+    arg137.flags = 0;
     arg137.collisions = coltmp;
 
     _world->FindSphereCollisions(&arg137);
 
     for (int i = arg137.coll_count - 1; i >= 0; i-- )
     {
-        yw_137col *clsn = &arg137.collisions[i];
+        TSphereContact *clsn = &arg137.collisions[i];
 
-        if ( clsn->pos2.y < 0.6 )
+        if ( clsn->normal.y < 0.6 )
         {
             vec3d tmp2 = _position - clsn->pos1;
 
-            tmp += clsn->pos2;
+            tmp += clsn->normal;
 
             float v36 = radius - tmp2.length();
 
@@ -6642,7 +6642,7 @@ void NC_STACK_ypabact::CorrectPositionInLevelBox(void *)
         {
             if ( _bact_type != BACT_TYPES_TANK && _bact_type != BACT_TYPES_CAR )
             {
-                ypaworld_arg136 arg136;
+                TRayIntersection arg136;
 
                 arg136.stPos = _position - vec3d::OY(100.0);
 
@@ -6737,7 +6737,7 @@ void NC_STACK_ypabact::NetUpdate(update_msg *upd)
 {
     ypabact_NetUpdate_VPHACKS(this, upd);
 
-    yw_130arg arg130;
+    TSectorInfo arg130;
     arg130.pos_x = _position.x;
     arg130.pos_z = _position.z;
     if ( !_world->GetSectorInfo(&arg130) )
@@ -6853,7 +6853,7 @@ size_t NC_STACK_ypabact::SetStateInternal(setState_msg *arg)
         {
             if ( _oflags & BACT_OFLAG_USERINPT )
             {
-                yw_arg180 v43;
+                TFFeedbackEffect v43;
                 v43.effects_type = 4;
 
                 _world->FFeedback_Play(&v43);
@@ -7001,7 +7001,7 @@ size_t NC_STACK_ypabact::SetStateInternal(setState_msg *arg)
         {
             if ( _oflags & BACT_OFLAG_USERINPT )
             {
-                yw_arg180 v46;
+                TFFeedbackEffect v46;
                 v46.effects_type = 4;
 
                 _world->FFeedback_Play(&v46);
@@ -7044,7 +7044,7 @@ size_t NC_STACK_ypabact::SetStateInternal(setState_msg *arg)
     {
         if ( _oflags & BACT_OFLAG_USERINPT )
         {
-            yw_arg180 v45;
+            TFFeedbackEffect v45;
             v45.effects_type = 4;
             _world->FFeedback_Play(&v45);
         }
@@ -7076,7 +7076,7 @@ size_t NC_STACK_ypabact::SetStateInternal(setState_msg *arg)
         {
             if ( _oflags & BACT_OFLAG_USERINPT )
             {
-                yw_arg180 v42;
+                TFFeedbackEffect v42;
                 v42.effects_type = 3;
                 _world->FFeedback_Play(&v42);
             }
@@ -7100,7 +7100,7 @@ size_t NC_STACK_ypabact::SetStateInternal(setState_msg *arg)
             {
                 if ( _oflags & BACT_OFLAG_USERINPT )
                 {
-                    yw_arg180 v44;
+                    TFFeedbackEffect v44;
                     v44.effects_type = 4;
                     _world->FFeedback_Play(&v44);
                 }
@@ -7148,13 +7148,13 @@ size_t NC_STACK_ypabact::SetStateInternal(setState_msg *arg)
     return result;
 }
 
-void NC_STACK_ypabact::ChangeSectorEnergy(yw_arg129 *arg)
+void NC_STACK_ypabact::ChangeSectorEnergy(TSectorDamage *arg)
 {
     arg->OwnerID = World::OWNER_RECALC;
 
     _world->DamageSectorBuilding(arg);
 
-    yw_130arg arg130;
+    TSectorInfo arg130;
     arg130.pos_x = arg->pos.x;
     arg130.pos_z = arg->pos.z;
 
@@ -7171,7 +7171,7 @@ void NC_STACK_ypabact::ChangeSectorEnergy(yw_arg129 *arg)
         seMsg.msgID = UAMSG_SECTORENERGY;
         seMsg.owner = _owner;
         seMsg.pos = arg->pos;
-        seMsg.energy = arg->field_10;
+        seMsg.energy = arg->energy;
         seMsg.sectOwner = v5;
 
         if ( arg->unit )
@@ -7388,7 +7388,7 @@ void NC_STACK_ypabact::NetExtrapolateMotion(update_msg *upd)
 
         if ( _status_flg & BACT_STFLAG_LAND )
         {
-            ypaworld_arg136 arg136;
+            TRayIntersection arg136;
             arg136.stPos = _position;
             arg136.vect = _rotation.AxisY() * 200.0;
             arg136.flags = 0;

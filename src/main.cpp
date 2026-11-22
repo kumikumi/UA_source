@@ -118,7 +118,7 @@ int ProcessGameplayFrame(int32_t frameTicks, bool timeFrozen)
 
         world_update_arg.DTime = frameTicks;
         world_update_arg.TimeStamp += frameTicks;
-        world_update_arg.field_8 = &input_states;
+        world_update_arg.Input = &input_states;
 
         draw = false;
         simPendingTicks = 0;
@@ -175,7 +175,7 @@ int ProcessGameplayFrame(int32_t frameTicks, bool timeFrozen)
 
             world_update_arg.DTime = stepTicks;
             world_update_arg.TimeStamp += stepTicks;
-            world_update_arg.field_8 = &input_states;
+            world_update_arg.Input = &input_states;
 
             draw = ypaworld->SimulationStep(&world_update_arg);
 
@@ -208,9 +208,9 @@ int ProcessGameplayFrame(int32_t frameTicks, bool timeFrozen)
             ClearInputEvents(&renderInput);
         }
 
-        base_64arg renderArg = world_update_arg;
+        TUpdateArgs renderArg = world_update_arg;
         renderArg.DTime = frameTicks;
-        renderArg.field_8 = &renderInput;
+        renderArg.Input = &renderInput;
 
         ypaworld->RenderFrame(&renderArg, stepFraction);
     }
@@ -334,9 +334,9 @@ std::string PickReplayFile(uint32_t a1)
     return userdata.snaps[v2];
 }
 
-int RunReplay(base_64arg *arg)
+int RunReplay(TUpdateArgs *arg)
 {
-    if ( (userdata.p_YW->_replayPlayer->field_74 - 3) <= userdata.p_YW->_replayPlayer->frame_id  &&  replayStarted )
+    if ( (userdata.p_YW->_replayPlayer->frame_count - 3) <= userdata.p_YW->_replayPlayer->frame_id  &&  replayStarted )
     {
         ypaworld->StopReplay();
 
@@ -355,48 +355,48 @@ int RunReplay(base_64arg *arg)
 
     ypaworld->PlayReplayFrame(arg);
 
-    yw_arg165 arg165;
-    arg165.field_0 = 0;
+    TReplayControl arg165;
+    arg165.command = 0;
     arg165.frame = 0;
 
     int cont_play = 1;
 
-    if ( arg->field_8->KbdLastHit == Input::KC_N )
+    if ( arg->Input->KbdLastHit == Input::KC_N )
     {
-        arg165.field_0 = 4;
+        arg165.command = 4;
     }
-    else if ( arg->field_8->KbdLastHit == Input::KC_P )
+    else if ( arg->Input->KbdLastHit == Input::KC_P )
     {
-        arg165.field_0 = 2;
+        arg165.command = 2;
     }
-    else if ( arg->field_8->KbdLastHit == Input::KC_R )
+    else if ( arg->Input->KbdLastHit == Input::KC_R )
     {
-        arg165.field_0 = 3;
+        arg165.command = 3;
     }
-    else if ( arg->field_8->KbdLastHit == Input::KC_S )
+    else if ( arg->Input->KbdLastHit == Input::KC_S )
     {
-        arg165.field_0 = 1;
+        arg165.command = 1;
     }
-    else if ( arg->field_8->KbdLastHit == Input::KC_V )
+    else if ( arg->Input->KbdLastHit == Input::KC_V )
     {
         arg165.frame = -10;
-        arg165.field_0 = 7;
+        arg165.command = 7;
     }
-    else if ( arg->field_8->KbdLastHit == Input::KC_B )
+    else if ( arg->Input->KbdLastHit == Input::KC_B )
     {
-        arg165.field_0 = 5;
+        arg165.command = 5;
     }
-    else if ( arg->field_8->KbdLastHit == Input::KC_M )
+    else if ( arg->Input->KbdLastHit == Input::KC_M )
     {
         arg165.frame = 10;
-        arg165.field_0 = 7;
+        arg165.command = 7;
     }
-    else if ( arg->field_8->KbdLastHit == Input::KC_SPACE || arg->field_8->KbdLastHit == Input::KC_ESCAPE )
+    else if ( arg->Input->KbdLastHit == Input::KC_SPACE || arg->Input->KbdLastHit == Input::KC_ESCAPE )
     {
         cont_play = 0;
     }
 
-    if ( arg165.field_0 )
+    if ( arg165.command )
         ypaworld->ControlReplay(&arg165);
 
     return cont_play;
@@ -462,9 +462,9 @@ int ProcessMenuFrame()
         if ( !userdata.SaveBuildProtoState() )
             return 0;
 
-        yw_arg161 v22;
+        TLevelLoadRequest v22;
         v22.lvlID = userdata.envAction.params[0];
-        v22.field_4 = 0;
+        v22.mode = 0;
 
         if ( !ypaworld->AdvancedCreateLevel(&v22) )
         {
@@ -509,9 +509,9 @@ int ProcessMenuFrame()
 
         ypaworld->CloseGameShell();
 
-        yw_arg161 v22;
+        TLevelLoadRequest v22;
         v22.lvlID = userdata.envAction.params[0];
-        v22.field_4 = 0;
+        v22.mode = 0;
 
         GameScreenMode = GAME_SCREEN_MODE_UNKNOWN;
 
@@ -598,7 +598,7 @@ int ProcessNextFrame()
 
     input_states.Period++;
     
-    world_update_arg.field_8 = &input_states;
+    world_update_arg.Input = &input_states;
 
     if ( !gameplay )
     {
@@ -694,7 +694,7 @@ int InitEngines()
     GameScreenMode = GAME_SCREEN_MODE_UNKNOWN;
     userdata.clear();
     input_states = TInputState();
-    world_update_arg = base_64arg();
+    world_update_arg = TUpdateArgs();
 
     if ( !init_classesLists_and_variables() )
     {

@@ -289,7 +289,7 @@ typedef void ( *wis_color_func)(NC_STACK_ypaworld *, float, float, float, float,
 
 int DrawTechUpgrade(NC_STACK_ypaworld *yw);
 void DrawHud(NC_STACK_ypaworld *yw);
-void yw_RenderHUDTarget(NC_STACK_ypaworld *yw, sklt_wis *wis);
+void yw_RenderHUDTarget(NC_STACK_ypaworld *yw, THudState *wis);
 
 void yw_RenderCursorOverUnit(NC_STACK_ypaworld *yw, NC_STACK_ypabact *bact);
 
@@ -305,7 +305,7 @@ void HandleWorldMouse(NC_STACK_ypaworld *yw, TInputState *arg);
 
 
 
-int HandlePause(NC_STACK_ypaworld *yw, base_64arg *arg);
+int HandlePause(NC_STACK_ypaworld *yw, TUpdateArgs *arg);
 void UpdatePlayerInRoboGun(NC_STACK_ypaworld *yw);
 void UpdateSuperItems(NC_STACK_ypaworld *yw);
 void UpdateGates(NC_STACK_ypaworld *yw);

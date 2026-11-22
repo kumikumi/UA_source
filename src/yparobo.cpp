@@ -422,7 +422,7 @@ void NC_STACK_yparobo::InitForce(NC_STACK_ypabact *unit)
     
     if ( v6 > (signed int)v23 )
     {
-        ypaworld_arg146 arg146;
+        TUnitSpawn arg146;
         arg146.vehicle_id = unit->_vehicleID;
         arg146.pos = _position + _roboDockPos;
 
@@ -805,7 +805,7 @@ void NC_STACK_yparobo::TurnRoboAboutOwnUpAxis(float angle)
 
     RotateGunsAroundAxis(_rotation.AxisY(), angle);
 
-    _roboColls.field_0 = angle;
+    _roboColls.lastTurnAngle = angle;
 }
 
 void NC_STACK_yparobo::TurnRoboAboutWorldUpAxis(float angle)
@@ -814,7 +814,7 @@ void NC_STACK_yparobo::TurnRoboAboutWorldUpAxis(float angle)
 
     RotateGunsAroundAxis(vec3d::OY(1.0), angle);
 
-    _roboColls.field_0 = angle;
+    _roboColls.lastTurnAngle = angle;
 }
 
 size_t NC_STACK_yparobo::checkCollisions(float a2)
@@ -831,13 +831,13 @@ size_t NC_STACK_yparobo::checkCollisions(float a2)
 
     int v86 = 0;
 
-    ypaworld_arg136 arg136;
+    TRayIntersection arg136;
 
     for (const World::TRoboColl &rcoll : _roboColls.roboColls)
     {
         if ( !v81 || _primTtype )
         {
-            vec3d tmp = rcoll.field_10;
+            vec3d tmp = rcoll.prev_coll_pos;
             vec3d t = _position + _rotation.Transform( rcoll.coll_pos );
 
             arg136.stPos = tmp;
@@ -868,14 +868,14 @@ size_t NC_STACK_yparobo::checkCollisions(float a2)
 
                     Recoil(&arg88);
 
-                    if ( fabs(_roboColls.field_0) > 0.0 )
+                    if ( fabs(_roboColls.lastTurnAngle) > 0.0 )
                     {
-                        TurnRoboAboutOwnUpAxis(-_roboColls.field_0);
+                        TurnRoboAboutOwnUpAxis(-_roboColls.lastTurnAngle);
 
-                        _roboColls.field_0 = 0;
+                        _roboColls.lastTurnAngle = 0;
                     }
 
-                    yw_130arg arg130;
+                    TSectorInfo arg130;
                     arg130.pos_x = arg136.isectPos.x;
                     arg130.pos_z = arg136.isectPos.z;
 
@@ -883,11 +883,11 @@ size_t NC_STACK_yparobo::checkCollisions(float a2)
 
                     if ( v81 || arg130.pcell->PurposeType == cellArea::PT_NONE )
                     {
-                        yw_arg129 v60;
+                        TSectorDamage v60;
                         v60.pos = arg136.isectPos;
                         v60.unit = NULL;
                         v60.OwnerID = World::OWNER_RECALC;
-                        v60.field_10 = v82 * 15000.0 / a2;
+                        v60.energy = v82 * 15000.0 / a2;
 
                         ChangeSectorEnergy(&v60);
                     }
@@ -905,19 +905,19 @@ size_t NC_STACK_yparobo::checkCollisions(float a2)
 
         if ( (isViewer || (v26 && v79)) && rcoll.robo_coll_radius > 0.01 )
         {
-            vec3d tmp = rcoll.field_10;
+            vec3d tmp = rcoll.prev_coll_pos;
             vec3d t = _position + _rotation.Transform( rcoll.coll_pos );
 
-            ypaworld_arg137 arg137;
+            TSphereCollisionQuery arg137;
             arg137.pos = tmp;
 
             float v83 = (tmp.XZ() - t.XZ()).length();
 
             if ( v83 <= 1.0 )
-                arg137.pos2 = _fly_dir;
+                arg137.dir = _fly_dir;
             else
             {
-                arg137.pos2 = vec3d::X0Z( (t.XZ() - tmp.XZ()) ) / v83;
+                arg137.dir = vec3d::X0Z( (t.XZ() - tmp.XZ()) ) / v83;
 
                 // TYPO??
                 /*arg137.pos2.x = 1.0 / v83 * (t.x - tmp.x);
@@ -925,11 +925,11 @@ size_t NC_STACK_yparobo::checkCollisions(float a2)
                 arg137.pos2.z = 1.0 / v83 * (t.x - tmp.x); */
             }
 
-            yw_137col v57[32];
+            TSphereContact v57[32];
 
             arg137.radius = rcoll.robo_coll_radius;
             arg137.collisions = v57;
-            arg137.field_30 = 0;
+            arg137.flags = 0;
             arg137.coll_max = 32;
 
             _world->FindSphereCollisions(&arg137);
@@ -944,11 +944,11 @@ size_t NC_STACK_yparobo::checkCollisions(float a2)
 
                 for (int j = arg137.coll_count - 1; j >= 0; j--)
                 {
-                    yw_137col *clzn = &arg137.collisions[j];
+                    TSphereContact *clzn = &arg137.collisions[j];
 
-                    ttmp += clzn->pos2;
+                    ttmp += clzn->normal;
 
-                    yw_130arg arg130;
+                    TSectorInfo arg130;
                     arg130.pos_x = clzn->pos1.x;
                     arg130.pos_z = clzn->pos1.z;
 
@@ -956,11 +956,11 @@ size_t NC_STACK_yparobo::checkCollisions(float a2)
 
                     if ( v81 || arg130.pcell->PurposeType == cellArea::PT_NONE )
                     {
-                        yw_arg129 v60;
+                        TSectorDamage v60;
                         v60.pos = clzn->pos1;
                         v60.unit = NULL;
                         v60.OwnerID = World::OWNER_RECALC;
-                        v60.field_10 = v89 / a2;
+                        v60.energy = v89 / a2;
 
                         ChangeSectorEnergy(&v60);
                     }
@@ -983,10 +983,10 @@ size_t NC_STACK_yparobo::checkCollisions(float a2)
 
                 Recoil(&arg88_2);
 
-                if ( fabs(_roboColls.field_0) > 0.0 )
+                if ( fabs(_roboColls.lastTurnAngle) > 0.0 )
                 {
-                    TurnRoboAboutOwnUpAxis(-_roboColls.field_0);
-                    _roboColls.field_0 = 0;
+                    TurnRoboAboutOwnUpAxis(-_roboColls.lastTurnAngle);
+                    _roboColls.lastTurnAngle = 0;
                 }
 
                 _fly_dir_length *= 0.4;
@@ -1019,7 +1019,7 @@ size_t NC_STACK_yparobo::checkCollisions(float a2)
         _status_flg &= ~BACT_STFLAG_UPWRD;
     }
 
-    _roboColls.field_0 = 0;
+    _roboColls.lastTurnAngle = 0;
 
     return 0;
 }
@@ -1044,7 +1044,7 @@ void NC_STACK_yparobo::wallow(update_msg *arg)
 void NC_STACK_yparobo::UpdateCollisionPointPositions()
 {
     for (World::TRoboColl &rcoll : _roboColls.roboColls)
-        rcoll.field_10 = _position + _rotation.Transform( rcoll.coll_pos );
+        rcoll.prev_coll_pos = _position + _rotation.Transform( rcoll.coll_pos );
 }
 
 bool NC_STACK_yparobo::IsNotUserControlled()
@@ -1292,10 +1292,10 @@ int NC_STACK_yparobo::IsCommanderClosestToTarget(NC_STACK_ypabact *bact)
 void NC_STACK_yparobo::doUserCommands(update_msg *arg)
 {
     setTarget_msg arg67;
-    ypaworld_arg146 arg146;
+    TUnitSpawn arg146;
     setState_msg arg78;
     bact_arg109 arg109;
-    ypaworld_arg148 arg148;
+    TBuildingPlacement arg148;
     robo_arg134 arg134;
     bact_arg124 arg124;
 
@@ -1512,9 +1512,9 @@ void NC_STACK_yparobo::doUserCommands(update_msg *arg)
         {
             arg148.owner = _owner;
             arg148.blg_ID = arg->protoID;
-            arg148.field_C = 0;
+            arg148.instant = 0;
             arg148.CellId = arg->target_Sect->CellId;
-            arg148.field_18 = 0;
+            arg148.flags = 0;
             if ( _world->CreateBuilding(&arg148) )
             {
                 _roboEnergyLife -= arg->energy;
@@ -1854,13 +1854,13 @@ void NC_STACK_yparobo::buildRadar(update_msg *arg)
                 }
                 else
                 {
-                    ypaworld_arg148 arg148;
+                    TBuildingPlacement arg148;
 
                     arg148.owner = _owner;
                     arg148.blg_ID = build_id;
                     arg148.CellId = pt;
-                    arg148.field_C = 0;
-                    arg148.field_18 = 0;
+                    arg148.instant = 0;
+                    arg148.flags = 0;
 
                     if ( _world->CreateBuilding(&arg148) )
                     {
@@ -1960,11 +1960,11 @@ void NC_STACK_yparobo::buildPower(update_msg *arg)
     }
     else
     {
-        yw_arg176 arg176;
+        TReloadRatios arg176;
         arg176.owner = _owner;
         _world->GetReloadRatios(&arg176);
 
-        if ( _world->SectorAt( _roboBuildingCellID ).energy_power != 255 && ( arg176.field_4 >= 0.9 || arg176.field_4 <= 0.001) )
+        if ( _world->SectorAt( _roboBuildingCellID ).energy_power != 255 && ( arg176.ratioClamped >= 0.9 || arg176.ratioClamped <= 0.001) )
         {
             int bldid = FindBestBldPowerStation();
 
@@ -2016,12 +2016,12 @@ void NC_STACK_yparobo::buildPower(update_msg *arg)
                     }
                     else
                     {
-                        ypaworld_arg148 arg148;
+                        TBuildingPlacement arg148;
                         arg148.owner = _owner;
                         arg148.blg_ID = bldid;
                         arg148.CellId = pt;
-                        arg148.field_C = 0;
-                        arg148.field_18 = 0;
+                        arg148.instant = 0;
+                        arg148.flags = 0;
 
                         if ( _world->CreateBuilding(&arg148) )
                         {
@@ -2180,13 +2180,13 @@ void NC_STACK_yparobo::buildSafe(update_msg *arg)
                 }
                 else
                 {
-                    ypaworld_arg148 arg148;
+                    TBuildingPlacement arg148;
 
                     arg148.owner = _owner;
                     arg148.blg_ID = build_id;
                     arg148.CellId = pt;
-                    arg148.field_C = 0;
-                    arg148.field_18 = 0;
+                    arg148.instant = 0;
+                    arg148.flags = 0;
 
                     if ( _world->CreateBuilding(&arg148) )
                     {
@@ -2463,7 +2463,7 @@ NC_STACK_ypabact *NC_STACK_yparobo::AllocForce(robo_loct1 *arg)
             v33 = v87;
         }
 
-        ypaworld_arg146 arg146;
+        TUnitSpawn arg146;
         arg146.vehicle_id = v33;
         arg146.pos = _position + _roboDockPos;
 
@@ -2598,7 +2598,7 @@ void NC_STACK_yparobo::buildConquer()
     if ( v20 < 15000 )
         v20 = 15000;
 
-    yw_130arg arg130;
+    TSectorInfo arg130;
     arg130.pos_x = arg92.pos.x;
     arg130.pos_z = arg92.pos.z;
 
@@ -2638,7 +2638,7 @@ void NC_STACK_yparobo::buildConquer()
     if ( enrg > v20 )
         v20 = enrg;
 
-    ypaworld_arg136 arg136;
+    TRayIntersection arg136;
     arg136.stPos = _position + _roboDockPos - vec3d::OY(100.0);
     arg136.vect = vec3d::OY(20000.0);
     arg136.flags = 0;
@@ -2732,7 +2732,7 @@ void NC_STACK_yparobo::buildDefense()
             }
         }
 
-        ypaworld_arg136 arg136;
+        TRayIntersection arg136;
         arg136.stPos = _position + _roboDockPos - vec3d::OY(100.0);
         arg136.vect = vec3d::OY(20000.0);
         arg136.flags = 0;
@@ -2817,7 +2817,7 @@ void NC_STACK_yparobo::buildRobo()
     arg132.priority = _roboVehicleCommandID;
     if ( GetTargetByCommandID(&arg132) )
     {
-        ypaworld_arg136 arg136;
+        TRayIntersection arg136;
         arg136.stPos = _position + _roboDockPos - vec3d::OY(100.0);
         arg136.vect = vec3d::OY(20000.0);
         arg136.flags = 0;
@@ -2882,7 +2882,7 @@ void NC_STACK_yparobo::buildRobo()
 
 void NC_STACK_yparobo::buildReconnoitre()
 {
-    ypaworld_arg136 arg136;
+    TRayIntersection arg136;
     arg136.stPos = _position + _roboDockPos - vec3d::OY(100.0);
     arg136.vect = vec3d::OY(20000.0);
     arg136.flags = 0;
@@ -4097,7 +4097,7 @@ int NC_STACK_yparobo::RateAreaControl(const Common::Point &cellId)
         {
             cellArea &cll = _world->SectorAt( cellId + Common::Point(i, j) );
 
-            yw_arg176 arg176;
+            TReloadRatios arg176;
             arg176.owner = cll.owner;
 
             _world->GetReloadRatios(&arg176);
@@ -4110,9 +4110,9 @@ int NC_STACK_yparobo::RateAreaControl(const Common::Point &cellId)
                 v15 = 3.0;
 
             if ( _owner == cll.owner )
-                v14 += cll.energy_power * arg176.field_4 + v15;
+                v14 += cll.energy_power * arg176.ratioClamped + v15;
             else
-                v14 -= cll.energy_power * arg176.field_4 + v15;
+                v14 -= cll.energy_power * arg176.ratioClamped + v15;
 
             for ( NC_STACK_ypabact* &bct : cll.unitsList )
             {
@@ -4347,7 +4347,7 @@ void NC_STACK_yparobo::AI_checkWorld(update_msg *arg)
         _roboState &= ~ROBOSTATE_FOUNDPLACE;
     }
 
-    yw_arg176 v85;
+    TReloadRatios v85;
     v85.owner = _owner;
     _world->GetReloadRatios(&v85);
 
@@ -4359,7 +4359,7 @@ void NC_STACK_yparobo::AI_checkWorld(update_msg *arg)
             v6 = 0;
     }
 
-    if ( v85.field_4 == 0.0 )
+    if ( v85.ratioClamped == 0.0 )
     {
         if ( _roboEpPower )
             v6 = 1;
@@ -4371,7 +4371,7 @@ void NC_STACK_yparobo::AI_checkWorld(update_msg *arg)
     else
         v93 = 0.89999998;
 
-    if ( _roboEpPower && (v85.field_8 > v93 || v85.field_4 < 0.0001) && v6 )
+    if ( _roboEpPower && (v85.ratioPositive > v93 || v85.ratioClamped < 0.0001) && v6 )
     {
         int v99 = (_wrldSectors.x + _wrldSectors.y) / 20 + 1;
         for (int i = v99; i > 0; i--)
@@ -4799,8 +4799,8 @@ void NC_STACK_yparobo::Die()
         {
             if ( !(_status_flg & BACT_STFLAG_CLEAN) )
             {
-                yw_arg177 arg177;
-                arg177.field_4 = _killer_owner;
+                TRoboDestroyed arg177;
+                arg177.killerOwner = _killer_owner;
                 arg177.bact = this;
 
                 _world->HandleRoboDestroyed(&arg177); //Reown sectors for new owner
@@ -4962,14 +4962,14 @@ void NC_STACK_yparobo::EnergyInteract(update_msg *arg)
 
         _energy_time = _clock;
 
-        yw_arg176 arg176;
+        TReloadRatios arg176;
         arg176.owner = _pSector->owner;
 
         _world->GetReloadRatios(&arg176);
 
         float v64 = _pSector->energy_power;
 
-        float v70 = v65 * v63 * v64 * arg176.field_4;
+        float v70 = v65 * v63 * v64 * arg176.ratioClamped;
 
         if ( IsPlayerRobo() )
         {
@@ -5511,7 +5511,7 @@ bool NC_STACK_yparobo::MakeSquad(const std::vector<int> &VhclIDS, vec3d pos, boo
     size_t curid = 0;
     int col = sqrt(VhclIDS.size()) + 2;
 
-    ypaworld_arg146 arg146;
+    TUnitSpawn arg146;
     arg146.pos.y = pos.y;
     arg146.pos.x = 100.0 * (curid % col - col / 2.0) + pos.x;
     arg146.pos.z = 100.0 * (curid / col) + pos.z;
@@ -5687,7 +5687,7 @@ int NC_STACK_yparobo::placeMessage(robo_arg134 *arg)
     if ( !ShouldPlaceMessage(arg) )
         return 0;
 
-    yw_arg159 v8;
+    TInfoMessage v8;
     v8.Priority = arg->field_14;
     v8.unit = arg->unit;
     v8.MsgID = arg->field_4;
@@ -5870,7 +5870,7 @@ void NC_STACK_yparobo::setROBO_proto(World::TRoboProto *proto)
     
     for (World::TRoboGun &gun : _roboGuns)
     {
-        ypaworld_arg146 gun_req;
+        TUnitSpawn gun_req;
 
         gun_req.pos = _position + _rotation.Transpose().Transform(gun.pos);
 
@@ -6185,7 +6185,7 @@ bool NC_STACK_yparobo::IsPlayerRobo() const
 NC_STACK_yparobo::NC_STACK_yparobo()
 {
     _roboFlotage = 0.;
-    _roboColls = World::rbcolls();
+    _roboColls = World::TRoboCollSet();
     _roboYPos = 0.;
 
     _roboWFlags = 0;

@@ -35,30 +35,30 @@ struct TRoboColl
 {
     float robo_coll_radius = 0.0;
     vec3d coll_pos;
-    vec3d field_10;
+    vec3d prev_coll_pos;
 };
 
-struct rbcolls
+struct TRoboCollSet
 {
-    int field_0 = 0;
+    int lastTurnAngle = 0;
     std::vector<TRoboColl> roboColls;
     
-    rbcolls() {};
+    TRoboCollSet() {};
     
-    rbcolls(const rbcolls &b)
+    TRoboCollSet(const TRoboCollSet &b)
     {
         operator =(b);
     }
     
-    rbcolls(rbcolls &&b)
+    TRoboCollSet(TRoboCollSet &&b)
     {
-        field_0 = b.field_0;
+        lastTurnAngle = b.lastTurnAngle;
         roboColls = std::move(b.roboColls);
     }
     
-    rbcolls &operator=(const rbcolls &b)
+    TRoboCollSet &operator=(const TRoboCollSet &b)
     {
-        field_0 = b.field_0;
+        lastTurnAngle = b.lastTurnAngle;
         roboColls = b.roboColls;
         return *this;
     }
@@ -151,8 +151,8 @@ struct TVhclProto
     std::array<TVhclSound, SND_MAX> sndFX;
     int vo_type = 0;
     float max_pitch = 0.0;
-    int16_t field_1D6D = 0;
-    int16_t field_1D6F = 0;
+    int16_t max_speed_disp = 0;
+    int16_t max_speed = 0;
     int shield = 0;
     int energy = 0;
     int field_1D79 = 0;
@@ -337,7 +337,7 @@ struct TRoboProto
     float robo_viewer_max_side = 0.0;
     std::vector<TRoboGun> guns;
     vec3d dock;
-    rbcolls coll;
+    TRoboCollSet coll;
 
     TRoboProto()
     {}

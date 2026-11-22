@@ -161,7 +161,7 @@ void NC_STACK_ypaufo::AI_layer3(update_msg *arg)
 
                 Move(&arg74);
 
-                ypaworld_arg136 arg136_2;
+                TRayIntersection arg136_2;
                 arg136_2.stPos = _old_pos;
 
                 vec2d ttmp = _position.XZ() - _old_pos.XZ();
@@ -173,7 +173,7 @@ void NC_STACK_ypaufo::AI_layer3(update_msg *arg)
                 else
                     arg136_2.vect = _rotation.AxisZ() * 300.0;
 
-                ypaworld_arg136 arg136;
+                TRayIntersection arg136;
                 arg136.stPos = _position;
                 arg136.vect = vec3d::OY( _height );
 
@@ -438,7 +438,7 @@ void NC_STACK_ypaufo::AI_layer3(update_msg *arg)
 
                 SetState(&arg78);
 
-                ypaworld_arg136 arg136_1;
+                TRayIntersection arg136_1;
 
                 arg136_1.stPos = _position;
                 arg136_1.vect = vec3d::OY(_overeof + 50.0);
@@ -506,7 +506,7 @@ void NC_STACK_ypaufo::User_layer(update_msg *arg)
         }
         else
         {
-            ypaworld_arg136 arg136;
+            TRayIntersection arg136;
             arg136.stPos = _position;
             arg136.vect = vec3d(0.0, 0.0, 0.0);
 
@@ -735,7 +735,7 @@ void NC_STACK_ypaufo::User_layer(update_msg *arg)
         }
         else
         {
-            yw_137col v60[10];
+            TSphereContact v60[10];
 
             for (int i = 3; i >= 0; i--)
             {
@@ -745,13 +745,13 @@ void NC_STACK_ypaufo::User_layer(update_msg *arg)
 
                 Move(&arg74);
 
-                ypaworld_arg137 arg137;
+                TSphereCollisionQuery arg137;
                 arg137.pos = _position;
-                arg137.pos2 = _fly_dir;
+                arg137.dir = _fly_dir;
                 arg137.radius = _viewer_radius;
                 arg137.collisions = v60;
                 arg137.coll_max = 10;
-                arg137.field_30 = 0;
+                arg137.flags = 0;
 
                 _world->FindSphereCollisions(&arg137);
 
@@ -764,7 +764,7 @@ void NC_STACK_ypaufo::User_layer(update_msg *arg)
 
 
                     for (int j = 0 ; j < arg137.coll_count; j++)
-                        v93 += arg137.collisions[j].pos2;
+                        v93 += arg137.collisions[j].normal;
 
                     float v89 = v93.length();
 
@@ -784,7 +784,7 @@ void NC_STACK_ypaufo::User_layer(update_msg *arg)
 
                 if ( v49 == 0 )
                 {
-                    ypaworld_arg136 arg136;
+                    TRayIntersection arg136;
                     arg136.stPos = _old_pos;
                     arg136.vect = _position - _old_pos;
 
@@ -820,12 +820,12 @@ void NC_STACK_ypaufo::User_layer(update_msg *arg)
 
                         SFXEngine::SFXe.startSound(&_soundcarrier, 5);
 
-                        yw_arg180 arg180;
+                        TFFeedbackEffect arg180;
 
                         arg180.effects_type = 5;
-                        arg180.field_4 = 1.0;
-                        arg180.field_8 = v93.x * 10.0 + _position.x;
-                        arg180.field_C = v93.z * 10.0 + _position.z;
+                        arg180.strength = 1.0;
+                        arg180.pos_x = v93.x * 10.0 + _position.x;
+                        arg180.pos_z = v93.z * 10.0 + _position.z;
 
                         _world->FFeedback_Play(&arg180);
                     }

@@ -871,14 +871,14 @@ struct TGameRecorder
     //int32_t field_34 = 0;
     int32_t ainf_size = 0;
     int32_t do_record = 0;
-    int32_t field_40 = 0;
-    vec3d field_44;
+    int32_t frame_timer = 0;
+    vec3d camera_pos;
     mat3x3 rotation_matrix;
-    int32_t field_74 = 0;
-    int32_t field_78 = 0;
-    int32_t field_7C = 0;
-    int32_t field_80 = 0;
-    uint32_t field_84 = 0;
+    int32_t frame_count = 0;
+    int32_t frame_flags = 0;
+    int32_t play_state = 0;
+    int32_t camera_mode = 0;
+    uint32_t camera_unit_id = 0;
     std::string filename;
     
     
@@ -1576,23 +1576,23 @@ struct TMapRegionsNet
 };
 
 
-struct sklt_wis
+struct THudState
 {
-    int field_0 = 0;
+    int visible = 0;
     NC_STACK_sklt *sklts[14] = {NULL};
     UAskeleton::Data *sklts_intern[14] = {NULL};
-    int field_72 = 0;
-    int field_76 = 0;
-    int field_7A = 0;
-    NC_STACK_ypabact *field_7E = NULL;
-    int field_82 = 0;
-    float field_86 = 0.0;
-    float field_8A = 0.0;
-    float field_8E = 0.0;
-    float field_92 = 0.0;
-    int field_96 = 0;
-    int field_9A = 0;
-    int field_9E = 0;
+    int color_fx = 0;
+    int switch_time = 0;
+    int target_time = 0;
+    NC_STACK_ypabact *target = NULL;
+    int pulse_period = 0;
+    float pulse_phase = 0.0;
+    float bar_width = 0.0;
+    float info_height = 0.0;
+    float line_height = 0.0;
+    int label_width = 0;
+    int value_width = 0;
+    int bar_segments = 0;
     float cl1_r = 0.0;
     float cl1_g = 0.0;
     float cl1_b = 0.0;
@@ -1710,19 +1710,19 @@ struct yw_arg172
 };
 
 
-struct yw_arg161
+struct TLevelLoadRequest
 {
     int lvlID;
-    int field_4;
+    int mode;
 };
 
-struct ypaworld_arg146
+struct TUnitSpawn
 {
     size_t vehicle_id;
     vec3d pos;
 };
 
-struct yw_130arg
+struct TSectorInfo
 {
     float pos_x;
     float pos_z;
@@ -1730,7 +1730,7 @@ struct yw_130arg
     cellArea *pcell;
 };
 
-struct ypaworld_arg136
+struct TRayIntersection
 {
     vec3d stPos;
     vec3d vect;
@@ -1741,7 +1741,7 @@ struct ypaworld_arg136
     UAskeleton::Data *skel;
     int flags;
 
-    ypaworld_arg136()
+    TRayIntersection()
     {
         isect = false;
         tVal = 0.0;
@@ -1751,54 +1751,54 @@ struct ypaworld_arg136
     }
 };
 
-struct yw_137col
+struct TSphereContact
 {
     vec3d pos1;
-    vec3d pos2;
+    vec3d normal;
 };
 
-struct ypaworld_arg137
+struct TSphereCollisionQuery
 {
     int field_0;
     vec3d pos;
     int field_10;
-    vec3d pos2;
+    vec3d dir;
     float radius;
-    yw_137col *collisions;
+    TSphereContact *collisions;
     int coll_max;
     int coll_count;
-    int field_30;
+    int flags;
 };
 
-struct yw_arg180
+struct TFFeedbackEffect
 {
     int effects_type;
-    float field_4;
-    float field_8;
-    float field_C;
+    float strength;
+    float pos_x;
+    float pos_z;
 };
 
-struct ypaworld_arg148
+struct TBuildingPlacement
 {
     int owner;
     int blg_ID;
-    int field_C;
+    int instant;
     Common::Point CellId;
     int x;
     int y;
-    int field_18;
+    int flags;
 };
 
-struct yw_arg129
+struct TSectorDamage
 {
     int field_0;
     vec3d pos;
-    int field_10;
+    int energy;
     int OwnerID;
     NC_STACK_ypabact *unit;
 };
 
-struct yw_arg159
+struct TInfoMessage
 {
     NC_STACK_ypabact *unit;
     int Priority;
@@ -1806,33 +1806,33 @@ struct yw_arg159
     int MsgID;
 };
 
-struct yw_arg176
+struct TReloadRatios
 {
     int owner;
-    float field_4;
-    float field_8;
+    float ratioClamped;
+    float ratioPositive;
 };
 
-struct yw_arg177
+struct TRoboDestroyed
 {
     NC_STACK_ypabact *bact;
-    int field_4;
+    int killerOwner;
 };
 
-struct yw_arg150
+struct TUnitRayQuery
 {
     NC_STACK_ypabact *unit;
     int field_4;
     vec3d pos;
     int field_14;
-    vec3d field_18;
-    NC_STACK_ypabact *field_24;
-    float field_28;
+    vec3d vect;
+    NC_STACK_ypabact *hitUnit;
+    float distance;
 };
 
-struct yw_arg165
+struct TReplayControl
 {
-    int field_0;
+    int command;
     int frame;
 };
 
@@ -1892,28 +1892,28 @@ public:
 public:
     virtual size_t Init(IDVList &stak);
     virtual size_t Deinit();
-    bool PausedFrame(base_64arg *arg);
-    bool SimulationStep(base_64arg *arg);
-    void RenderFrame(base_64arg *arg, float stepFraction);
+    bool PausedFrame(TUpdateArgs *arg);
+    bool SimulationStep(TUpdateArgs *arg);
+    void RenderFrame(TUpdateArgs *arg, float stepFraction);
 
     void SaveUnitTransforms();
     void InterpolateUnitTransforms(float stepFraction);
     void RestoreUnitTransforms();
-    virtual void DamageSectorBuilding(yw_arg129 *arg);
-    virtual size_t GetSectorInfo(yw_130arg *arg);
+    virtual void DamageSectorBuilding(TSectorDamage *arg);
+    virtual size_t GetSectorInfo(TSectorInfo *arg);
     virtual void SetViewerUnit(NC_STACK_ypabact *bact);
     virtual void AddToUnitsList(NC_STACK_ypabact *bact);
-    virtual void IntersectRay(ypaworld_arg136 *arg);
-    virtual void FindSphereCollisions(ypaworld_arg137 *arg);
+    virtual void IntersectRay(TRayIntersection *arg);
+    virtual void FindSphereCollisions(TSphereCollisionQuery *arg);
     virtual void GuiWinAttach(GuiBase *lstvw);
     virtual void GuiWinDetach(GuiBase *lstvw);
     virtual void MoveToDeadCache(NC_STACK_ypabact *bacto);
     virtual size_t IsNearViewer(NC_STACK_ypabact *bact);
-    virtual NC_STACK_ypabact * CreateVehicle(ypaworld_arg146 *vhcl_id);
-    virtual NC_STACK_ypamissile * CreateWeapon(ypaworld_arg146 *arg);
-    virtual size_t CreateBuilding(ypaworld_arg148 *arg);
-    virtual void IntersectLongRay(ypaworld_arg136 *arg);
-    virtual void FindUnitOnRay(yw_arg150 *arg);
+    virtual NC_STACK_ypabact * CreateVehicle(TUnitSpawn *vhcl_id);
+    virtual NC_STACK_ypamissile * CreateWeapon(TUnitSpawn *arg);
+    virtual size_t CreateBuilding(TBuildingPlacement *arg);
+    virtual void IntersectLongRay(TRayIntersection *arg);
+    virtual void FindUnitOnRay(TUnitRayQuery *arg);
     virtual void DeleteLevel();
     virtual void SetHudVisor(bact_hudi *arg);
     virtual bool InitGameShell(UserData *usr);
@@ -1930,12 +1930,12 @@ public:
     virtual bool OpenGameShell();
     virtual void CloseGameShell();
     virtual void ProcessGameShell();
-    virtual void ShowMessage(yw_arg159 *arg);
-    virtual size_t CreateLevel(yw_arg161 *arg);
+    virtual void ShowMessage(TInfoMessage *arg);
+    virtual size_t CreateLevel(TLevelLoadRequest *arg);
     virtual size_t StartReplay(const std::string &fname);
-    virtual void PlayReplayFrame(base_64arg *arg);
+    virtual void PlayReplayFrame(TUpdateArgs *arg);
     virtual void StopReplay();
-    virtual void ControlReplay(yw_arg165 *arg);
+    virtual void ControlReplay(TReplayControl *arg);
     virtual size_t LoadLanguage(const std::string &langname);
     virtual void UpdateGameShell();
     virtual size_t BeamUnitThroughGate(NC_STACK_ypabact *pbact);
@@ -1955,14 +1955,14 @@ public:
     void RelayoutGameShell();
     void RelayoutGameGui();
     virtual size_t ReloadLanguage();
-    virtual void GetReloadRatios(yw_arg176 *arg);
-    virtual void HandleRoboDestroyed(yw_arg177 *arg);
-    virtual size_t CreateNetLevel(yw_arg161 *arg);
-    virtual void FFeedback_Play(yw_arg180 *arg);
+    virtual void GetReloadRatios(TReloadRatios *arg);
+    virtual void HandleRoboDestroyed(TRoboDestroyed *arg);
+    virtual size_t CreateNetLevel(TLevelLoadRequest *arg);
+    virtual void FFeedback_Play(TFFeedbackEffect *arg);
     virtual bool NetSendMessage(uamessage_base *data, size_t dataSize, const std::string &recvID, bool garantee);
     virtual bool NetBroadcastMessage(uamessage_base *data, size_t dataSize, bool garantee);
 
-    virtual size_t AdvancedCreateLevel(yw_arg161 *arg);
+    virtual size_t AdvancedCreateLevel(TLevelLoadRequest *arg);
     virtual void HistoryEventAdd(const World::History::Record &arg);
     virtual void OpenHelpURL(const void *arg);
 
@@ -2128,7 +2128,7 @@ public:
     void DrawMapRegionsTutorial();
     void DrawMapRegions();
     
-    void RenderGame(base_64arg *bs64, int a2);
+    void RenderGame(TUpdateArgs *bs64, int a2);
     void RenderAdditionalBeeBox(Common::Point sect, TRenderingSector *sct, baseRender_msg *bs77);
     void RenderSector(TRenderingSector *sct, baseRender_msg *bs77);
     void yw_renderSky(baseRender_msg *rndr_params);
@@ -2329,8 +2329,8 @@ public:
     int SectorBeamEnergy(const Common::Point &sector);
     TSectorCollision GetSectorCollision(int _dx, int _dz, int _dxx, int _dzz, int flags);
     void FitFillerCollisionHeights(TSectorCollision &arg);
-    void IntersectRaySkeleton(ypaworld_arg136 *arg, const TSectorCollision &loc);
-    void CollideSphereWithSkeleton(ypaworld_arg137 *arg, const TSectorCollision &a2);    
+    void IntersectRaySkeleton(TRayIntersection *arg, const TSectorCollision &loc);
+    void CollideSphereWithSkeleton(TSphereCollisionQuery *arg, const TSectorCollision &a2);    
     
     void VoiceMessageUpdate();
     void VoiceMessagePlayFile(const std::string &flname, NC_STACK_ypabact *unit, int a5);
@@ -2650,7 +2650,7 @@ public:
     Common::PlaneBytes _lvlPrimevalOwnMap;
     
     
-    sklt_wis _hud;
+    THudState _hud;
     
     bool _shellConfIsParsed = false;
     uint32_t  _preferences = 0;

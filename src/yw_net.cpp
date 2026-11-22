@@ -538,7 +538,7 @@ void NC_STACK_ypaworld::yw_netApplyVhclDataE(NC_STACK_ypabact *bact, uamessage_v
 
             if ( bact->_status_flg & BACT_STFLAG_LAND )
             {
-                ypaworld_arg136 v69;
+                TRayIntersection v69;
                 v69.stPos = bact->_position;
                 v69.vect = bact->_rotation.AxisY() * 200.0;
                 v69.flags = 0;
@@ -864,8 +864,8 @@ bool yw_netRecvUpdate(NC_STACK_ypaworld *yw, uamessage_update *msg, int owner)
 
         while ( msg->data[id].type != 0 )
         {
-            ypaworld_arg146 newVhcl;
-            ypaworld_arg146 newMiss;
+            TUnitSpawn newVhcl;
+            TUnitSpawn newMiss;
 
             vhclUpdData *dat = &msg->data[id];
 
@@ -1138,7 +1138,7 @@ size_t yw_handleNormMsg(NC_STACK_ypaworld *yw, windp_recvMsg *msg, std::string *
         if ( plr && plr->UpdateCountDown )
             break;
 
-        ypaworld_arg146 newVhcl;
+        TUnitSpawn newVhcl;
         newVhcl.pos = nvMsg->pos;
         newVhcl.vehicle_id = nvMsg->type;
 
@@ -1341,7 +1341,7 @@ size_t yw_handleNormMsg(NC_STACK_ypaworld *yw, windp_recvMsg *msg, std::string *
             break;
         }
 
-        ypaworld_arg146 newWpn;
+        TUnitSpawn newWpn;
         newWpn.pos = nwMsg->pos;
         newWpn.vehicle_id = nwMsg->type;
 
@@ -1745,7 +1745,7 @@ size_t yw_handleNormMsg(NC_STACK_ypaworld *yw, windp_recvMsg *msg, std::string *
 
         NC_STACK_ypabact *host_node = yw->yw_getHostByOwner(seMsg->owner);
 
-        yw_arg129 arg129;
+        TSectorDamage arg129;
         if ( host_node )
         {
             arg129.unit = NetGetBactByID(host_node, seMsg->whoHit);
@@ -1757,7 +1757,7 @@ size_t yw_handleNormMsg(NC_STACK_ypaworld *yw, windp_recvMsg *msg, std::string *
         }
 
         arg129.pos = seMsg->pos;
-        arg129.field_10 = seMsg->energy;
+        arg129.energy = seMsg->energy;
         arg129.OwnerID = seMsg->sectOwner;
 
         yw->DamageSectorBuilding(&arg129);
@@ -1774,12 +1774,12 @@ size_t yw_handleNormMsg(NC_STACK_ypaworld *yw, windp_recvMsg *msg, std::string *
 
         if ( yw->yw_getHostByOwner(sbMsg->owner) )
         {
-            ypaworld_arg148 arg148;
+            TBuildingPlacement arg148;
             arg148.owner = sbMsg->owner;
             arg148.blg_ID = sbMsg->bproto;
-            arg148.field_C = 0;
+            arg148.instant = 0;
             arg148.CellId = {sbMsg->sec_x, sbMsg->sec_y};
-            arg148.field_18 = 0;
+            arg148.flags = 0;
 
             yw->CreateBuilding(&arg148);
         }
@@ -1802,7 +1802,7 @@ size_t yw_handleNormMsg(NC_STACK_ypaworld *yw, windp_recvMsg *msg, std::string *
 
         if ( bhost )
         {
-            ypaworld_arg146 newVhcl;
+            TUnitSpawn newVhcl;
             newVhcl.vehicle_id = bvMsg->vhcl[0].protoID;
             newVhcl.pos = bvMsg->vhcl[0].pos;
 
@@ -2041,7 +2041,7 @@ size_t yw_handleNormMsg(NC_STACK_ypaworld *yw, windp_recvMsg *msg, std::string *
 
             if ( wee == 1 && nwee == 0 )
             {
-                yw_arg159 arg159;
+                TInfoMessage arg159;
                 arg159.Priority = 10;
                 arg159.MsgID = 91;
                 arg159.unit = 0;
@@ -2074,7 +2074,7 @@ size_t yw_handleNormMsg(NC_STACK_ypaworld *yw, windp_recvMsg *msg, std::string *
                     yw->_netEvent.Player2Name = yw->_GameShell->netPlayers[hdMsg->killerOwner].Name;
                 }
 
-                yw_arg159 arg159;
+                TInfoMessage arg159;
                 arg159.unit = 0;
                 arg159.Priority = 50;
                 switch ( hdMsg->owner)
@@ -2131,8 +2131,8 @@ size_t yw_handleNormMsg(NC_STACK_ypaworld *yw, windp_recvMsg *msg, std::string *
             //rarg134.unit = NULL;
         }
 
-        yw_arg177 arg177;
-        arg177.field_4 = hdMsg->killerOwner;
+        TRoboDestroyed arg177;
+        arg177.killerOwner = hdMsg->killerOwner;
         arg177.bact = bhost;
         yw->HandleRoboDestroyed(&arg177);
     }
@@ -2161,7 +2161,7 @@ size_t yw_handleNormMsg(NC_STACK_ypaworld *yw, windp_recvMsg *msg, std::string *
                 {
                     std::string bff = fmt::sprintf("%s: %s", msg->senderName, msgMsg->message);
 
-                    yw_arg159 arg159;
+                    TInfoMessage arg159;
                     arg159.txt = bff;
                     arg159.MsgID = 93;
                     arg159.Priority = 10;
@@ -2277,7 +2277,7 @@ size_t yw_handleNormMsg(NC_STACK_ypaworld *yw, windp_recvMsg *msg, std::string *
             std::string bff = Locale::Text::Feedback(Locale::FEEDBACK_TECHDOWN);
             bff += gemProt.MsgDefault;
 
-            yw_arg159 arg159;
+            TInfoMessage arg159;
             arg159.Priority = 80;
             arg159.txt = bff;
             arg159.MsgID = 29;
@@ -2438,7 +2438,7 @@ size_t yw_handleNormMsg(NC_STACK_ypaworld *yw, windp_recvMsg *msg, std::string *
         if ( plr && plr->UpdateCountDown )
             break;
 
-        yw_130arg secInfo;
+        TSectorInfo secInfo;
         secInfo.pos_x = impMsg->pos.x;
         secInfo.pos_z = impMsg->pos.z;
 
@@ -2895,7 +2895,7 @@ size_t yw_handleNormMsg(NC_STACK_ypaworld *yw, windp_recvMsg *msg, std::string *
         yw->_netEvent.TimeStamp = yw->_timeStamp;
         yw->_netEvent.PlayerName = msg->senderName;
 
-        yw_arg159 arg159;
+        TInfoMessage arg159;
         arg159.Priority = 50;
         arg159.unit = NULL;
 
@@ -3526,7 +3526,7 @@ bool NC_STACK_ypaworld::yw_NetSetHostStations(const std::vector<MapRobo> &Robos)
 
         _GameShell->netPlayers[owner].Name = plData.name;
 
-        ypaworld_arg136 arg136;
+        TRayIntersection arg136;
         arg136.stPos = place.X0Z() - vec3d::OY(30000.0);
         arg136.vect = vec3d::OY(50000.0);
         arg136.flags = 0;
@@ -3538,7 +3538,7 @@ bool NC_STACK_ypaworld::yw_NetSetHostStations(const std::vector<MapRobo> &Robos)
         else
             log_netlog("Warning: Robo placed without y-correction\n");
 
-        ypaworld_arg146 arg146;
+        TUnitSpawn arg146;
         switch ( selFraction )
         {
         case World::OWNER_RESIST_BIT:
@@ -3611,7 +3611,7 @@ bool NC_STACK_ypaworld::yw_NetSetHostStations(const std::vector<MapRobo> &Robos)
 
 
 
-size_t NC_STACK_ypaworld::CreateNetLevel(yw_arg161 *arg)
+size_t NC_STACK_ypaworld::CreateNetLevel(TLevelLoadRequest *arg)
 {
     bact_id = 0x10000;
     
@@ -3620,7 +3620,7 @@ size_t NC_STACK_ypaworld::CreateNetLevel(yw_arg161 *arg)
     TLevelDescription proto;
     bool loadOK = false;
 
-    if ( LevelCommonLoader(&proto, arg->lvlID, arg->field_4) )
+    if ( LevelCommonLoader(&proto, arg->lvlID, arg->mode) )
     {
         if ( LoadTypeMap(proto.TypStr) )
         {

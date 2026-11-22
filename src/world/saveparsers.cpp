@@ -397,7 +397,7 @@ bool SaveRoboParser::IsScope(ScriptParser::Parser &parser, const std::string &wo
     if ( StriCmp(word, "begin_robo") )
         return false;
 
-    ypaworld_arg146 v5;
+    TUnitSpawn v5;
     v5.pos.x = 600;
     v5.pos.z = -600.0;
     v5.pos.y = 0;
@@ -436,7 +436,7 @@ bool SaveSquadParser::IsScope(ScriptParser::Parser &parser, const std::string &w
 {
     if ( !StriCmp(word, "begin_commander") )
     {
-        ypaworld_arg146 v5;
+        TUnitSpawn v5;
         v5.pos.x = 600.0;
         v5.pos.z = -600.0;
         v5.pos.y = 0;
@@ -452,7 +452,7 @@ bool SaveSquadParser::IsScope(ScriptParser::Parser &parser, const std::string &w
     }
     else if ( !StriCmp(word, "begin_slave") )
     {
-        ypaworld_arg146 v5;
+        TUnitSpawn v5;
         v5.pos.x = 600.0;
         v5.pos.z = -600.0;
         v5.pos.y = 0;
@@ -630,11 +630,11 @@ bool SaveBuildingMapParser::IsScope(ScriptParser::Parser &parser, const std::str
                 
                 if (blg > 0 && cell.owner != 0)
                 {
-                    ypaworld_arg148 arg148;
-                    arg148.field_18 = 1;
+                    TBuildingPlacement arg148;
+                    arg148.flags = 1;
                     arg148.owner = cell.owner;
                     arg148.blg_ID = blg;
-                    arg148.field_C = 1;
+                    arg148.instant = 1;
                     arg148.CellId = cell.CellId;
 
                     _o.CreateBuilding(&arg148);
