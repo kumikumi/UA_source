@@ -1511,7 +1511,7 @@ void sub_4D9550(NC_STACK_ypaworld *yw, int arg)
 
     if ( pSmpl )
     {
-        SFXEngine::SFXe.sub_424000(&usr->samples1_info, World::SOUND_ID_CHAT);
+        SFXEngine::SFXe.stopSound(&usr->samples1_info, World::SOUND_ID_CHAT);
         SFXEngine::SFXe.ForceStopSource(&usr->samples1_info, World::SOUND_ID_CHAT);
         pSmpl->Delete();
         pSmpl = NULL;
@@ -2764,7 +2764,7 @@ void UserData::GameShellUiHandleInput()
         }
         else if ( r.code == 1117 )
         {
-            SFXEngine::SFXe.sub_424000(&samples1_info, 0);
+            SFXEngine::SFXe.stopSound(&samples1_info, 0);
         }
         else if ( r.code == 1118 )
         {

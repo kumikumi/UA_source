@@ -722,9 +722,9 @@ void NC_STACK_ypamissile::Renew()
 
 size_t NC_STACK_ypamissile::SetStateInternal(setState_msg *arg)
 {
-    SFXEngine::SFXe.sub_424000(&_soundcarrier, 2);
-    SFXEngine::SFXe.sub_424000(&_soundcarrier, 0);
-    SFXEngine::SFXe.sub_424000(&_soundcarrier, 1);
+    SFXEngine::SFXe.stopSound(&_soundcarrier, 2);
+    SFXEngine::SFXe.stopSound(&_soundcarrier, 0);
+    SFXEngine::SFXe.stopSound(&_soundcarrier, 1);
 
     if ( arg->newStatus )
         _status = arg->newStatus;

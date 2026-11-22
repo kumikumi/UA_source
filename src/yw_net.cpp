@@ -1987,7 +1987,7 @@ size_t yw_handleNormMsg(NC_STACK_ypaworld *yw, windp_recvMsg *msg, std::string *
                 un->SetStateInternal(&stm);
                 un->_status = BACT_STATUS_DEAD;
 
-                SFXEngine::SFXe.sub_424000(&un->_soundcarrier, 3);
+                SFXEngine::SFXe.stopSound(&un->_soundcarrier, 3);
                 SFXEngine::SFXe.startSound(&un->_soundcarrier, 7);
 
                 un->_soundFlags &= 0xFFFFFFF7;
@@ -2007,7 +2007,7 @@ size_t yw_handleNormMsg(NC_STACK_ypaworld *yw, windp_recvMsg *msg, std::string *
             cm->SetStateInternal(&stm);
             cm->_status = BACT_STATUS_DEAD;
 
-            SFXEngine::SFXe.sub_424000(&cm->_soundcarrier, 3);
+            SFXEngine::SFXe.stopSound(&cm->_soundcarrier, 3);
             SFXEngine::SFXe.startSound(&cm->_soundcarrier, 7);
 
             cm->_soundFlags &= 0xFFFFFFF7;

@@ -4834,7 +4834,7 @@ void NC_STACK_yparobo::Die()
 
                 subnode->_status = BACT_STATUS_DEAD;
 
-                SFXEngine::SFXe.sub_424000(&subnode->_soundcarrier, 3);
+                SFXEngine::SFXe.stopSound(&subnode->_soundcarrier, 3);
                 SFXEngine::SFXe.startSound(&subnode->_soundcarrier, 7);
 
                 subnode->_soundFlags &= 0xFFFFFFF7;
@@ -4860,7 +4860,7 @@ void NC_STACK_yparobo::Die()
 
             node->_status = BACT_STATUS_DEAD;
 
-            SFXEngine::SFXe.sub_424000(&node->_soundcarrier, 3);
+            SFXEngine::SFXe.stopSound(&node->_soundcarrier, 3);
             SFXEngine::SFXe.startSound(&node->_soundcarrier, 7);
 
             node->_soundFlags &= 0xFFFFFFF7;

@@ -223,7 +223,7 @@ size_t NC_STACK_ypabact::Init(IDVList &stak)
                         if ( _world->_isNetGame )
                             viewMsg.view = 0;
 
-                        SFXEngine::SFXe.sub_424000(&_soundcarrier, 8);
+                        SFXEngine::SFXe.stopSound(&_soundcarrier, 8);
                     }
 
                     if ( _world->_isNetGame ) // Network message send routine?
@@ -6889,29 +6889,29 @@ size_t NC_STACK_ypabact::SetStateInternal(setState_msg *arg)
                 _world->ypaworld_func180(&v43);
             }
 
-            SFXEngine::SFXe.sub_424000(&_soundcarrier, 1);
+            SFXEngine::SFXe.stopSound(&_soundcarrier, 1);
             _soundFlags &= ~2;
         }
 
         if ( _oflags & BACT_OFLAG_USERINPT )
-            SFXEngine::SFXe.sub_424000(&_soundcarrier, 8);
+            SFXEngine::SFXe.stopSound(&_soundcarrier, 8);
 
         if ( _soundFlags & 1 )
         {
             _soundFlags &= ~1;
-            SFXEngine::SFXe.sub_424000(&_soundcarrier, 0);
+            SFXEngine::SFXe.stopSound(&_soundcarrier, 0);
         }
 
         if ( _soundFlags & 8 )
         {
             _soundFlags &= ~8;
-            SFXEngine::SFXe.sub_424000(&_soundcarrier, 3);
+            SFXEngine::SFXe.stopSound(&_soundcarrier, 3);
         }
 
         if ( _soundFlags & 4 )
         {
             _soundFlags &= ~4;
-            SFXEngine::SFXe.sub_424000(&_soundcarrier, 2);
+            SFXEngine::SFXe.stopSound(&_soundcarrier, 2);
         }
 
         SFXEngine::SFXe.startSound(&_soundcarrier, 7);
@@ -6932,19 +6932,19 @@ size_t NC_STACK_ypabact::SetStateInternal(setState_msg *arg)
         if ( _soundFlags & 8 )
         {
             _soundFlags &= ~8;
-            SFXEngine::SFXe.sub_424000(&_soundcarrier, 3);
+            SFXEngine::SFXe.stopSound(&_soundcarrier, 3);
         }
 
         if ( _soundFlags & 4 )
         {
             _soundFlags &= ~4;
-            SFXEngine::SFXe.sub_424000(&_soundcarrier, 2);
+            SFXEngine::SFXe.stopSound(&_soundcarrier, 2);
         }
 
         if ( _soundFlags & 0x80 )
         {
             _soundFlags &= ~0x80;
-            SFXEngine::SFXe.sub_424000(&_soundcarrier, 7);
+            SFXEngine::SFXe.stopSound(&_soundcarrier, 7);
         }
 
         if ( !(_soundFlags & 1) )
@@ -6964,19 +6964,19 @@ size_t NC_STACK_ypabact::SetStateInternal(setState_msg *arg)
         if ( _soundFlags & 8 )
         {
             _soundFlags &= ~8;
-            SFXEngine::SFXe.sub_424000(&_soundcarrier, 3);
+            SFXEngine::SFXe.stopSound(&_soundcarrier, 3);
         }
 
         if ( _soundFlags & 4 )
         {
             _soundFlags &= ~4;
-            SFXEngine::SFXe.sub_424000(&_soundcarrier, 2);
+            SFXEngine::SFXe.stopSound(&_soundcarrier, 2);
         }
 
         if ( _soundFlags & 0x80 )
         {
             _soundFlags &= ~0x80;
-            SFXEngine::SFXe.sub_424000(&_soundcarrier, 7);
+            SFXEngine::SFXe.stopSound(&_soundcarrier, 7);
         }
 
         if ( !(_soundFlags & 0x200) )
@@ -6998,19 +6998,19 @@ size_t NC_STACK_ypabact::SetStateInternal(setState_msg *arg)
         if ( _soundFlags & 1 )
         {
             _soundFlags &= ~1;
-            SFXEngine::SFXe.sub_424000(&_soundcarrier, 0);
+            SFXEngine::SFXe.stopSound(&_soundcarrier, 0);
         }
 
         if ( _soundFlags & 8 )
         {
             _soundFlags &= ~8;
-            SFXEngine::SFXe.sub_424000(&_soundcarrier, 3);
+            SFXEngine::SFXe.stopSound(&_soundcarrier, 3);
         }
 
         if ( _soundFlags & 0x80 )
         {
             _soundFlags &= ~0x80;
-            SFXEngine::SFXe.sub_424000(&_soundcarrier, 7);
+            SFXEngine::SFXe.stopSound(&_soundcarrier, 7);
         }
 
         if ( !(_soundFlags & 4) )
@@ -7037,26 +7037,26 @@ size_t NC_STACK_ypabact::SetStateInternal(setState_msg *arg)
                 _world->ypaworld_func180(&v46);
             }
 
-            SFXEngine::SFXe.sub_424000(&_soundcarrier, 1);
+            SFXEngine::SFXe.stopSound(&_soundcarrier, 1);
             _soundFlags &= ~2;
         }
 
         if ( _soundFlags & 1 )
         {
             _soundFlags &= ~1;
-            SFXEngine::SFXe.sub_424000(&_soundcarrier, 0);
+            SFXEngine::SFXe.stopSound(&_soundcarrier, 0);
         }
 
         if ( _soundFlags & 4 )
         {
             _soundFlags &= ~4;
-            SFXEngine::SFXe.sub_424000(&_soundcarrier, 2);
+            SFXEngine::SFXe.stopSound(&_soundcarrier, 2);
         }
 
         if ( _soundFlags & 0x80 )
         {
             _soundFlags &= ~0x80;
-            SFXEngine::SFXe.sub_424000(&_soundcarrier, 7);
+            SFXEngine::SFXe.stopSound(&_soundcarrier, 7);
         }
 
         if ( !(_soundFlags & 8) )
@@ -7082,7 +7082,7 @@ size_t NC_STACK_ypabact::SetStateInternal(setState_msg *arg)
         SetVP(_vp_normal);
         _vp_active = 1;
 
-        SFXEngine::SFXe.sub_424000(&_soundcarrier, 1);
+        SFXEngine::SFXe.stopSound(&_soundcarrier, 1);
 
         _soundFlags &= ~2;
 
@@ -7135,35 +7135,35 @@ size_t NC_STACK_ypabact::SetStateInternal(setState_msg *arg)
                     _world->ypaworld_func180(&v44);
                 }
 
-                SFXEngine::SFXe.sub_424000(&_soundcarrier, 1);
+                SFXEngine::SFXe.stopSound(&_soundcarrier, 1);
                 _soundFlags &= ~2;
             }
 
             if ( _oflags & BACT_OFLAG_USERINPT )
-                SFXEngine::SFXe.sub_424000(&_soundcarrier, 8);
+                SFXEngine::SFXe.stopSound(&_soundcarrier, 8);
 
             if ( _soundFlags & 1 )
             {
                 _soundFlags &= ~2;
-                SFXEngine::SFXe.sub_424000(&_soundcarrier, 0);
+                SFXEngine::SFXe.stopSound(&_soundcarrier, 0);
             }
 
             if ( _soundFlags & 8 )
             {
                 _soundFlags &= ~8;
-                SFXEngine::SFXe.sub_424000(&_soundcarrier, 3);
+                SFXEngine::SFXe.stopSound(&_soundcarrier, 3);
             }
 
             if ( _soundFlags & 4 )
             {
                 _soundFlags &= ~4;
-                SFXEngine::SFXe.sub_424000(&_soundcarrier, 2);
+                SFXEngine::SFXe.stopSound(&_soundcarrier, 2);
             }
 
             if ( _soundFlags & 0x80 )
             {
                 _soundFlags &= ~0x80;
-                SFXEngine::SFXe.sub_424000(&_soundcarrier, 7);
+                SFXEngine::SFXe.stopSound(&_soundcarrier, 7);
             }
 
             SFXEngine::SFXe.startSound(&_soundcarrier, 4);
@@ -7758,7 +7758,7 @@ void NC_STACK_ypabact::setBACT_viewer(bool vwr)
         if ( _world->_isNetGame )
             viewMsg.view = 0;
 
-        SFXEngine::SFXe.sub_424000(&_soundcarrier, 8);
+        SFXEngine::SFXe.stopSound(&_soundcarrier, 8);
 
         if ( _bact_type != BACT_TYPES_MISSLE && _bact_type != BACT_TYPES_ROBO && _status != BACT_STATUS_DEAD )
         {

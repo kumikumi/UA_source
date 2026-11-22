@@ -172,7 +172,7 @@ void SFXEngine::startSound(TSndCarrier *smpls, size_t id)
     }
 }
 
-void SFXEngine::sub_424000(TSndCarrier *smpls, size_t id)
+void SFXEngine::stopSound(TSndCarrier *smpls, size_t id)
 {
     if (id >= smpls->Sounds.size())
         return;
@@ -379,7 +379,7 @@ void SFXEngine::audio_InsertSoundSource(TSoundSource *smpl)
     }
 }
 
-int SFXEngine::sub_423B3C(TSoundSource *smpl, int a2, int *a3)
+int SFXEngine::FindFragmentAt(TSoundSource *smpl, int a2, int *a3)
 {
     int i = 0;
 
@@ -428,7 +428,7 @@ void SFXEngine::SoundCarrierProcessSounds(TSndCarrier *smpls, float distance)
                     if ( snd.IsPlay() )
                         fragId = snd.CurrentFrag;
                     else
-                        fragId = sub_423B3C(&snd, currentTime - snd.StartTime, NULL);
+                        fragId = FindFragmentAt(&snd, currentTime - snd.StartTime, NULL);
                 }
 
                 bool ok = true;
@@ -615,7 +615,7 @@ void SFXEngine::UpdateSoundCarrier(TSndCarrier *smpls)
     }
 }
 
-void SFXEngine::sb_0x424c74__sub0()
+void SFXEngine::FreeEndedChannels()
 {
     //Free ended channels
     for (int i = 0; i < audio_channels; i++)
@@ -647,7 +647,7 @@ void SFXEngine::sb_0x424c74__sub0()
     }
 }
 
-void SFXEngine::sb_0x424c74__sub1()
+void SFXEngine::AssignFreeChannels()
 {
     //Find free snd_channel
     int v1 = 0;
@@ -677,7 +677,7 @@ void SFXEngine::sb_0x424c74__sub1()
     }
 }
 
-void SFXEngine::sb_0x424c74__sub2__sub1(TSoundSource *smpl)
+void SFXEngine::CalcPlayParams(TSoundSource *smpl)
 {
     TSndCarrier *v2 = smpl->PCarrier;
 
@@ -817,7 +817,7 @@ void SFXEngine::sound_eos_clbk(void *_smpl)
 }
 
 
-void SFXEngine::sb_0x424c74__sub2__sub0(int id, TSoundSource *smpl)
+void SFXEngine::StartChannel(int id, TSoundSource *smpl)
 {
     walsmpl *v3 = snd_channels[id].hSample;
 
@@ -836,7 +836,7 @@ void SFXEngine::sb_0x424c74__sub2__sub0(int id, TSoundSource *smpl)
         else
         {
             int a3;
-            size_t v7 = sub_423B3C(smpl, v4, &a3);
+            size_t v7 = FindFragmentAt(smpl, v4, &a3);
 
             if ( v7 == smpl->PFragments->size() )
                 v7 = smpl->PFragments->size() - 1;
@@ -877,7 +877,7 @@ void SFXEngine::sb_0x424c74__sub2__sub0(int id, TSoundSource *smpl)
     }
 }
 
-void SFXEngine::sb_0x424c74__sub2()
+void SFXEngine::UpdateChannels()
 {
     for (int i = 0; i < audio_channels; i++)
     {
@@ -888,12 +888,12 @@ void SFXEngine::sb_0x424c74__sub2()
         {
             if ( v2->PSample || v2->IsFragmented() )
             {
-                sb_0x424c74__sub2__sub1(snd_channels[i].sndSouce);
+                CalcPlayParams(snd_channels[i].sndSouce);
 
                 if ( v2->IsPlay() )
                     wrapper_setSampleVRP(digDriver, v3, v2->ResultRate, v2->ResultVol, v2->ResultPan);
                 else
-                    sb_0x424c74__sub2__sub0(i, v2);
+                    StartChannel(i, v2);
             }
             else
             {
@@ -903,7 +903,7 @@ void SFXEngine::sb_0x424c74__sub2()
     }
 }
 
-void SFXEngine::sb_0x424c74__sub3()
+void SFXEngine::UpdatePaletteEffects()
 {
     float pwr = 1.0;
     std::vector<GFX::ColorFx> fxes;
@@ -941,7 +941,7 @@ void SFXEngine::sb_0x424c74__sub3()
     GFX::Engine.SetColorEffectsPowers(fxes);
 }
 
-void SFXEngine::sb_0x424c74__sub4()
+void SFXEngine::UpdateShake()
 {
     vec3d tmp(0.0, 0.0, 0.0);
 
@@ -995,15 +995,15 @@ const mat3x3 &SFXEngine::EndSoundFrame()
 {
     if ( digDriver->inited() )
     {
-        sb_0x424c74__sub0();
-        sb_0x424c74__sub1();
-        sb_0x424c74__sub2();
+        FreeEndedChannels();
+        AssignFreeChannels();
+        UpdateChannels();
     }
 
     if ( audio_num_palfx )
-        sb_0x424c74__sub3();
+        UpdatePaletteEffects();
 
-    sb_0x424c74__sub4();
+    UpdateShake();
 
     UpdateMusic();
 

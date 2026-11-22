@@ -254,7 +254,7 @@ public:
 
 
     void startSound(TSndCarrier *a1, size_t);
-    void sub_424000(TSndCarrier *smpls, size_t);
+    void stopSound(TSndCarrier *smpls, size_t);
     void StopCarrier(TSndCarrier *smpls);
     void StopSource(TSoundSource *snd);
     void StopPlayingSounds();
@@ -281,19 +281,19 @@ protected:
 
     float audio_rnd();
     void audio_InsertSoundSource(TSoundSource *smpl);
-    int sub_423B3C(TSoundSource *smpl, int a2, int *a3);
+    int FindFragmentAt(TSoundSource *smpl, int a2, int *a3);
     void SoundCarrierProcessSounds(TSndCarrier *smpls, float a2);
     void audio_InsertPalFX(TSoundSource *smpl);
     void SoundCarrierProcessPFx(TSndCarrier *smpls, float a2);
     void InsertShakeFX(TSoundSource *smpl);
     void SoundCarrierProcessShake(TSndCarrier *smpls, float a2);
-    void sb_0x424c74__sub0();
-    void sb_0x424c74__sub1();
-    void sb_0x424c74__sub2__sub1(TSoundSource *smpl);
-    void sb_0x424c74__sub2__sub0(int id, TSoundSource *smpl);
-    void sb_0x424c74__sub2();
-    void sb_0x424c74__sub3();
-    void sb_0x424c74__sub4();
+    void FreeEndedChannels();
+    void AssignFreeChannels();
+    void CalcPlayParams(TSoundSource *smpl);
+    void StartChannel(int id, TSoundSource *smpl);
+    void UpdateChannels();
+    void UpdatePaletteEffects();
+    void UpdateShake();
     void UpdateMusic();
 
     static void sound_eos_clbk(void *_smpl);

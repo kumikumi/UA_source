@@ -4289,7 +4289,7 @@ void NC_STACK_ypaworld::recorder_updateObject(NC_STACK_ypabact *bact, trec_bct *
                 bact->_soundFlags &= ~v48;
 
                 if ( bact->_soundcarrier.Sounds[i].IsLoop() )
-                    SFXEngine::SFXe.sub_424000(&bact->_soundcarrier, i);
+                    SFXEngine::SFXe.stopSound(&bact->_soundcarrier, i);
             }
         }
     }
