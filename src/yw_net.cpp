@@ -477,6 +477,8 @@ void NC_STACK_ypaworld::yw_netApplyVhclDataE(NC_STACK_ypabact *bact, uamessage_v
 
             if ( spd > 400.0 )
             {
+                // TODO(multiplayer): Scales the speed change to length 4, not 400. Probably meant
+                // 400.0 / spd, the limit tested above.
                 bact->_netDSpeed *= 4.0 / spd;
             }
 

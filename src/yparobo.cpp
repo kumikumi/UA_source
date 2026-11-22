@@ -974,6 +974,9 @@ size_t NC_STACK_yparobo::checkCollisions(float dtime)
                     avgNormal.normal += _fly_dir;
             }
 
+            // TODO(bug): Inside the per-point loop, so it returns at the first point with sphere
+            // contacts: hitCount is always 1 and nothing is averaged. Probably meant
+            // to run after the loop. The first decompile has the same.
             if ( hitCount )
             {
                 avgNormal.normal /= (float)hitCount;
@@ -1679,6 +1682,8 @@ void NC_STACK_yparobo::doUserCommands(update_msg *arg)
                 arg->selectBact->_waypoints[wpCount].z = arg->target_point.z;
                 arg->selectBact->_waypoints_count++;
             }
+            // TODO(cleanup): Always false: this case only runs when BACT_STFLAG_WAYPOINT is already
+            // set (see the if at the top), so the block never runs.
             if ( !(arg->selectBact->_status_flg & BACT_STFLAG_WAYPOINT) )
             {
                 arg->selectBact->_status_flg |= BACT_STFLAG_WAYPOINT;
@@ -2400,6 +2405,8 @@ NC_STACK_ypabact *NC_STACK_yparobo::AllocForce(robo_loct1 *arg)
                             if ( _energy < ((float)_energy_max * 0.9) )
                                 preferNew = 0;
 
+                            // TODO(cleanup): Always false: the enclosing block only runs when ROBOSTATE_DOCKINUSE is
+                            // clear.
                             if ( _roboState & ROBOSTATE_DOCKINUSE )
                                 preferNew = 0;
 
@@ -3470,6 +3477,9 @@ void NC_STACK_yparobo::checkCommander()
                 pathRequest.tgt_type = 1;
 
                 if ( ! commander->PathFinder(&pathRequest) )
+                    // TODO(bug): Leaves the commander loop, so one failed path skips every remaining
+                    // commander this frame. Probably meant continue. The first decompile has
+                    // the same.
                     break;
 
                 if ( pathRequest.steps_cnt > 1 )
@@ -3578,6 +3588,9 @@ void NC_STACK_yparobo::checkDanger()
             {
                 for ( NC_STACK_ypabact* &unit : _world->SectorAt(pt).unitsList )
                 {
+                    // TODO(bug): Only enemies with both a weapon and a machine gun count, so units with
+                    // just one are ignored. Probably meant ||, as in the gun checks. The
+                    // first decompile has the same.
                     if (unit->_owner != _owner && unit->_status != BACT_STATUS_DEAD && unit->_weapon != -1 && unit->_mgun != -1)
                     {
                         enemyNear = 1;
@@ -4243,6 +4256,9 @@ void NC_STACK_yparobo::AI_checkWorld(update_msg *arg)
         int defenseRating = FindDefenseTarget(&enemyCommandId, &cellId);
         if ( defenseRating > _roboEnemyValue )
         {
+            // TODO(bug): tgt is never set (tgt_pos is left from the conquer scan), but
+            // FindMatchingCommander reads tgt when prim_comm_id is 0. Same problem as
+            // the robo search below.
             commanderSearch.flags = 2;
             commanderSearch.tgType = BACT_TGT_TYPE_UNIT;
             commanderSearch.prim_comm_id = enemyCommandId;
@@ -5780,6 +5796,8 @@ void NC_STACK_yparobo::UpdateGateBeamOut()
                 _position = _old_pos;
                 _roboYPos = _old_pos.y;
 
+                // TODO(bug): _GameShell is dereferenced here but only null-checked for the .rst
+                // delete below.
                 if ( !_world->SaveGame( fmt::sprintf("save:%s/%d.fin", _world->_GameShell->UserName, _world->_levelInfo.LevelID) ) )
                     ypa_log_out("Warning, final sgm save error\n");
 
@@ -5822,6 +5840,9 @@ void NC_STACK_yparobo::UpdateGateBeamOut()
                     float dx = fabs(bct->_position.x - temp.x);
                     float dz = fabs(bct->_position.z - temp.y);
 
+                    // TODO(bug): || accepts units within 450 of the centre on either axis, so only the
+                    // sector's corners are left out. Probably meant &&. The first decompile
+                    // has the same.
                     if ( dx <= 450.0 || dz <= 450.0 )
                     {
                         bct->_status = BACT_STATUS_BEAM;

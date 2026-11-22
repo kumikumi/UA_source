@@ -413,6 +413,8 @@ void FontUA::FormateAlignedClippedString(NC_STACK_ypaworld *yw, CmdStream *cmdbu
 
     size_t cI = 0;
 
+    // TODO(bug): No bounds check on cI. If the prefix and postfix glyphs are wider than
+    // arg->width, clipLeft can exceed txtWidth and this reads past arg->txt.
     while (clipLeft > 0)
     {
         chr = arg->txt[cI];

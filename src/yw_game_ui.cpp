@@ -867,6 +867,9 @@ void RoboMapDrawSpecialSectors(NC_STACK_ypaworld *yw, CmdStream *cur)
                                     if ( ks.PCell->owner == yw->_userRobo->_owner || yw->_timeStamp / 500 & 1 )
                                     {
                                         vec2d tmp = World::SectorIDToCenterPos2( ks.CellId );
+                                        // TODO(bug): Key sectors get itemGlyph; keyGlyph (0x8E/0x92) is only used as a flag.
+                                        // Gate key sectors have their own glyph (0x8A). The first decompile has
+                                        // the same, so this may be in the original.
                                         RoboMapDrawIcon(cur, tmp.x, tmp.y, itemGlyph, iconSize, iconSize);
                                     }
                                 }
@@ -8082,6 +8085,8 @@ void wis_color(NC_STACK_ypaworld *yw, float x1, float y1, float x2, float y2, SD
     int g2 = (yw->_hud.cl2_g - yw->_hud.cl1_g) * blend2 + yw->_hud.cl1_g;
     int r2 = (yw->_hud.cl2_r - yw->_hud.cl1_r) * blend2 + yw->_hud.cl1_r;
     int b2 = (yw->_hud.cl2_b - yw->_hud.cl1_b) * blend2 + yw->_hud.cl1_b;
+    // TODO(cleanup): Passes (g2, r2, b2), so red and green are swapped compared with out1.
+    // Harmless today: yw_RenderVector2D never uses out2.
     *out2 = GFX::Engine.Color(g2, r2, b2);
 }
 

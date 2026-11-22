@@ -1990,6 +1990,9 @@ void NC_STACK_ypabact::User_layer(update_msg *arg)
         {
             float netWeight = _mass * 9.80665 - _force;
             float ceilingBand = _height_max_user * 0.2;
+            // TODO(bug): netWeight is negative for anything that can climb, so thrustCap <= 0
+            // and thrust drops to 0 above 80% of the ceiling instead of tapering.
+            // Probably missing "+ _force". The first decompile has the same.
             float thrustCap = (altitude - softCeiling) * netWeight / ceilingBand;
 
             if ( _thraction > thrustCap )
@@ -2171,6 +2174,8 @@ void NC_STACK_ypabact::User_layer(update_msg *arg)
                         TFFeedbackEffect ffEffect;
                         ffEffect.effects_type = 5;
                         ffEffect.strength = 1.0;
+                        // TODO(bug): contactNormal is only set by the sphere test. After a ray-test hit it
+                        // is zero or left from an earlier pass, so the effect position is wrong.
                         ffEffect.pos_x = contactNormal.x * 10.0 + _position.x;
                         ffEffect.pos_z = contactNormal.z * 10.0 + _position.z;
 
@@ -2275,6 +2280,8 @@ void NC_STACK_ypabact::Move(move_msg *arg)
     float scaledSpeed = fabs(_fly_dir_length) * maxPitch;
     float sideForceSq = _force * _force - _mass * 100.0 * _mass;
 
+    // TODO(bug): sqrt() of a negative sideForceSq is NaN when _force < 10 * _mass, and
+    // the NaN then goes into the int Sounds[0].Pitch below (undefined).
     float pitchFactor = scaledSpeed / (sqrt(sideForceSq) / _airconst_static);
 
     if ( pitchFactor > maxPitch )
@@ -3867,6 +3874,9 @@ size_t NC_STACK_ypabact::CrashOrLand(TCrashLandStep *arg)
 
                             normalSum += contact->normal;
 
+                            // TODO(bug): Tests the running sum, so groundHit only repeats the normalSum.y >= 0.6
+                            // check it is used with. Probably meant contact->normal.y (any floor-like
+                            // contact). The first decompile has the same.
                             if ( normalSum.y > 0.6 )
                                 groundHit = 1;
                         }
@@ -4165,6 +4175,9 @@ size_t NC_STACK_ypabact::CollisionWithBact(int arg)
 
                 if (!collNodes)
                 {
+                    // TODO(bug): Uses this unit's own radius for bnode when it has no collision nodes;
+                    // FireMinigun uses the other unit's _radius. Probably meant
+                    // bnode->_radius. The first decompile has the same.
                     ttrad = trad;
                     spherePos = bnode->_position;
                 }
@@ -5369,6 +5382,9 @@ size_t NC_STACK_ypabact::FireMinigun(TMinigunShot *arg)
 
                                 if ( !collNodes || sphereRadius >= 0.01 )
                                 {
+                                    // TODO(bug): Set for every sphere tested, hit or not, so the impact point below uses
+                                    // the last sphere's radius, not the nearest hit's. Should be saved with
+                                    // nearestHit.
                                     hitRadius = sphereRadius;
 
                                     vec3d toSphere = spherePos - _old_pos;
@@ -5809,6 +5825,9 @@ bool NC_STACK_ypabact::GetFightMotivation(float *arg)
     if ( arg )
         *arg = forceRatio;
 
+    // TODO(bug): An escaping unit with forceRatio in 0.2..0.5 falls through to the > 0.2
+    // test and returns true. The first decompile returned forceRatio > 0.5
+    // for escaping units; the threshold was lost when this was rewritten.
     if ( (_status_flg & BACT_STFLAG_ESCAPE) && forceRatio > 0.5 )
     {
         return true;
@@ -7119,6 +7138,8 @@ size_t NC_STACK_ypabact::SetStateInternal(setState_msg *arg)
 
             if ( _soundFlags & 1 )
             {
+                // TODO(bug): Stops sound 0 but clears flag 2 (already cleared above), so flag 1
+                // stays set. The other branches clear ~1 here.
                 _soundFlags &= ~2;
                 SFXEngine::SFXe.stopSound(&_soundcarrier, 0);
             }

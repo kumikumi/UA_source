@@ -1875,6 +1875,9 @@ void NC_STACK_ypaworld::RenderGame(TUpdateArgs *bs64, int drawGui)
 
     int span = _renderSectors - 1;
 
+    // TODO(bug): Clears only indices 0..span-1, but the loop below writes up to span
+    // and RenderFillers reads up to _renderSectors. After the view drops
+    // from 9 to 5 sectors, stale entries and their p_cell are still used.
     for (int j = 0; j < span; j++)
     {
         for (int i = 0; i < span; i++)
@@ -2093,6 +2096,9 @@ void NC_STACK_ypaworld::PlaceBuilding(const Common::Point &cellId, int ownerid2,
                         stateMsg.unsetFlags = 0;
                         stateMsg.setFlags = 0;
 
+                        // TODO(bug): gunn is NULL when the building's gun proto is not an ypagun (see the
+                        // check above), but it is used here without a check and passed to
+                        // AddSubject below.
                         gunn->SetStateInternal(&stateMsg);
 
                         gun_obj->_scale_time = 500;
@@ -2466,6 +2472,9 @@ void UpdateReloadRatios(NC_STACK_ypaworld *yw)
             {
                 if ( yw->_levelUnitLimitType == 1 )
                 {
+                    // TODO(bug): Every owner i is penalised by the local player's unit count, and
+                    // penalty is an int, so it stays 0 until it reaches 1 and then wipes
+                    // out the 0..1 reload ratio.
                     int unitsOverLimit = yw->_countUnitsPerOwner[yw->_userRobo->_owner] - yw->_levelUnitLimit;
 
                     if ( unitsOverLimit > 0 )
@@ -4560,6 +4569,9 @@ void NC_STACK_ypaworld::CameraPrepareRender(TGameRecorder *rcrd, NC_STACK_ypabac
         }
     }
 
+    // TODO(bug): Points from the new position to the old one, the reverse of
+    // recorder_updateObject, so the camera velocity PlayReplayFrame gives
+    // the sound engine is backwards.
     bact->_fly_dir = bact->_old_pos - bact->_position;
 
     float moveLen = bact->_fly_dir.length();

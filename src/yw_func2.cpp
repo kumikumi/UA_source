@@ -1533,6 +1533,8 @@ void AddChatMessage(NC_STACK_ypaworld *yw, const std::string &sender, const std:
 
     if ( StriCmp(sender, usr->lastSender) )
     {
+        // TODO(multiplayer): Drops the oldest line whenever the sender changes, even when the
+        // buffer is not full. Probably meant size() >= 31, as below.
         if ( usr->msgBuffers.size() )
             usr->msgBuffers.pop_front();
 
@@ -1902,6 +1904,8 @@ void DeleteDirContents(const std::string &path)
 
         while ( dir.getNext(&node) )
         {
+            // TODO(bug): The || sends every subdirectory except . and .. to uaDeleteFile too,
+            // which cannot remove it. Probably meant && (or the file test alone).
             if ( node->getType() == FSMgr::iNode::NTYPE_FILE || (node->getName().compare(".") && node->getName().compare("..")) )
                 uaDeleteFile(fmt::sprintf("%s/%s", path, node->getName()));
         }

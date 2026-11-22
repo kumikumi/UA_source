@@ -692,6 +692,9 @@ void NC_STACK_ypaufo::User_layer(update_msg *arg)
         {
             if ( _status_flg & BACT_STFLAG_FIRE )
             {
+                // TODO(bug): Missing !. While fire is held this clears BACT_STFLAG_FIRE and the
+                // block below sets it again, restarting the gun sound every frame, and
+                // on release it stays set. The car and flyer test !Is(2) here.
                 if ( arg->inpt->Buttons.Is(2) )
                 {
                     setState_msg stateMsg;
@@ -908,6 +911,9 @@ void NC_STACK_ypaufo::Move(move_msg *arg)
         pitchShift = pitchMax;
 
     if ( _soundcarrier.Sounds[0].PSample )
+        // TODO(bug): Sets the pitch with =, where the flyer, tank and bact add with +=,
+        // so the base _pitch set above is replaced, not added to. In the first
+        // decompile too, and yparobo does the same.
         _soundcarrier.Sounds[0].Pitch = (_soundcarrier.Sounds[0].PSample->SampleRate + _soundcarrier.Sounds[0].Pitch) * pitchShift;
 
 }

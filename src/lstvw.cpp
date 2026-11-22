@@ -222,6 +222,8 @@ void GuiList::FormateTitle(NC_STACK_ypaworld *yw)
         buttons[1] = ButtonBox(0, 0, dragBarW, yw->_fontH);
 
         if ( flags & FLAG_WITH_HELP )
+            // TODO(cleanup): The help button uses closeW; should be helpW. Harmless today: both are
+            // _fontDefCloseW and help is only ever set together with close.
             buttons[7] = ButtonBox(dragBarW, 0, closeW, yw->_fontH);
         else
             buttons[7] = ButtonBox();

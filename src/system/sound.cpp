@@ -482,6 +482,8 @@ void SFXEngine::audio_InsertPalFX(TSoundSource *smpl)
     {
         if ( palFXs[i] )
         {
+            // TODO(bug): Never compares with minMag, so with no free slot this picks the last
+            // slot with a non-zero PFxMag, not the weakest. InsertShakeFX compares.
             if ( palFXs[i]->PFxMag )
             {
                 minMag = palFXs[i]->PFxMag;
@@ -782,6 +784,8 @@ void SFXEngine::sound_eos_clbk(void *_smpl)
 
                 if ( src->IsEnabled() )
                 {
+                    // TODO(bug): No break, so src is put on every free channel and smpl ends up as the
+                    // last free one. The extra channels stay held by src and play nothing.
                     for (int i = 0; i < SFXe.audio_channels; i++)
                     {
                         if ( !SFXe.snd_channels[i].sndSouce )

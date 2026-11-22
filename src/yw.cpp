@@ -1379,6 +1379,8 @@ size_t NC_STACK_ypaworld::IsNearViewer(NC_STACK_ypabact *bact)
 
 NC_STACK_ypabact * NC_STACK_ypaworld::CreateVehicle(TUnitSpawn *vhcl_id)
 {
+    // TODO(bug): Should be >=. vehicle_id NUM_VHCL_PROTO passes and indexes one past
+    // the end of _vhclProtos.
     if ( vhcl_id->vehicle_id > NUM_VHCL_PROTO )
         return NULL;
 
@@ -1528,6 +1530,8 @@ NC_STACK_ypabact * NC_STACK_ypaworld::CreateVehicle(TUnitSpawn *vhcl_id)
 
 NC_STACK_ypamissile * NC_STACK_ypaworld::CreateWeapon(TUnitSpawn *arg)
 {
+    // TODO(bug): Should be >=. vehicle_id == size() passes, and .at() then throws
+    // instead of the function returning NULL.
     if ( arg->vehicle_id > _weaponProtos.size() )
         return NULL;
 
@@ -1842,6 +1846,9 @@ void NC_STACK_ypaworld::IntersectLongRay(TRayIntersection *arg)
     while( remaining > 0.0 );
 
     int endSecX = ((int)((arg->vect.x + stpos.x + 150.0) / 75.0 * 16384.0)) >> 16;
+    // TODO(bug): -endSecZ is -(z >> 16), but secY above is (-fixZ) >> 16. They differ
+    // by one unless z is on a sector edge, so the extra test below can hit
+    // the wrong sector or skip the real end sector.
     int endSecZ = ((int)((arg->vect.z + stpos.z - 150.0) / 75.0 * 16384.0)) >> 16;
 
     if ( endSecX != secX || -endSecZ != secY )
@@ -5659,6 +5666,9 @@ size_t NC_STACK_ypaworld::StartReplay(const std::string &fname)
 {
     _replayPlayer = new TGameRecorder();
 
+    // TODO(bug): new never returns NULL. When recorder_open_replay or CreateLevel fails
+    // below, _replayPlayer stays allocated and non-NULL, and the menu caller
+    // in main.cpp does not call StopReplay, so it leaks.
     if ( !_replayPlayer )
         return 0;
 
@@ -5795,6 +5805,8 @@ void NC_STACK_ypaworld::PlayReplayFrame(TUpdateArgs *arg)
 
     GFX::Engine.EndFrame();
 
+    // TODO(bug): Stores the replay render time as PFID_UPDATETIME, which the debug
+    // overlay shows as "prof ai". RenderFrame uses PFID_RENDERTIME.
     _profileVals[PFID_UPDATETIME] = profiler_end(renderStart);
 
     HandleSnapshotKeys(this, arg->Input);

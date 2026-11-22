@@ -298,6 +298,8 @@ void GFXEngine::DrawTextEntry(const ScreenText *txt)
                     else
                     {
                         SDL_FreeSurface(tmp);
+                        // TODO(bug): tmp isn't checked again after this second render, so if it fails
+                        // tmp->w below dereferences NULL.
                         tmp = TTF_RenderUTF8_Blended(_font.ttfFont, txt->string.c_str(), clr);
                         SDL_SetSurfaceBlendMode(tmp, SDL_BLENDMODE_BLEND);
                     }

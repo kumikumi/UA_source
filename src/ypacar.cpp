@@ -97,11 +97,17 @@ void NC_STACK_ypacar::DoKamikaze()
 
     for (int i = 0; i < radiusSteps; i++)
     {
+        // TODO(bug): A circle would be sqrt(r^2 - i^2); this is sqrt(i^2 + r^2), so the
+        // blast covers a square-ish area wider than its radius. rowSectors
+        // below has the same pattern.
         float rowSteps = sqrt( POW2(i) + POW2(radiusSteps) );
 
         for (int j = 0; j <= rowSteps; j++)
         {
             TSectorDamage sectorDamage;
+            // TODO(bug): Treats each 300-unit step as a full 1200-unit sector, so sector
+            // damage falls off 4x faster than the unit damage below. In the first
+            // decompile too.
             sectorDamage.energy = exp( sqrt( POW2(i) + POW2(j) ) * (World::CVSectorLength * -2.8) / World::CVSectorLength ) * _carBlast;
             sectorDamage.pos = vec3d(i, 0, j) * 300.0 + _position.X0Z();
             sectorDamage.unit = this;
@@ -155,6 +161,9 @@ void NC_STACK_ypacar::DoKamikaze()
 
         for (int j = 0; j <= rowSectors; j++ )
         {
+            // TODO(bug): Only looks at _cellId + (i, j) with i, j >= 0, so units in the other
+            // three quadrants are never hit. Under a 1200 blast radius radiusSectors
+            // is 0 and no unit is hit at all.
             Common::Point pt = _cellId + Common::Point(i, j);
 
             if ( _world->IsGamePlaySector(pt) )

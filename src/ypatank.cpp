@@ -343,6 +343,8 @@ void NC_STACK_ypatank::AI_layer3(update_msg *arg)
 
                 if ( wallNormal.y < 0.6 && _tankCollisionAngle == 0.0)
                 {
+                    // TODO(cleanup): fabs(0.0) < 0.7 is always true. It is in the first decompile too, so
+                    // probably a term the compiler folded away.
                     if ( ray.tVal * probeLen > (_radius + 50.0) && fabs(turnAngle) < 1.0 && fabs(0.0) < 0.7 && targetDist >= 840.0 )
                     {
                         if ( !_secndTtype )
@@ -1496,6 +1498,9 @@ size_t NC_STACK_ypatank::CollisionWithBact(int arg)
                 {
                     if ( avgDir.XZ().cross( moveDir.XZ() ) >= 0.0 )
                     {
+                        // TODO(bug): oldX is an int, so the old avgDir.x (|x| <= 1) becomes 0 or +-1 when
+                        // it moves into avgDir.z, here and in the else branch. The slide
+                        // direction comes out wrong.
                         int oldX = avgDir.x;
                         avgDir.x = -avgDir.z;
                         avgDir.z = oldX;
