@@ -17,6 +17,7 @@
 #include "gui/uamsgbox.h"
 #include "env.h"
 #include "system/inivals.h"
+#include "system/perf.h"
 #include "locale/locale.h"
 
 extern yw_infolog info_log;
@@ -456,6 +457,7 @@ size_t NC_STACK_ypaworld::Process(base_64arg *arg)
             _ownerOldCellUserUnit = _userUnit->_pSector->owner;
 
             uint32_t v37 = profiler_begin();
+            uint64_t simStart = System::PerfStats::Now();
             
             // Do user commands before any unit state can be changed
             if (_userRobo)
@@ -474,6 +476,7 @@ size_t NC_STACK_ypaworld::Process(base_64arg *arg)
                 _updateMessage.units_count++;
             }
 
+            System::Perf.AddTime(System::PerfStats::SEC_SIM, System::PerfStats::Now() - simStart);
             _profileVals[PFID_UPDATETIME] = profiler_end(v37);
 
             sub_445230(this);
@@ -550,6 +553,7 @@ size_t NC_STACK_ypaworld::Process(base_64arg *arg)
                 }
                 
                 debug_info_draw(arg->field_8);
+                DrawPerfOverlay(arg->field_8);
 
                 GFX::Engine.EndFrame();
 
@@ -5675,6 +5679,7 @@ void NC_STACK_ypaworld::ypaworld_func163(base_64arg *arg)
     RenderGame(arg, 0);
 
     debug_info_draw(arg->field_8);
+    DrawPerfOverlay(arg->field_8);
 
     GFX::Engine.EndFrame();
 

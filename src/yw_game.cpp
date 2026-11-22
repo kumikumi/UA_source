@@ -13,6 +13,7 @@
 #include "font.h"
 #include "gui/uacommon.h"
 #include "system/inivals.h"
+#include "system/perf.h"
 
 extern uint32_t bact_id;
 
@@ -1579,7 +1580,10 @@ void NC_STACK_ypaworld::RenderSector(TRenderingSector *sct, baseRender_msg *bs77
     for ( NC_STACK_ypabact* &bact : sct->p_cell->unitsList )
     {
         if ( sct->dword8 || bact->_bact_type == BACT_TYPES_ROBO)
+        {
             bact->Render(bs77);
+            System::Perf.Count(System::PerfStats::CNT_UNITS);
+        }
     }
 }
 
@@ -1847,6 +1851,8 @@ void NC_STACK_ypaworld::RenderGame(base_64arg *bs64, int a2)
     if ( !_viewerBact )
         return;
 
+    uint64_t sceneStart = System::PerfStats::Now();
+
     TF::TForm3D *v5 = TF::Engine.GetViewPoint();
 
     if ( v5 )
@@ -1937,12 +1943,15 @@ void NC_STACK_ypaworld::RenderGame(base_64arg *bs64, int a2)
     if ( _skyRender )
         yw_renderSky(&rndrs);
 
+    System::Perf.AddTime(System::PerfStats::SEC_SCENE, System::PerfStats::Now() - sceneStart);
+
     GFX::Engine.Rasterize();
 
     GFX::Engine.EndScene();
 
     if ( a2 )
     {
+        System::PerfStats::Timer perf(System::PerfStats::SEC_GUI);
         uint32_t tpm = profiler_begin();
         sb_0x4d7c08__sub0(this);
         _profileVals[PFID_NEWGUITIME] = profiler_end(tpm);
@@ -5129,7 +5138,52 @@ void NC_STACK_ypaworld::debug_info_draw(TInputState *inpt)
     }
 }
 
+void NC_STACK_ypaworld::DrawPerfOverlay(TInputState *inpt)
+{
+    if ( inpt->KbdLastHit == Input::KC_F10 )
+        _showPerfOverlay = !_showPerfOverlay;
 
+    if ( !_showPerfOverlay )
+        return;
+
+    using PS = System::PerfStats;
+    const PS::Summary &perf = System::Perf.GetSummary();
+
+    const std::array<std::string, 5> lines = {
+        fmt::sprintf("%.0f fps   %.1f ms   worst %.1f ms", perf.Fps, perf.FrameMs, perf.WorstMs),
+
+        fmt::sprintf("sim %.1f   scene %.1f   draw %.1f   gui %.1f   present %.1f ms",
+                     perf.SectionMs[PS::SEC_SIM], perf.SectionMs[PS::SEC_SCENE],
+                     perf.SectionMs[PS::SEC_DRAW], perf.SectionMs[PS::SEC_GUI],
+                     perf.SectionMs[PS::SEC_PRESENT]),
+
+        fmt::sprintf("%d draw calls (%d particles), %d triangles, %d texture changes",
+                     perf.Counters[PS::CNT_DRAWCALLS], perf.Counters[PS::CNT_PARTICLES],
+                     perf.Counters[PS::CNT_TRIANGLES], perf.Counters[PS::CNT_TEXCHANGES]),
+
+        fmt::sprintf("%d units drawn", perf.Counters[PS::CNT_UNITS]),
+
+        GFX::Engine.GetRendererInfo()
+    };
+
+    CmdStream txt;
+    FontUA::select_tileset(&txt, 15);
+    FontUA::set_xpos(&txt, 0);
+    FontUA::set_ypos(&txt, 16);
+
+    for (const std::string &line : lines)
+    {
+        // Flag 2 right-aligns the text in its block, which ends 8 pixels
+        // from the right edge of the screen.
+        FontUA::copy_position(&txt);
+        FontUA::add_txt(&txt, _screenSize.x - 8, 1 | 2, line);
+        FontUA::next_line(&txt);
+    }
+
+    FontUA::set_end(&txt);
+
+    GFX::Engine.ProcessDrawSeq(txt);
+}
 
 
 

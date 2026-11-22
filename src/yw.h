@@ -2172,6 +2172,7 @@ public:
     bool IsAnyBuildingProcess(int owner) const;
     
     void debug_info_draw(TInputState *inpt);
+    void DrawPerfOverlay(TInputState *inpt);
     void debug_count_units();
     void ProfileCalcValues();
     
@@ -2556,6 +2557,7 @@ public:
     update_msg _updateMessage;
     
     int8_t _showDebugMode = 0; // debug info draw modes
+    bool _showPerfOverlay = false; // FPS and frame timings, toggled with F10
     
     int32_t _polysCount = 0;
     int32_t _polysDraw = 0;

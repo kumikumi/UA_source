@@ -18,6 +18,7 @@
 #include "../log.h"
 #include "../font.h"
 #include "inivals.h"
+#include "perf.h"
 #include "glfuncs.h"
 
 namespace GFX
@@ -765,6 +766,8 @@ void GFXEngine::SetRenderStates(int setAll)
         
         if (forceSetShader || (newStates->Tex != _lastStates.Tex))
         {
+            System::Perf.Count(System::PerfStats::CNT_TEXCHANGES);
+
             if (newStates->Tex)
             {
                 if (newStates->Prog.UVLoc != -1)
@@ -886,6 +889,8 @@ void GFXEngine::SetRenderStates(int setAll)
         
         if (setAll || (newStates->Tex != _lastStates.Tex))
         {
+            System::Perf.Count(System::PerfStats::CNT_TEXCHANGES);
+
             if (newStates->Tex)
             {
                 glEnable(GL_TEXTURE_2D);
@@ -1158,6 +1163,9 @@ void GFXEngine::RenderingMeshOld(TRenderNode *nod)
     }
     
     glDrawElements(GL_TRIANGLES, mesh->Indixes.size(), GLINDEXTYPE, mesh->Indixes.data());
+
+    System::Perf.Count(System::PerfStats::CNT_DRAWCALLS);
+    System::Perf.Count(System::PerfStats::CNT_TRIANGLES, mesh->Indixes.size() / 3);
 }
 
 void GFXEngine::RenderingMesh(TRenderNode *nod)
@@ -1308,6 +1316,9 @@ void GFXEngine::RenderingMesh(TRenderNode *nod)
     
     CommitUBOParameters();    
     glDrawElements(GL_TRIANGLES, mesh->Indixes.size(), GLINDEXTYPE, NULL);
+
+    System::Perf.Count(System::PerfStats::CNT_DRAWCALLS);
+    System::Perf.Count(System::PerfStats::CNT_TRIANGLES, mesh->Indixes.size() / 3);
 }
 
 void GFXEngine::RenderNode(TRenderNode *node)
@@ -1361,6 +1372,8 @@ void GFXEngine::QueueRenderMesh(TRenderNode *nod)
 
 void GFXEngine::Rasterize(uint32_t RasterEtapes)
 {
+    System::PerfStats::Timer perf(System::PerfStats::SEC_DRAW);
+
     if (RasterEtapes & RASTER_SKY)
     {
         _renderSkyBoxList.sort(TRenderNode::CompareSolid);
@@ -1788,6 +1801,8 @@ void GFXEngine::raster_func221(const Common::Rect &arg)
 
 void GFXEngine::BeginFrame()
 {
+    System::Perf.FrameStart();
+
     SDL_FillRect(Screen(), NULL, SDL_MapRGBA(Screen()->format, 0, 0, 0, 0) );
     
     Common::Point scrSz = System::GetResolution();
@@ -1819,6 +1834,8 @@ void GFXEngine::BeginFrame()
 
 void GFXEngine::EndFrame()
 {       
+    System::PerfStats::Timer perf(System::PerfStats::SEC_PRESENT);
+
     if (_colorEffects > 1)
     {
         Glext::GLBindFramebuffer(GL_FRAMEBUFFER, 0);   
@@ -2284,6 +2301,34 @@ void GFXEngine::fpsLimitter(int value)
         FpsMaxTicks = 0;
     else
         FpsMaxTicks = 1000/value;
+}
+
+std::string GFXEngine::GetRendererInfo()
+{
+    std::string vsync;
+    switch ( SDL_GL_GetSwapInterval() )
+    {
+        case 0:
+            vsync = "off";
+            break;
+
+        case -1:
+            vsync = "adaptive";
+            break;
+
+        default:
+            vsync = "on";
+            break;
+    }
+
+    std::string cap = "none";
+    if ( FpsMaxTicks )
+        cap = fmt::sprintf("%d fps", 1000 / FpsMaxTicks);
+
+    return fmt::sprintf("OpenGL %d.%d %s renderer, %dx%d, vsync %s, fps cap %s",
+                        Glext::VersionMajor, Glext::VersionMinor,
+                        _vbo ? "shader" : "legacy",
+                        _resolution.x, _resolution.y, vsync, cap);
 }
 
 
@@ -3600,6 +3645,9 @@ void GFXEngine::DrawVtxQuad(const std::array<GFX::TVertex, 4> &vtx)
 
         glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_SHORT, &indexes);
     }
+
+    System::Perf.Count(System::PerfStats::CNT_DRAWCALLS);
+    System::Perf.Count(System::PerfStats::CNT_TRIANGLES, 2);
 }
 
 void GFXEngine::DrawScreenSurface()

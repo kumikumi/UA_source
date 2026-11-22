@@ -64,6 +64,7 @@ set(SOURCES
 	system/inpt.cpp
 	system/luascript.cpp
 	system/movie.cpp
+	system/perf.cpp
 	system/sound.cpp
 	system/stdshdr.cpp
 	system/system.cpp

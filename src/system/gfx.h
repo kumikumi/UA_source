@@ -637,6 +637,9 @@ public:
         
     void fpsLimitter(int value);
     
+    // One line on the renderer in use, for the performance overlay.
+    std::string GetRendererInfo();
+
     float GetColorEffectPower(int id);
     
     Common::Point ConvertPosTo2DStuff(const Common::Point &pos);

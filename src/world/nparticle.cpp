@@ -1,5 +1,6 @@
 #include "nparticle.h"
 #include "../system/inivals.h"
+#include "../system/perf.h"
 #include "../skeleton.h"
 #include "../ade.h"
 #include "../particle.h"
@@ -135,6 +136,7 @@ void ParticleSystem::Render(Frak *p, float scale, area_arg_65 *rndrParams)
             rend.ParticleSize = scale;
 
             GFX::GFXEngine::Instance.QueueRenderMesh(&rend);
+            System::Perf.Count(System::PerfStats::CNT_PARTICLES);
         }
     }
 }
