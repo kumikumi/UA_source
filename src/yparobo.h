@@ -82,9 +82,6 @@ public:
     virtual void CorrectPositionOnLand();
     virtual void DeadTimeUpdate(update_msg *arg);
     virtual void FindMatchingCommander(robo_arg128 *arg);
-    virtual void yparobo_func129(IDVPair *arg);
-    virtual void yparobo_func130(IDVPair *arg);
-    virtual void yparobo_func131(IDVPair *arg);
     virtual size_t GetTargetByCommandID(setTarget_msg *arg);
     virtual bool MakeSquad(const std::vector<int> &VhclIDS, vec3d pos, bool usable);
     virtual int placeMessage(robo_arg134 *arg);

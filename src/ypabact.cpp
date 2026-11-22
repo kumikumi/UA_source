@@ -4294,12 +4294,6 @@ void NC_STACK_ypabact::Recoil(bact_arg88 *arg)
     }
 }
 
-void NC_STACK_ypabact::ypabact_func89(IDVPair *arg)
-{
-    dprintf("MAKE ME %s\n","ypabact_func89");
-    //call_parent(zis, obj, 89, arg);
-}
-
 
 bool NC_STACK_ypabact::IsAnyKidWithoutSecondUnitTarget() const
 {
@@ -4776,12 +4770,6 @@ void NC_STACK_ypabact::GetForcesRatio(bact_arg92 *arg)
     }
 }
 
-void NC_STACK_ypabact::ypabact_func93(IDVPair *arg)
-{
-    dprintf("MAKE ME %s\n","ypabact_func93");
-//    call_parent(zis, obj, 93, arg);
-}
-
 void NC_STACK_ypabact::GetFormationPosition(bact_arg94 *arg)
 {
     vec3d v2d = _rotation.AxisZ().X0Z();
@@ -4804,12 +4792,6 @@ void NC_STACK_ypabact::GetFormationPosition(bact_arg94 *arg)
 
     // With y = 0
     //arg->pos2 = vec3d::X0Z( arg->pos1.XZ() - _position.XZ() );
-}
-
-void NC_STACK_ypabact::ypabact_func95(IDVPair *arg)
-{
-    dprintf("MAKE ME %s\n","ypabact_func95");
-//    call_parent(zis, obj, 95, arg);
 }
 
 // Reset
@@ -4928,12 +4910,6 @@ void NC_STACK_ypabact::HandBrake(update_msg *arg)
     }
 
     _fly_dir_length *= 0.8;
-}
-
-void NC_STACK_ypabact::ypabact_func98(IDVPair *arg)
-{
-    dprintf("MAKE ME %s\n","ypabact_func98");
-//    call_parent(zis, obj, 98, arg);
 }
 
 void NC_STACK_ypabact::CreationTimeUpdate(update_msg *arg)
@@ -5213,12 +5189,6 @@ void NC_STACK_ypabact::MarkSectorsForView()
 
     for( NC_STACK_ypabact* &kid : _kidList )
         kid->MarkSectorsForView();
-}
-
-void NC_STACK_ypabact::ypabact_func103(IDVPair *arg)
-{
-    dprintf("MAKE ME %s\n","ypabact_func103");
-//    call_parent(zis, obj, 103, arg);
 }
 
 void NC_STACK_ypabact::StuckFree(update_msg *arg)

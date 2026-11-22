@@ -1902,16 +1902,11 @@ public:
     virtual void ypaworld_func129(yw_arg129 *arg);
     virtual size_t GetSectorInfo(yw_130arg *arg);
     virtual void ypaworld_func131(NC_STACK_ypabact *bact);
-    virtual void ypaworld_func132(void *arg);
-    virtual void ypaworld_func133(void *arg);
     virtual void AddToUnitsList(NC_STACK_ypabact *bact);
-    virtual void ypaworld_func135(void *arg);
     virtual void ypaworld_func136(ypaworld_arg136 *arg);
     virtual void ypaworld_func137(ypaworld_arg137 *arg);
-    virtual void ypaworld_func138(void *arg);
     virtual void GuiWinAttach(GuiBase *lstvw);
     virtual void GuiWinDetach(GuiBase *lstvw);
-    virtual void ypaworld_func143(void *arg);
     virtual void MoveToDeadCache(NC_STACK_ypabact *bacto);
     virtual size_t IsNearViewer(NC_STACK_ypabact *bact);
     virtual NC_STACK_ypabact * CreateVehicle(ypaworld_arg146 *vhcl_id);
@@ -1936,7 +1931,6 @@ public:
     virtual void CloseGameShell();
     virtual void ProcessGameShell();
     virtual void ShowMessage(yw_arg159 *arg);
-    virtual void ypaworld_func160(void *arg);
     virtual size_t ypaworld_func161(yw_arg161 *arg);
     virtual size_t ypaworld_func162(const std::string &fname);
     virtual void PlayReplayFrame(base_64arg *arg);

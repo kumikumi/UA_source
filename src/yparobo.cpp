@@ -5449,24 +5449,6 @@ void NC_STACK_yparobo::FindMatchingCommander(robo_arg128 *arg)
     }
 }
 
-void NC_STACK_yparobo::yparobo_func129(IDVPair *arg)
-{
-    dprintf("MAKE ME %s\n","yparobo_func129");
-//	call_parent(zis, obj, 129, arg);
-}
-
-void NC_STACK_yparobo::yparobo_func130(IDVPair *arg)
-{
-    dprintf("MAKE ME %s\n","yparobo_func130");
-//	call_parent(zis, obj, 130, arg);
-}
-
-void NC_STACK_yparobo::yparobo_func131(IDVPair *arg)
-{
-    dprintf("MAKE ME %s\n","yparobo_func131");
-//	call_parent(zis, obj, 131, arg);
-}
-
 size_t NC_STACK_yparobo::GetTargetByCommandID(setTarget_msg *arg)
 {
     if ( !arg->priority )

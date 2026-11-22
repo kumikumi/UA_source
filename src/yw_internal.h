@@ -52,7 +52,6 @@ void ypaworld_func156__sub1(UserData *usr);
 
 void yw_calcPlayerScore(NC_STACK_ypaworld *yw);
 
-int sub_4DA41C(NC_STACK_ypaworld *yw, TLevelDescription *mapp, const char *fname);
 
 void UpdateBriefingScreen(NC_STACK_ypaworld *yw, UserData *usr, TInputState *inpt);
 

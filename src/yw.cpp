@@ -1112,18 +1112,6 @@ void NC_STACK_ypaworld::ypaworld_func131(NC_STACK_ypabact *bact)
 }
 
 
-void NC_STACK_ypaworld::ypaworld_func132(void *arg)
-{
-    dprintf("MAKE ME %s\n","ypaworld_func132");
-}
-
-
-void NC_STACK_ypaworld::ypaworld_func133(void *arg)
-{
-    dprintf("MAKE ME %s\n","ypaworld_func133");
-}
-
-
 void NC_STACK_ypaworld::AddToUnitsList(NC_STACK_ypabact *bact)
 {
     newMaster_msg arg73;
@@ -1132,12 +1120,6 @@ void NC_STACK_ypaworld::AddToUnitsList(NC_STACK_ypabact *bact)
     arg73.list = &_unitsList;
 
     bact->SetNewMaster(&arg73);
-}
-
-
-void NC_STACK_ypaworld::ypaworld_func135(void *arg)
-{
-    dprintf("MAKE ME %s\n","ypaworld_func135");
 }
 
 
@@ -1278,12 +1260,6 @@ void NC_STACK_ypaworld::ypaworld_func137(ypaworld_arg137 *arg)
 }
 
 
-void NC_STACK_ypaworld::ypaworld_func138(void *arg)
-{
-    dprintf("MAKE ME %s\n","ypaworld_func138");
-}
-
-
 void NC_STACK_ypaworld::GuiWinAttach(GuiBase *lstvw)
 {
     if ( !(lstvw->flags & GuiBase::FLAG_WITH_ICON) )
@@ -1321,12 +1297,6 @@ void NC_STACK_ypaworld::GuiWinDetach(GuiBase *lstvw)
         else if ( lstvw->IsOpen() )
             Input::Engine.RemClickBox(lstvw);
     }
-}
-
-
-void NC_STACK_ypaworld::ypaworld_func143(void *arg)
-{
-    dprintf("MAKE ME %s\n","ypaworld_func143");
 }
 
 
@@ -5620,11 +5590,6 @@ void NC_STACK_ypaworld::ShowMessage(yw_arg159 *arg)
     }
 }
 
-
-void NC_STACK_ypaworld::ypaworld_func160(void *arg)
-{
-    dprintf("MAKE ME %s\n","ypaworld_func160");
-}
 
 // Load Level
 size_t NC_STACK_ypaworld::ypaworld_func161(yw_arg161 *arg)
