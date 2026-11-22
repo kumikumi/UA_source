@@ -2200,16 +2200,16 @@ public:
     void ypaworld_func64__sub19__sub2(int id);
     void ypaworld_func64__sub19__sub1(int id);
     void ypaworld_func64__sub19__sub0(int id);
-    void ypaworld_func64__sub19();
+    void UpdateSuperItems();
     void sub_4D16C4(int id);
     bool sub_4D1230(int id, int a3);
     bool sub_4D11C0(int id, int owner);
     bool sub_4D12A0(int owner);
     
-    void sub_4C40AC();
+    void UpdateCommanderList();
     NC_STACK_ypabact *GetLastMsgSender();
     
-    void ypaworld_func64__sub7(TInputState *inpt);
+    void HandleGuiInput(TInputState *inpt);
     void ypaworld_func64__sub7__sub4(TInputState *inpt);
     void ypaworld_func64__sub7__sub4__sub0(int a2);
     void ypaworld_func64__sub7__sub3__sub4(NC_STACK_ypabact *bact);
@@ -2223,7 +2223,7 @@ public:
     void ypaworld_func64__sub21__sub1__sub3__sub0(TClickBoxInf *winp);
     void yw_3D_MouseSelect(TClickBoxInf *winp);
     
-    void ypaworld_func64__sub21(TInputState *arg);
+    void HandleWorldMouse(TInputState *arg);
     void ypaworld_func64__sub21__sub7();
     float sub_4498F4();
     
@@ -2267,7 +2267,7 @@ public:
         return Locale::Text::Tooltip(_toolTipId);
     }
     
-    void ypaworld_func64__sub1(TInputState *inpt);
+    void PrepareUserInput(TInputState *inpt);
     void ypaworld_func64__sub21__sub5(int arg);
     
     

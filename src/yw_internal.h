@@ -109,7 +109,7 @@ void sb_0x4d7c08__sub0(NC_STACK_ypaworld *yw);
 
 void draw_tooltip(NC_STACK_ypaworld *yw);
 
-void sub_4C40AC(NC_STACK_ypaworld *yw);
+void UpdateCommanderList(NC_STACK_ypaworld *yw);
 
 
 class squadMan: public GuiList
@@ -275,13 +275,13 @@ struct debrif_t1
 };
 
 
-void ypaworld_func64__sub7(NC_STACK_ypaworld *yw, TInputState *inpt);
-void ypaworld_func64__sub8(NC_STACK_ypaworld *yw);
+void HandleGuiInput(NC_STACK_ypaworld *yw, TInputState *inpt);
+void RoboMapFollowViewer(NC_STACK_ypaworld *yw);
 void RoboMapUpdateLayout(NC_STACK_ypaworld *yw);
 
-void ypaworld_func64__sub15(NC_STACK_ypaworld *yw);
-void ypaworld_func64__sub16(NC_STACK_ypaworld *yw);
-void ypaworld_func64__sub17(NC_STACK_ypaworld *yw);
+void UpdateGunList(NC_STACK_ypaworld *yw);
+void UpdateVehicleList(NC_STACK_ypaworld *yw);
+void UpdateBuildingList(NC_STACK_ypaworld *yw);
 
 int sub_47B388(int a1, const std::string &a2);
 
@@ -301,23 +301,23 @@ void yw_RenderHUDRadare(NC_STACK_ypaworld *yw);
 void sb_0x4d7c08__sub0__sub2(NC_STACK_ypaworld *yw);
 
 
-void ypaworld_func64__sub6(NC_STACK_ypaworld *yw);
+void UpdateReloadRatios(NC_STACK_ypaworld *yw);
 
-void ypaworld_func64__sub21(NC_STACK_ypaworld *yw, TInputState *arg);
-
-
+void HandleWorldMouse(NC_STACK_ypaworld *yw, TInputState *arg);
 
 
-int ypaworld_func64__sub4(NC_STACK_ypaworld *yw, base_64arg *arg);
-void ypaworld_func64__sub2(NC_STACK_ypaworld *yw);
-void ypaworld_func64__sub19(NC_STACK_ypaworld *yw);
-void ypaworld_func64__sub9(NC_STACK_ypaworld *yw);
 
-void ypaworld_func64__sub3(NC_STACK_ypaworld *yw);
+
+int HandlePause(NC_STACK_ypaworld *yw, base_64arg *arg);
+void UpdatePlayerInRoboGun(NC_STACK_ypaworld *yw);
+void UpdateSuperItems(NC_STACK_ypaworld *yw);
+void UpdateGates(NC_STACK_ypaworld *yw);
+
+void CheckEnemySectorEntered(NC_STACK_ypaworld *yw);
 
 
 void FFeedback_Update(NC_STACK_ypaworld *yw);
-void sb_0x447720(NC_STACK_ypaworld *yw, TInputState *inpt);
+void HandleSnapshotKeys(NC_STACK_ypaworld *yw, TInputState *inpt);
 void recorder_update_time(NC_STACK_ypaworld *yw, int dtime);
 void recorder_write_frame(NC_STACK_ypaworld *yw);
 

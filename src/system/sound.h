@@ -272,9 +272,9 @@ public:
     void PlayMusicTrack();
 
     void UpdateSoundCarrier(TSndCarrier *smpls);
-    const mat3x3 &sb_0x424c74(); //Update sounds and return shake matrix
+    const mat3x3 &EndSoundFrame(); //Update sounds and return shake matrix
 
-    void sub_423EFC(int a1, const vec3d &a2, const vec3d &a3, const mat3x3 &a4);
+    void BeginSoundFrame(int a1, const vec3d &a2, const vec3d &a3, const mat3x3 &a4);
     TSoundSource *SndGetTopShake();
 
 protected:

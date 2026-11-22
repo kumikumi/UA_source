@@ -278,7 +278,7 @@ size_t NC_STACK_ypaworld::Deinit()
     return NC_STACK_nucleus::Deinit();
 }
 
-void sub_445230(NC_STACK_ypaworld *yw)
+void UpdateViewerPosition(NC_STACK_ypaworld *yw)
 {
     if ( yw->_viewerBact->getBACT_extraViewer() )
     {
@@ -315,7 +315,7 @@ size_t NC_STACK_ypaworld::Process(base_64arg *arg)
         arg->field_8->HotKeyID = -1;
     }
 
-    if ( !ypaworld_func64__sub4(this, arg) )
+    if ( !HandlePause(this, arg) )
     {
         uint32_t v92 = profiler_begin();
 
@@ -339,7 +339,7 @@ size_t NC_STACK_ypaworld::Process(base_64arg *arg)
 
             vec3d a3 = _userUnit->_fly_dir * _userUnit->_fly_dir_length;
 
-            SFXEngine::SFXe.sub_423EFC(arg->DTime, _viewerPosition, a3, _viewerRotation);
+            SFXEngine::SFXe.BeginSoundFrame(arg->DTime, _viewerPosition, a3, _viewerRotation);
         }
 
         if ( _framesElapsed == 1 )
@@ -352,12 +352,12 @@ size_t NC_STACK_ypaworld::Process(base_64arg *arg)
             ypaworld_func159(&arg159);
         }
 
-        ypaworld_func64__sub6(this);
-        ypaworld_func64__sub2(this);
+        UpdateReloadRatios(this);
+        UpdatePlayerInRoboGun(this);
 
         if ( !_doNotRender )
         {
-            ypaworld_func64__sub1(arg->field_8); //Precompute input (add mouse turn)
+            PrepareUserInput(arg->field_8); //Precompute input (add mouse turn)
 
             TClickBoxInf *winp = &arg->field_8->ClickInf;
 
@@ -422,25 +422,25 @@ size_t NC_STACK_ypaworld::Process(base_64arg *arg)
                 _win3d->raster_func192(NULL);*/
             }
 
-            ypaworld_func64__sub15(this);
-            ypaworld_func64__sub16(this);
-            ypaworld_func64__sub17(this);
-            sub_4C40AC();
-            ypaworld_func64__sub9(this);
-            ypaworld_func64__sub19();
+            UpdateGunList(this);
+            UpdateVehicleList(this);
+            UpdateBuildingList(this);
+            UpdateCommanderList();
+            UpdateGates(this);
+            UpdateSuperItems();
             BuildingConstructUpdate(arg->DTime);
 
             if ( !_doNotRender )
             {
                 uint32_t v33 = profiler_begin();
 
-                ypaworld_func64__sub8(this);
-                ypaworld_func64__sub7(arg->field_8);
+                RoboMapFollowViewer(this);
+                HandleGuiInput(arg->field_8);
 
-                sub_445230(this);
+                UpdateViewerPosition(this);
 
                 RoboMapUpdateLayout(this);
-                ypaworld_func64__sub21(arg->field_8);
+                HandleWorldMouse(arg->field_8);
 
                 _profileVals[PFID_GUITIME] = profiler_end(v33);
             }
@@ -479,7 +479,7 @@ size_t NC_STACK_ypaworld::Process(base_64arg *arg)
             System::Perf.AddTime(System::PerfStats::SEC_SIM, System::PerfStats::Now() - simStart);
             _profileVals[PFID_UPDATETIME] = profiler_end(v37);
 
-            sub_445230(this);
+            UpdateViewerPosition(this);
 
             uint32_t v41 = profiler_begin();
 
@@ -530,7 +530,7 @@ size_t NC_STACK_ypaworld::Process(base_64arg *arg)
                         
             VoiceMessageUpdate(); // update sound messages
 
-            const mat3x3 &v57 = SFXEngine::SFXe.sb_0x424c74();
+            const mat3x3 &v57 = SFXEngine::SFXe.EndSoundFrame();
             TF::TForm3D *v58 = TF::Engine.GetViewPoint();
 
             v58->SclRot = v57 * v58->SclRot;
@@ -538,7 +538,7 @@ size_t NC_STACK_ypaworld::Process(base_64arg *arg)
             if ( _replayRecorder->do_record )
                 recorder_write_frame();
 
-            ypaworld_func64__sub3(this);
+            CheckEnemySectorEntered(this);
 
             if ( !_doNotRender )
             {
@@ -562,7 +562,7 @@ size_t NC_STACK_ypaworld::Process(base_64arg *arg)
 
             FFeedback_Update(); // Do vibrate joystick
 
-            sb_0x447720(this, arg->field_8); // Snaps/ start/stop recording
+            HandleSnapshotKeys(this, arg->field_8); // Snaps/ start/stop recording
 
             _profileVals[PFID_FRAMETIME] = profiler_end(v92);
             _profileVals[PFID_POLYGONS] = _polysDraw;
@@ -5293,7 +5293,7 @@ void NC_STACK_ypaworld::ProcessGameShell()
 {
     _GameShell->envAction.action = EnvAction::ACTION_NONE;
 
-    SFXEngine::SFXe.sub_423EFC(_GameShell->DTime, vec3d(0.0), vec3d(0.0), mat3x3::Ident());
+    SFXEngine::SFXe.BeginSoundFrame(_GameShell->DTime, vec3d(0.0), vec3d(0.0), mat3x3::Ident());
 
     GFX::Engine.BeginFrame();
 
@@ -5324,7 +5324,7 @@ void NC_STACK_ypaworld::ProcessGameShell()
 
     SFXEngine::SFXe.UpdateSoundCarrier(&_GameShell->samples1_info);
 
-    SFXEngine::SFXe.sb_0x424c74();
+    SFXEngine::SFXe.EndSoundFrame();
     
 
     GFX::Engine.EndFrame();
@@ -5642,7 +5642,7 @@ void NC_STACK_ypaworld::ypaworld_func163(base_64arg *arg)
 
     _win3d->raster_func192(NULL);*/
 
-    sub_4C40AC();
+    UpdateCommanderList();
 
     _guiVisor.field_0 = 0;
     _guiVisor.field_4 = 0;
@@ -5654,7 +5654,7 @@ void NC_STACK_ypaworld::ypaworld_func163(base_64arg *arg)
 
     vec3d a3a = _userUnit->_fly_dir * _userUnit->_fly_dir_length;
 
-    SFXEngine::SFXe.sub_423EFC(arg->DTime, _userUnit->_position, a3a, _userUnit->_rotation);
+    SFXEngine::SFXe.BeginSoundFrame(arg->DTime, _userUnit->_position, a3a, _userUnit->_rotation);
 
     for ( NC_STACK_ypabact* &bct : _userUnit->_kidList )
     {
@@ -5669,7 +5669,7 @@ void NC_STACK_ypaworld::ypaworld_func163(base_64arg *arg)
         SFXEngine::SFXe.UpdateSoundCarrier(&bct->_soundcarrier);
     }
 
-    const mat3x3 &v25 = SFXEngine::SFXe.sb_0x424c74();
+    const mat3x3 &v25 = SFXEngine::SFXe.EndSoundFrame();
     TF::TForm3D *v26 = TF::Engine.GetViewPoint();
 
     v26->SclRot = v25 * v26->SclRot;
@@ -5685,7 +5685,7 @@ void NC_STACK_ypaworld::ypaworld_func163(base_64arg *arg)
 
     _profileVals[PFID_UPDATETIME] = profiler_end(v28);
 
-    sb_0x447720(this, arg->field_8);
+    HandleSnapshotKeys(this, arg->field_8);
 
     _profileVals[PFID_FRAMETIME] = profiler_end(v33);
     _profileVals[PFID_POLYGONS] = _polysDraw;

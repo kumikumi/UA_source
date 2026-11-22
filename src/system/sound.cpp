@@ -991,7 +991,7 @@ void SFXEngine::UpdateMusic()
 }
 
 
-const mat3x3 &SFXEngine::sb_0x424c74()
+const mat3x3 &SFXEngine::EndSoundFrame()
 {
     if ( digDriver->inited() )
     {
@@ -1010,7 +1010,7 @@ const mat3x3 &SFXEngine::sb_0x424c74()
     return shakeMatrix;
 }
 
-void SFXEngine::sub_423EFC(int a1, const vec3d &a2, const vec3d &a3, const mat3x3 &a4)
+void SFXEngine::BeginSoundFrame(int a1, const vec3d &a2, const vec3d &a3, const mat3x3 &a4)
 {
     currentTime += a1;
 

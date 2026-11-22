@@ -5466,7 +5466,7 @@ void ypaworld_func64__sub7__sub3__sub3(NC_STACK_ypaworld *yw, TClickBoxInf *winp
         }
         yw->_activeCmdrID = squadron_manager.field_2BC->_commandID;
         sub_4C707C(yw);
-        yw->sub_4C40AC();
+        yw->UpdateCommanderList();
     }
     else
     {
@@ -5516,7 +5516,7 @@ void ypaworld_func64__sub7__sub3__sub3(NC_STACK_ypaworld *yw, TClickBoxInf *winp
             }
             yw->_activeCmdrID = v6->_commandID;
             sub_4C707C(yw);
-            yw->sub_4C40AC();
+            yw->UpdateCommanderList();
         }
     }
 }
@@ -5889,7 +5889,7 @@ void ypaworld_func64__sub7__sub1__sub0(NC_STACK_ypaworld *yw)
     if ( v13 )
         yw->_activeCmdrID = v13->_commandID;
 
-    yw->sub_4C40AC();
+    yw->UpdateCommanderList();
 }
 
 void  RoboMap_InputHandle(NC_STACK_ypaworld *yw, TInputState *inpt)
@@ -6866,7 +6866,7 @@ void NC_STACK_ypaworld::ypaworld_func64__sub7__sub4(TInputState *inpt)
 }
 
 
-void NC_STACK_ypaworld::ypaworld_func64__sub7(TInputState *inpt)
+void NC_STACK_ypaworld::HandleGuiInput(TInputState *inpt)
 {
     TClickBoxInf *winpt = &inpt->ClickInf;
 
@@ -7090,7 +7090,7 @@ bool sub_4C3E34(NC_STACK_ypabact* const &a1, NC_STACK_ypabact* const &a2)
 }
 
 
-void NC_STACK_ypaworld::sub_4C40AC()
+void NC_STACK_ypaworld::UpdateCommanderList()
 {
     _cmdrsRemap.clear();
     _cmdrsRemap.reserve(128);
@@ -7183,7 +7183,7 @@ void RoboMapUpdateLayout(NC_STACK_ypaworld *yw)
     }
 }
 
-void ypaworld_func64__sub8(NC_STACK_ypaworld *yw)
+void RoboMapFollowViewer(NC_STACK_ypaworld *yw)
 {
     if ( robo_map.IsOpen() )
     {
@@ -7302,7 +7302,7 @@ int sub_4C3C88(const void *a1, const void *a2)
     return 0;
 }
 
-void ypaworld_func64__sub16(NC_STACK_ypaworld *yw)
+void UpdateVehicleList(NC_STACK_ypaworld *yw)
 {
     int v6 = 0;
 
@@ -7395,7 +7395,7 @@ int sub_4C3D6C(const void *a1, const void *a2)
 }
 
 
-void ypaworld_func64__sub17(NC_STACK_ypaworld *yw)
+void UpdateBuildingList(NC_STACK_ypaworld *yw)
 {
     int v6 = 0;
 
@@ -7438,7 +7438,7 @@ void ypaworld_func64__sub17(NC_STACK_ypaworld *yw)
     }
 }
 
-void ypaworld_func64__sub15(NC_STACK_ypaworld *yw)
+void UpdateGunList(NC_STACK_ypaworld *yw)
 {
     NC_STACK_yparobo *robo = dynamic_cast<NC_STACK_yparobo *>(yw->_userRobo);
 
@@ -10533,7 +10533,7 @@ void NC_STACK_ypaworld::ypaworld_func64__sub21__sub5(int arg)
             if ( sub_4D3C80(this) )
             {
                 _activeCmdrID = _bactOnMouse->_commandID;
-                sub_4C40AC();
+                UpdateCommanderList();
             }
         }
 
@@ -10612,7 +10612,7 @@ void NC_STACK_ypaworld::ypaworld_func64__sub21__sub5(int arg)
             if ( sub_4D3C80(this) )
             {
                 _activeCmdrID = _bactOnMouse->_commandID;
-                sub_4C40AC();
+                UpdateCommanderList();
             }
         }
         break;
@@ -10646,7 +10646,7 @@ void NC_STACK_ypaworld::ypaworld_func64__sub21__sub5(int arg)
 }
 
 
-void NC_STACK_ypaworld::ypaworld_func64__sub21(TInputState *arg)
+void NC_STACK_ypaworld::HandleWorldMouse(TInputState *arg)
 {
     if ( _userRobo && (arg->ClickInf.flag & TClickBoxInf::FLAG_OK) && _viewerBact )
     {
@@ -11062,7 +11062,7 @@ void NC_STACK_ypaworld::ypaworld_func64__sub21(TInputState *arg)
 
 
 
-void NC_STACK_ypaworld::ypaworld_func64__sub1(TInputState *inpt)
+void NC_STACK_ypaworld::PrepareUserInput(TInputState *inpt)
 {
     //Precompute input
     TClickBoxInf *winp = &inpt->ClickInf;

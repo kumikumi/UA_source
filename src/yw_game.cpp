@@ -2427,7 +2427,7 @@ void NC_STACK_ypaworld::ypaworld_func64__sub6__sub0()
 }
 
 
-void ypaworld_func64__sub6(NC_STACK_ypaworld *yw)
+void UpdateReloadRatios(NC_STACK_ypaworld *yw)
 {
     int v13[8];
 
@@ -2791,7 +2791,7 @@ void NC_STACK_ypaworld::RefreshUnitPRT(NC_STACK_ypabact *unit, NC_STACK_ypabact 
 }
 
 
-int ypaworld_func64__sub4(NC_STACK_ypaworld *yw, base_64arg *arg)
+int HandlePause(NC_STACK_ypaworld *yw, base_64arg *arg)
 {
     if ( yw->_isNetGame )
         return 0;
@@ -2821,7 +2821,7 @@ int ypaworld_func64__sub4(NC_STACK_ypaworld *yw, base_64arg *arg)
 
         vec3d a2a = yw->_viewerPosition + vec3d::OY(50000.0);
 
-        SFXEngine::SFXe.sub_423EFC(1, a2a, vec3d(0.0), mat3x3::Ident());
+        SFXEngine::SFXe.BeginSoundFrame(1, a2a, vec3d(0.0), mat3x3::Ident());
 
         if ( arg->TimeStamp / 500 & 1 )
         {
@@ -2842,7 +2842,7 @@ int ypaworld_func64__sub4(NC_STACK_ypaworld *yw, base_64arg *arg)
             GFX::Engine.ProcessDrawSeq(v10);
         }
 
-        SFXEngine::SFXe.sb_0x424c74();
+        SFXEngine::SFXe.EndSoundFrame();
 
         GFX::Engine.EndFrame();
     }
@@ -2850,7 +2850,7 @@ int ypaworld_func64__sub4(NC_STACK_ypaworld *yw, base_64arg *arg)
 }
 
 
-void ypaworld_func64__sub2(NC_STACK_ypaworld *yw)
+void UpdatePlayerInRoboGun(NC_STACK_ypaworld *yw)
 {
     yw->_playerInHSGun = false;
 
@@ -2867,7 +2867,7 @@ void ypaworld_func64__sub2(NC_STACK_ypaworld *yw)
 }
 
 
-void ypaworld_func64__sub9(NC_STACK_ypaworld *yw)
+void UpdateGates(NC_STACK_ypaworld *yw)
 {
     for ( size_t i = 0; i < yw->_levelInfo.Gates.size(); i++ )
     {
@@ -3237,7 +3237,7 @@ void NC_STACK_ypaworld::ypaworld_func64__sub19__sub2(int id)
     }
 }
 
-void NC_STACK_ypaworld::ypaworld_func64__sub19()
+void NC_STACK_ypaworld::UpdateSuperItems()
 {
     for (size_t i = 0; i < _levelInfo.SuperItems.size(); i++)
     {
@@ -3314,7 +3314,7 @@ void NC_STACK_ypaworld::VoiceMessageUpdate()
     }
 }
 
-void ypaworld_func64__sub3(NC_STACK_ypaworld *yw)
+void CheckEnemySectorEntered(NC_STACK_ypaworld *yw)
 {
     if ( yw->_userUnit->_pSector->owner != yw->_userRobo->_owner )
     {
@@ -3613,7 +3613,7 @@ void recorder_stoprec(NC_STACK_ypaworld *yw)
     rcrd->mfile.close();
 }
 
-void sb_0x447720(NC_STACK_ypaworld *yw, TInputState *inpt)
+void HandleSnapshotKeys(NC_STACK_ypaworld *yw, TInputState *inpt)
 {
     if ( inpt->KbdLastHit == Input::KC_NUMMUL && (inpt->ClickInf.flag & TClickBoxInf::FLAG_RM_HOLD || yw->_easyCheatKeys) )
     {
