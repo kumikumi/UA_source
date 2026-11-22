@@ -8,8 +8,8 @@ class NC_STACK_sklt: public NC_STACK_skeleton
 public:
     virtual size_t LoadingFromIFF(IFFile **file);
     virtual size_t func6(IFFile **file);
-    virtual rsrc * rsrc_func64(IDVList &stak);
-    virtual size_t rsrc_func66(rsrc_func66_arg *arg);
+    virtual rsrc * CreateResource(IDVList &stak);
+    virtual size_t SaveResource(rsrc_func66_arg *arg);
 
     NC_STACK_sklt() {};
     virtual ~NC_STACK_sklt() {};

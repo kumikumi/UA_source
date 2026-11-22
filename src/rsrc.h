@@ -38,9 +38,9 @@ class NC_STACK_rsrc: public NC_STACK_nucleus
 public:
     virtual size_t Init(IDVList &stak);
     virtual size_t Deinit();
-    virtual rsrc * rsrc_func64(IDVList &stak);
-    virtual size_t rsrc_func65(rsrc *res);
-    virtual size_t rsrc_func66(rsrc_func66_arg *arg) {
+    virtual rsrc * CreateResource(IDVList &stak);
+    virtual size_t FreeResource(rsrc *res);
+    virtual size_t SaveResource(rsrc_func66_arg *arg) {
         return 0;
     };
 

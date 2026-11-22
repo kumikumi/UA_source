@@ -17,7 +17,7 @@ size_t NC_STACK_ilbm::Init(IDVList &stak)
 }
 
 
-size_t NC_STACK_ilbm::ilbm_func5__sub0(NC_STACK_ilbm *obj, IFFile **pmfile)
+size_t NC_STACK_ilbm::LoadFromCibo(NC_STACK_ilbm *obj, IFFile **pmfile)
 {
     IFFile *mfile = *pmfile;
 
@@ -89,7 +89,7 @@ size_t NC_STACK_ilbm::ilbm_func5__sub0(NC_STACK_ilbm *obj, IFFile **pmfile)
 size_t NC_STACK_ilbm::LoadingFromIFF(IFFile **file)
 {
     if ( (*file)->GetCurrentChunk().TAG_EXTENSION == TAG_CIBO )
-        return ilbm_func5__sub0(this, file);
+        return LoadFromCibo(this, file);
 
     return 0;
 }
@@ -237,7 +237,7 @@ rsrc * NC_STACK_ilbm::READ_ILBM(IDVList &stak, IFFile *mfil, int transp)
     BMHD_type bmhd;
     VBMP_type vbmp;
     
-    rsrc *res = NC_STACK_rsrc::rsrc_func64(stak);
+    rsrc *res = NC_STACK_rsrc::CreateResource(stak);
     int convertColor = stak.Get<int32_t>(BMD_ATT_CONVCOLOR, 0);
     int alphaPalette = stak.Get<int32_t>(ATT_ALPHAPALETTE, 1);
     
@@ -277,7 +277,7 @@ rsrc * NC_STACK_ilbm::READ_ILBM(IDVList &stak, IFFile *mfil, int transp)
         if ( v10 )
         {
             if ( res )
-                rsrc_func65(res);
+                FreeResource(res);
 
             return NULL;
         }
@@ -369,7 +369,7 @@ rsrc * NC_STACK_ilbm::READ_ILBM(IDVList &stak, IFFile *mfil, int transp)
             }
             if ( !success )
             {
-                rsrc_func65(res);
+                FreeResource(res);
                 return NULL;
             }
             mfil->parse();
@@ -420,7 +420,7 @@ rsrc * NC_STACK_ilbm::READ_ILBM(IDVList &stak, IFFile *mfil, int transp)
 
 
 // Create ilbm resource node and fill rsrc field data
-rsrc * NC_STACK_ilbm::rsrc_func64(IDVList &stak)
+rsrc * NC_STACK_ilbm::CreateResource(IDVList &stak)
 {
     const std::string resName = stak.Get<std::string>(RSRC_ATT_NAME, "");
     const char *reassignName = NULL;
@@ -608,7 +608,7 @@ int VBMP__WRITE_TO_FILE(IFFile *mfile, ResBitmap *bitm)
     return mfile->popChunk() == IFFile::IFF_ERR_OK;
 }
 
-size_t NC_STACK_ilbm::rsrc_func66(rsrc_func66_arg *arg)
+size_t NC_STACK_ilbm::SaveResource(rsrc_func66_arg *arg)
 {
     IFFile *mfile;
 

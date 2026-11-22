@@ -506,7 +506,7 @@ NC_STACK_button::ResCode NC_STACK_button::ProcessWidgetsEvents(TInputState *arg)
 }
 
 
-void NC_STACK_button::button_func70__sub1(button_str2 *sbt, CmdStream *pbuf)
+void NC_STACK_button::DrawTextButton(button_str2 *sbt, CmdStream *pbuf)
 {
     int v6;
 
@@ -592,7 +592,7 @@ void NC_STACK_button::button_func70__sub1(button_str2 *sbt, CmdStream *pbuf)
     FontUA::add_txt(pbuf, tmp, v17, v18);
 }
 
-void NC_STACK_button::button_func70__sub0(button_str2 *sbt, CmdStream *pbuf)
+void NC_STACK_button::DrawTileButton(button_str2 *sbt, CmdStream *pbuf)
 {
     int v6 = 0;
     int v7;
@@ -737,9 +737,9 @@ size_t NC_STACK_button::Draw()
             if ( it->flags & FLAG_DRAW )
             {
                 if ( it->flags & FLAG_TEXT )
-                    button_func70__sub1(&*it, &button_tmpbuf);
+                    DrawTextButton(&*it, &button_tmpbuf);
                 else
-                    button_func70__sub0(&*it, &button_tmpbuf);
+                    DrawTileButton(&*it, &button_tmpbuf);
             }
         }
         FontUA::set_end(&button_tmpbuf);

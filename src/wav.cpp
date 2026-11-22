@@ -28,7 +28,7 @@ struct __attribute__((packed)) PCM_fmt
     uint16_t BitsPerSample;
 };
 
-rsrc * wav_func64__sub0(NC_STACK_wav *obj, IDVList &stak, const std::string &filname)
+rsrc * LoadWavFile(NC_STACK_wav *obj, IDVList &stak, const std::string &filname)
 {
     rsrc *res = NULL;
 
@@ -61,7 +61,7 @@ rsrc * wav_func64__sub0(NC_STACK_wav *obj, IDVList &stak, const std::string &fil
                     stak.Add(NC_STACK_sample::SMPL_ATT_LEN, (int32_t)sbchunk.SubchunkSize);
                     stak.Add(NC_STACK_sample::SMPL_ATT_TYPE, (int32_t)1);
 
-                    res = obj->NC_STACK_sample::rsrc_func64(stak); //Create sampl structure and alloc buff
+                    res = obj->NC_STACK_sample::CreateResource(stak); //Create sampl structure and alloc buff
 
                     if ( res )
                     {
@@ -70,7 +70,7 @@ rsrc * wav_func64__sub0(NC_STACK_wav *obj, IDVList &stak, const std::string &fil
 
                         if ( !smpl )
                         {
-                            obj->rsrc_func65(res);
+                            obj->FreeResource(res);
                             delete fil;
                             return NULL;
                         }
@@ -109,12 +109,12 @@ rsrc * wav_func64__sub0(NC_STACK_wav *obj, IDVList &stak, const std::string &fil
     return res;
 }
 
-rsrc * NC_STACK_wav::rsrc_func64(IDVList &stak)
+rsrc * NC_STACK_wav::CreateResource(IDVList &stak)
 {
     std::string filename = stak.Get<std::string>(RSRC_ATT_NAME, "");
 
     if ( !filename.empty() )
-        return wav_func64__sub0(this, stak, filename);
+        return LoadWavFile(this, stak, filename);
 
     return NULL;
 }

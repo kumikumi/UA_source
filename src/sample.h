@@ -8,8 +8,8 @@ class NC_STACK_sample: public NC_STACK_rsrc
 {
 public:
     virtual size_t Init(IDVList &stak);
-    virtual rsrc * rsrc_func64(IDVList &stak);
-    virtual size_t rsrc_func65(rsrc *pres);
+    virtual rsrc * CreateResource(IDVList &stak);
+    virtual size_t FreeResource(rsrc *pres);
 
     NC_STACK_sample() {};
     virtual ~NC_STACK_sample() {};

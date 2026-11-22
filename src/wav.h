@@ -6,7 +6,7 @@
 class NC_STACK_wav: public NC_STACK_sample
 {
 public:
-    virtual rsrc * rsrc_func64(IDVList &stak);
+    virtual rsrc * CreateResource(IDVList &stak);
 
     NC_STACK_wav() {
     };

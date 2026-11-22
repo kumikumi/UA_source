@@ -101,7 +101,7 @@ size_t NC_STACK_bmpanim::SavingIntoIFF(IFFile **file)
     sv.filename = a3.c_str();
     sv.file = NULL;
 
-    if ( rsrc_func66(&sv) != 1 )
+    if ( SaveResource(&sv) != 1 )
     {
         ypa_log_out("bmpanim.class/OM_SAVETOIFF: couldn't save resource.\n");
         return 0;
@@ -356,11 +356,11 @@ ResBmpAnm * NC_STACK_bmpanim::ConstructBAnm(const std::string &className, std::v
 }
 
 // Create bmpanim resource node and fill rsrc field data
-rsrc * NC_STACK_bmpanim::rsrc_func64(IDVList &stak)
+rsrc * NC_STACK_bmpanim::CreateResource(IDVList &stak)
 {
     stak.Add(RSRC_ATT_TOTAIL, (int32_t)1);
 
-    rsrc *res = NC_STACK_bitmap::rsrc_func64(stak);// rsrc_func64
+    rsrc *res = NC_STACK_bitmap::CreateResource(stak);// CreateResource
     if ( res )
     {
 
@@ -385,7 +385,7 @@ rsrc * NC_STACK_bmpanim::rsrc_func64(IDVList &stak)
 
         if ( !res->data )
         {
-            rsrc_func65(res);
+            FreeResource(res);
             return NULL;
         }
 
@@ -393,7 +393,7 @@ rsrc * NC_STACK_bmpanim::rsrc_func64(IDVList &stak)
     return res;
 }
 
-size_t NC_STACK_bmpanim::rsrc_func65(rsrc *res)
+size_t NC_STACK_bmpanim::FreeResource(rsrc *res)
 {
     ResBmpAnm *v5 = (ResBmpAnm *)res->data;
 
@@ -402,7 +402,7 @@ size_t NC_STACK_bmpanim::rsrc_func65(rsrc *res)
         delete v5;
         res->data = NULL;
     }
-    return NC_STACK_bitmap::rsrc_func65(res);
+    return NC_STACK_bitmap::FreeResource(res);
 }
 
 bool NC_STACK_bmpanim::WriteClassName(FSMgr::iFileHandle *fil, ResBmpAnm *t1)
@@ -519,7 +519,7 @@ bool NC_STACK_bmpanim::WriteToFile(ResBmpAnm *banm, const std::string &name, IFF
     return wok;
 }
 
-size_t NC_STACK_bmpanim::rsrc_func66(rsrc_func66_arg *sv)
+size_t NC_STACK_bmpanim::SaveResource(rsrc_func66_arg *sv)
 {
     if ( !_pData )
         return 0;

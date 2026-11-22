@@ -27,9 +27,9 @@ size_t NC_STACK_bitmap::Deinit()
 }
 
 // Create bitmap resource node and fill rsrc field data
-rsrc * NC_STACK_bitmap::rsrc_func64(IDVList &stak)
+rsrc * NC_STACK_bitmap::CreateResource(IDVList &stak)
 {
-    rsrc *res = NC_STACK_rsrc::rsrc_func64(stak);// rsrc_func64
+    rsrc *res = NC_STACK_rsrc::CreateResource(stak);// CreateResource
     if ( res )
     {
         int width = stak.Get<int32_t>(BMD_ATT_WIDTH, 0);
@@ -79,7 +79,7 @@ rsrc * NC_STACK_bitmap::rsrc_func64(IDVList &stak)
     return res;
 }
 
-size_t NC_STACK_bitmap::rsrc_func65(rsrc *res)
+size_t NC_STACK_bitmap::FreeResource(rsrc *res)
 {
     ResBitmap *intern = (ResBitmap *)(res)->data;
 
@@ -98,7 +98,7 @@ size_t NC_STACK_bitmap::rsrc_func65(rsrc *res)
         res->data = NULL;
     }
 
-    return NC_STACK_rsrc::rsrc_func65(res);
+    return NC_STACK_rsrc::FreeResource(res);
 }
 
 void NC_STACK_bitmap::setBMD_palette(UA_PALETTE *newPal)

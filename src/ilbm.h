@@ -33,8 +33,8 @@ public:
     virtual size_t Init(IDVList &stak);
     virtual size_t LoadingFromIFF(IFFile **file);
     virtual size_t SavingIntoIFF(IFFile **pmfile);
-    virtual rsrc * rsrc_func64(IDVList &stak);
-    virtual size_t rsrc_func66(rsrc_func66_arg *arg);
+    virtual rsrc * CreateResource(IDVList &stak);
+    virtual size_t SaveResource(rsrc_func66_arg *arg);
 
     NC_STACK_ilbm() {};
     virtual ~NC_STACK_ilbm() {};
@@ -53,7 +53,7 @@ public:
 
     virtual int getILBM_saveFmt();
 
-    size_t ilbm_func5__sub0(NC_STACK_ilbm *obj, IFFile **pmfile);
+    size_t LoadFromCibo(NC_STACK_ilbm *obj, IFFile **pmfile);
     rsrc * READ_ILBM(IDVList &stak, IFFile *mfil, int val5);
 
     //Data

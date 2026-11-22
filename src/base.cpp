@@ -522,7 +522,7 @@ size_t NC_STACK_base::Render(baseRender_msg *arg, Instance * inst, bool doCopy /
         _renderMsg.flags = arg->flags;
         
         if (!inst)
-            isVisible = _skeleton->skeleton_func132(&skel132);
+            isVisible = _skeleton->TransformAndCull(&skel132);
         else
             isVisible = 1;
         
@@ -715,7 +715,7 @@ void NC_STACK_base::SetSkeleton(NC_STACK_skeleton *skel)
 void NC_STACK_base::SetAde(NC_STACK_ade *ade)
 {
     if (ade)
-        ade->ade_func64(_ADES);
+        ade->AttachToList(_ADES);
 }
 
 void NC_STACK_base::SetParentFollow(bool follow)

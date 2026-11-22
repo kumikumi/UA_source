@@ -37,7 +37,7 @@ public:
     virtual size_t Deinit();
     virtual size_t LoadingFromIFF(IFFile **file);
     virtual size_t SavingIntoIFF(IFFile **file);
-    virtual size_t ade_func64(AdeList &lst);
+    virtual size_t AttachToList(AdeList &lst);
 
     NC_STACK_ade() {};
     virtual ~NC_STACK_ade() {};

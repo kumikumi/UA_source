@@ -124,7 +124,7 @@ size_t NC_STACK_embed::SavingIntoIFF(IFFile **file)
             arg66.file = mfile;
             arg66.OpenedStream = 2;
 
-            if ( !embd_obj->rsrc_func66(&arg66 ) )
+            if ( !embd_obj->SaveResource(&arg66 ) )
                 return 0;
         }
     }

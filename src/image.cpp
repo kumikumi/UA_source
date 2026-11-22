@@ -102,7 +102,7 @@ static SDL_RWops * MyCustomRWop(FSMgr::FileHandle *fil)
 
 
 
-rsrc * NC_STACK_image::rsrc_func64(IDVList &stak)
+rsrc * NC_STACK_image::CreateResource(IDVList &stak)
 {
     const std::string resName = stak.Get<std::string>(RSRC_ATT_NAME, "");
     int convertColor = stak.Get<int32_t>(BMD_ATT_CONVCOLOR, 0);
@@ -132,7 +132,7 @@ rsrc * NC_STACK_image::rsrc_func64(IDVList &stak)
         return NULL;
     }
 
-    rsrc *res = NC_STACK_rsrc::rsrc_func64(stak); // bitmap_func64
+    rsrc *res = NC_STACK_rsrc::CreateResource(stak); // bitmap_func64
 
     if ( !res )
     {
@@ -144,7 +144,7 @@ rsrc * NC_STACK_image::rsrc_func64(IDVList &stak)
     if ( !bitm )
     {
         SDL_FreeSurface(loaded);
-        rsrc_func65(res);
+        FreeResource(res);
         return NULL;
     }
     

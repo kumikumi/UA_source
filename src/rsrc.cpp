@@ -39,7 +39,7 @@ size_t NC_STACK_rsrc::Init(IDVList &stak)
         res = rsrc_find(&publicList, res_name);
 
     if (!res)
-        res = rsrc_func64(stak);
+        res = CreateResource(stak);
 
     if ( res )
     {
@@ -65,7 +65,7 @@ size_t NC_STACK_rsrc::Deinit()
         resource->ref_cnt--;
 
         if ( resource->ref_cnt == 0 )
-            rsrc_func65(resource);
+            FreeResource(resource);
 
         resource = NULL;
     }
@@ -74,7 +74,7 @@ size_t NC_STACK_rsrc::Deinit()
 }
 
 // Allocate resource node
-rsrc * NC_STACK_rsrc::rsrc_func64(IDVList &stak)
+rsrc * NC_STACK_rsrc::CreateResource(IDVList &stak)
 {
     const std::string resname = stak.Get<std::string>(RSRC_ATT_NAME, "");
     int shared = stak.Get<int32_t>(RSRC_ATT_TRYSHARED, 1);
@@ -102,7 +102,7 @@ rsrc * NC_STACK_rsrc::rsrc_func64(IDVList &stak)
     return res;
 }
 
-size_t NC_STACK_rsrc::rsrc_func65(rsrc *res)
+size_t NC_STACK_rsrc::FreeResource(rsrc *res)
 {
     if (res->shared)
         publicList.remove(res);

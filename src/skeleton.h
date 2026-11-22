@@ -91,11 +91,11 @@ class NC_STACK_skeleton: public NC_STACK_rsrc
 {
 public:
     virtual size_t Init(IDVList &stak);
-    virtual rsrc * rsrc_func64(IDVList &stak);
-    virtual size_t rsrc_func65(rsrc *pres);
-    virtual size_t skeleton_func131(int *arg);
-    virtual size_t skeleton_func132(skeleton_arg_132 *arg);
-    virtual bool skeleton_func133(skeleton_arg133 *arg);
+    virtual rsrc * CreateResource(IDVList &stak);
+    virtual size_t FreeResource(rsrc *pres);
+    virtual size_t RecalcPolygonPlane(int *arg);
+    virtual size_t TransformAndCull(skeleton_arg_132 *arg);
+    virtual bool PreparePolygon(skeleton_arg133 *arg);
 
     NC_STACK_skeleton() {};
     virtual ~NC_STACK_skeleton() {};

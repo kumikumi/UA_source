@@ -7,7 +7,7 @@ class NC_STACK_image: public NC_STACK_bitmap
 {
 public:
     virtual size_t Init(IDVList &stak);
-    virtual rsrc * rsrc_func64(IDVList &stak);
+    virtual rsrc * CreateResource(IDVList &stak);
     
     static bool SavePng(ResBitmap *bmp, const std::string &fname);
 

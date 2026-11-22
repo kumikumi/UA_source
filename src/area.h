@@ -106,8 +106,8 @@ public:
     virtual int getAREA_tracyVal();
 
 
-    int area_func5__sub0(IFFile *mfile);
-    int area_func5__sub1(IFFile *mfile);
+    int LoadAreaParams(IFFile *mfile);
+    int LoadAreaBitmaps(IFFile *mfile);
     
     virtual void GenMesh(std::list<GFX::TMesh> *meshList, NC_STACK_skeleton * skelet) override;
     

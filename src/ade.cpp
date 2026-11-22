@@ -133,7 +133,7 @@ size_t NC_STACK_ade::SavingIntoIFF(IFFile **file)
 }
 
 // Add ade to list
-size_t NC_STACK_ade::ade_func64(AdeList &lst)
+size_t NC_STACK_ade::AttachToList(AdeList &lst)
 {
     if ( AttachedTo )
     {

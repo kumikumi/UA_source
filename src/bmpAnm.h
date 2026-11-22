@@ -45,9 +45,9 @@ public:
     virtual size_t Deinit();
     virtual size_t LoadingFromIFF(IFFile **file);
     virtual size_t SavingIntoIFF(IFFile **file);
-    virtual rsrc * rsrc_func64(IDVList &stak);
-    virtual size_t rsrc_func65(rsrc *pres);
-    virtual size_t rsrc_func66(rsrc_func66_arg *sv);
+    virtual rsrc * CreateResource(IDVList &stak);
+    virtual size_t FreeResource(rsrc *pres);
+    virtual size_t SaveResource(rsrc_func66_arg *sv);
     virtual void SetTime(int32_t timeStamp, int32_t frameTime);
 
     NC_STACK_bmpanim() {};

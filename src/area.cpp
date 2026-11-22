@@ -86,7 +86,7 @@ size_t NC_STACK_area::Deinit()
 }
 
 
-int NC_STACK_area::area_func5__sub0(IFFile *mfile)
+int NC_STACK_area::LoadAreaParams(IFFile *mfile)
 {
     struct AREA_STRC
     {
@@ -123,7 +123,7 @@ int NC_STACK_area::area_func5__sub0(IFFile *mfile)
 
 
 
-int NC_STACK_area::area_func5__sub1(IFFile *mfile)
+int NC_STACK_area::LoadAreaBitmaps(IFFile *mfile)
 {
     int v8 = _polflags & AREA_POL_FLAG_TEXUTRED;
 
@@ -189,7 +189,7 @@ size_t NC_STACK_area::LoadingFromIFF(IFFile **file)
         }
         else if ( chunk.Is(TAG_STRC) )
         {
-            if ( obj_ok && !area_func5__sub0(mfile) )
+            if ( obj_ok && !LoadAreaParams(mfile) )
             {
                 Deinit();
                 return 0;
@@ -198,7 +198,7 @@ size_t NC_STACK_area::LoadingFromIFF(IFFile **file)
         }
         else if ( chunk.Is(TAG_FORM, TAG_OBJT) )
         {
-            if ( obj_ok && !area_func5__sub1(mfile) )
+            if ( obj_ok && !LoadAreaBitmaps(mfile) )
             {
                 Deinit();
                 return 0;

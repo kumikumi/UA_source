@@ -182,8 +182,8 @@ public:
 
 protected:
     void UpdateSlider(button_str2 *sbt);
-    void button_func70__sub1(button_str2 *sbt, CmdStream *pbuf);
-    void button_func70__sub0(button_str2 *sbt, CmdStream *pbuf);
+    void DrawTextButton(button_str2 *sbt, CmdStream *pbuf);
+    void DrawTileButton(button_str2 *sbt, CmdStream *pbuf);
 
     void UnsetRadioButtons();
 

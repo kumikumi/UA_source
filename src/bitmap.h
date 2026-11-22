@@ -11,8 +11,8 @@ class NC_STACK_bitmap: public NC_STACK_rsrc
 public:
     virtual size_t Init(IDVList &stak);
     virtual size_t Deinit();
-    virtual rsrc * rsrc_func64(IDVList &stak);
-    virtual size_t rsrc_func65(rsrc *pres);
+    virtual rsrc * CreateResource(IDVList &stak);
+    virtual size_t FreeResource(rsrc *pres);
     virtual void SetTime(int32_t timeStamp, int32_t frameTime) {};
 
     NC_STACK_bitmap() {};

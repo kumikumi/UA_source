@@ -26,9 +26,9 @@ size_t NC_STACK_skeleton::Init(IDVList &stak)
 }
 
 // Create skeleton resource node and fill rsrc field data
-rsrc * NC_STACK_skeleton::rsrc_func64(IDVList &stak)
+rsrc * NC_STACK_skeleton::CreateResource(IDVList &stak)
 {
-    rsrc *res = NC_STACK_rsrc::rsrc_func64(stak);
+    rsrc *res = NC_STACK_rsrc::CreateResource(stak);
 
     if ( !res )
         return NULL;
@@ -39,7 +39,7 @@ rsrc * NC_STACK_skeleton::rsrc_func64(IDVList &stak)
 
     if (!sklt)
     {
-        rsrc_func65(res);
+        FreeResource(res);
         return NULL;
     }
 
@@ -61,7 +61,7 @@ rsrc * NC_STACK_skeleton::rsrc_func64(IDVList &stak)
     {
         if (num_indexes <= 0)
         {
-            rsrc_func65(res);
+            FreeResource(res);
             return NULL;
         }
 
@@ -71,7 +71,7 @@ rsrc * NC_STACK_skeleton::rsrc_func64(IDVList &stak)
     return res;
 }
 
-size_t NC_STACK_skeleton::rsrc_func65(rsrc *res)
+size_t NC_STACK_skeleton::FreeResource(rsrc *res)
 {
     UAskeleton::Data *sklt = (UAskeleton::Data *)res->data;
 
@@ -81,10 +81,10 @@ size_t NC_STACK_skeleton::rsrc_func65(rsrc *res)
 
         res->data = NULL;
     }
-    return NC_STACK_rsrc::rsrc_func65(res);
+    return NC_STACK_rsrc::FreeResource(res);
 }
 
-size_t NC_STACK_skeleton::skeleton_func131(int *arg)
+size_t NC_STACK_skeleton::RecalcPolygonPlane(int *arg)
 {
     int vtxid = *arg;
 
@@ -161,7 +161,7 @@ bool NC_STACK_skeleton::TransformVertexes(skeleton_arg_132 *arg, const std::vect
     return andFlags == 0;
 }
 
-size_t NC_STACK_skeleton::skeleton_func132(skeleton_arg_132 *arg)
+size_t NC_STACK_skeleton::TransformAndCull(skeleton_arg_132 *arg)
 {
     int result = 1;
 
@@ -202,7 +202,7 @@ bool NC_STACK_skeleton::PolygonCheckInvisible(const std::vector<UAskeleton::Vert
 }
 
 
-bool NC_STACK_skeleton::skeleton_func133(skeleton_arg133 *arg)
+bool NC_STACK_skeleton::PreparePolygon(skeleton_arg133 *arg)
 {
     std::vector<vec3d> PolyVertex;
     UAskeleton::Polygon &pol = _resData->polygons[arg->polyID];

@@ -97,7 +97,7 @@ rsrc * skeleton_read_pooX(NC_STACK_sklt *obj, IDVList &stak, IFFile *mfile, int 
 
     stak.Add(NC_STACK_skeleton::SKEL_ATT_POINTSCNT, (int32_t)num);
 
-    rsrc *res = obj->NC_STACK_skeleton::rsrc_func64(stak);
+    rsrc *res = obj->NC_STACK_skeleton::CreateResource(stak);
     if ( res )
     {
         UAskeleton::Data *sklt = (UAskeleton::Data *)res->data;
@@ -244,7 +244,7 @@ int skeleton_read_senX(NC_STACK_sklt *obj, IFFile *mfile, UAskeleton::Data *sklt
     return 1;
 }
 
-void sklt_func64__sub0__sub0(UAskeleton::Data *sklt, int id)
+void CalcPolygonPlane(UAskeleton::Data *sklt, int id)
 {
     if ( sklt )
     {
@@ -294,7 +294,7 @@ void sklt_func64__sub0__sub0(UAskeleton::Data *sklt, int id)
     }
 }
 
-rsrc * sklt_func64__sub0(NC_STACK_sklt *obj, IDVList &stak, IFFile *mfile)
+rsrc * LoadSkeletonIFF(NC_STACK_sklt *obj, IDVList &stak, IFFile *mfile)
 {
     UAskeleton::Data *sklt = NULL;
     rsrc *res = NULL;
@@ -310,7 +310,7 @@ rsrc * sklt_func64__sub0(NC_STACK_sklt *obj, IDVList &stak, IFFile *mfile)
         if ( iff_flag )
         {
             if ( res )
-                obj->rsrc_func65(res);
+                obj->FreeResource(res);
 
             return NULL;
         }
@@ -400,19 +400,19 @@ rsrc * sklt_func64__sub0(NC_STACK_sklt *obj, IDVList &stak, IFFile *mfile)
     if ( !read_ok || !sklt )
     {
         if ( res )
-            obj->rsrc_func65(res);
+            obj->FreeResource(res);
 
         return NULL;
     }
 
     for (size_t i = 0; i < sklt->polygons.size(); i++)
-        sklt_func64__sub0__sub0(sklt, i);
+        CalcPolygonPlane(sklt, i);
 
     return res;
 }
 
 // Create sklt resource node and fill rsrc field data
-rsrc * NC_STACK_sklt::rsrc_func64(IDVList &stak)
+rsrc * NC_STACK_sklt::CreateResource(IDVList &stak)
 {
     const std::string filename = stak.Get<std::string>(RSRC_ATT_NAME, "");
     if ( !filename.empty() )
@@ -431,7 +431,7 @@ rsrc * NC_STACK_sklt::rsrc_func64(IDVList &stak)
             selfopened = 1;
         }
 
-        rsrc *res = sklt_func64__sub0(this, stak, mfile);
+        rsrc *res = LoadSkeletonIFF(this, stak, mfile);
 
         if ( selfopened )
             delete mfile;
@@ -442,7 +442,7 @@ rsrc * NC_STACK_sklt::rsrc_func64(IDVList &stak)
         return NULL;
 }
 
-size_t NC_STACK_sklt::rsrc_func66(rsrc_func66_arg *arg)
+size_t NC_STACK_sklt::SaveResource(rsrc_func66_arg *arg)
 {
     UAskeleton::Data *sklt = (UAskeleton::Data *)getRsrc_pData();
 
