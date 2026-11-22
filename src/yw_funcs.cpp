@@ -418,14 +418,20 @@ int get_level_numb(const std::string &filename)
     else if ( buf.size() == 6 )
         buf.resize(3);
 
-    // TODO(bug): std::stoi throws on a name with no leading digits (say a stray
-    // .DS_Store in the levels dir) and nothing catches it. The log below
-    // says 0..127, but 1..255 is accepted.
-    int levelNum = std::stoi(buf);
+    // Any file in the levels directory gets here, e.g. a .DS_Store.
+    int levelNum = -1;
+    try
+    {
+        levelNum = std::stoi(buf);
+    }
+    catch (const std::exception &)
+    {
+    }
+
     if ( levelNum < 1 || levelNum >= 256 )
     {
         levelNum = -1;
-        ypa_log_out("Invalid level num [valid: 0..127] for %s.\n", filename.c_str());
+        ypa_log_out("Invalid level num [valid: 1..255] for %s.\n", filename.c_str());
     }
     return levelNum;
 }
