@@ -14,9 +14,6 @@
 
 #endif // GLOBAL
 
-extern int dword_514EFC;
-EXTR int dword_514F24;
-
 EXTR TInputState input_states;
 EXTR base_64arg world_update_arg;
 

@@ -318,7 +318,7 @@ public:
     int audio_volume;
     int audio_channels;
     int audio_num_palfx;
-    int audio_num_shakefx; // num_shakeFX
+    int audio_num_shakefx;
     std::array<TSoundChannel, AUDIO_CHANNELS> snd_channels;
     std::array<TSoundSource *, AUDIO_CHANNELS> soundSources = Common::ArrayInit<TSoundSource *, AUDIO_CHANNELS>(NULL);
     std::array<TSoundSource *, 8> palFXs = Common::ArrayInit<TSoundSource *, 8>(NULL);

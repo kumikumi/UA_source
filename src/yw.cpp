@@ -25,10 +25,6 @@ extern yw_infolog info_log;
 int vertMenuSpace;
 int videoMenuRowWidth;
 int menuListWidth;
-int word_5A50AE;
-int word_5A50BC;
-int word_5A50BA;
-int word_5A50BE;
 int buttonsSpace;
 int checkBoxWidth;
 
@@ -5088,10 +5084,6 @@ bool NC_STACK_ypaworld::CreateGameShellControls()
         vertMenuSpace = 2;
         checkBoxWidth = 8;
         videoMenuRowWidth = 210;
-        word_5A50AE = 200;
-        word_5A50BC = 220;
-        word_5A50BA = 300;
-        word_5A50BE = 270;
     }
     else
     {
@@ -5099,10 +5091,6 @@ bool NC_STACK_ypaworld::CreateGameShellControls()
         vertMenuSpace = 3;
         checkBoxWidth = 16;
         videoMenuRowWidth = 380;
-        word_5A50AE = 280;
-        word_5A50BC = 390;
-        word_5A50BA = 500;
-        word_5A50BE = 480;
     }
     
     int menuWidth = _screenSize.x * 0.7;

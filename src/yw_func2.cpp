@@ -22,10 +22,6 @@
 extern int vertMenuSpace;
 extern int videoMenuRowWidth;
 extern int menuListWidth;
-extern int word_5A50AE;
-extern int word_5A50BC;
-extern int word_5A50BA;
-extern int word_5A50BE;
 extern int buttonsSpace;
 
 extern int netMenuWidth;
