@@ -5,7 +5,7 @@
 #include "system/gfx.h"
 
 class NC_STACK_ade;
-struct area_arg_65;
+struct TObjectRenderParams;
 
 typedef std::list<NC_STACK_ade *> AdeList;
 

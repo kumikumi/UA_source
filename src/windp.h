@@ -65,7 +65,7 @@ struct windp_recvMsg
     std::string senderName;
 };
 
-struct windp_arg87
+struct TRemoteStartInfo
 {
     char callSIGN[64];
     bool isHoster;
@@ -91,12 +91,12 @@ int yw_DestroyPlayer(NC_STACK_ypaworld *yw, const char *playerName);
 class netgamelst: public GuiBase
 {
 public:
-    int field_1CC;
-    int field_1D0;
-    int field_1D4;
-    int field_1D8;
-    char field_1DC[64];
-    int field_21C;
+    int btnWidth;
+    int inputHeight;
+    int maxWidth;
+    int minInputHeight;
+    char text[64];
+    int textLen;
 };
 
 extern netgamelst netgame_wnd;
@@ -169,7 +169,7 @@ public:
     virtual size_t Reset(IDVPair *stak);
     
 
-    virtual bool GetRemoteStart(windp_arg87 *arg);
+    virtual bool GetRemoteStart(TRemoteStartInfo *arg);
 
     virtual size_t GetLocalName(IDVPair *stak);
     virtual void   SetVersion(const std::string &arg);

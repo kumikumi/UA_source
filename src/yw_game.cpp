@@ -46,14 +46,14 @@ void draw_splashScreen(NC_STACK_ypaworld *yw, NC_STACK_bitmap *splashScreen)
 {
     if ( splashScreen )
     {
-        GFX::rstr_arg204 a4;
+        GFX::TBitmapBlitParams a4;
 
         a4.pbitm = splashScreen->GetBitmap();
 
-        a4.float4  = Common::FRect(-1.0, -1.0, 1.0, 1.0);
-        a4.float14 = Common::FRect(-1.0, -1.0, 1.0, 1.0);
+        a4.srcRect  = Common::FRect(-1.0, -1.0, 1.0, 1.0);
+        a4.dstRect = Common::FRect(-1.0, -1.0, 1.0, 1.0);
 
-        GFX::displ_arg263 v4;
+        GFX::TCursorParams v4;
         if (yw->_mousePointers[5])
             v4.bitm = yw->_mousePointers[5]->GetBitmap();
         v4.pointer_id = 6;
@@ -74,14 +74,14 @@ void drawSplashScreenWithTOD(NC_STACK_ypaworld *yw, NC_STACK_bitmap *splashScree
 {
     if ( splashScreen )
     {
-        GFX::rstr_arg204 a4;
+        GFX::TBitmapBlitParams a4;
 
         a4.pbitm = splashScreen->GetBitmap();
 
-        a4.float4  = Common::FRect(-1.0, -1.0, 1.0, 1.0);
-        a4.float14 = Common::FRect(-1.0, -1.0, 1.0, 1.0);
+        a4.srcRect  = Common::FRect(-1.0, -1.0, 1.0, 1.0);
+        a4.dstRect = Common::FRect(-1.0, -1.0, 1.0, 1.0);
 
-        GFX::displ_arg263 v4;
+        GFX::TCursorParams v4;
         if (yw->_mousePointers[5])
             v4.bitm = yw->_mousePointers[5]->GetBitmap();
         v4.pointer_id = 6;
@@ -1926,7 +1926,7 @@ void NC_STACK_ypaworld::RenderGame(TUpdateArgs *bs64, int a2)
     _polysDraw = 7777;
 
 
-    area_arg_65 rrg;
+    TObjectRenderParams rrg;
     rrg.timeStamp = bs64->TimeStamp;
     rrg.frameTime = bs64->DTime;
     rrg.minZ = 1.0;

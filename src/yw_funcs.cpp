@@ -965,7 +965,7 @@ int yw_InitMouseStuff(NC_STACK_ypaworld *yw)
         }
     }
 
-    GFX::displ_arg263 arg_263;
+    GFX::TCursorParams arg_263;
 
     arg_263.bitm = 0;
     arg_263.pointer_id = 0;
@@ -1170,11 +1170,11 @@ int writeTOD(NC_STACK_ypaworld *yw, const char *fname, int tod)
 
 void NC_STACK_ypaworld::GameShellBlitBkg(NC_STACK_bitmap *bitm)
 {
-    GFX::rstr_arg204 a4;
+    GFX::TBitmapBlitParams a4;
     a4.pbitm = bitm->GetBitmap();
 
-    a4.float14 = Common::FRect(-1.0, -1.0, 1.0, 1.0);
-    a4.float4 = Common::FRect(-1.0, -1.0, 1.0, 1.0);
+    a4.dstRect = Common::FRect(-1.0, -1.0, 1.0, 1.0);
+    a4.srcRect = Common::FRect(-1.0, -1.0, 1.0, 1.0);
 
     GFX::Engine.DrawBitmapNormalized(&a4);
 }
@@ -1365,11 +1365,11 @@ void NC_STACK_ypaworld::DrawMapRegionsTutorial()
 {
     if ( _globalMapRegions.MenuImage && _globalMapRegions.MaskImage && _globalMapRegions.RolloverImage )
     {
-        GFX::rstr_arg204 a4;
+        GFX::TBitmapBlitParams a4;
         a4.pbitm = _globalMapRegions.MenuImage->GetBitmap();
 
-        a4.float4 = Common::FRect(-1.0, -1.0, 1.0, 1.0);
-        a4.float14 = Common::FRect(-1.0, -1.0, 1.0, 1.0);
+        a4.srcRect = Common::FRect(-1.0, -1.0, 1.0, 1.0);
+        a4.dstRect = Common::FRect(-1.0, -1.0, 1.0, 1.0);
 
         GFX::Engine.DrawBitmapNormalized(&a4);
 
@@ -1391,13 +1391,13 @@ void NC_STACK_ypaworld::DrawMapRegionsTutorial()
 
                 if ( v20 )
                 {
-                    GFX::rstr_218_arg v17;
-                    v17.bitm_intern = v20;
-                    v17.bitm_intern2 = _globalMapRegions.MaskImage->GetBitmap();
+                    GFX::TMaskedBlitParams v17;
+                    v17.bitmap = v20;
+                    v17.mask = _globalMapRegions.MaskImage->GetBitmap();
 
-                    v17.flg = i;
-                    v17.rect2 = region.Rect;
-                    v17.rect1 = v17.rect2;
+                    v17.maskIndex = i;
+                    v17.dstRect = region.Rect;
+                    v17.srcRect = v17.dstRect;
 
                     GFX::Engine.DrawMaskedBitmapNormalized(&v17);
                 }
@@ -1435,11 +1435,11 @@ void NC_STACK_ypaworld::DrawMapRegions()
 {
     if ( _globalMapRegions.MenuImage && _globalMapRegions.MaskImage && _globalMapRegions.RolloverImage && _globalMapRegions.FinishedImage && _globalMapRegions.EnabledImage )
     {
-        GFX::rstr_arg204 a4;
+        GFX::TBitmapBlitParams a4;
         a4.pbitm = _globalMapRegions.MenuImage->GetBitmap();
 
-        a4.float4 = Common::FRect(-1.0, -1.0, 1.0, 1.0);
-        a4.float14 = Common::FRect(-1.0, -1.0, 1.0, 1.0);
+        a4.srcRect = Common::FRect(-1.0, -1.0, 1.0, 1.0);
+        a4.dstRect = Common::FRect(-1.0, -1.0, 1.0, 1.0);
 
         GFX::Engine.DrawBitmapNormalized(&a4);
         //printf("field_BE38 %d \n",yw->LevelNet->field_BE38);
@@ -1470,13 +1470,13 @@ void NC_STACK_ypaworld::DrawMapRegions()
 
                 if ( v20 )
                 {
-                    GFX::rstr_218_arg v17;
-                    v17.bitm_intern = v20;
-                    v17.bitm_intern2 = _globalMapRegions.MaskImage->GetBitmap();
+                    GFX::TMaskedBlitParams v17;
+                    v17.bitmap = v20;
+                    v17.mask = _globalMapRegions.MaskImage->GetBitmap();
 
-                    v17.flg = i;
-                    v17.rect2 = region.Rect;
-                    v17.rect1 = v17.rect2;
+                    v17.maskIndex = i;
+                    v17.dstRect = region.Rect;
+                    v17.srcRect = v17.dstRect;
 
                     GFX::Engine.DrawMaskedBitmapNormalized(&v17);
                 }
@@ -2720,7 +2720,7 @@ void yw_freeTileSets(NC_STACK_ypaworld *yw)
 
 void NC_STACK_ypaworld::FreeGameDataCursors()
 {
-    GFX::displ_arg263 v5;
+    GFX::TCursorParams v5;
     v5.bitm = NULL;
     v5.pointer_id = 0;
 

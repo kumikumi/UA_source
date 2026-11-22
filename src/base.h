@@ -19,7 +19,7 @@ typedef std::list<NC_STACK_base *> BaseList;
 
 
 
-struct area_arg_65
+struct TObjectRenderParams
 {
     //polys *rndrSTK_cur;
     //polysDat *argSTK_cur;
@@ -36,7 +36,7 @@ struct area_arg_65
     int ambientLight;
     uint32_t flags;
 
-    area_arg_65()
+    TObjectRenderParams()
     {
         timeStamp = 0;
         frameTime = 0;
@@ -168,7 +168,7 @@ public:
     TF::TForm3D &TForm();
     virtual BaseList &GetKidList();
 
-    virtual area_arg_65 *GetRenderParams();
+    virtual TObjectRenderParams *GetRenderParams();
 
     virtual int32_t GetFadeLength();
     virtual bool IsStatic();
@@ -217,7 +217,7 @@ public:
     BaseList _KIDS;
 //    base_node kid_node;
     int _visLimit = 0;
-    area_arg_65 _renderMsg;
+    TObjectRenderParams _renderMsg;
     NC_STACK_nucleus *_embed = NULL;
     
     // Not used. Save it.

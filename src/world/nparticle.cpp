@@ -19,7 +19,7 @@ void ParticleSystem::AddParticle(NC_STACK_particle *base, const vec3d& pos, cons
         _particles.emplace_back( base, pos, vec, age );
 }
 
-void ParticleSystem::UpdateRender(area_arg_65 *rndrParams, int32_t delta)
+void ParticleSystem::UpdateRender(TObjectRenderParams *rndrParams, int32_t delta)
 {
     //Prevent spawn new particles from particle render
     _disableAdd = true;
@@ -56,7 +56,7 @@ void ParticleSystem::UpdateRender(area_arg_65 *rndrParams, int32_t delta)
 }
 
 
-void ParticleSystem::Render(Frak *p, float scale, area_arg_65 *rndrParams)
+void ParticleSystem::Render(Frak *p, float scale, TObjectRenderParams *rndrParams)
 {
     TF::TForm3D *view = rndrParams->ViewTForm;
 

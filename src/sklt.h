@@ -9,7 +9,7 @@ public:
     virtual size_t LoadingFromIFF(IFFile **file);
     virtual size_t func6(IFFile **file);
     virtual rsrc * CreateResource(IDVList &stak);
-    virtual size_t SaveResource(rsrc_func66_arg *arg);
+    virtual size_t SaveResource(TSaveResourceParams *arg);
 
     NC_STACK_sklt() {};
     virtual ~NC_STACK_sklt() {};

@@ -26,7 +26,7 @@ struct rsrc
     }
 };
 
-struct rsrc_func66_arg
+struct TSaveResourceParams
 {
     const char *filename;
     IFFile *file;
@@ -40,7 +40,7 @@ public:
     virtual size_t Deinit();
     virtual rsrc * CreateResource(IDVList &stak);
     virtual size_t FreeResource(rsrc *res);
-    virtual size_t SaveResource(rsrc_func66_arg *arg) {
+    virtual size_t SaveResource(TSaveResourceParams *arg) {
         return 0;
     };
 

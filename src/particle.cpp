@@ -529,7 +529,7 @@ size_t NC_STACK_particle::SavingIntoIFF(IFFile **file)
     return mfile->popChunk() == IFFile::IFF_ERR_OK;
 }
 
-size_t NC_STACK_particle::Emit(area_arg_65 *arg, InstanceOpts * uopts)
+size_t NC_STACK_particle::Emit(TObjectRenderParams *arg, InstanceOpts * uopts)
 {
     if (!uopts)
         return 1;

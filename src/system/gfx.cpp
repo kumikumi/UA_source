@@ -621,19 +621,19 @@ size_t GFXEngine::DrawClippedLineCentered(const Common::Line &l)
     return 1;
 }
 
-size_t GFXEngine::DrawBitmapNormalized(rstr_arg204 *arg)
+size_t GFXEngine::DrawBitmapNormalized(TBitmapBlitParams *arg)
 {
     Common::Rect r1;
-    r1.left   = (arg->float4.left   + 1.0) * (arg->pbitm->width / 2);
-    r1.top    = (arg->float4.top    + 1.0) * (arg->pbitm->height / 2);
-    r1.right  = (arg->float4.right  + 1.0) * (arg->pbitm->width / 2);
-    r1.bottom = (arg->float4.bottom + 1.0) * (arg->pbitm->height / 2);
+    r1.left   = (arg->srcRect.left   + 1.0) * (arg->pbitm->width / 2);
+    r1.top    = (arg->srcRect.top    + 1.0) * (arg->pbitm->height / 2);
+    r1.right  = (arg->srcRect.right  + 1.0) * (arg->pbitm->width / 2);
+    r1.bottom = (arg->srcRect.bottom + 1.0) * (arg->pbitm->height / 2);
 
     Common::Rect r2;
-    r2.left   = _field_554 * (arg->float14.left   + 1.0);
-    r2.top    = _field_558 * (arg->float14.top    + 1.0);
-    r2.right  = _field_554 * (arg->float14.right  + 1.0);
-    r2.bottom = _field_558 * (arg->float14.bottom + 1.0);
+    r2.left   = _field_554 * (arg->dstRect.left   + 1.0);
+    r2.top    = _field_558 * (arg->dstRect.top    + 1.0);
+    r2.right  = _field_554 * (arg->dstRect.right  + 1.0);
+    r2.bottom = _field_558 * (arg->dstRect.bottom + 1.0);
     
     SDL_Rect src = r1;
     SDL_Rect dst = r2;
@@ -643,19 +643,19 @@ size_t GFXEngine::DrawBitmapNormalized(rstr_arg204 *arg)
     return 1;
 }
 
-size_t GFXEngine::DrawClippedBitmapNormalized(rstr_arg204 *arg)
+size_t GFXEngine::DrawClippedBitmapNormalized(TBitmapBlitParams *arg)
 {   
     Common::Rect r1;
-    r1.left   = (arg->float4.left   + 1.0) * (arg->pbitm->width / 2);
-    r1.top    = (arg->float4.top    + 1.0) * (arg->pbitm->height / 2);
-    r1.right  = (arg->float4.right  + 1.0) * (arg->pbitm->width / 2);
-    r1.bottom = (arg->float4.bottom + 1.0) * (arg->pbitm->height / 2);
+    r1.left   = (arg->srcRect.left   + 1.0) * (arg->pbitm->width / 2);
+    r1.top    = (arg->srcRect.top    + 1.0) * (arg->pbitm->height / 2);
+    r1.right  = (arg->srcRect.right  + 1.0) * (arg->pbitm->width / 2);
+    r1.bottom = (arg->srcRect.bottom + 1.0) * (arg->pbitm->height / 2);
 
     Common::Rect r2;
-    r2.left   = _field_554 * (arg->float14.left   + 1.0);
-    r2.top    = _field_558 * (arg->float14.top    + 1.0);
-    r2.right  = _field_554 * (arg->float14.right  + 1.0);
-    r2.bottom = _field_558 * (arg->float14.bottom + 1.0);
+    r2.left   = _field_554 * (arg->dstRect.left   + 1.0);
+    r2.top    = _field_558 * (arg->dstRect.top    + 1.0);
+    r2.right  = _field_554 * (arg->dstRect.right  + 1.0);
+    r2.bottom = _field_558 * (arg->dstRect.bottom + 1.0);
     
     if ( _clip.IsIntersects(r2) )
     {
@@ -1752,19 +1752,19 @@ void GFXEngine::EndScene()
     _renderNodesCache.Rewind();
 }
 
-void GFXEngine::DrawMaskedBitmapNormalized(rstr_218_arg *arg)
+void GFXEngine::DrawMaskedBitmapNormalized(TMaskedBlitParams *arg)
 {
-    Common::Rect sRect( (arg->rect1.left + 1.0) * (arg->bitm_intern->width / 2),
-                        (arg->rect1.top + 1.0) * (arg->bitm_intern->height / 2),
-                        (arg->rect1.right + 1.0) * (arg->bitm_intern->width / 2),
-                        (arg->rect1.bottom + 1.0) * (arg->bitm_intern->height / 2) );
+    Common::Rect sRect( (arg->srcRect.left + 1.0) * (arg->bitmap->width / 2),
+                        (arg->srcRect.top + 1.0) * (arg->bitmap->height / 2),
+                        (arg->srcRect.right + 1.0) * (arg->bitmap->width / 2),
+                        (arg->srcRect.bottom + 1.0) * (arg->bitmap->height / 2) );
 
-    Common::Rect dRect( (arg->rect2.left + 1.0) * _field_554,
-                        (arg->rect2.top + 1.0) * _field_558,
-                        (arg->rect2.right + 1.0) * _field_554,
-                        (arg->rect2.bottom + 1.0) * _field_558 );
+    Common::Rect dRect( (arg->dstRect.left + 1.0) * _field_554,
+                        (arg->dstRect.top + 1.0) * _field_558,
+                        (arg->dstRect.right + 1.0) * _field_554,
+                        (arg->dstRect.bottom + 1.0) * _field_558 );
 
-    BlitScaleMasked(arg->bitm_intern->swTex, sRect, arg->bitm_intern2->swTex, arg->flg, Screen(), dRect);
+    BlitScaleMasked(arg->bitmap->swTex, sRect, arg->mask->swTex, arg->maskIndex, Screen(), dRect);
 }
 
 void GFXEngine::SetInverseClipCentered(const Common::Rect &arg)

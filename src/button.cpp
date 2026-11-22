@@ -14,13 +14,13 @@ size_t NC_STACK_button::Init(IDVList &stak)
     if ( !NC_STACK_nucleus::Init(stak) )
         return 0;
 
-    field_19F = 97;
-    field_1A0 = 115;
-    field_1A1 = 99;
+    track_left_chr = 97;
+    track_fill_chr = 115;
+    track_right_chr = 99;
 
-    field_19c = 97;
-    field_19D = 99;
-    field_19E = 32;
+    left_chr = 97;
+    right_chr = 99;
+    fill_chr = 32;
 
     for( auto& it : stak )
     {
@@ -68,13 +68,13 @@ size_t NC_STACK_button::Init(IDVList &stak)
 
 size_t NC_STACK_button::Deinit()
 {
-    for (WidgetArr::iterator it = field_d8.begin(); it != field_d8.end(); it++)
+    for (WidgetArr::iterator it = widgets.begin(); it != widgets.end(); it++)
     {
         if (it->button_type == NC_STACK_button::TYPE_SLIDER)
-            delete it->field_41C;
+            delete it->slider;
     }
 
-    field_d8.clear();
+    widgets.clear();
     buttons.clear();
 
     return NC_STACK_nucleus::Deinit();
@@ -82,9 +82,9 @@ size_t NC_STACK_button::Deinit()
 
 
 // Update slider
-void NC_STACK_button::UpdateSlider(button_str2 *sbt)
+void NC_STACK_button::UpdateSlider(WidgetEntry *sbt)
 {
-    Slider *sbttt = sbt->field_41C;
+    Slider *sbttt = sbt->slider;
 
     if ( sbttt->value > sbttt->max )
         sbttt->value = sbttt->max;
@@ -97,77 +97,77 @@ void NC_STACK_button::UpdateSlider(button_str2 *sbt)
     if ( v7 < 6 )
         v7 = 6;
 
-    sbttt->field_6_ = (float)((sbttt->value - sbttt->min) * (sbt->width - v7) / (sbttt->max - sbttt->min)) + 0.5;
+    sbttt->thumbStart = (float)((sbttt->value - sbttt->min) * (sbt->width - v7) / (sbttt->max - sbttt->min)) + 0.5;
 
-    if ( sbttt->field_6_ < 0 )
-        sbttt->field_6_ = 0;
+    if ( sbttt->thumbStart < 0 )
+        sbttt->thumbStart = 0;
 
-    sbttt->field_8_ = v7 + sbttt->field_6_;
+    sbttt->thumbEnd = v7 + sbttt->thumbStart;
 
-    if ( sbttt->field_8_ > sbt->width )
-        sbttt->field_8_ = sbt->width;
+    if ( sbttt->thumbEnd > sbt->width )
+        sbttt->thumbEnd = sbt->width;
 
 
     CmdStream captionbuf;
     captionbuf.reserve(512);
     
-    if ( sbttt->field_6_ > 0 )
+    if ( sbttt->thumbStart > 0 )
     {
         if ( sbt->flags & FLAG_BORDER )
         {
-            FontUA::store_u8(&captionbuf, field_19F);
+            FontUA::store_u8(&captionbuf, track_left_chr);
 
-            if ( sbttt->field_6_ > 1 )
+            if ( sbttt->thumbStart > 1 )
             {
-                FontUA::op17(&captionbuf, sbttt->field_6_);
-                FontUA::store_u8(&captionbuf, field_1A0);
+                FontUA::op17(&captionbuf, sbttt->thumbStart);
+                FontUA::store_u8(&captionbuf, track_fill_chr);
             }
         }
         else
         {
-            FontUA::op17(&captionbuf, sbttt->field_6_);
-            FontUA::store_u8(&captionbuf, field_1A0);
+            FontUA::op17(&captionbuf, sbttt->thumbStart);
+            FontUA::store_u8(&captionbuf, track_fill_chr);
         }
     }
 
-    FontUA::store_u8(&captionbuf, field_19c);
+    FontUA::store_u8(&captionbuf, left_chr);
 
-    FontUA::op17(&captionbuf, sbttt->field_8_);
+    FontUA::op17(&captionbuf, sbttt->thumbEnd);
 
-    FontUA::store_u8(&captionbuf, field_19E);
-    FontUA::store_u8(&captionbuf, field_19D);
+    FontUA::store_u8(&captionbuf, fill_chr);
+    FontUA::store_u8(&captionbuf, right_chr);
 
     if ( sbt->flags & FLAG_BORDER )
     {
-        if ( sbttt->field_8_ < sbt->width - 1 )
+        if ( sbttt->thumbEnd < sbt->width - 1 )
         {
             FontUA::op17(&captionbuf, sbt->width - 1);
 
-            FontUA::store_u8(&captionbuf, field_1A0);
-            FontUA::store_u8(&captionbuf, field_1A1);
+            FontUA::store_u8(&captionbuf, track_fill_chr);
+            FontUA::store_u8(&captionbuf, track_right_chr);
         }
     }
-    else if ( sbttt->field_8_ < sbt->width )
+    else if ( sbttt->thumbEnd < sbt->width )
     {
         FontUA::op17(&captionbuf, sbt->width - 1);
 
-        FontUA::store_u8(&captionbuf, field_1A0);
+        FontUA::store_u8(&captionbuf, track_fill_chr);
     }
     FontUA::set_end(&captionbuf);
     
     sbt->caption.assign(captionbuf.begin(), captionbuf.end());
 }
 
-size_t NC_STACK_button::Add(button_64_arg *arg)
+size_t NC_STACK_button::Add(WidgetDesc *arg)
 {
     /*if ( idd >= 48 )
         return 0;*/
 
     buttons.emplace_back();
-    field_d8.emplace_back(); //field_d8[idd] = (button_str2 *)AllocVec(sizeof(button_str2), 65537);
+    widgets.emplace_back(); //field_d8[idd] = (WidgetEntry *)AllocVec(sizeof(WidgetEntry), 65537);
 
-    button_str2 &sbt = field_d8[idd];
-    ButtonBox &bt = buttons[idd];
+    WidgetEntry &sbt = widgets[widget_count];
+    ButtonBox &bt = buttons[widget_count];
 
     if (   arg->button_type != TYPE_BUTTON
             && arg->button_type != TYPE_CHECKBX
@@ -214,27 +214,27 @@ size_t NC_STACK_button::Add(button_64_arg *arg)
     else
         bt.h = GFX::Engine.GetTileset( arg->tileset_up )->h;
 
-    idd++;
+    widget_count++;
 
     sbt.button_id = arg->button_id;
     sbt.tileset_down = arg->tileset_down;
     sbt.tileset_up = arg->tileset_up;
-    sbt.field_42E = arg->field_3A;
+    sbt.tileset_disabled = arg->tileset_disabled;
     sbt.flags = arg->flags;
 
     sbt.flags |= FLAG_DRAW;
 
     if ( sbt.button_type == TYPE_SLIDER )
     {
-        if ( !arg->field_34 )
+        if ( !arg->slider )
             return 0;
 
         Slider *sbtt = new Slider;
         if ( sbtt )
         {
-            *sbtt = *arg->field_34;
+            *sbtt = *arg->slider;
 
-            sbt.field_41C = sbtt;
+            sbt.slider = sbtt;
 
             UpdateSlider(&sbt);
             return 1;
@@ -250,15 +250,15 @@ size_t NC_STACK_button::Remove(int butID)
 {
     int id = GetIndexByID(butID);
 
-    if ( id >= 0 && id < idd )
+    if ( id >= 0 && id < widget_count )
     {
-        if (field_d8[id].field_41C)
-            delete field_d8[id].field_41C;
+        if (widgets[id].slider)
+            delete widgets[id].slider;
 
-        field_d8.erase( field_d8.begin() + id );
+        widgets.erase( widgets.begin() + id );
         buttons.erase( buttons.begin() + id );
 
-        idd--;
+        widget_count--;
 
         return 1;
     }
@@ -266,38 +266,38 @@ size_t NC_STACK_button::Remove(int butID)
     return 0;
 }
 
-size_t NC_STACK_button::Enable(button_66arg *arg)
+size_t NC_STACK_button::Enable(WidgetState *arg)
 {
     int id = GetIndexByID(arg->butID);
 
-    if ( id >= 0 && id < idd )
+    if ( id >= 0 && id < widget_count )
     {
-        if ( field_d8[id].button_type != TYPE_CAPTION )
+        if ( widgets[id].button_type != TYPE_CAPTION )
         {
-            buttons[id].w = field_d8[id].width;
-            buttons[id].h = GFX::Engine.GetTileset( field_d8[id].tileset_down )->h;
+            buttons[id].w = widgets[id].width;
+            buttons[id].h = GFX::Engine.GetTileset( widgets[id].tileset_down )->h;
         }
 
-        field_d8[id].flags &= ~FLAG_DISABLED;
-        field_d8[id].flags |= FLAG_DRAW;
+        widgets[id].flags &= ~FLAG_DISABLED;
+        widgets[id].flags |= FLAG_DRAW;
         return 1;
     }
 
     return 0;
 }
 
-size_t NC_STACK_button::Disable(button_66arg *arg)
+size_t NC_STACK_button::Disable(WidgetState *arg)
 {
     int id = GetIndexByID(arg->butID);
 
-    if ( id >= 0 && id < idd )
+    if ( id >= 0 && id < widget_count )
     {
         buttons[id].w = 0;
         buttons[id].h = 0;
-        field_d8[id].flags |= FLAG_DISABLED;
+        widgets[id].flags |= FLAG_DISABLED;
 
-        if ( !arg->field_4 )
-            field_d8[id].flags &= ~FLAG_DRAW;
+        if ( !arg->state )
+            widgets[id].flags &= ~FLAG_DRAW;
 
         return 1;
     }
@@ -332,7 +332,7 @@ NC_STACK_button::ResCode NC_STACK_button::ProcessWidgetsEvents(TInputState *arg)
 
     if ( arg->ClickInf.flag & TClickBoxInf::FLAG_LM_DOWN )
     {
-        for (WidgetArr::iterator it = field_d8.begin(); it != field_d8.end(); it++)
+        for (WidgetArr::iterator it = widgets.begin(); it != widgets.end(); it++)
         {
             it->flags &= ~FLAG_DOWN;
         }
@@ -340,14 +340,14 @@ NC_STACK_button::ResCode NC_STACK_button::ProcessWidgetsEvents(TInputState *arg)
 
     if (arg->ClickInf.flag & TClickBoxInf::FLAG_LM_UP)
     {
-        for (WidgetArr::iterator it = field_d8.begin(); it != field_d8.end(); it++)
+        for (WidgetArr::iterator it = widgets.begin(); it != widgets.end(); it++)
         {
             if ( it->button_type == TYPE_SLIDER )
             {
                 if ( it->flags & FLAG_DOWN )
                 {
                     it->flags &= ~(FLAG_PRESSED | FLAG_DOWN);
-                    it->field_41C->pressPart = 0;
+                    it->slider->pressPart = 0;
 
                     return ResCode(it->up_id, it->button_id);
                 }
@@ -357,27 +357,27 @@ NC_STACK_button::ResCode NC_STACK_button::ProcessWidgetsEvents(TInputState *arg)
 
     if ( arg->ClickInf.flag & TClickBoxInf::FLAG_LM_HOLD )
     {
-        if ( this == arg->ClickInf.selected_btn && arg->ClickInf.selected_btnID != -1 && (field_d8[arg->ClickInf.selected_btnID].flags & FLAG_DOWN) )
+        if ( this == arg->ClickInf.selected_btn && arg->ClickInf.selected_btnID != -1 && (widgets[arg->ClickInf.selected_btnID].flags & FLAG_DOWN) )
         {
-            button_str2 &sbt = field_d8[arg->ClickInf.selected_btnID];
+            WidgetEntry &sbt = widgets[arg->ClickInf.selected_btnID];
 
             if ( sbt.button_type == TYPE_BUTTON )
                 sbt.flags |= FLAG_PRESSED;
         }
         else
         {
-            for (WidgetArr::iterator it = field_d8.begin(); it != field_d8.end(); it++)
+            for (WidgetArr::iterator it = widgets.begin(); it != widgets.end(); it++)
             {
                 if (it->button_type == TYPE_BUTTON)
                     it->flags &= ~FLAG_PRESSED;
             }
         }
 
-        for (WidgetArr::iterator it = field_d8.begin(); it != field_d8.end(); it++)
+        for (WidgetArr::iterator it = widgets.begin(); it != widgets.end(); it++)
         {
             if (it->button_type == TYPE_SLIDER && it->flags & FLAG_DOWN)
             {
-                Slider *sbttt = it->field_41C;
+                Slider *sbttt = it->slider;
 
                 if (sbttt->pressPart == 2)
                 {
@@ -405,9 +405,9 @@ NC_STACK_button::ResCode NC_STACK_button::ProcessWidgetsEvents(TInputState *arg)
         if ( arg->ClickInf.flag & TClickBoxInf::FLAG_LM_DOWN )
             result = ResCode(3);
 
-        if ( arg->ClickInf.selected_btnID != -1 && arg->ClickInf.selected_btnID < (int)field_d8.size())
+        if ( arg->ClickInf.selected_btnID != -1 && arg->ClickInf.selected_btnID < (int)widgets.size())
         {
-            button_str2 &sbt = field_d8[arg->ClickInf.selected_btnID];
+            WidgetEntry &sbt = widgets[arg->ClickInf.selected_btnID];
             result = ResCode(0, sbt.button_id);
 
             switch ( sbt.button_type )
@@ -466,14 +466,14 @@ NC_STACK_button::ResCode NC_STACK_button::ProcessWidgetsEvents(TInputState *arg)
                 {
                     if ( arg->ClickInf.flag & TClickBoxInf::FLAG_BTN_DOWN )
                     {
-                        Slider *sbttt = sbt.field_41C;
-                        if ( arg->ClickInf.ldw_pos.BtnPos.x < sbttt->field_6_ )
+                        Slider *sbttt = sbt.slider;
+                        if ( arg->ClickInf.ldw_pos.BtnPos.x < sbttt->thumbStart )
                         {
                             sbttt->pressPart = 1;
                             if ( sbttt->value > sbttt->min )
                                 sbttt->value -= 1;
                         }
-                        else if ( arg->ClickInf.ldw_pos.BtnPos.x <= sbttt->field_8_ )
+                        else if ( arg->ClickInf.ldw_pos.BtnPos.x <= sbttt->thumbEnd )
                         {
                             sbttt->pressPart = 2;
                             sbttt->oldValue = sbttt->value;
@@ -506,13 +506,13 @@ NC_STACK_button::ResCode NC_STACK_button::ProcessWidgetsEvents(TInputState *arg)
 }
 
 
-void NC_STACK_button::DrawTextButton(button_str2 *sbt, CmdStream *pbuf)
+void NC_STACK_button::DrawTextButton(WidgetEntry *sbt, CmdStream *pbuf)
 {
     int v6;
 
     if ( sbt->flags & FLAG_DISABLED )
     {
-        v6 = sbt->field_42E;
+        v6 = sbt->tileset_disabled;
     }
     else if ( !(sbt->flags & FLAG_PRESSED) || (sbt->flags & FLAG_NOPRESS) )
     {
@@ -537,8 +537,8 @@ void NC_STACK_button::DrawTextButton(button_str2 *sbt, CmdStream *pbuf)
     {
         if ( sbt->flags & FLAG_BORDER )
         {
-            FontUA::store_u8(pbuf, field_19c); //Padding gfx
-            tmp += -v7->map[field_19c].w - v7->map[field_19D].w;
+            FontUA::store_u8(pbuf, left_chr); //Padding gfx
+            tmp += -v7->map[left_chr].w - v7->map[right_chr].w;
         }
     }
 
@@ -546,13 +546,13 @@ void NC_STACK_button::DrawTextButton(button_str2 *sbt, CmdStream *pbuf)
 
     FontUA::op17(pbuf, tmp);
 
-    FontUA::store_u8(pbuf, field_19E); //Padding gfx
+    FontUA::store_u8(pbuf, fill_chr); //Padding gfx
 
     if ( sbt->button_type != TYPE_CAPTION )
     {
         if ( sbt->flags & FLAG_BORDER )
         {
-            FontUA::store_u8(pbuf, field_19D); //Padding gfx
+            FontUA::store_u8(pbuf, right_chr); //Padding gfx
         }
     }
 
@@ -592,14 +592,14 @@ void NC_STACK_button::DrawTextButton(button_str2 *sbt, CmdStream *pbuf)
     FontUA::add_txt(pbuf, tmp, v17, v18);
 }
 
-void NC_STACK_button::DrawTileButton(button_str2 *sbt, CmdStream *pbuf)
+void NC_STACK_button::DrawTileButton(WidgetEntry *sbt, CmdStream *pbuf)
 {
     int v6 = 0;
     int v7;
 
     if ( sbt->flags & FLAG_DISABLED )
     {
-        v7 = sbt->field_42E;
+        v7 = sbt->tileset_disabled;
     }
     else if ( sbt->flags & FLAG_PRESSED )
     {
@@ -629,7 +629,7 @@ void NC_STACK_button::DrawTileButton(button_str2 *sbt, CmdStream *pbuf)
             strwdth += v8->map[(uint8_t)sbt->caption[i]].w;
     }
 
-    int v47 = (sbt->width - strwdth - v8->map[field_19c].w) / 2;
+    int v47 = (sbt->width - strwdth - v8->map[left_chr].w) / 2;
 
     FontUA::select_tileset(pbuf, v7);
 
@@ -653,8 +653,8 @@ void NC_STACK_button::DrawTileButton(button_str2 *sbt, CmdStream *pbuf)
         {
             if ( sbt->flags & FLAG_BORDER )
             {
-                FontUA::store_u8(pbuf, field_19c);
-                ttmp += -v8->map[field_19c].w - v8->map[field_19D].w;
+                FontUA::store_u8(pbuf, left_chr);
+                ttmp += -v8->map[left_chr].w - v8->map[right_chr].w;
             }
         }
 
@@ -664,7 +664,7 @@ void NC_STACK_button::DrawTileButton(button_str2 *sbt, CmdStream *pbuf)
             {
                 FontUA::op10(pbuf, v47);
 
-                FontUA::store_u8(pbuf, field_19E);
+                FontUA::store_u8(pbuf, fill_chr);
 
                 v6 = v47;
             }
@@ -705,20 +705,20 @@ void NC_STACK_button::DrawTileButton(button_str2 *sbt, CmdStream *pbuf)
         {
             if ( sbt->button_type != TYPE_CAPTION && sbt->flags & FLAG_BORDER )
             {
-                FontUA::op17(pbuf, sbt->width - v8->map[field_19D].w);
+                FontUA::op17(pbuf, sbt->width - v8->map[right_chr].w);
             }
             else
             {
                 FontUA::op17(pbuf, sbt->width);
             }
-            FontUA::store_u8(pbuf, field_19E);
+            FontUA::store_u8(pbuf, fill_chr);
         }
 
         if ( sbt->button_type != TYPE_CAPTION )
         {
             if ( sbt->flags & FLAG_BORDER )
             {
-                FontUA::store_u8(pbuf, field_19D);
+                FontUA::store_u8(pbuf, right_chr);
             }
         }
     }
@@ -732,7 +732,7 @@ size_t NC_STACK_button::Draw()
     
     if ( visible )
     {
-        for (WidgetArr::iterator it = field_d8.begin(); it != field_d8.end(); it++)
+        for (WidgetArr::iterator it = widgets.begin(); it != widgets.end(); it++)
         {
             if ( it->flags & FLAG_DRAW )
             {
@@ -750,18 +750,18 @@ size_t NC_STACK_button::Draw()
     return 1;
 }
 
-bool NC_STACK_button::SetText(int butID, const std::string &field_4, const std::string &field_8)
+bool NC_STACK_button::SetText(int butID, const std::string &caption, const std::string &caption2)
 {
     int v5 = GetIndexByID(butID);
 
-    if ( v5 >= 0 && v5 < idd &&  !field_4.empty() )
+    if ( v5 >= 0 && v5 < widget_count &&  !caption.empty() )
     {
-        button_str2 &v7 = field_d8[v5];
+        WidgetEntry &v7 = widgets[v5];
 
-        v7.caption = field_4;
+        v7.caption = caption;
 
-        if ( !field_8.empty() )
-            v7.caption2 = field_8;
+        if ( !caption2.empty() )
+            v7.caption2 = caption2;
         else
             v7.caption2 = v7.caption;
 
@@ -771,16 +771,16 @@ bool NC_STACK_button::SetText(int butID, const std::string &field_4, const std::
     return false;
 }
 
-bool NC_STACK_button::SetText(int butID, const std::string &field_4)
+bool NC_STACK_button::SetText(int butID, const std::string &caption)
 {
     int v5 = GetIndexByID(butID);
 
-    if ( v5 >= 0 && v5 < idd &&  !field_4.empty() )
+    if ( v5 >= 0 && v5 < widget_count &&  !caption.empty() )
     {
-        button_str2 &v7 = field_d8[v5];
+        WidgetEntry &v7 = widgets[v5];
 
-        v7.caption = field_4;
-        v7.caption2 = field_4;
+        v7.caption = caption;
+        v7.caption2 = caption;
 
         return true;
     }
@@ -790,31 +790,31 @@ bool NC_STACK_button::SetText(int butID, const std::string &field_4)
 
 int NC_STACK_button::GetIndexByID(int butid)
 {
-    for (unsigned int i = 0; i < field_d8.size(); i++)
+    for (unsigned int i = 0; i < widgets.size(); i++)
     {
-        if (field_d8[i].button_id == butid)
+        if (widgets[i].button_id == butid)
             return i;
     }
     return -1;
 }
 
-void NC_STACK_button::SetState(button_66arg *arg)
+void NC_STACK_button::SetState(WidgetState *arg)
 {
     int id = GetIndexByID(arg->butID);
 
-    if ( id < 0 || id >= idd )
+    if ( id < 0 || id >= widget_count )
         return;
 
-    button_str2 &b = field_d8[id];
+    WidgetEntry &b = widgets[id];
 
     if ( b.button_type == TYPE_BUTTON || b.button_type == TYPE_CHECKBX || b.button_type == TYPE_RADIOBTN )
     {
         if ( b.button_type == TYPE_RADIOBTN )
             UnsetRadioButtons();
 
-        if ( arg->field_4 == 1 )
+        if ( arg->state == 1 )
             b.flags |= FLAG_PRESSED | FLAG_DOWN;
-        else if ( arg->field_4 == 2 )
+        else if ( arg->state == 2 )
             b.flags &= ~(FLAG_PRESSED | FLAG_DOWN);
     }
 }
@@ -823,8 +823,8 @@ NC_STACK_button::Slider * NC_STACK_button::GetSliderData(int butid)
 {
     int id = GetIndexByID(butid);
 
-    if ( id != -1 && field_d8[id].button_type == TYPE_SLIDER)
-        return field_d8[id].field_41C;
+    if ( id != -1 && widgets[id].button_type == TYPE_SLIDER)
+        return widgets[id].slider;
 
     return NULL;
 }
@@ -833,33 +833,33 @@ size_t NC_STACK_button::Refresh(int butid)
 {
     int id = GetIndexByID(butid);
 
-    if ( id != -1 && field_d8[id].button_type == TYPE_SLIDER)
-        UpdateSlider(&field_d8[id]);
+    if ( id != -1 && widgets[id].button_type == TYPE_SLIDER)
+        UpdateSlider(&widgets[id]);
 
     return 1;
 }
 
-size_t NC_STACK_button::setXYWidth(button_arg76 *arg)
+size_t NC_STACK_button::setXYWidth(WidgetPlacement *arg)
 {
     int id = GetIndexByID(arg->butID);
 
-    if ( id >= 0 && id < idd )
+    if ( id >= 0 && id < widget_count )
     {
         if (arg->xpos != -1)
         {
-            field_d8[id].xpos = arg->xpos;
+            widgets[id].xpos = arg->xpos;
             buttons[id].x = arg->xpos;
         }
 
         if (arg->ypos != -1)
         {
-            field_d8[id].ypos = arg->ypos;
+            widgets[id].ypos = arg->ypos;
             buttons[id].y = arg->ypos;
         }
 
         if (arg->width != -1)
         {
-            field_d8[id].width = arg->width;
+            widgets[id].width = arg->width;
             buttons[id].w = arg->width;
         }
         return 1;
@@ -871,7 +871,7 @@ size_t NC_STACK_button::setXYWidth(button_arg76 *arg)
 
 void NC_STACK_button::UnsetRadioButtons()
 {
-    for (WidgetArr::iterator it = field_d8.begin(); it != field_d8.end(); it++)
+    for (WidgetArr::iterator it = widgets.begin(); it != widgets.end(); it++)
     {
         if ( it->button_type == TYPE_RADIOBTN )
             it->flags &= ~(FLAG_DOWN | FLAG_PRESSED);
@@ -902,9 +902,9 @@ void NC_STACK_button::setBTN_h(int _h)
 
 void NC_STACK_button::setBTN_chars(const std::string &chrs)
 {
-    field_19c = (uint8_t)chrs[0];
-    field_19D = (uint8_t)chrs[1];
-    field_19E = (uint8_t)chrs[2];
+    left_chr = (uint8_t)chrs[0];
+    right_chr = (uint8_t)chrs[1];
+    fill_chr = (uint8_t)chrs[2];
 }
 
 

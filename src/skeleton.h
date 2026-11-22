@@ -68,17 +68,17 @@ struct Data
 
 
 
-struct skeleton_arg_132
+struct TSkeletonTransformParams
 {
     mat4x4 tform;
     float minZ;
     float maxZ;
 };
 
-struct skeleton_arg133
+struct TSkeletonPolygonParams
 {
     int polyID;
-    int field_4;
+    int flags;
     tUtV *texCoords;
     float minZ;
     float maxZ;
@@ -94,8 +94,8 @@ public:
     virtual rsrc * CreateResource(IDVList &stak);
     virtual size_t FreeResource(rsrc *pres);
     virtual size_t RecalcPolygonPlane(int *arg);
-    virtual size_t TransformAndCull(skeleton_arg_132 *arg);
-    virtual bool PreparePolygon(skeleton_arg133 *arg);
+    virtual size_t TransformAndCull(TSkeletonTransformParams *arg);
+    virtual bool PreparePolygon(TSkeletonPolygonParams *arg);
 
     NC_STACK_skeleton() {};
     virtual ~NC_STACK_skeleton() {};
@@ -120,7 +120,7 @@ public:
 
 protected:
     bool PolygonCheckInvisible(const std::vector<UAskeleton::Vertex> &in, const UAskeleton::Polygon &pol, std::vector<vec3d> *out);
-    bool TransformVertexes(skeleton_arg_132 *arg, const std::vector<UAskeleton::Vertex> &in, std::vector<UAskeleton::Vertex> *out);
+    bool TransformVertexes(TSkeletonTransformParams *arg, const std::vector<UAskeleton::Vertex> &in, std::vector<UAskeleton::Vertex> *out);
 
 
 public:

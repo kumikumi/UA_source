@@ -32,7 +32,7 @@ public:
     virtual size_t Deinit();
     virtual size_t LoadingFromIFF(IFFile **file);
     virtual size_t SavingIntoIFF(IFFile **file);
-    virtual size_t Emit(area_arg_65 *arg, InstanceOpts * opts = NULL);
+    virtual size_t Emit(TObjectRenderParams *arg, InstanceOpts * opts = NULL);
     virtual void SetAccel(const vec3d &start, const vec3d &end);
     virtual void SetMagnify(const vec3d &start, const vec3d &end);
     virtual void AddLifeStage(NC_STACK_area *ade);

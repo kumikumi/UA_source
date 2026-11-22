@@ -41,15 +41,15 @@ public:
         int16_t max; // maximal value
         int16_t min; // minimal value
 
-        int16_t field_6_;
-        int16_t field_8_;
+        int16_t thumbStart;
+        int16_t thumbEnd;
 
         int16_t pressPart;
         int16_t oldValue;
         int16_t scrDownX;
     };
 
-    struct button_str2
+    struct WidgetEntry
     {
         int16_t xpos;
         int16_t ypos;
@@ -63,18 +63,18 @@ public:
         int pressed_id;
         int16_t button_type;
         int16_t button_id;
-        Slider *field_41C;
+        Slider *slider;
         int txt_r;
         int txt_g;
         int txt_b;
         uint8_t tileset_down;
         uint8_t tileset_up;
-        uint8_t field_42E;
+        uint8_t tileset_disabled;
     };
 
-    typedef std::vector<button_str2> WidgetArr;
+    typedef std::vector<WidgetEntry> WidgetArr;
 
-    struct button_64_arg
+    struct WidgetDesc
     {
         int button_type;
         int xpos;
@@ -88,22 +88,22 @@ public:
         int pressedCode;
         int button_id;
         int flags;
-        Slider *field_34;
+        Slider *slider;
         uint8_t tileset_down;
         uint8_t tileset_up;
-        uint8_t field_3A;
+        uint8_t tileset_disabled;
         int txt_r;
         int txt_g;
         int txt_b;
     };
 
-    struct button_66arg
+    struct WidgetState
     {
         int butID;
-        int field_4;
+        int state;
     };
 
-    struct button_arg76
+    struct WidgetPlacement
     {
         int butID;
         int16_t xpos;
@@ -130,26 +130,26 @@ public:
 public:
     virtual size_t Init(IDVList &stak);
     virtual size_t Deinit();
-    virtual size_t Add(button_64_arg *arg);
+    virtual size_t Add(WidgetDesc *arg);
     virtual size_t Remove(int butID);
-    virtual size_t Enable(button_66arg *arg);
-    virtual size_t Disable(button_66arg *arg);
+    virtual size_t Enable(WidgetState *arg);
+    virtual size_t Disable(WidgetState *arg);
     
     virtual void ShowScreen(); // Part of 68th method
     virtual void HideScreen(); // Part of 68th method
     
     virtual ResCode ProcessWidgetsEvents(TInputState *arg);
     virtual size_t Draw();
-    bool SetText(int butID, const std::string &field_4, const std::string &field_8);
-    bool SetText(int butID, const std::string &field_4);
+    bool SetText(int butID, const std::string &caption, const std::string &caption2);
+    bool SetText(int butID, const std::string &caption);
     int GetIndexByID(int butid);
-    virtual void SetState(button_66arg *arg);
+    virtual void SetState(WidgetState *arg);
     Slider * GetSliderData(int butid);
     size_t Refresh(int butid);
-    virtual size_t setXYWidth(button_arg76 *arg);
+    virtual size_t setXYWidth(WidgetPlacement *arg);
 
     NC_STACK_button() {
-        field_d8.reserve(ClickBox::RESERVED);
+        widgets.reserve(ClickBox::RESERVED);
         buttons.reserve(ClickBox::RESERVED);
     };
     virtual ~NC_STACK_button() {};
@@ -181,9 +181,9 @@ public:
     virtual int getBTN_h();
 
 protected:
-    void UpdateSlider(button_str2 *sbt);
-    void DrawTextButton(button_str2 *sbt, CmdStream *pbuf);
-    void DrawTileButton(button_str2 *sbt, CmdStream *pbuf);
+    void UpdateSlider(WidgetEntry *sbt);
+    void DrawTextButton(WidgetEntry *sbt, CmdStream *pbuf);
+    void DrawTileButton(WidgetEntry *sbt, CmdStream *pbuf);
 
     void UnsetRadioButtons();
 
@@ -191,15 +191,15 @@ protected:
 public:
     static constexpr const char * __ClassName = "button.class";
 
-    WidgetArr field_d8;
-    int16_t idd = 0;
+    WidgetArr widgets;
+    int16_t widget_count = 0;
     bool    visible = false;
-    uint8_t field_19c = 0;
-    uint8_t field_19D = 0;
-    uint8_t field_19E = 0;
-    uint8_t field_19F = 0;
-    uint8_t field_1A0 = 0;
-    uint8_t field_1A1 = 0;
+    uint8_t left_chr = 0;
+    uint8_t right_chr = 0;
+    uint8_t fill_chr = 0;
+    uint8_t track_left_chr = 0;
+    uint8_t track_fill_chr = 0;
+    uint8_t track_right_chr = 0;
     int16_t screen_width = 0;
     int16_t screen_height = 0;
 };

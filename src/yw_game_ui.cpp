@@ -10996,7 +10996,7 @@ void NC_STACK_ypaworld::HandleWorldMouse(TInputState *arg)
         if ( _mouseCursorHidden )
             mousePointer = -1;
 
-        GFX::displ_arg263 v19;
+        GFX::TCursorParams v19;
 
         if ( mousePointer == -1 )
             v19.bitm = NULL;

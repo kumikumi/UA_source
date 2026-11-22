@@ -96,7 +96,7 @@ size_t NC_STACK_bmpanim::SavingIntoIFF(IFFile **file)
         return 0;
     }
 
-    rsrc_func66_arg sv;
+    TSaveResourceParams sv;
     sv.OpenedStream = 1;
     sv.filename = a3.c_str();
     sv.file = NULL;
@@ -519,7 +519,7 @@ bool NC_STACK_bmpanim::WriteToFile(ResBmpAnm *banm, const std::string &name, IFF
     return wok;
 }
 
-size_t NC_STACK_bmpanim::SaveResource(rsrc_func66_arg *sv)
+size_t NC_STACK_bmpanim::SaveResource(TSaveResourceParams *sv)
 {
     if ( !_pData )
         return 0;

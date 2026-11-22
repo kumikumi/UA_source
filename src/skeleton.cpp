@@ -120,7 +120,7 @@ size_t NC_STACK_skeleton::RecalcPolygonPlane(int *arg)
 }
 
 
-bool NC_STACK_skeleton::TransformVertexes(skeleton_arg_132 *arg, const std::vector<UAskeleton::Vertex> &in, std::vector<UAskeleton::Vertex> *out)
+bool NC_STACK_skeleton::TransformVertexes(TSkeletonTransformParams *arg, const std::vector<UAskeleton::Vertex> &in, std::vector<UAskeleton::Vertex> *out)
 {
     if ( in.empty() )
         return false;
@@ -161,7 +161,7 @@ bool NC_STACK_skeleton::TransformVertexes(skeleton_arg_132 *arg, const std::vect
     return andFlags == 0;
 }
 
-size_t NC_STACK_skeleton::TransformAndCull(skeleton_arg_132 *arg)
+size_t NC_STACK_skeleton::TransformAndCull(TSkeletonTransformParams *arg)
 {
     int result = 1;
 
@@ -202,7 +202,7 @@ bool NC_STACK_skeleton::PolygonCheckInvisible(const std::vector<UAskeleton::Vert
 }
 
 
-bool NC_STACK_skeleton::PreparePolygon(skeleton_arg133 *arg)
+bool NC_STACK_skeleton::PreparePolygon(TSkeletonPolygonParams *arg)
 {
     std::vector<vec3d> PolyVertex;
     UAskeleton::Polygon &pol = _resData->polygons[arg->polyID];
@@ -216,7 +216,7 @@ bool NC_STACK_skeleton::PreparePolygon(skeleton_arg133 *arg)
 //    for (int i = 0; i < vtxCnt; i++ )
 //        arg->rndrArg->vertexes[i] = PolyVertex[i];
 
-    if ( arg->field_4 & 1 )
+    if ( arg->flags & 1 )
     {
         if (arg->texCoords)
         {
@@ -225,9 +225,9 @@ bool NC_STACK_skeleton::PreparePolygon(skeleton_arg133 *arg)
         }
     }
 
-    if ( arg->field_4 & 2 )
+    if ( arg->flags & 2 )
     {
-        if ( arg->field_4 & 4 )
+        if ( arg->flags & 4 )
         {
             for (int i = 0; i < vtxCnt; i++ )
             {

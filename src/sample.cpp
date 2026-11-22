@@ -33,7 +33,7 @@ rsrc * NC_STACK_sample::CreateResource(IDVList &stak)
         return res;
 
     smpl->bufsz = bufsz;
-    smpl->field_8 = type;
+    smpl->Type = type;
 
     void *buf = stak.Get<void *>(SMPL_ATT_BUFFER, NULL);
 
@@ -45,7 +45,7 @@ rsrc * NC_STACK_sample::CreateResource(IDVList &stak)
     else
     {
         smpl->Data = buf;
-        smpl->field_10 |= 1;
+        smpl->Flags |= 1;
     }
 
     res->data = smpl;
@@ -75,7 +75,7 @@ TSampleData *NC_STACK_sample::GetSampleData()
 int NC_STACK_sample::getSMPL_type()
 {
     if (p_sampl)
-        return p_sampl->field_8;
+        return p_sampl->Type;
     return 0;
 }
 

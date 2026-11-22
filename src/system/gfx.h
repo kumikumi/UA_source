@@ -345,20 +345,20 @@ struct GfxStates
     TShaderProg Prog;
 };
 
-struct rstr_arg204
+struct TBitmapBlitParams
 {
     ResBitmap *pbitm = NULL;
-    Common::FRect float4;
-    Common::FRect float14;
+    Common::FRect srcRect;
+    Common::FRect dstRect;
 };
 
-struct rstr_218_arg
+struct TMaskedBlitParams
 {
-    ResBitmap *bitm_intern;
-    ResBitmap *bitm_intern2;
-    int flg;
-    Common::FRect rect1;
-    Common::FRect rect2;
+    ResBitmap *bitmap;
+    ResBitmap *mask;
+    int maskIndex;
+    Common::FRect srcRect;
+    Common::FRect dstRect;
 };
 
 struct ColorFx
@@ -370,7 +370,7 @@ struct ColorFx
     ColorFx(int id, float pwr) : Id(id), Pwr(pwr) {};
 };
 
-struct displ_arg263
+struct TCursorParams
 {
     ResBitmap *bitm = NULL;
     int pointer_id = 0;
@@ -555,8 +555,8 @@ public:
     virtual size_t DrawLineCentered(const Common::Line &arg);
     virtual size_t DrawClippedLineNormalized(const Common::FLine &arg);
     virtual size_t DrawClippedLineCentered(const Common::Line &r);
-    virtual size_t DrawBitmapNormalized(rstr_arg204 *arg);
-    virtual size_t DrawClippedBitmapNormalized(rstr_arg204 *arg);
+    virtual size_t DrawBitmapNormalized(TBitmapBlitParams *arg);
+    virtual size_t DrawClippedBitmapNormalized(TBitmapBlitParams *arg);
     virtual void _SetTileset(int id, TileMap *tiles);
     virtual TileMap *_GetTileset(int id);
     virtual int GetTilesetID(TileMap *tiles);
@@ -567,7 +567,7 @@ public:
     virtual void SetClipCentered(const Common::Rect &arg);
     virtual void BeginScene();
     virtual void EndScene();
-    virtual void DrawMaskedBitmapNormalized(rstr_218_arg *arg);
+    virtual void DrawMaskedBitmapNormalized(TMaskedBlitParams *arg);
     virtual void SetInverseClipCentered(const Common::Rect &arg);
     virtual void BeginFrame();
     virtual void EndFrame();

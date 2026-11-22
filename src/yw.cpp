@@ -2214,7 +2214,7 @@ bool NC_STACK_ypaworld::InitGameShell(UserData *usr)
 
     usr->ReloadAllInputs();
 
-    windp_arg87 v67;
+    TRemoteStartInfo v67;
 
     if (!_netDriver->GetRemoteStart(&v67) )
     {
@@ -2577,12 +2577,12 @@ bool NC_STACK_ypaworld::CreateTitleControls(){
     }
 
     int v70 = 0;
-    NC_STACK_button::button_64_arg btn_64arg;
+    NC_STACK_button::WidgetDesc btn_64arg;
 
     btn_64arg.tileset_down = 19;
     btn_64arg.tileset_up = 18;
     btn_64arg.button_type = NC_STACK_button::TYPE_BUTTON;
-    btn_64arg.field_3A = 30;
+    btn_64arg.tileset_disabled = 30;
     btn_64arg.xpos = _screenSize.x * 0.3328125;
     btn_64arg.ypos = _screenSize.y * 0.2291666666666666;
     btn_64arg.width = _screenSize.x / 3;
@@ -2689,11 +2689,11 @@ bool NC_STACK_ypaworld::CreateTitleControls(){
         return false;
     }
 
-    NC_STACK_button::button_66arg v228;
+    NC_STACK_button::WidgetState v228;
 
     if ( _GameShell->lang_dlls.size() <= 1 )
     {
-        v228.field_4 = 0;
+        v228.state = 0;
         v228.butID = UIWidgets::MAIN_MENU_WIDGET_IDS::BTN_LANGUAGE;
         _GameShell->titel_button->Disable(&v228);
     }
@@ -2703,7 +2703,7 @@ bool NC_STACK_ypaworld::CreateTitleControls(){
 }
 bool NC_STACK_ypaworld::CreateSubBarControls(){
     int v70 = 0;
-    NC_STACK_button::button_64_arg btn_64arg;
+    NC_STACK_button::WidgetDesc btn_64arg;
     subBarButtonWidth = _screenSize.x / 4 - 20;
 
     _GameShell->sub_bar_button = Nucleus::CInit<NC_STACK_button>({ 
@@ -2721,7 +2721,7 @@ bool NC_STACK_ypaworld::CreateSubBarControls(){
     v70 = 0;
 
     btn_64arg.tileset_down = 19;
-    btn_64arg.field_3A = 30;
+    btn_64arg.tileset_disabled = 30;
     btn_64arg.ypos = 0;
     btn_64arg.button_type = NC_STACK_button::TYPE_BUTTON;
     btn_64arg.tileset_up = 18;
@@ -2802,15 +2802,15 @@ bool NC_STACK_ypaworld::CreateSubBarControls(){
         ypa_log_out("Unable to add button to sub-bar\n");
         return false;
     }
-    NC_STACK_button::button_66arg v228;
+    NC_STACK_button::WidgetState v228;
     if ( _GameShell->sgmSaveExist != 1 )
     {
         v228.butID = 1015;
-        v228.field_4 = 0;
+        v228.state = 0;
         _GameShell->sub_bar_button->Disable(&v228);
     }
 
-    v228.field_4 = 0;
+    v228.state = 0;
     v228.butID = 1014;
     _GameShell->sub_bar_button->Disable(&v228);
 
@@ -2837,10 +2837,10 @@ bool NC_STACK_ypaworld::CreateConfirmControls()
         return false;
     }
 
-    NC_STACK_button::button_64_arg btn_64arg;
+    NC_STACK_button::WidgetDesc btn_64arg;
     btn_64arg.tileset_up = 18;
     btn_64arg.tileset_down = 19;
-    btn_64arg.field_3A = 30;
+    btn_64arg.tileset_disabled = 30;
     btn_64arg.button_type = NC_STACK_button::TYPE_BUTTON;
     btn_64arg.xpos = _screenSize.x * 0.25;
     btn_64arg.ypos = _screenSize.y * 0.53125;
@@ -2871,7 +2871,7 @@ bool NC_STACK_ypaworld::CreateConfirmControls()
             btn_64arg.tileset_down = 16;
             btn_64arg.button_type = NC_STACK_button::TYPE_CAPTION;
             btn_64arg.tileset_up = 16;
-            btn_64arg.field_3A = 16;
+            btn_64arg.tileset_disabled = 16;
             btn_64arg.xpos = _screenSize.x * 0.25;
             btn_64arg.ypos = _screenSize.y * 0.4375;
             btn_64arg.caption = " ";
@@ -2898,8 +2898,8 @@ bool NC_STACK_ypaworld::CreateConfirmControls()
             }
         }
     }
-    NC_STACK_button::button_66arg v228;
-    v228.field_4 = 0;
+    NC_STACK_button::WidgetState v228;
+    v228.state = 0;
     v228.butID = 1300;
     _GameShell->confirm_button->Disable(&v228);
 
@@ -2949,12 +2949,12 @@ bool NC_STACK_ypaworld::CreateInputControls()
         return false;
     }
     int v70 = 0;
-    NC_STACK_button::button_64_arg btn_64arg;
+    NC_STACK_button::WidgetDesc btn_64arg;
 
     v70 = 0;
     btn_64arg.tileset_down = 16;
     btn_64arg.tileset_up = 16;
-    btn_64arg.field_3A = 16;
+    btn_64arg.tileset_disabled = 16;
     btn_64arg.xpos = 0;
     btn_64arg.button_type = NC_STACK_button::TYPE_CAPTION;
     btn_64arg.ypos = 0;
@@ -3003,7 +3003,7 @@ bool NC_STACK_ypaworld::CreateInputControls()
                 if ( _GameShell->button_input_button->Add(&btn_64arg) )
                 {
                     btn_64arg.tileset_down = 19;
-                    btn_64arg.field_3A = 30;
+                    btn_64arg.tileset_disabled = 30;
                     btn_64arg.tileset_up = 18;
                     btn_64arg.button_type = NC_STACK_button::TYPE_CHECKBX;
                     btn_64arg.xpos = menuWidth / 6;
@@ -3021,7 +3021,7 @@ bool NC_STACK_ypaworld::CreateInputControls()
                     {
                         btn_64arg.tileset_down = 16;
                         btn_64arg.tileset_up = 16;
-                        btn_64arg.field_3A = 16;
+                        btn_64arg.tileset_disabled = 16;
                         btn_64arg.xpos = (checkBoxWidth + buttonsSpace + menuWidth / 6);
                         btn_64arg.button_type = NC_STACK_button::TYPE_CAPTION;
                         btn_64arg.width = (menuWidth / 2 - buttonsSpace);
@@ -3039,7 +3039,7 @@ bool NC_STACK_ypaworld::CreateInputControls()
                         if ( _GameShell->button_input_button->Add(&btn_64arg) )
                         {
                             btn_64arg.tileset_down = 19;
-                            btn_64arg.field_3A = 30;
+                            btn_64arg.tileset_disabled = 30;
                             btn_64arg.tileset_up = 18;
                             btn_64arg.caption = "g";
                             btn_64arg.caption2 = "g";
@@ -3056,7 +3056,7 @@ bool NC_STACK_ypaworld::CreateInputControls()
                             {
                                 btn_64arg.tileset_down = 16;
                                 btn_64arg.tileset_up = 16;
-                                btn_64arg.field_3A = 16;
+                                btn_64arg.tileset_disabled = 16;
                                 btn_64arg.button_type = NC_STACK_button::TYPE_CAPTION;
                                 btn_64arg.xpos = (checkBoxWidth + (menuWidth / 2) + 2 * buttonsSpace);
                                 btn_64arg.width = ((menuWidth / 2) - buttonsSpace);
@@ -3074,7 +3074,7 @@ bool NC_STACK_ypaworld::CreateInputControls()
                                 if ( _GameShell->button_input_button->Add(&btn_64arg) )
                                 {
                                     btn_64arg.tileset_down = 19;
-                                    btn_64arg.field_3A = 30;
+                                    btn_64arg.tileset_disabled = 30;
                                     btn_64arg.tileset_up = 18;
                                     btn_64arg.button_type = NC_STACK_button::TYPE_CHECKBX;
                                     btn_64arg.xpos = menuWidth / 3;
@@ -3092,7 +3092,7 @@ bool NC_STACK_ypaworld::CreateInputControls()
                                     {
                                         btn_64arg.tileset_down = 16;
                                         btn_64arg.tileset_up = 16;
-                                        btn_64arg.field_3A = 16;
+                                        btn_64arg.tileset_disabled = 16;
                                         btn_64arg.button_type = NC_STACK_button::TYPE_CAPTION;
                                         btn_64arg.xpos = (checkBoxWidth + (menuWidth / 3) + buttonsSpace);
                                         btn_64arg.width = menuWidth / 2;
@@ -3109,7 +3109,7 @@ bool NC_STACK_ypaworld::CreateInputControls()
                                             btn_64arg.tileset_down = 19;
                                             btn_64arg.tileset_up = 18;
                                             btn_64arg.button_type = NC_STACK_button::TYPE_BUTTON;
-                                            btn_64arg.field_3A = 30;
+                                            btn_64arg.tileset_disabled = 30;
                                             btn_64arg.xpos = menuWidth / 6;
                                             btn_64arg.ypos = 5 * vertMenuSpace + 13 * _fontH;
                                             btn_64arg.width = (menuWidth / 3 - buttonsSpace);
@@ -3266,13 +3266,13 @@ bool NC_STACK_ypaworld::CreateVideoControls()
     _GameShell->d3d_listvw.y = 7 * vertMenuSpace + 7 * _fontH + scaledFontHeight;
 
     int v70 = 0;
-    NC_STACK_button::button_64_arg btn_64arg;
+    NC_STACK_button::WidgetDesc btn_64arg;
 
     v70 = 0;
 
     btn_64arg.tileset_down = 16;
     btn_64arg.tileset_up = 16;
-    btn_64arg.field_3A = 16;
+    btn_64arg.tileset_disabled = 16;
     btn_64arg.button_type = NC_STACK_button::TYPE_CAPTION;
     btn_64arg.xpos = 0;
     btn_64arg.ypos = 0;
@@ -3322,7 +3322,7 @@ bool NC_STACK_ypaworld::CreateVideoControls()
                 {
                             btn_64arg.tileset_down = 16;
                             btn_64arg.tileset_up = 16;
-                            btn_64arg.field_3A = 16;
+                            btn_64arg.tileset_disabled = 16;
                             btn_64arg.button_type = NC_STACK_button::TYPE_CAPTION;
                             btn_64arg.xpos = 0;
                             btn_64arg.ypos = 2 * (3 * (vertMenuSpace + _fontH));
@@ -3342,7 +3342,7 @@ bool NC_STACK_ypaworld::CreateVideoControls()
                             {
                                 btn_64arg.width = v294 * 0.6;
                                 btn_64arg.tileset_down = 19;
-                                btn_64arg.field_3A = 30;
+                                btn_64arg.tileset_disabled = 30;
                                 btn_64arg.button_type = NC_STACK_button::TYPE_CHECKBX;
                                 btn_64arg.downCode = 1134;
                                 btn_64arg.upCode = 1135;
@@ -3364,7 +3364,7 @@ bool NC_STACK_ypaworld::CreateVideoControls()
                                     btn_64arg.tileset_down = 19;
                                     btn_64arg.button_type = NC_STACK_button::TYPE_CHECKBX;
                                     btn_64arg.tileset_up = 18;
-                                    btn_64arg.field_3A = 30;
+                                    btn_64arg.tileset_disabled = 30;
                                     btn_64arg.xpos = 0;
                                     btn_64arg.caption = "g";
                                     btn_64arg.caption2 = "g";
@@ -3382,7 +3382,7 @@ bool NC_STACK_ypaworld::CreateVideoControls()
 
                                         btn_64arg.tileset_down = 16;
                                         btn_64arg.tileset_up = 16;
-                                        btn_64arg.field_3A = 16;
+                                        btn_64arg.tileset_disabled = 16;
                                         btn_64arg.xpos = checkBoxWidth + buttonsSpace;
                                         btn_64arg.button_type = NC_STACK_button::TYPE_CAPTION;
                                         btn_64arg.width = v120;
@@ -3404,7 +3404,7 @@ bool NC_STACK_ypaworld::CreateVideoControls()
                                             btn_64arg.width = checkBoxWidth;
                                             btn_64arg.caption = "g";
                                             btn_64arg.caption2 = "g";
-                                            btn_64arg.field_3A = 30;
+                                            btn_64arg.tileset_disabled = 30;
                                             btn_64arg.upCode = 1107;
                                             btn_64arg.button_type = NC_STACK_button::TYPE_CHECKBX;
                                             btn_64arg.downCode = 1106;
@@ -3417,7 +3417,7 @@ bool NC_STACK_ypaworld::CreateVideoControls()
                                             {
                                                 btn_64arg.tileset_down = 16;
                                                 btn_64arg.tileset_up = 16;
-                                                btn_64arg.field_3A = 16;
+                                                btn_64arg.tileset_disabled = 16;
                                                 btn_64arg.width = v120;
                                                 btn_64arg.xpos = 4 * buttonsSpace + v120 + 2 * checkBoxWidth;
                                                 btn_64arg.button_type = NC_STACK_button::TYPE_CAPTION;
@@ -3435,7 +3435,7 @@ bool NC_STACK_ypaworld::CreateVideoControls()
                                                     btn_64arg.tileset_up = 18;
                                                     btn_64arg.button_type = NC_STACK_button::TYPE_CHECKBX;
                                                     btn_64arg.xpos = 0;
-                                                    btn_64arg.field_3A = 30;
+                                                    btn_64arg.tileset_disabled = 30;
                                                     btn_64arg.width = checkBoxWidth;
                                                     btn_64arg.caption = "g";
                                                     btn_64arg.caption2 = "g";
@@ -3450,7 +3450,7 @@ bool NC_STACK_ypaworld::CreateVideoControls()
                                                     {
                                                         btn_64arg.tileset_down = 16;
                                                         btn_64arg.tileset_up = 16;
-                                                        btn_64arg.field_3A = 16;
+                                                        btn_64arg.tileset_disabled = 16;
                                                         btn_64arg.width = v120;
                                                         btn_64arg.xpos = checkBoxWidth + buttonsSpace;
                                                         btn_64arg.button_type = NC_STACK_button::TYPE_CAPTION;
@@ -3468,7 +3468,7 @@ bool NC_STACK_ypaworld::CreateVideoControls()
                                                             btn_64arg.tileset_down = 19;
                                                             btn_64arg.tileset_up = 18;
                                                             btn_64arg.button_type = NC_STACK_button::TYPE_CHECKBX;
-                                                            btn_64arg.field_3A = 30;
+                                                            btn_64arg.tileset_disabled = 30;
                                                             btn_64arg.downCode = 1130;
                                                             btn_64arg.pressedCode = 0;
                                                             btn_64arg.flags = 0;
@@ -3482,7 +3482,7 @@ bool NC_STACK_ypaworld::CreateVideoControls()
                                                             {
                                                                 btn_64arg.tileset_down = 16;
                                                                 btn_64arg.tileset_up = 16;
-                                                                btn_64arg.field_3A = 16;
+                                                                btn_64arg.tileset_disabled = 16;
                                                                 btn_64arg.button_type = NC_STACK_button::TYPE_CAPTION;
                                                                 btn_64arg.xpos = 4 * buttonsSpace + v120 + 2 * checkBoxWidth;
                                                                 btn_64arg.width = v120;
@@ -3516,7 +3516,7 @@ bool NC_STACK_ypaworld::CreateVideoControls()
                                                                         btn_64arg.button_type = NC_STACK_button::TYPE_CHECKBX;
                                                                         btn_64arg.pressedCode = 0;
                                                                         btn_64arg.flags = 0;
-                                                                        btn_64arg.field_3A = 30;
+                                                                        btn_64arg.tileset_disabled = 30;
                                                                         btn_64arg.xpos = 0;
                                                                         btn_64arg.button_id = 1150;
                                                                         btn_64arg.caption = "g";
@@ -3528,7 +3528,7 @@ bool NC_STACK_ypaworld::CreateVideoControls()
                                                                         {
                                                                             btn_64arg.tileset_down = 16;
                                                                             btn_64arg.tileset_up = 16;
-                                                                            btn_64arg.field_3A = 16;
+                                                                            btn_64arg.tileset_disabled = 16;
                                                                             btn_64arg.button_type = NC_STACK_button::TYPE_CAPTION;
                                                                             btn_64arg.xpos = v120 + 2 * checkBoxWidth + 4 * buttonsSpace;
                                                                             btn_64arg.width = v120;
@@ -3546,7 +3546,7 @@ bool NC_STACK_ypaworld::CreateVideoControls()
                                                                                 btn_64arg.tileset_down = 19;
                                                                                 btn_64arg.tileset_up = 18;
                                                                                 btn_64arg.button_type = NC_STACK_button::TYPE_CHECKBX;
-                                                                                btn_64arg.field_3A = 30;
+                                                                                btn_64arg.tileset_disabled = 30;
                                                                                 btn_64arg.downCode = 1128;
                                                                                 btn_64arg.pressedCode = 0;
                                                                                 btn_64arg.flags = 0;
@@ -3559,7 +3559,7 @@ bool NC_STACK_ypaworld::CreateVideoControls()
                                                                                 if ( _GameShell->video_button->Add(&btn_64arg) )
                                                                                 {
                                                                                     btn_64arg.tileset_down = 19;
-                                                                                    btn_64arg.field_3A = 30;
+                                                                                    btn_64arg.tileset_disabled = 30;
                                                                                     btn_64arg.tileset_up = 18;
                                                                                     btn_64arg.xpos = 0;
                                                                                     btn_64arg.button_type = NC_STACK_button::TYPE_CHECKBX;
@@ -3577,7 +3577,7 @@ bool NC_STACK_ypaworld::CreateVideoControls()
                                                                                     {
                                                                                         btn_64arg.tileset_down = 16;
                                                                                         btn_64arg.tileset_up = 16;
-                                                                                        btn_64arg.field_3A = 16;
+                                                                                        btn_64arg.tileset_disabled = 16;
                                                                                         btn_64arg.button_type = NC_STACK_button::TYPE_CAPTION;
                                                                                         btn_64arg.xpos = checkBoxWidth + buttonsSpace;
                                                                                         btn_64arg.width = v120 - checkBoxWidth;
@@ -3593,7 +3593,7 @@ bool NC_STACK_ypaworld::CreateVideoControls()
                                                                                         {
                                                                                             btn_64arg.tileset_down = 16;
                                                                                             btn_64arg.tileset_up = 16;
-                                                                                            btn_64arg.field_3A = 16;
+                                                                                            btn_64arg.tileset_disabled = 16;
                                                                                             btn_64arg.button_type = NC_STACK_button::TYPE_CAPTION;
                                                                                             btn_64arg.xpos = v120 + 2 * checkBoxWidth + 4 * buttonsSpace;
                                                                                             btn_64arg.width = v120;
@@ -3614,7 +3614,7 @@ bool NC_STACK_ypaworld::CreateVideoControls()
                                                                                                 btn_64arg.flags = 0;
                                                                                                 btn_64arg.caption = "g";
                                                                                                 btn_64arg.caption2 = "g";
-                                                                                                btn_64arg.field_3A = 30;
+                                                                                                btn_64arg.tileset_disabled = 30;
                                                                                                 btn_64arg.button_id = 1151;
                                                                                                 btn_64arg.xpos = 3 * buttonsSpace + checkBoxWidth + v120;
                                                                                                 btn_64arg.downCode = 1112;
@@ -3625,7 +3625,7 @@ bool NC_STACK_ypaworld::CreateVideoControls()
                                                                                                 {
                                                                                                     btn_64arg.tileset_down = 16;
                                                                                                     btn_64arg.tileset_up = 16;
-                                                                                                    btn_64arg.field_3A = 16;
+                                                                                                    btn_64arg.tileset_disabled = 16;
                                                                                                     btn_64arg.button_type = NC_STACK_button::TYPE_CAPTION;
                                                                                                     btn_64arg.xpos = 0;
                                                                                                     btn_64arg.ypos = 11 * (_fontH + vertMenuSpace);
@@ -3649,7 +3649,7 @@ bool NC_STACK_ypaworld::CreateVideoControls()
                                                                                                         btn_64arg.caption2.clear();
                                                                                                         btn_64arg.tileset_down = 18;
                                                                                                         btn_64arg.tileset_up = 18;
-                                                                                                        btn_64arg.field_3A = 30;
+                                                                                                        btn_64arg.tileset_disabled = 30;
                                                                                                         btn_64arg.button_type = NC_STACK_button::TYPE_SLIDER;
                                                                                                         btn_64arg.pressedCode = 1110;
                                                                                                         btn_64arg.button_id = 1159;
@@ -3657,7 +3657,7 @@ bool NC_STACK_ypaworld::CreateVideoControls()
                                                                                                         btn_64arg.caption = " ";
                                                                                                         btn_64arg.downCode = 1108;
                                                                                                         btn_64arg.flags = 0;
-                                                                                                        btn_64arg.field_34 = &v225;
+                                                                                                        btn_64arg.slider = &v225;
                                                                                                         btn_64arg.upCode = 1109;
                                                                                                         btn_64arg.width = (videoMenuRowWidth - 5 * buttonsSpace) * 0.55;
 
@@ -3665,7 +3665,7 @@ bool NC_STACK_ypaworld::CreateVideoControls()
                                                                                                         {
                                                                                                             btn_64arg.tileset_down = 16;
                                                                                                             btn_64arg.tileset_up = 16;
-                                                                                                            btn_64arg.field_3A = 16;
+                                                                                                            btn_64arg.tileset_disabled = 16;
                                                                                                             btn_64arg.button_type = NC_STACK_button::TYPE_CAPTION;
                                                                                                             btn_64arg.caption2.clear();
                                                                                                             btn_64arg.xpos = buttonsSpace + (videoMenuRowWidth - 5 * buttonsSpace) * 0.85;
@@ -3699,7 +3699,7 @@ bool NC_STACK_ypaworld::CreateVideoControls()
                                                                                                                     v225.max = 127;
                                                                                                                     v225.value = 100;
 
-                                                                                                                    btn_64arg.field_3A = 30;
+                                                                                                                    btn_64arg.tileset_disabled = 30;
                                                                                                                     btn_64arg.tileset_down = 18;
                                                                                                                     btn_64arg.tileset_up = 18;
                                                                                                                     btn_64arg.button_type = NC_STACK_button::TYPE_SLIDER;
@@ -3709,7 +3709,7 @@ bool NC_STACK_ypaworld::CreateVideoControls()
                                                                                                                     btn_64arg.caption = " ";
                                                                                                                     btn_64arg.downCode = 1115;
                                                                                                                     btn_64arg.upCode = 1117;
-                                                                                                                    btn_64arg.field_34 = &v225;
+                                                                                                                    btn_64arg.slider = &v225;
                                                                                                                     btn_64arg.pressedCode = 1116;
                                                                                                                     btn_64arg.flags = 0;
 
@@ -3718,7 +3718,7 @@ bool NC_STACK_ypaworld::CreateVideoControls()
                                                                                                                         btn_64arg.button_type = NC_STACK_button::TYPE_CAPTION;
                                                                                                                         btn_64arg.tileset_down = 16;
                                                                                                                         btn_64arg.tileset_up = 16;
-                                                                                                                        btn_64arg.field_3A = 16;
+                                                                                                                        btn_64arg.tileset_disabled = 16;
                                                                                                                         btn_64arg.caption = "4";
                                                                                                                         btn_64arg.button_id = 1153;
                                                                                                                         btn_64arg.caption2.clear();
@@ -3753,14 +3753,14 @@ bool NC_STACK_ypaworld::CreateVideoControls()
                                                                                                                                 btn_64arg.tileset_down = 18;
                                                                                                                                 btn_64arg.tileset_up = 18;
                                                                                                                                 btn_64arg.upCode = 1120;
-                                                                                                                                btn_64arg.field_3A = 30;
+                                                                                                                                btn_64arg.tileset_disabled = 30;
                                                                                                                                 btn_64arg.button_type = NC_STACK_button::TYPE_SLIDER;
                                                                                                                                 btn_64arg.caption2.clear();
                                                                                                                                 btn_64arg.downCode = 1118;
                                                                                                                                 btn_64arg.xpos = buttonsSpace + (videoMenuRowWidth - 5 * buttonsSpace) * 0.3;
                                                                                                                                 btn_64arg.caption = " ";
                                                                                                                                 btn_64arg.pressedCode = 1119;
-                                                                                                                                btn_64arg.field_34 = &v225;
+                                                                                                                                btn_64arg.slider = &v225;
                                                                                                                                 btn_64arg.flags = 0;
                                                                                                                                 btn_64arg.button_id = 1154;
 
@@ -3768,7 +3768,7 @@ bool NC_STACK_ypaworld::CreateVideoControls()
                                                                                                                                 {
                                                                                                                                     btn_64arg.tileset_down = 16;
                                                                                                                                     btn_64arg.tileset_up = 16;
-                                                                                                                                    btn_64arg.field_3A = 16;
+                                                                                                                                    btn_64arg.tileset_disabled = 16;
                                                                                                                                     btn_64arg.button_type = NC_STACK_button::TYPE_CAPTION;
                                                                                                                                     btn_64arg.caption = "4";
                                                                                                                                     btn_64arg.caption2.clear();
@@ -3783,7 +3783,7 @@ bool NC_STACK_ypaworld::CreateVideoControls()
                                                                                                                                     if ( _GameShell->video_button->Add(&btn_64arg) )
                                                                                                                                     {
                                                                                                                                         btn_64arg.tileset_up = 18;
-                                                                                                                                        btn_64arg.field_3A = 30;
+                                                                                                                                        btn_64arg.tileset_disabled = 30;
                                                                                                                                         btn_64arg.button_type = NC_STACK_button::TYPE_BUTTON;
                                                                                                                                         btn_64arg.xpos = 0;
                                                                                                                                         btn_64arg.ypos = bottomButtonsY;
@@ -3870,7 +3870,7 @@ bool NC_STACK_ypaworld::CreateVideoControls()
         btn_64arg.tileset_down = 19;
         btn_64arg.tileset_up = 18;
         btn_64arg.button_type = NC_STACK_button::TYPE_CHECKBX;
-        btn_64arg.field_3A = 30;
+        btn_64arg.tileset_disabled = 30;
         btn_64arg.xpos = 0;
         btn_64arg.ypos = 14 * (vertMenuSpace + _fontH);
         btn_64arg.caption = "g";
@@ -3885,7 +3885,7 @@ bool NC_STACK_ypaworld::CreateVideoControls()
         {
             btn_64arg.tileset_down = 16;
             btn_64arg.tileset_up = 16;
-            btn_64arg.field_3A = 16;
+            btn_64arg.tileset_disabled = 16;
             btn_64arg.button_type = NC_STACK_button::TYPE_CAPTION;
             btn_64arg.xpos = checkBoxWidth + buttonsSpace;
             btn_64arg.width = (videoMenuRowWidth - 6 * buttonsSpace - 2 * checkBoxWidth) / 2;
@@ -3908,9 +3908,9 @@ bool NC_STACK_ypaworld::CreateVideoControls()
         return false;
     }
 
-    NC_STACK_button::button_66arg v229;
+    NC_STACK_button::WidgetState v229;
     v229.butID = 1151;
-    v229.field_4 = ((_GameShell->soundFlags & World::SF_INVERTLR) == 0) + 1;
+    v229.state = ((_GameShell->soundFlags & World::SF_INVERTLR) == 0) + 1;
 
     _GameShell->video_button->SetState(&v229);
 
@@ -3970,13 +3970,13 @@ bool NC_STACK_ypaworld::CreateDiskControls()
         v223 += "h";
 
     int v70 = 0;
-    NC_STACK_button::button_64_arg btn_64arg;
+    NC_STACK_button::WidgetDesc btn_64arg;
 
     v70 = 0;
 
     btn_64arg.tileset_down = 16;
     btn_64arg.tileset_up = 16;
-    btn_64arg.field_3A = 16;
+    btn_64arg.tileset_disabled = 16;
     btn_64arg.button_type = NC_STACK_button::TYPE_CAPTION;
 
     btn_64arg.xpos = 0;
@@ -4021,7 +4021,7 @@ bool NC_STACK_ypaworld::CreateDiskControls()
                 {
                     btn_64arg.tileset_down = 17;
                     btn_64arg.tileset_up = 17;
-                    btn_64arg.field_3A = 17;
+                    btn_64arg.tileset_disabled = 17;
                     btn_64arg.xpos = 0;
                     btn_64arg.button_type = NC_STACK_button::TYPE_CAPTION;
                     btn_64arg.width = menuWidth;
@@ -4038,7 +4038,7 @@ bool NC_STACK_ypaworld::CreateDiskControls()
                     {
                         btn_64arg.tileset_down = 19;
                         btn_64arg.tileset_up = 18;
-                        btn_64arg.field_3A = 30;
+                        btn_64arg.tileset_disabled = 30;
                         btn_64arg.button_type = NC_STACK_button::TYPE_BUTTON;
                         btn_64arg.xpos = buttonsSpace + (menuWidth - 3 * buttonsSpace) * 0.25;
                         btn_64arg.ypos = 7 * buttonsSpace + 15 * _fontH;
@@ -4134,8 +4134,8 @@ bool NC_STACK_ypaworld::CreateDiskControls()
 
 
     _GameShell->disk_button->HideScreen();
-    NC_STACK_button::button_66arg v228;
-    v228.field_4 = 0;
+    NC_STACK_button::WidgetState v228;
+    v228.state = 0;
     v228.butID = 1105;
     _GameShell->disk_button->Disable(&v228);
     return true;
@@ -4184,7 +4184,7 @@ bool NC_STACK_ypaworld::CreateLocaleControls()
     _GameShell->local_listvw.y = 4 * (vertMenuSpace + _fontH) + scaledFontHeight;
 
     int v70 = 0;
-    NC_STACK_button::button_64_arg btn_64arg;
+    NC_STACK_button::WidgetDesc btn_64arg;
 
     v70 = 0;
     btn_64arg.tileset_down = 16;
@@ -4192,7 +4192,7 @@ bool NC_STACK_ypaworld::CreateLocaleControls()
     btn_64arg.button_type = NC_STACK_button::TYPE_CAPTION;
     btn_64arg.xpos = 0;
     btn_64arg.width = menuWidth;
-    btn_64arg.field_3A = 30;
+    btn_64arg.tileset_disabled = 30;
     btn_64arg.ypos = 0;
     btn_64arg.caption = Locale::Text::Dialogs(Locale::DLG_L_TITLE);
     btn_64arg.caption2.clear();
@@ -4237,7 +4237,7 @@ bool NC_STACK_ypaworld::CreateLocaleControls()
                     btn_64arg.tileset_down = 19;
                     btn_64arg.tileset_up = 18;
                     btn_64arg.button_type = NC_STACK_button::TYPE_BUTTON;
-                    btn_64arg.field_3A = 30;
+                    btn_64arg.tileset_disabled = 30;
                     btn_64arg.xpos = 0;
                     btn_64arg.ypos = bottomButtonsY;
                     btn_64arg.width = button1LineWidth;
@@ -4306,11 +4306,11 @@ bool NC_STACK_ypaworld::CreateAboutControls(){
         return false;
     }
     int v70 = 0;
-    NC_STACK_button::button_64_arg btn_64arg;
+    NC_STACK_button::WidgetDesc btn_64arg;
     v70 = 0;
     btn_64arg.tileset_down = 16;
     btn_64arg.tileset_up = 16;
-    btn_64arg.field_3A = 16;
+    btn_64arg.tileset_disabled = 16;
     btn_64arg.button_type = NC_STACK_button::TYPE_CAPTION;
     btn_64arg.xpos = 0;
     btn_64arg.width = (_screenSize.x - 4 * buttonsSpace);
@@ -4474,11 +4474,11 @@ bool NC_STACK_ypaworld::CreateNetworkControls()
     _GameShell->network_listvw.y = _GameShell->netListY;
 
     int v70 = 0;
-    NC_STACK_button::button_64_arg btn_64arg;
+    NC_STACK_button::WidgetDesc btn_64arg;
 
     btn_64arg.tileset_down = 17;
     btn_64arg.tileset_up = 17;
-    btn_64arg.field_3A = 17;
+    btn_64arg.tileset_disabled = 17;
     btn_64arg.button_type = NC_STACK_button::TYPE_CAPTION;
     btn_64arg.xpos = 0;
     btn_64arg.caption = "???";
@@ -4502,7 +4502,7 @@ bool NC_STACK_ypaworld::CreateNetworkControls()
         btn_64arg.tileset_down = 19;
         btn_64arg.tileset_up = 18;
         btn_64arg.xpos = buttonsSpace + netMenuWidth * 0.8;
-        btn_64arg.field_3A = 30;
+        btn_64arg.tileset_disabled = 30;
         btn_64arg.width = netMenuWidth * 0.2 - buttonsSpace;
         btn_64arg.button_type = NC_STACK_button::TYPE_BUTTON;
         btn_64arg.caption = Locale::Text::Netdlg(Locale::NETDLG_SEND);
@@ -4523,7 +4523,7 @@ bool NC_STACK_ypaworld::CreateNetworkControls()
 
             btn_64arg.tileset_down = 16;
             btn_64arg.tileset_up = 16;
-            btn_64arg.field_3A = 16;
+            btn_64arg.tileset_disabled = 16;
             btn_64arg.button_type = NC_STACK_button::TYPE_CAPTION;
             btn_64arg.ypos = (15 * (vertMenuSpace + _fontH));
             btn_64arg.xpos = 0;
@@ -4541,7 +4541,7 @@ bool NC_STACK_ypaworld::CreateNetworkControls()
             {
                 btn_64arg.tileset_down = 8;
                 btn_64arg.tileset_up = 8;
-                btn_64arg.field_3A = 30;
+                btn_64arg.tileset_disabled = 30;
                 btn_64arg.button_type = 4;
                 btn_64arg.xpos += btn_64arg.width + 2 * buttonsSpace;
                 btn_64arg.width = v198->map[65].w;
@@ -4579,7 +4579,7 @@ bool NC_STACK_ypaworld::CreateNetworkControls()
                             {
                                 btn_64arg.tileset_down = 19;
                                 btn_64arg.tileset_up = 18;
-                                btn_64arg.field_3A = 30;
+                                btn_64arg.tileset_disabled = 30;
                                 btn_64arg.button_type = NC_STACK_button::TYPE_BUTTON;
                                 btn_64arg.xpos += v284 + 2 * buttonsSpace;
                                 btn_64arg.width = menuListWidth - btn_64arg.xpos;
@@ -4600,7 +4600,7 @@ bool NC_STACK_ypaworld::CreateNetworkControls()
                                     btn_64arg.xpos = 0;
                                     btn_64arg.ypos = 0;
                                     btn_64arg.tileset_up = 16;
-                                    btn_64arg.field_3A = 16;
+                                    btn_64arg.tileset_disabled = 16;
                                     btn_64arg.width = menuListWidth;
                                     btn_64arg.button_type = NC_STACK_button::TYPE_CAPTION;
                                     btn_64arg.caption = Locale::Text::Netdlg(Locale::NETDLG_SELPROV);
@@ -4635,7 +4635,7 @@ bool NC_STACK_ypaworld::CreateNetworkControls()
                                                 btn_64arg.tileset_down = 19;
                                                 btn_64arg.tileset_up = 18;
                                                 btn_64arg.button_type = NC_STACK_button::TYPE_BUTTON;
-                                                btn_64arg.field_3A = 30;
+                                                btn_64arg.tileset_disabled = 30;
                                                 btn_64arg.xpos = netMenuWidth * 0.3;
                                                 btn_64arg.ypos = (buttonsSpace + _fontH) * 15.2;
                                                 btn_64arg.width = netMenuWidth * 0.4;
@@ -4694,7 +4694,7 @@ bool NC_STACK_ypaworld::CreateNetworkControls()
 
                                                                 btn_64arg.tileset_down = 16;
                                                                 btn_64arg.tileset_up = 16;
-                                                                btn_64arg.field_3A = 16;
+                                                                btn_64arg.tileset_disabled = 16;
                                                                 btn_64arg.button_type = NC_STACK_button::TYPE_CAPTION;
                                                                 btn_64arg.xpos = v204 + checkBoxWidth;
                                                                 btn_64arg.ypos = 4 * (_fontH + buttonsSpace);
@@ -4729,7 +4729,7 @@ bool NC_STACK_ypaworld::CreateNetworkControls()
                                                                             {
                                                                                 btn_64arg.tileset_down = 8;
                                                                                 btn_64arg.tileset_up = 8;
-                                                                                btn_64arg.field_3A = 8;
+                                                                                btn_64arg.tileset_disabled = 8;
                                                                                 btn_64arg.button_type = NC_STACK_button::TYPE_CAPTION;
                                                                                 btn_64arg.xpos = 0;
                                                                                 btn_64arg.width = v204;
@@ -4765,7 +4765,7 @@ bool NC_STACK_ypaworld::CreateNetworkControls()
                                                                                                 btn_64arg.tileset_down = 19;
                                                                                                 btn_64arg.tileset_up = 18;
                                                                                                 btn_64arg.xpos = 0;
-                                                                                                btn_64arg.field_3A = 30;
+                                                                                                btn_64arg.tileset_disabled = 30;
                                                                                                 btn_64arg.button_type = NC_STACK_button::TYPE_CHECKBX;
                                                                                                 btn_64arg.width = checkBoxWidth;
                                                                                                 btn_64arg.caption = "g";
@@ -4781,7 +4781,7 @@ bool NC_STACK_ypaworld::CreateNetworkControls()
                                                                                                 {
                                                                                                     btn_64arg.tileset_down = 16;
                                                                                                     btn_64arg.tileset_up = 16;
-                                                                                                    btn_64arg.field_3A = 16;
+                                                                                                    btn_64arg.tileset_disabled = 16;
                                                                                                     btn_64arg.button_type = NC_STACK_button::TYPE_CAPTION;
                                                                                                     btn_64arg.xpos += buttonsSpace + checkBoxWidth;
                                                                                                     btn_64arg.width = button1LineWidth - checkBoxWidth - buttonsSpace;
@@ -4798,7 +4798,7 @@ bool NC_STACK_ypaworld::CreateNetworkControls()
                                                                                                         btn_64arg.xpos = 0;
                                                                                                         btn_64arg.tileset_down = 16;
                                                                                                         btn_64arg.tileset_up = 16;
-                                                                                                        btn_64arg.field_3A = 16;
+                                                                                                        btn_64arg.tileset_disabled = 16;
                                                                                                         btn_64arg.button_type = NC_STACK_button::TYPE_CAPTION;
                                                                                                         btn_64arg.ypos = 3 * (_fontH + buttonsSpace);
                                                                                                         btn_64arg.width = netMenuWidth * 0.3;
@@ -4826,7 +4826,7 @@ bool NC_STACK_ypaworld::CreateNetworkControls()
                                                                                                             {
                                                                                                                 btn_64arg.tileset_down = 16;
                                                                                                                 btn_64arg.tileset_up = 16;
-                                                                                                                btn_64arg.field_3A = 16;
+                                                                                                                btn_64arg.tileset_disabled = 16;
                                                                                                                 btn_64arg.button_type = NC_STACK_button::TYPE_CAPTION;
                                                                                                                 btn_64arg.xpos = 0;
                                                                                                                 btn_64arg.ypos = (14 * (vertMenuSpace + _fontH));
@@ -4876,9 +4876,9 @@ bool NC_STACK_ypaworld::CreateNetworkControls()
         ypa_log_out("Unable to add network-button\n");
         return false;
     }
-    NC_STACK_button::button_66arg v228;
+    NC_STACK_button::WidgetState v228;
     v228.butID = 1210;
-    v228.field_4 = 0;
+    v228.state = 0;
     _GameShell->network_button->Disable(&v228);
 
     v228.butID = 1211;
@@ -4943,7 +4943,7 @@ bool NC_STACK_ypaworld::OpenGameShell()
         return false;
     }
 
-    GFX::displ_arg263 v233;
+    GFX::TCursorParams v233;
 
     if (_mousePointers[0])
         v233.bitm = _mousePointers[0]->GetBitmap();
@@ -5244,8 +5244,8 @@ void NC_STACK_ypaworld::ShowGameShellPage()
 
         if ( _GameShell->GameIsOver )
         {
-            NC_STACK_button::button_66arg v231;
-            v231.field_4 = 0;
+            NC_STACK_button::WidgetState v231;
+            v231.state = 0;
             v231.butID = 1014;
 
             _GameShell->sub_bar_button->Disable(&v231);
@@ -5884,8 +5884,8 @@ void NC_STACK_ypaworld::UpdateGameShell()
     {
         _GameShell->disk_listvw.PosOnSelected(_GameShell->diskListActiveElement - 1);
 
-        NC_STACK_button::button_66arg v18;
-        v18.field_4 = 1;
+        NC_STACK_button::WidgetState v18;
+        v18.state = 1;
         v18.butID = 1101;
         _GameShell->disk_button->Enable(&v18);
 
@@ -5897,8 +5897,8 @@ void NC_STACK_ypaworld::UpdateGameShell()
     }
     else
     {
-        NC_STACK_button::button_66arg v18;
-        v18.field_4 = 1;
+        NC_STACK_button::WidgetState v18;
+        v18.state = 1;
         v18.butID = 1101;
         _GameShell->disk_button->Disable(&v18);
 
@@ -5909,18 +5909,18 @@ void NC_STACK_ypaworld::UpdateGameShell()
         _GameShell->disk_button->Disable(&v18);
     }
 
-    NC_STACK_button::button_66arg v16;
+    NC_STACK_button::WidgetState v16;
     v16.butID = 1151;
-    v16.field_4 = ((_GameShell->soundFlags & World::SF_INVERTLR) == 0) + 1;
+    v16.state = ((_GameShell->soundFlags & World::SF_INVERTLR) == 0) + 1;
 
     _GameShell->video_button->SetState(&v16);
 
 
     v16.butID = 1150;
-    v16.field_4 = ((_GameShell->GFXFlags & World::GFX_FLAG_16BITTEXTURE) == 0) + 1;
+    v16.state = ((_GameShell->GFXFlags & World::GFX_FLAG_16BITTEXTURE) == 0) + 1;
     _GameShell->video_button->SetState(&v16);
 
-    v16.field_4 = ((_GameShell->soundFlags & World::SF_CDSOUND) == 0) + 1;
+    v16.state = ((_GameShell->soundFlags & World::SF_CDSOUND) == 0) + 1;
     v16.butID = 1164;
     _GameShell->video_button->SetState(&v16);
 
@@ -5935,27 +5935,27 @@ void NC_STACK_ypaworld::UpdateGameShell()
     _GameShell->video_button->Refresh(1154);
 
     v16.butID = 1163;
-    v16.field_4 = (_GameShell->enemyIndicator == 0) + 1;
+    v16.state = (_GameShell->enemyIndicator == 0) + 1;
     _GameShell->video_button->SetState(&v16);
 
     v16.butID = 1157;
-    v16.field_4 = ((_GameShell->GFXFlags & World::GFX_FLAG_FARVIEW) == 0) + 1;
+    v16.state = ((_GameShell->GFXFlags & World::GFX_FLAG_FARVIEW) == 0) + 1;
     _GameShell->video_button->SetState(&v16);
 
-    v16.field_4 = ((_GameShell->GFXFlags & World::GFX_FLAG_SKYRENDER) == 0) + 1;
+    v16.state = ((_GameShell->GFXFlags & World::GFX_FLAG_SKYRENDER) == 0) + 1;
     v16.butID = 1160;
     _GameShell->video_button->SetState(&v16);
 
     v16.butID = 1165;
-    v16.field_4 = ((_GameShell->GFXFlags & World::GFX_FLAG_SOFTMOUSE) == 0) + 1;
+    v16.state = ((_GameShell->GFXFlags & World::GFX_FLAG_SOFTMOUSE) == 0) + 1;
     _GameShell->video_button->SetState(&v16);
 
     v16.butID = 1166;
-    v16.field_4 = (!_GameShell->IsWindowedFlag()) + 1;
+    v16.state = (!_GameShell->IsWindowedFlag()) + 1;
     _GameShell->video_button->SetState(&v16);
 
     v16.butID = 1173;
-    v16.field_4 = (!_GameShell->IsVsyncFlag()) + 1;
+    v16.state = (!_GameShell->IsVsyncFlag()) + 1;
     _GameShell->video_button->SetState(&v16);
 
     tmp = _GameShell->video_button->GetSliderData(1159);
@@ -5963,18 +5963,18 @@ void NC_STACK_ypaworld::UpdateGameShell()
 
     _GameShell->video_button->Refresh(1159);
 
-    NC_STACK_button::button_66arg v9;
+    NC_STACK_button::WidgetState v9;
     v9.butID = 1050;
-    v9.field_4 = ((_GameShell->p_YW->_preferences & World::PREF_JOYDISABLE) != 0) + 1;
+    v9.state = ((_GameShell->p_YW->_preferences & World::PREF_JOYDISABLE) != 0) + 1;
 
     _GameShell->button_input_button->SetState(&v9);
 
     v9.butID = 1061;
-    v9.field_4 = (_GameShell->altJoystickEnabled == false) + 1;
+    v9.state = (_GameShell->altJoystickEnabled == false) + 1;
     _GameShell->button_input_button->SetState(&v9);
 
     v9.butID = 1055;
-    v9.field_4 = ((_GameShell->p_YW->_preferences & World::PREF_FFDISABLE) != 0) + 1;
+    v9.state = ((_GameShell->p_YW->_preferences & World::PREF_FFDISABLE) != 0) + 1;
     _GameShell->button_input_button->SetState(&v9);
 
     if ( _GameShell->inpListActiveElement )

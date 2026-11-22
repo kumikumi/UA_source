@@ -27,9 +27,9 @@ struct TSampleData
 {
     void *Data = NULL;
     int bufsz = 0;
-    int field_8 = 0;
+    int Type = 0;
     int SampleRate = 0;
-    int field_10 = 0;
+    int Flags = 0;
     std::vector<uint8_t> _Buffer;
 };
 

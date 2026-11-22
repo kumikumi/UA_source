@@ -47,13 +47,13 @@ void BriefStartMapScaling(NC_STACK_ypaworld *yw, TInputState *inpt, TBriefengScr
         v16 = (float)yw->_mapSize.y / (float)yw->_mapSize.x;
     }
 
-    brf->MapBlitParams.float4 = Common::FRect(-1.0, -1.0, 1.0, 1.0);
+    brf->MapBlitParams.srcRect = Common::FRect(-1.0, -1.0, 1.0, 1.0);
 
     brf->MapBlitEnd.left = -0.4515625 - v17 * 0.4828125;
     brf->MapBlitEnd.top = -0.325 - v16 * 0.6083333333333334;
     brf->MapBlitEnd.right = brf->MapBlitEnd.left + v17 * 0.965625;
     brf->MapBlitEnd.bottom = brf->MapBlitEnd.top + v16 * 1.216666666666667;
-    brf->MapBlitParams.float14 = brf->MapBlitStart;
+    brf->MapBlitParams.dstRect = brf->MapBlitStart;
     brf->TextTime = 0;
     brf->PreTextTime = brf->CurrTime;
 }
@@ -64,10 +64,10 @@ void BriefUpdateMapScaling(NC_STACK_ypaworld *yw, TInputState *inpt, TBriefengSc
 
     if ( v5 >= 600 )
     {
-        brf->MapBlitParams.float14 = brf->MapBlitEnd;
+        brf->MapBlitParams.dstRect = brf->MapBlitEnd;
         brf->Stage = TBriefengScreen::STAGE_SCALEEND;
 
-        GFX::displ_arg263 v4;
+        GFX::TCursorParams v4;
         if (yw->_mousePointers[5])
             v4.bitm = yw->_mousePointers[5]->GetBitmap();
         v4.pointer_id = 6;
@@ -77,10 +77,10 @@ void BriefUpdateMapScaling(NC_STACK_ypaworld *yw, TInputState *inpt, TBriefengSc
     else
     {
         float v3 = v5 * 0.0016666667;
-        brf->MapBlitParams.float14.left = (brf->MapBlitEnd.left - brf->MapBlitStart.left) * v3 + brf->MapBlitStart.left;
-        brf->MapBlitParams.float14.top = (brf->MapBlitEnd.top - brf->MapBlitStart.top) * v3 + brf->MapBlitStart.top;
-        brf->MapBlitParams.float14.right = (brf->MapBlitEnd.right - brf->MapBlitStart.right) * v3 + brf->MapBlitStart.right;
-        brf->MapBlitParams.float14.bottom = (brf->MapBlitEnd.bottom - brf->MapBlitStart.bottom) * v3 + brf->MapBlitStart.bottom;
+        brf->MapBlitParams.dstRect.left = (brf->MapBlitEnd.left - brf->MapBlitStart.left) * v3 + brf->MapBlitStart.left;
+        brf->MapBlitParams.dstRect.top = (brf->MapBlitEnd.top - brf->MapBlitStart.top) * v3 + brf->MapBlitStart.top;
+        brf->MapBlitParams.dstRect.right = (brf->MapBlitEnd.right - brf->MapBlitStart.right) * v3 + brf->MapBlitStart.right;
+        brf->MapBlitParams.dstRect.bottom = (brf->MapBlitEnd.bottom - brf->MapBlitStart.bottom) * v3 + brf->MapBlitStart.bottom;
     }
 }
 
@@ -185,7 +185,7 @@ void BriefLoadLevelSet(NC_STACK_ypaworld *yw, TInputState *inpt, TBriefengScreen
     {
         brf->Stage = TBriefengScreen::STAGE_PLAYER_ST;
 
-        GFX::displ_arg263 v6;
+        GFX::TCursorParams v6;
         if (yw->_mousePointers[0])
             v6.bitm = yw->_mousePointers[0]->GetBitmap();
         v6.pointer_id = 1;
@@ -1045,12 +1045,12 @@ void UpdateBriefingScreen(NC_STACK_ypaworld *yw, UserData *usr, TInputState *inp
 
         if ( brf->BriefingMapImg )
         {
-            GFX::rstr_arg204 a4;
+            GFX::TBitmapBlitParams a4;
 
             a4.pbitm = brf->BriefingMapImg->GetBitmap();
 
-            a4.float4 = Common::FRect(-1.0, -1.0, 1.0, 1.0);
-            a4.float14 = Common::FRect(-1.0, -1.0, 1.0, 1.0);
+            a4.srcRect = Common::FRect(-1.0, -1.0, 1.0, 1.0);
+            a4.dstRect = Common::FRect(-1.0, -1.0, 1.0, 1.0);
 
             GFX::Engine.DrawClippedBitmapNormalized(&a4);
         }
@@ -1152,8 +1152,8 @@ void DebriefStartMapScaling(NC_STACK_ypaworld *yw, TInputState *struc, TBriefeng
     brf->MapBlitEnd.bottom = brf->MapBlitEnd.top + v22 * 1.216666666666667;
     ClampRectToUnit(&brf->MapBlitEnd);
 
-    brf->MapBlitParams.float4 = brf->MapBlitStart;
-    brf->MapBlitParams.float14 = brf->MapBlitEnd;
+    brf->MapBlitParams.srcRect = brf->MapBlitStart;
+    brf->MapBlitParams.dstRect = brf->MapBlitEnd;
 
     if ( yw->_GameShell )
         SFXEngine::SFXe.startSound(&yw->_GameShell->samples1_info, 11);
@@ -1165,18 +1165,18 @@ void DebriefUpdateMapScaling(NC_STACK_ypaworld *yw, TInputState *struc, TBriefen
 
     if ( v4 >= 600 )
     {
-        brf->MapBlitParams.float4 = Common::FRect(-1.0, -1.0, 1.0, 1.0);
-        brf->MapBlitParams.float14 = brf->MapBlitEnd;
+        brf->MapBlitParams.srcRect = Common::FRect(-1.0, -1.0, 1.0, 1.0);
+        brf->MapBlitParams.dstRect = brf->MapBlitEnd;
         brf->Stage = TBriefengScreen::STAGE_SCALEEND;
     }
     else
     {
         float v3 = v4 / 600.0;
-        brf->MapBlitParams.float4.left = brf->MapBlitStart.left + (-1.0 - brf->MapBlitStart.left) * v3;
-        brf->MapBlitParams.float4.top = brf->MapBlitStart.top + (-1.0 - brf->MapBlitStart.top) * v3;
-        brf->MapBlitParams.float4.right = brf->MapBlitStart.right + (1.0 - brf->MapBlitStart.right) * v3;
-        brf->MapBlitParams.float4.bottom = brf->MapBlitStart.bottom + (1.0 - brf->MapBlitStart.bottom) * v3;
-        brf->MapBlitParams.float14 = brf->MapBlitEnd;
+        brf->MapBlitParams.srcRect.left = brf->MapBlitStart.left + (-1.0 - brf->MapBlitStart.left) * v3;
+        brf->MapBlitParams.srcRect.top = brf->MapBlitStart.top + (-1.0 - brf->MapBlitStart.top) * v3;
+        brf->MapBlitParams.srcRect.right = brf->MapBlitStart.right + (1.0 - brf->MapBlitStart.right) * v3;
+        brf->MapBlitParams.srcRect.bottom = brf->MapBlitStart.bottom + (1.0 - brf->MapBlitStart.bottom) * v3;
+        brf->MapBlitParams.dstRect = brf->MapBlitEnd;
     }
 }
 
@@ -2118,11 +2118,11 @@ void yw_debriefUpdate(NC_STACK_ypaworld *yw, TInputState *inpt)
     {
         if ( brf->BriefingMapImg )
         {
-            GFX::rstr_arg204 arg204;
+            GFX::TBitmapBlitParams arg204;
             arg204.pbitm = brf->BriefingMapImg->GetBitmap();
 
-            arg204.float4 = Common::FRect(-1.0, -1.0, 1.0, 1.0);
-            arg204.float14 = Common::FRect(-1.0, -1.0, 1.0, 1.0);
+            arg204.srcRect = Common::FRect(-1.0, -1.0, 1.0, 1.0);
+            arg204.dstRect = Common::FRect(-1.0, -1.0, 1.0, 1.0);
 
             GFX::Engine.DrawClippedBitmapNormalized(&arg204);
         }

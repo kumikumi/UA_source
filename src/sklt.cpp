@@ -442,7 +442,7 @@ rsrc * NC_STACK_sklt::CreateResource(IDVList &stak)
         return NULL;
 }
 
-size_t NC_STACK_sklt::SaveResource(rsrc_func66_arg *arg)
+size_t NC_STACK_sklt::SaveResource(TSaveResourceParams *arg)
 {
     UAskeleton::Data *sklt = (UAskeleton::Data *)getRsrc_pData();
 

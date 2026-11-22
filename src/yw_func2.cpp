@@ -874,7 +874,7 @@ void UserData::CreateNewProfile()
 
 void UserData::HideConfirmDialog()
 {
-    NC_STACK_button::button_66arg v4;
+    NC_STACK_button::WidgetState v4;
     v4.butID = 1300;
     confirm_button->Disable(&v4);
 
@@ -1088,8 +1088,8 @@ void UserData::ApplyOptions()
     if ( d3d_listvw.IsOpen() )
         p_YW->GuiWinClose( &d3d_listvw );
 
-    NC_STACK_button::button_66arg v38;
-    v38.field_4 = 2;
+    NC_STACK_button::WidgetState v38;
+    v38.state = 2;
     v38.butID = 1172;
     video_button->SetState(&v38);
 
@@ -1630,12 +1630,12 @@ void UserData::ShowConfirmDialog( int a2, const std::string &txt1, const std::st
     confirmText2 = txt2;
     confirmSingleButton = a5;
 
-    NC_STACK_button::button_66arg v12;
+    NC_STACK_button::WidgetState v12;
     v12.butID = 1300;
     confirm_button->Enable(&v12);
 
 
-    NC_STACK_button::button_arg76 v10;
+    NC_STACK_button::WidgetPlacement v10;
 
     if ( a5 )
     {
@@ -1703,23 +1703,23 @@ void UserData::InputPageCancel()
     EnvMode = ENVMODE_TITLE;
     InputConfCancel();
 
-    NC_STACK_button::button_66arg v6;
+    NC_STACK_button::WidgetState v6;
     v6.butID = UIWidgets::MAIN_MENU_WIDGET_IDS::BTN_INPUT_SETTINGS;
-    v6.field_4 = 2;
+    v6.state = 2;
     sub_bar_button->SetState(&v6);
 
     inputChangedParts = 0;
 
     v6.butID = 1050;
-    v6.field_4 = (joystickEnabled == false) + 1;
+    v6.state = (joystickEnabled == false) + 1;
     button_input_button->SetState(&v6);
 
-    v6.field_4 = (altJoystickEnabled == false) + 1;
+    v6.state = (altJoystickEnabled == false) + 1;
     v6.butID = 1061;
     button_input_button->SetState(&v6);
 
     v6.butID = 1055;
-    v6.field_4 = ((p_YW->_preferences & World::PREF_FFDISABLE) != 0) + 1;
+    v6.state = ((p_YW->_preferences & World::PREF_FFDISABLE) != 0) + 1;
     button_input_button->SetState(&v6);
 
     button_input_button->HideScreen();
@@ -1777,40 +1777,40 @@ void UserData::CancelOptions()
     conf3DGuid = win3d_guid;
     conf3DName = win3d_name;
 
-    NC_STACK_button::button_66arg v10;
+    NC_STACK_button::WidgetState v10;
     v10.butID = 1151;
-    v10.field_4 = ((soundFlags & World::SF_INVERTLR) == 0) + 1;
+    v10.state = ((soundFlags & World::SF_INVERTLR) == 0) + 1;
     video_button->SetState(&v10);
 
-    v10.field_4 = ((soundFlags & World::SF_CDSOUND) == 0) + 1;
+    v10.state = ((soundFlags & World::SF_CDSOUND) == 0) + 1;
     v10.butID = 1164;
     video_button->SetState(&v10);
 
     v10.butID = 1157;
-    v10.field_4 = ((GFXFlags & World::GFX_FLAG_FARVIEW) == 0) + 1;
+    v10.state = ((GFXFlags & World::GFX_FLAG_FARVIEW) == 0) + 1;
     video_button->SetState(&v10);
 
-    v10.field_4 = ((GFXFlags & World::GFX_FLAG_SKYRENDER) == 0) + 1;
+    v10.state = ((GFXFlags & World::GFX_FLAG_SKYRENDER) == 0) + 1;
     v10.butID = 1160;
     video_button->SetState(&v10);
 
     v10.butID = 1150;
-    v10.field_4 = ((GFXFlags & World::GFX_FLAG_16BITTEXTURE) == 0) + 1;
+    v10.state = ((GFXFlags & World::GFX_FLAG_16BITTEXTURE) == 0) + 1;
     video_button->SetState(&v10);
 
     v10.butID = 1166;
-    v10.field_4 = (!IsWindowedFlag()) + 1;
+    v10.state = (!IsWindowedFlag()) + 1;
     video_button->SetState(&v10);
 
     v10.butID = 1173;
-    v10.field_4 = (!IsVsyncFlag()) + 1;
+    v10.state = (!IsVsyncFlag()) + 1;
     video_button->SetState(&v10);
 
     v10.butID = 1165;
-    v10.field_4 = ((GFXFlags & World::GFX_FLAG_SOFTMOUSE) == 0) + 1;
+    v10.state = ((GFXFlags & World::GFX_FLAG_SOFTMOUSE) == 0) + 1;
     video_button->SetState(&v10);
 
-    v10.field_4 = (enemyIndicator == 0) + 1;
+    v10.state = (enemyIndicator == 0) + 1;
     v10.butID = 1163;
     video_button->SetState(&v10);
 
@@ -1833,7 +1833,7 @@ void UserData::CancelOptions()
 
     titel_button->ShowScreen();
 
-    v10.field_4 = 2;
+    v10.state = 2;
     v10.butID = 1172;
     video_button->SetState(&v10);
 }
@@ -2099,10 +2099,10 @@ void UserData::GameShellUiHandleInput()
         }
     }
 
-    NC_STACK_button::button_66arg v408;
-    NC_STACK_button::button_66arg v410;
+    NC_STACK_button::WidgetState v408;
+    NC_STACK_button::WidgetState v410;
 
-    v410.field_4 = 0;
+    v410.state = 0;
     v410.butID = 1015;
     sub_bar_button->Disable(&v410);
     v410.butID = 1011;
@@ -2133,7 +2133,7 @@ void UserData::GameShellUiHandleInput()
     v410.butID = UIWidgets::MAIN_MENU_WIDGET_IDS::BTN_MULTIPLAYER;
     titel_button->Disable(&v410);
 
-    NC_STACK_button::button_arg76 v393;
+    NC_STACK_button::WidgetPlacement v393;
     v393.ypos = -1;
     v393.width = -1;
     //v394 = -1;
@@ -2564,13 +2564,13 @@ void UserData::GameShellUiHandleInput()
 
     if ( InputConfig[inpListActiveElement].Type == World::INPUT_BIND_TYPE_SLIDER )
     {
-        v410.field_4 = 0;
+        v410.state = 0;
         v410.butID = 1056;
         button_input_button->Disable(&v410);
     }
     else
     {
-        v410.field_4 = 0;
+        v410.state = 0;
         v410.butID = 1056;
         button_input_button->Enable(&v410);
     }
@@ -2853,7 +2853,7 @@ void UserData::GameShellUiHandleInput()
 
         if ( d3d_listvw.IsClosed() )
         {
-            v408.field_4 = 2;
+            v408.state = 2;
             v408.butID = 1172;
 
             video_button->SetState(&v408);
@@ -3165,7 +3165,7 @@ void UserData::GameShellUiHandleInput()
         v410.butID = 1105;
         disk_button->Enable(&v410);
 
-        v410.field_4 = 0;
+        v410.state = 0;
         v410.butID = 1104;
         disk_button->Disable(&v410);
 
@@ -3183,7 +3183,7 @@ void UserData::GameShellUiHandleInput()
 
         if ( diskScreenMode == 4 )
         {
-            v410.field_4 = 0;
+            v410.state = 0;
             v410.butID = 1105;
 
             if ( !diskListActiveElement || !StriCmp(userNameDir, UserName) )
@@ -3194,7 +3194,7 @@ void UserData::GameShellUiHandleInput()
 
         if ( diskScreenMode == 2 && !diskListActiveElement )
         {
-            v410.field_4 = 0;
+            v410.state = 0;
             v410.butID = 1105;
             disk_button->Disable(&v410);
         }
@@ -3212,7 +3212,7 @@ void UserData::GameShellUiHandleInput()
     }
     else
     {
-        v410.field_4 = 0;
+        v410.state = 0;
         v410.butID = 1105;
         disk_button->Disable(&v410);
 
@@ -4044,7 +4044,7 @@ void UserData::GameShellUiHandleInput()
     v410.butID = 1221;
     network_button->Disable(&v410);
 
-    v410.field_4 = 0;
+    v410.state = 0;
     v410.butID = 1210;
     network_button->Disable(&v410);
 
@@ -4151,7 +4151,7 @@ void UserData::GameShellUiHandleInput()
     switch ( netSelMode )
     {
     case NETSCREEN_MODE_SELECT:
-        v410.field_4 = 0;
+        v410.state = 0;
         v410.butID = 1205;
 
         network_button->Disable(&v410);
@@ -4317,7 +4317,7 @@ void UserData::GameShellUiHandleInput()
 
             if ( v408.butID )
             {
-                v408.field_4 = 1;
+                v408.state = 1;
                 network_button->SetState(&v408);
             }
 
@@ -4425,7 +4425,7 @@ void UserData::GameShellUiHandleInput()
 
             if ( !netGameCanStart )
             {
-                v410.field_4 = 0;
+                v410.state = 0;
                 v410.butID = 1201;
                 network_button->Disable(&v410);
             }

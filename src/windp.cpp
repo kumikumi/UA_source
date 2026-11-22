@@ -580,7 +580,7 @@ uint32_t NC_STACK_windp::GetPlayerCount() const
     return _rawUsers.size();
 }
 
-bool NC_STACK_windp::GetRemoteStart(windp_arg87 *arg)
+bool NC_STACK_windp::GetRemoteStart(TRemoteStartInfo *arg)
 {
     //check remote start
     arg->isClient = false;
@@ -1384,14 +1384,14 @@ void UserData::ExitFromNetworkToMain()
 
     p_YW->GuiWinClose(&network_listvw);
 
-    NC_STACK_button::button_66arg arg66;
+    NC_STACK_button::WidgetState arg66;
     arg66.butID = UIWidgets::MAIN_MENU_WIDGET_IDS::BTN_MULTIPLAYER;
-    arg66.field_4 = 2;
+    arg66.state = 2;
 
     sub_bar_button->SetState(&arg66);
 
     arg66.butID = 1219;
-    arg66.field_4 = 2;
+    arg66.state = 2;
     sub_bar_button->SetState(&arg66);
 
     yw_netcleanup();
@@ -1512,7 +1512,7 @@ void SetNetGameWindowLayout(NC_STACK_ypaworld *yw)
     netgame_wnd.x = 0;
     netgame_wnd.y = 2 * yw->_screenSize.y / 3;
     netgame_wnd.w = yw->_screenSize.x - 1;
-    netgame_wnd.field_1D4 = yw->_screenSize.x;
+    netgame_wnd.maxWidth = yw->_screenSize.x;
 }
 
 void CreateNetGameWindow(NC_STACK_ypaworld *yw)
@@ -1526,11 +1526,11 @@ void CreateNetGameWindow(NC_STACK_ypaworld *yw)
     netgame_wnd.buttons[1] = ButtonBox(0, 0,
                                        yw->_guiTiles[0]->map[97].w, yw->_fontH);
 
-    netgame_wnd.field_1CC = yw->_guiTiles[0]->map[97].w;
-    netgame_wnd.field_1D0 = 2 * yw->_fontH;
-    netgame_wnd.field_1D8 = netgame_wnd.field_1D0;
-    netgame_wnd.field_1DC[0] = 0;
-    netgame_wnd.field_21C = 0;
+    netgame_wnd.btnWidth = yw->_guiTiles[0]->map[97].w;
+    netgame_wnd.inputHeight = 2 * yw->_fontH;
+    netgame_wnd.minInputHeight = netgame_wnd.inputHeight;
+    netgame_wnd.text[0] = 0;
+    netgame_wnd.textLen = 0;
 
     SetNetGameWindowLayout(yw);
 

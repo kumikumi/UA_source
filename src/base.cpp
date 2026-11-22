@@ -502,7 +502,7 @@ size_t NC_STACK_base::Render(baseRender_msg *arg, Instance * inst, bool doCopy /
 
         TF::TForm3D *view = TF::Engine.GetViewPoint();
 
-        skeleton_arg_132 skel132;
+        TSkeletonTransformParams skel132;
         skel132.minZ = arg->minZ;
         skel132.maxZ = arg->maxZ;
         skel132.tform = view->CalcSclRot;
@@ -622,7 +622,7 @@ size_t NC_STACK_base::RenderImmediately(baseRender_msg *arg, Instance * inst)
 
         TF::TForm3D *view = TF::Engine.GetViewPoint();
 
-        skeleton_arg_132 skel132;
+        TSkeletonTransformParams skel132;
         skel132.minZ = arg->minZ;
         skel132.maxZ = arg->maxZ;
         skel132.tform = view->CalcSclRot;
@@ -813,7 +813,7 @@ BaseList &NC_STACK_base::GetKidList()
     return _KIDS;
 }
 
-area_arg_65 *NC_STACK_base::GetRenderParams()
+TObjectRenderParams *NC_STACK_base::GetRenderParams()
 {
     return &_renderMsg;
 }

@@ -1404,7 +1404,7 @@ struct TBriefengScreen
     std::string ObjDescription;
     std::string BriefingText;
     
-    GFX::rstr_arg204 MapBlitParams;
+    GFX::TBitmapBlitParams MapBlitParams;
     Common::FRect MapBlitStart;
     Common::FRect MapBlitEnd;
 
@@ -1487,7 +1487,7 @@ struct TBriefengScreen
         ViewingObjectAngle = 0;
         ViewingObjectStartTime = 0;
         
-        MapBlitParams = GFX::rstr_arg204();
+        MapBlitParams = GFX::TBitmapBlitParams();
         MapBlitStart = Common::FRect();
         MapBlitEnd = Common::FRect();
         AddObjectsFlag = false;

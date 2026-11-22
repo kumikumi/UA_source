@@ -608,7 +608,7 @@ int VBMP__WRITE_TO_FILE(IFFile *mfile, ResBitmap *bitm)
     return mfile->popChunk() == IFFile::IFF_ERR_OK;
 }
 
-size_t NC_STACK_ilbm::SaveResource(rsrc_func66_arg *arg)
+size_t NC_STACK_ilbm::SaveResource(TSaveResourceParams *arg)
 {
     IFFile *mfile;
 

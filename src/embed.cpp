@@ -119,7 +119,7 @@ size_t NC_STACK_embed::SavingIntoIFF(IFFile **file)
             mfile->writeU8(0);
             mfile->popChunk();
 
-            rsrc_func66_arg arg66;
+            TSaveResourceParams arg66;
             arg66.filename = NULL;
             arg66.file = mfile;
             arg66.OpenedStream = 2;

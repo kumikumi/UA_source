@@ -9,7 +9,7 @@
 class NC_STACK_particle;
 class NC_STACK_skeleton;
 namespace UAskeleton { struct Data; };
-struct area_arg_65;
+struct TObjectRenderParams;
 
 namespace World
 {
@@ -38,12 +38,12 @@ public:
     
     void AddParticle(NC_STACK_particle *base, const vec3d& pos, const vec3d& vec, int32_t age = 0);
     
-    void UpdateRender(area_arg_65 *rndrParams, int32_t delta);
+    void UpdateRender(TObjectRenderParams *rndrParams, int32_t delta);
     
     void Clear();
     
 protected:
-    void Render(Frak *p, float scale, area_arg_65 *rndrParams);
+    void Render(Frak *p, float scale, TObjectRenderParams *rndrParams);
     
     
 protected:
