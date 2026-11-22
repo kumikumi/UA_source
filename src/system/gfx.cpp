@@ -2295,12 +2295,30 @@ SDL_Surface * GFXEngine::ConvertSDLSurface(SDL_Surface *src, const SDL_PixelForm
 
 void GFXEngine::fpsLimitter(int value)
 {
-    if (value > 1000)
-        FpsMaxTicks = 0;
-    else if (value <= 0)
+    _fpsMaxSetting = value;
+    UpdateFpsLimit();
+}
+
+// gfx.maxfps 0 caps the frame rate a quarter above the refresh rate of the
+// window's display: vsync paces the frames, and the cap only stops the game
+// from spinning when vsync does not wait, as for a hidden window.
+void GFXEngine::UpdateFpsLimit()
+{
+    int fps = _fpsMaxSetting;
+
+    if (fps == 0)
+    {
+        int refresh = System::GetRefreshRate();
+        if (refresh <= 0)
+            refresh = 200; // Unknown, assume a fast display
+
+        fps = refresh + refresh / 4;
+    }
+
+    if (fps <= 0 || fps > 1000)
         FpsMaxTicks = 0;
     else
-        FpsMaxTicks = 1000/value;
+        FpsMaxTicks = 1000 / fps;
 }
 
 std::string GFXEngine::GetRendererInfo()
@@ -2324,6 +2342,9 @@ std::string GFXEngine::GetRendererInfo()
     std::string cap = "none";
     if ( FpsMaxTicks )
         cap = fmt::sprintf("%d fps", 1000 / FpsMaxTicks);
+
+    if ( _fpsMaxSetting == 0 )
+        cap += " (auto)";
 
     return fmt::sprintf("OpenGL %d.%d %s renderer, %dx%d, vsync %s, fps cap %s",
                         Glext::VersionMajor, Glext::VersionMinor,
@@ -2775,6 +2796,11 @@ int GFXEngine::EventsWatcher(void *, SDL_Event *event)
         case SDL_WINDOWEVENT_SIZE_CHANGED:
             Instance.UpdateFBOSizes();
             break;
+#if SDL_VERSION_ATLEAST(2, 0, 18)
+        case SDL_WINDOWEVENT_DISPLAY_CHANGED:
+            Instance.UpdateFpsLimit(); // The new display may refresh at another rate
+            break;
+#endif
         default:
             break;
         }

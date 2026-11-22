@@ -45,6 +45,9 @@ namespace System
     // Fullscreen is borderless over the desktop: the display mode is never changed.
     void SetFullscreen(bool fullscreen);
     bool IsFullscreen();
+
+    // Refresh rate of the display the window is on, 0 if unknown.
+    int GetRefreshRate();
     
     
     void SetReleativeMouse(bool mode);

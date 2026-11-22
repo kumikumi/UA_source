@@ -636,6 +636,7 @@ public:
     static SDL_Surface *ConvertSDLSurface(SDL_Surface *src, const SDL_PixelFormat * fmt);
         
     void fpsLimitter(int value);
+    void UpdateFpsLimit();
     
     // One line on the renderer in use, for the performance overlay.
     std::string GetRendererInfo();
@@ -750,6 +751,7 @@ public:
     
     bool _glext = false;
     bool _vbo = false;
+    int _fpsMaxSetting = 0; // gfx.maxfps
     
     // Display class
     SDL_Color _field_4 = {0}; // Color?

@@ -376,6 +376,22 @@ bool IsFullscreen()
     return window && (SDL_GetWindowFlags(window) & SDL_WINDOW_FULLSCREEN) != 0;
 }
 
+int GetRefreshRate()
+{
+    if (!window)
+        return 0;
+
+    int display = SDL_GetWindowDisplayIndex(window);
+    if (display < 0)
+        return 0;
+
+    SDL_DisplayMode mode;
+    if (SDL_GetCurrentDisplayMode(display, &mode) != 0)
+        return 0;
+
+    return mode.refresh_rate;
+}
+
 void SetReleativeMouse(bool mode)
 {
     if (mode != curRelMouse)
