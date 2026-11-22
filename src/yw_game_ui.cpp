@@ -10087,7 +10087,7 @@ int NC_STACK_ypaworld::UserActBuildCheck()
 }
 
 
-int NC_STACK_ypaworld::ypaworld_func64__sub21__sub3()
+int NC_STACK_ypaworld::UserActBeamCheck()
 {
     if ( !(_guiActFlags & 0x10) )
         return 6;
@@ -10169,7 +10169,7 @@ int NC_STACK_ypaworld::ypaworld_func64__sub21__sub3()
     return 0;
 }
 
-int NC_STACK_ypaworld::ypaworld_func64__sub21__sub4(TInputState *arg, int a3)
+int NC_STACK_ypaworld::HandleWaypointMode(TInputState *arg, int a3)
 {
     if ( !_makingWaypointsMode && arg->Buttons.Is(4) )
     {
@@ -10211,7 +10211,7 @@ int NC_STACK_ypaworld::ypaworld_func64__sub21__sub4(TInputState *arg, int a3)
     return a3;
 }
 
-bool NC_STACK_ypaworld::ypaworld_func64__sub21__sub6(TClickBoxInf *winp)
+bool NC_STACK_ypaworld::CheckUnitDoubleClick(TClickBoxInf *winp)
 {
     if ( winp->flag & TClickBoxInf::FLAG_DBL_CLICK
             && _bactPrevClicked
@@ -10247,7 +10247,7 @@ bool NC_STACK_ypaworld::ypaworld_func64__sub21__sub6(TClickBoxInf *winp)
 }
 
 
-void NC_STACK_ypaworld::ypaworld_func64__sub21__sub1__sub0(TInputState *arg)
+void NC_STACK_ypaworld::ComputeMouseSelectFlags(TInputState *arg)
 {
     _guiActFlags = 0;
 
@@ -10371,7 +10371,7 @@ void NC_STACK_ypaworld::yw_SMAN_MouseSelect(TClickBoxInf *winp)
     }
 }
 
-void NC_STACK_ypaworld::ypaworld_func64__sub21__sub1__sub3__sub0(TClickBoxInf *winp)
+void NC_STACK_ypaworld::UpdateMouseVector(TClickBoxInf *winp)
 {
     float v3 = (float)(winp->move.ScreenPos.x - (_screenSize.x / 2)) / (float)(_screenSize.x / 2);
     float v4 = (float)(winp->move.ScreenPos.y - (_screenSize.y / 2)) / (float)(_screenSize.y / 2);
@@ -10392,7 +10392,7 @@ void NC_STACK_ypaworld::ypaworld_func64__sub21__sub1__sub3__sub0(TClickBoxInf *w
 
 void NC_STACK_ypaworld::yw_3D_MouseSelect(TClickBoxInf *winp)
 {
-    ypaworld_func64__sub21__sub1__sub3__sub0(winp);
+    UpdateMouseVector(winp);
 
     yw_arg150 arg150;
     arg150.field_24 = NULL;
@@ -10468,7 +10468,7 @@ void NC_STACK_ypaworld::yw_3D_MouseSelect(TClickBoxInf *winp)
 
 void NC_STACK_ypaworld::yw_MouseSelect(TInputState *arg)
 {
-    ypaworld_func64__sub21__sub1__sub0(arg);
+    ComputeMouseSelectFlags(arg);
 
     if ( _guiActFlags & 4 )
     {
@@ -10487,7 +10487,7 @@ void NC_STACK_ypaworld::yw_MouseSelect(TInputState *arg)
     }
 }
 
-void NC_STACK_ypaworld::ypaworld_func64__sub21__sub7()
+void NC_STACK_ypaworld::UpdateActionEnergyCost()
 {
     _updateMessage.energy = 0;
 
@@ -10527,7 +10527,7 @@ int sub_4D3C80(NC_STACK_ypaworld *yw)
     return 1;
 }
 
-void NC_STACK_ypaworld::ypaworld_func64__sub21__sub5(int arg)
+void NC_STACK_ypaworld::ExecuteMouseAction(int arg)
 {
     switch ( arg )
     {
@@ -10655,7 +10655,7 @@ void NC_STACK_ypaworld::HandleWorldMouse(TInputState *arg)
     if ( _userRobo && (arg->ClickInf.flag & TClickBoxInf::FLAG_OK) && _viewerBact )
     {
         yw_MouseSelect(arg);
-        ypaworld_func64__sub21__sub7();
+        UpdateActionEnergyCost();
 
         int tooltip = 0;
         int mousePointer = 0;
@@ -10946,7 +10946,7 @@ void NC_STACK_ypaworld::HandleWorldMouse(TInputState *arg)
                 }
                 else
                 {
-                    switch ( ypaworld_func64__sub21__sub3() )
+                    switch ( UserActBeamCheck() )
                     {
                     case 0:
                         doAction = World::DOACTION_10;
@@ -10976,10 +10976,10 @@ void NC_STACK_ypaworld::HandleWorldMouse(TInputState *arg)
                 }
             }
 
-            _doAction = ypaworld_func64__sub21__sub4(arg, doAction);
+            _doAction = HandleWaypointMode(arg, doAction);
             int v18 = _doAction;
 
-            if ( ypaworld_func64__sub21__sub6(&arg->ClickInf) )
+            if ( CheckUnitDoubleClick(&arg->ClickInf) )
             {
                 v18 = World::DOACTION_5;
                 mousePointer = 8;
@@ -10987,7 +10987,7 @@ void NC_STACK_ypaworld::HandleWorldMouse(TInputState *arg)
             }
 
             if ( arg->ClickInf.flag & TClickBoxInf::FLAG_LM_DOWN )
-                ypaworld_func64__sub21__sub5(v18);
+                ExecuteMouseAction(v18);
 
             if ( (arg->ClickInf.flag & TClickBoxInf::FLAG_LM_HOLD) && v18 != World::DOACTION_0 )
                 mousePointer = 0;

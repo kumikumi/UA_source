@@ -2205,13 +2205,13 @@ public:
     bool yw_write_units(FSMgr::FileHandle *fil);
     bool yw_write_robo(NC_STACK_yparobo *robo, FSMgr::FileHandle *fil);
     
-    void ypaworld_func64__sub6__sub0();
+    void CountUnitsPerOwner();
     
-    void ypaworld_func64__sub19__sub2__sub0__sub0(uint8_t activate, float a5, float a6, float a7);
-    void ypaworld_func64__sub19__sub2__sub0(int id);
-    void ypaworld_func64__sub19__sub2(int id);
-    void ypaworld_func64__sub19__sub1(int id);
-    void ypaworld_func64__sub19__sub0(int id);
+    void KillUnitsInSuperBombRadius(uint8_t activate, float a5, float a6, float a7);
+    void UpdateSuperBombShockwave(int id);
+    void UpdateTriggeredSuperItem(int id);
+    void UpdateStoppedSuperItem(int id);
+    void UpdateActiveSuperItem(int id);
     void UpdateSuperItems();
     void sub_4D16C4(int id);
     bool sub_4D1230(int id, int a3);
@@ -2228,15 +2228,15 @@ public:
     bool ypaworld_func64__sub7__sub3__sub2();
     
     void yw_MouseSelect(TInputState *arg);
-    void ypaworld_func64__sub21__sub1__sub0(TInputState *arg);
+    void ComputeMouseSelectFlags(TInputState *arg);
     
     void yw_MAP_MouseSelect(TClickBoxInf *winp);
     
-    void ypaworld_func64__sub21__sub1__sub3__sub0(TClickBoxInf *winp);
+    void UpdateMouseVector(TClickBoxInf *winp);
     void yw_3D_MouseSelect(TClickBoxInf *winp);
     
     void HandleWorldMouse(TInputState *arg);
-    void ypaworld_func64__sub21__sub7();
+    void UpdateActionEnergyCost();
     float sub_4498F4();
     
     int ypaworld_func64__sub7__sub3__sub1(TClickBoxInf *winpt);
@@ -2280,12 +2280,12 @@ public:
     }
     
     void PrepareUserInput(TInputState *inpt);
-    void ypaworld_func64__sub21__sub5(int arg);
+    void ExecuteMouseAction(int arg);
     
     
-    bool ypaworld_func64__sub21__sub6(TClickBoxInf *winp);
-    int ypaworld_func64__sub21__sub4(TInputState *arg, int a3);
-    int ypaworld_func64__sub21__sub3();
+    bool CheckUnitDoubleClick(TClickBoxInf *winp);
+    int HandleWaypointMode(TInputState *arg, int a3);
+    int UserActBeamCheck();
     int UserActBuildCheck();
     int sb_0x4d3d44(TClickBoxInf *winp);
     void ypaworld_func64__sub7__sub6(TInputState *inpt);

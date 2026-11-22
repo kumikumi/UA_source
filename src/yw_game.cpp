@@ -2389,7 +2389,7 @@ bool NC_STACK_ypaworld::IsAnyBuildingProcess(int owner) const
     return false;
 }
 
-void NC_STACK_ypaworld::ypaworld_func64__sub6__sub0()
+void NC_STACK_ypaworld::CountUnitsPerOwner()
 {
     for(int i = 0; i < 8; i++)
         _countUnitsPerOwner[i] = 0;
@@ -2440,7 +2440,7 @@ void UpdateReloadRatios(NC_STACK_ypaworld *yw)
             v13[ ps.second.pCell->owner ] += ps.second.EffectivePower;
     }
 
-    yw->ypaworld_func64__sub6__sub0();
+    yw->CountUnitsPerOwner();
 
     for (int i = 0; i < 8; i++)
     {
@@ -3044,7 +3044,7 @@ void NC_STACK_ypaworld::sub_4D16C4(int id)
     ShowMessage(&arg159);
 }
 
-void NC_STACK_ypaworld::ypaworld_func64__sub19__sub0(int id)
+void NC_STACK_ypaworld::UpdateActiveSuperItem(int id)
 {
     TMapSuperItem &sitem = _levelInfo.SuperItems[id];
 
@@ -3075,7 +3075,7 @@ void NC_STACK_ypaworld::ypaworld_func64__sub19__sub0(int id)
 }
 
 
-void ypaworld_func64__sub19__sub3(NC_STACK_ypaworld *yw, int id)
+void PlaySuperItemCountdownSound(NC_STACK_ypaworld *yw, int id)
 {
     if ( yw->_GameShell )
     {
@@ -3117,7 +3117,7 @@ bool NC_STACK_ypaworld::sub_4D1230(int id, int a3)
     return true;
 }
 
-void NC_STACK_ypaworld::ypaworld_func64__sub19__sub1(int id)
+void NC_STACK_ypaworld::UpdateStoppedSuperItem(int id)
 {
     const TMapSuperItem &sitem = _levelInfo.SuperItems[id];
 
@@ -3136,7 +3136,7 @@ void NC_STACK_ypaworld::ypaworld_func64__sub19__sub1(int id)
     sub_4D16C4(id);
 }
 
-void NC_STACK_ypaworld::ypaworld_func64__sub19__sub2__sub0__sub0(uint8_t activate, float a5, float a6, float a7)
+void NC_STACK_ypaworld::KillUnitsInSuperBombRadius(uint8_t activate, float a5, float a6, float a7)
 {
     for(cellArea &cell : _cells)
     {
@@ -3173,7 +3173,7 @@ void NC_STACK_ypaworld::ypaworld_func64__sub19__sub2__sub0__sub0(uint8_t activat
     }
 }
 
-void NC_STACK_ypaworld::ypaworld_func64__sub19__sub2__sub0(int id)
+void NC_STACK_ypaworld::UpdateSuperBombShockwave(int id)
 {
     TMapSuperItem &sitem = _levelInfo.SuperItems[id];
 
@@ -3219,17 +3219,17 @@ void NC_STACK_ypaworld::ypaworld_func64__sub19__sub2__sub0(int id)
         }
     }
 
-    ypaworld_func64__sub19__sub2__sub0__sub0(sitem.ActivateOwner, tmp.x, tmp.y, sitem.CurrentRadius);
+    KillUnitsInSuperBombRadius(sitem.ActivateOwner, tmp.x, tmp.y, sitem.CurrentRadius);
 }
 
-void NC_STACK_ypaworld::ypaworld_func64__sub19__sub2(int id)
+void NC_STACK_ypaworld::UpdateTriggeredSuperItem(int id)
 {
     const TMapSuperItem &sitem = _levelInfo.SuperItems[id];
 
     if ( !sub_4D1230(id, sitem.ActivateOwner) && sub_4D12A0(sitem.ActivateOwner) )
     {
         if ( sitem.Type == TMapSuperItem::TYPE_BOMB )
-            ypaworld_func64__sub19__sub2__sub0(id);
+            UpdateSuperBombShockwave(id);
     }
     else
     {
@@ -3256,16 +3256,16 @@ void NC_STACK_ypaworld::UpdateSuperItems()
                 break;
 
             case TMapSuperItem::STATE_ACTIVE:
-                ypaworld_func64__sub19__sub0(i);
-                ypaworld_func64__sub19__sub3(this, i);
+                UpdateActiveSuperItem(i);
+                PlaySuperItemCountdownSound(this, i);
                 break;
 
             case TMapSuperItem::STATE_STOPPED:
-                ypaworld_func64__sub19__sub1(i);
+                UpdateStoppedSuperItem(i);
                 break;
 
             case TMapSuperItem::STATE_TRIGGED:
-                ypaworld_func64__sub19__sub2(i);
+                UpdateTriggeredSuperItem(i);
                 break;
 
             default:
