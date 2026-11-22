@@ -282,9 +282,9 @@ void NC_STACK_yparobo::AI_layer1(update_msg *arg)
 {
     if ( _status == BACT_STATUS_DEAD )
     {
-        int a4 = getBACT_yourLastSeconds();
-        a4 -= arg->frameTime;
-        setBACT_yourLastSeconds(a4);
+        int lastSeconds = getBACT_yourLastSeconds();
+        lastSeconds -= arg->frameTime;
+        setBACT_yourLastSeconds(lastSeconds);
     }
 
     _airconst = _airconst_static;
@@ -305,9 +305,9 @@ void NC_STACK_yparobo::AI_layer1(update_msg *arg)
     else if ( _primTtype != BACT_TGT_TYPE_UNIT )
         _target_vec = vec3d(0.0, 0.0, 0.0);
 
-    int v9 = getBACT_inputting();
+    int inputting = getBACT_inputting();
 
-    if ( v9 )
+    if ( inputting )
         User_layer(arg);
     else
         AI_layer3(arg);
@@ -318,69 +318,69 @@ void NC_STACK_yparobo::DispatchDockedForce(NC_STACK_ypabact *unit)
 {
     if ( _roboState & ROBOSTATE_SETDOCKTARGET )
     {
-        setTarget_msg arg67;
-        arg67.tgt_type = _roboDockTargetType;
-        arg67.priority = 0;
-        arg67.tgt.pbact = _roboDockTargetBact;
-        arg67.tgt_pos.x = _roboDockTargetPos.x;
-        arg67.tgt_pos.z = _roboDockTargetPos.z;
+        setTarget_msg targetMsg;
+        targetMsg.tgt_type = _roboDockTargetType;
+        targetMsg.priority = 0;
+        targetMsg.tgt.pbact = _roboDockTargetBact;
+        targetMsg.tgt_pos.x = _roboDockTargetPos.x;
+        targetMsg.tgt_pos.z = _roboDockTargetPos.z;
 
-        if ( arg67.tgt_type == BACT_TGT_TYPE_UNIT )
+        if ( targetMsg.tgt_type == BACT_TGT_TYPE_UNIT )
         {
-            arg67.priority = _roboDockTargetCommandID;
+            targetMsg.priority = _roboDockTargetCommandID;
 
-            if ( GetTargetByCommandID(&arg67) )
+            if ( GetTargetByCommandID(&targetMsg) )
             {
-                if ( !arg67.tgt.pbact->_pSector->IsCanSee(_owner) )
+                if ( !targetMsg.tgt.pbact->_pSector->IsCanSee(_owner) )
                 {
-                    arg67.tgt_type = BACT_TGT_TYPE_CELL;
-                    arg67.tgt_pos.x = _roboDockTargetPos.x;
-                    arg67.tgt_pos.z = _roboDockTargetPos.z;
+                    targetMsg.tgt_type = BACT_TGT_TYPE_CELL;
+                    targetMsg.tgt_pos.x = _roboDockTargetPos.x;
+                    targetMsg.tgt_pos.z = _roboDockTargetPos.z;
 
                     _roboDockAggr = 50;
                 }
             }
             else
             {
-                arg67.tgt_type = BACT_TGT_TYPE_CELL;
-                arg67.tgt_pos.x = unit->_position.x;
-                arg67.tgt_pos.z = unit->_position.z;
+                targetMsg.tgt_type = BACT_TGT_TYPE_CELL;
+                targetMsg.tgt_pos.x = unit->_position.x;
+                targetMsg.tgt_pos.z = unit->_position.z;
             }
-            arg67.priority = 0;
+            targetMsg.priority = 0;
         }
 
         if ( unit->_status != BACT_STATUS_DEAD )
         {
-            TPathRequest arg124;
-            arg124.from = unit->_position.XZ();
+            TPathRequest pathReq;
+            pathReq.from = unit->_position.XZ();
 
-            if ( arg67.tgt_type == BACT_TGT_TYPE_UNIT )
+            if ( targetMsg.tgt_type == BACT_TGT_TYPE_UNIT )
             {
-                arg124.to = arg67.tgt.pbact->_position.XZ();
+                pathReq.to = targetMsg.tgt.pbact->_position.XZ();
             }
             else
             {
-                arg124.to = arg67.tgt_pos.XZ();
+                pathReq.to = targetMsg.tgt_pos.XZ();
             }
 
-            arg124.tgt_type = 1;
-            arg124.steps_cnt = 32;
+            pathReq.tgt_type = 1;
+            pathReq.steps_cnt = 32;
 
-            if ( unit->IsNeedsWaypoints() && unit->PathFinder(&arg124) )
+            if ( unit->IsNeedsWaypoints() && unit->PathFinder(&pathReq) )
             {
-                arg124.steps_cnt = 32;
+                pathReq.steps_cnt = 32;
 
-                unit->SetPath(&arg124);
+                unit->SetPath(&pathReq);
 
-                if ( arg67.tgt_type == BACT_TGT_TYPE_UNIT )
+                if ( targetMsg.tgt_type == BACT_TGT_TYPE_UNIT )
                 {
-                    unit->_m_cmdID = arg67.tgt.pbact->_commandID;
-                    unit->_m_owner = arg67.tgt.pbact->_owner;
+                    unit->_m_cmdID = targetMsg.tgt.pbact->_commandID;
+                    unit->_m_owner = targetMsg.tgt.pbact->_owner;
                 }
             }
             else
             {
-                unit->SetTarget(&arg67);
+                unit->SetTarget(&targetMsg);
             }
         }
 
@@ -405,28 +405,28 @@ void NC_STACK_yparobo::InitForce(NC_STACK_ypabact *unit)
         return;
     }
 
-    int v6 = _energy - _energy_max * 0.2;
+    int availableEnergy = _energy - _energy_max * 0.2;
 
     if ( _roboState & ROBOSTATE_USEVHCLPARTS )
-        v6 += _roboVehicleSpare;
+        availableEnergy += _roboVehicleSpare;
 
-    TSummaryQuery arg81;
-    arg81.enrg_type = 3;
-    arg81.enrg_sum = 0;
+    TSummaryQuery unitCountQuery;
+    unitCountQuery.enrg_type = 3;
+    unitCountQuery.enrg_sum = 0;
 
-    GetSummary(&arg81);
+    GetSummary(&unitCountQuery);
 
     NC_STACK_ypabact *newUnit = NULL;
 
-    int v23 = (arg81.enrg_sum * 0.05 + 1.0) * (float)unit->_energy_max;
+    int unitCost = (unitCountQuery.enrg_sum * 0.05 + 1.0) * (float)unit->_energy_max;
     
-    if ( v6 > (signed int)v23 )
+    if ( availableEnergy > (signed int)unitCost )
     {
-        TUnitSpawn arg146;
-        arg146.vehicle_id = unit->_vehicleID;
-        arg146.pos = _position + _roboDockPos;
+        TUnitSpawn spawn;
+        spawn.vehicle_id = unit->_vehicleID;
+        spawn.pos = _position + _roboDockPos;
 
-        newUnit = _world->CreateVehicle(&arg146);
+        newUnit = _world->CreateVehicle(&spawn);
     }
 
     if ( !newUnit )
@@ -440,17 +440,17 @@ void NC_STACK_yparobo::InitForce(NC_STACK_ypabact *unit)
     newUnit->_commandID = unit->_commandID;
     newUnit->_host_station = this;
 
-    int v20 = getBACT_bactCollisions();
-    newUnit->setBACT_bactCollisions(v20);
+    int bactCollisions = getBACT_bactCollisions();
+    newUnit->setBACT_bactCollisions(bactCollisions);
 
     unit->AddSubject(newUnit);
 
-    setTarget_msg arg67;
-    arg67.tgt_type = BACT_TGT_TYPE_CELL;
-    arg67.priority = 0;
-    arg67.tgt_pos.x = _position.x + _rotation.m20 * World::CVSectorLength * 0.5;
-    arg67.tgt_pos.z = _position.z + _rotation.m22 * World::CVSectorLength * 0.5;
-    newUnit->SetTarget(&arg67);
+    setTarget_msg targetMsg;
+    targetMsg.tgt_type = BACT_TGT_TYPE_CELL;
+    targetMsg.priority = 0;
+    targetMsg.tgt_pos.x = _position.x + _rotation.m20 * World::CVSectorLength * 0.5;
+    targetMsg.tgt_pos.z = _position.z + _rotation.m22 * World::CVSectorLength * 0.5;
+    newUnit->SetTarget(&targetMsg);
 
     if ( _world->_isNetGame )
     {
@@ -471,28 +471,28 @@ void NC_STACK_yparobo::InitForce(NC_STACK_ypabact *unit)
 
     if ( _roboState & ROBOSTATE_USEVHCLPARTS )
     {
-        if ( v23 > _roboVehicleSpare )
+        if ( unitCost > _roboVehicleSpare )
         {
-            _energy -= v23 - _roboVehicleSpare;
+            _energy -= unitCost - _roboVehicleSpare;
             _roboVehicleSpare = 0;
         }
         else
         {
-            _roboVehicleSpare -= v23;
+            _roboVehicleSpare -= unitCost;
         }
     }
     else
     {
-        _energy -= v23;
+        _energy -= unitCost;
     }
 
     _roboDockEnerg -= newUnit->_energy;
 
-    setState_msg arg78;
-    arg78.setFlags = 0;
-    arg78.unsetFlags = 0;
-    arg78.newStatus = BACT_STATUS_CREATE;
-    newUnit->SetState(&arg78);
+    setState_msg stateMsg;
+    stateMsg.setFlags = 0;
+    stateMsg.unsetFlags = 0;
+    stateMsg.newStatus = BACT_STATUS_CREATE;
+    newUnit->SetState(&stateMsg);
 
     newUnit->_scale_time = newUnit->_energy_max * 0.2;
     _roboDockTime = newUnit->_scale_time + 2000;
@@ -502,12 +502,12 @@ void NC_STACK_yparobo::InitForce(NC_STACK_ypabact *unit)
 }
 
 
-int NC_STACK_yparobo::SendSquadToPosition(NC_STACK_ypabact *bact, float a2, float a3)
+int NC_STACK_yparobo::SendSquadToPosition(NC_STACK_ypabact *bact, float x, float z)
 {
-    int v5 = 0;
+    int hasGroundUnits = 0;
     if ( bact->_bact_type == BACT_TYPES_TANK || bact->_bact_type == BACT_TYPES_CAR )
     {
-        v5 = 1;
+        hasGroundUnits = 1;
     }
     else
     {
@@ -515,40 +515,40 @@ int NC_STACK_yparobo::SendSquadToPosition(NC_STACK_ypabact *bact, float a2, floa
         {
             if (node->_bact_type == BACT_TYPES_TANK || node->_bact_type == BACT_TYPES_CAR)
             {
-                v5 = 1;
+                hasGroundUnits = 1;
                 break;
             }
         }
     }
 
-    if ( v5 )
+    if ( hasGroundUnits )
     {
-        TPathRequest arg125;
-        arg125.steps_cnt = 32;
-        arg125.from = bact->_position.XZ();
-        arg125.to = vec2d(a2, a3);
-        arg125.tgt_type = 1;
-        if ( !bact->SetPath(&arg125) )
+        TPathRequest pathReq;
+        pathReq.steps_cnt = 32;
+        pathReq.from = bact->_position.XZ();
+        pathReq.to = vec2d(x, z);
+        pathReq.tgt_type = 1;
+        if ( !bact->SetPath(&pathReq) )
             return 0;
     }
     else
     {
-        setTarget_msg arg67;
-        arg67.tgt_pos.x = a2;
-        arg67.tgt_pos.z = a3;
-        arg67.tgt_type = BACT_TGT_TYPE_CELL;
-        arg67.priority = 0;
-        bact->SetTarget(&arg67);
+        setTarget_msg targetMsg;
+        targetMsg.tgt_pos.x = x;
+        targetMsg.tgt_pos.z = z;
+        targetMsg.tgt_type = BACT_TGT_TYPE_CELL;
+        targetMsg.priority = 0;
+        bact->SetTarget(&targetMsg);
     }
     return 1;
 }
 
 int NC_STACK_yparobo::SendSquadToUnit(NC_STACK_ypabact *bact, NC_STACK_ypabact *bact2)
 {
-    int v5 = 0;
+    int hasGroundUnits = 0;
     if ( bact->_bact_type == BACT_TYPES_TANK || bact->_bact_type == BACT_TYPES_CAR )
     {
-        v5 = 1;
+        hasGroundUnits = 1;
     }
     else
     {
@@ -556,27 +556,27 @@ int NC_STACK_yparobo::SendSquadToUnit(NC_STACK_ypabact *bact, NC_STACK_ypabact *
         {
             if (node->_bact_type == BACT_TYPES_TANK || node->_bact_type == BACT_TYPES_CAR)
             {
-                v5 = 1;
+                hasGroundUnits = 1;
                 break;
             }
         }
     }
 
-    if ( v5 )
+    if ( hasGroundUnits )
     {
-        TPathRequest arg124;
-        arg124.steps_cnt = 32;
-        arg124.from = bact->_position.XZ();
-        arg124.to = bact2->_position.XZ();
-        arg124.tgt_type = 1;
+        TPathRequest pathReq;
+        pathReq.steps_cnt = 32;
+        pathReq.from = bact->_position.XZ();
+        pathReq.to = bact2->_position.XZ();
+        pathReq.tgt_type = 1;
 
-        if ( !bact->PathFinder(&arg124) )
+        if ( !bact->PathFinder(&pathReq) )
             return 0;
 
-        if ( arg124.steps_cnt > 1 )
+        if ( pathReq.steps_cnt > 1 )
         {
-            arg124.steps_cnt = 32;
-            bact->SetPath(&arg124);
+            pathReq.steps_cnt = 32;
+            bact->SetPath(&pathReq);
 
             bact->_m_cmdID = bact2->_commandID;
             bact->_m_owner = bact2->_owner;
@@ -584,11 +584,11 @@ int NC_STACK_yparobo::SendSquadToUnit(NC_STACK_ypabact *bact, NC_STACK_ypabact *
         }
     }
 
-    setTarget_msg arg67;
-    arg67.tgt.pbact = bact2;
-    arg67.priority = 0;
-    arg67.tgt_type = BACT_TGT_TYPE_UNIT;
-    bact->SetTarget(&arg67);
+    setTarget_msg targetMsg;
+    targetMsg.tgt.pbact = bact2;
+    targetMsg.priority = 0;
+    targetMsg.tgt_type = BACT_TGT_TYPE_UNIT;
+    bact->SetTarget(&targetMsg);
     return 1;
 }
 
@@ -615,18 +615,18 @@ void NC_STACK_yparobo::SendSquadAgainstEnemyRobo(NC_STACK_ypabact *unit1, NC_STA
 
                 if ( pcell.IsCanSee(unit2->_owner) )
                 {
-                    for( NC_STACK_ypabact* &v10 : pcell.unitsList )
+                    for( NC_STACK_ypabact* &cellUnit : pcell.unitsList )
                     {
-                        if ( v10->_bact_type == BACT_TYPES_GUN && unit1->_owner == v10->_owner && v10->_status != BACT_STATUS_DEAD )
+                        if ( cellUnit->_bact_type == BACT_TYPES_GUN && unit1->_owner == cellUnit->_owner && cellUnit->_status != BACT_STATUS_DEAD )
                         {
-                            NC_STACK_ypagun *gun = dynamic_cast<NC_STACK_ypagun *>( v10 );
+                            NC_STACK_ypagun *gun = dynamic_cast<NC_STACK_ypagun *>( cellUnit );
 
                             if ( !gun->IsRoboGun() )
                             {
-                                if ( v10->IsParentMyRobo() )
-                                    SendSquadToUnit(unit2, v10);
-                                else if (v10->_parent)
-                                    SendSquadToUnit(unit2, v10->_parent);
+                                if ( cellUnit->IsParentMyRobo() )
+                                    SendSquadToUnit(unit2, cellUnit);
+                                else if (cellUnit->_parent)
+                                    SendSquadToUnit(unit2, cellUnit->_parent);
 
                                 unit2->setBACT_aggression(25);
                                 return;
@@ -690,25 +690,25 @@ void NC_STACK_yparobo::UpdateRoboAttackSquad(NC_STACK_ypabact *unit, TRoboAttack
     }
 }
 
-void NC_STACK_yparobo::doBeamUpdate(int a2)
+void NC_STACK_yparobo::doBeamUpdate(int frameTime)
 {
-    _roboBeamTimePre -= a2;
+    _roboBeamTimePre -= frameTime;
 
     if ( _roboBeamTimePre > 0 )
     {
         if ( _roboBeamFXTime <= 0 )
         {
-            int v23 = (1500 - _roboBeamTimePre) / 10;
-            int v10 = _roboBeamTimePre / 10;
+            int onTime = (1500 - _roboBeamTimePre) / 10;
+            int offTime = _roboBeamTimePre / 10;
 
             if ( _vp_extra[0].flags & EVPROTO_FLAG_ACTIVE )
             {
-                _roboBeamFXTime = v10;
+                _roboBeamFXTime = offTime;
                 _vp_extra[0].flags &= ~EVPROTO_FLAG_ACTIVE;
             }
             else
             {
-                _roboBeamFXTime = v23;
+                _roboBeamFXTime = onTime;
 
                 _vp_extra[0].pos = _position;
                 _vp_extra[0].rotate = _rotation;
@@ -719,12 +719,12 @@ void NC_STACK_yparobo::doBeamUpdate(int a2)
 
             if ( _vp_extra[1].flags & EVPROTO_FLAG_ACTIVE )
             {
-                _roboBeamFXTime = v10;
+                _roboBeamFXTime = offTime;
                 _vp_extra[1].flags &= ~EVPROTO_FLAG_ACTIVE;
             }
             else
             {
-                _roboBeamFXTime = v23;
+                _roboBeamFXTime = onTime;
 
                 _vp_extra[1].pos = _roboBeamPos;
                 _vp_extra[1].rotate = _rotation;
@@ -733,7 +733,7 @@ void NC_STACK_yparobo::doBeamUpdate(int a2)
             }
         }
 
-        _roboBeamFXTime -= a2;
+        _roboBeamFXTime -= frameTime;
     }
     else
     {
@@ -743,11 +743,11 @@ void NC_STACK_yparobo::doBeamUpdate(int a2)
 
         tmp.y = _roboYPos;
 
-        TUnitPlacement v18;
-        v18.pos = _roboBeamPos;
-        v18.flags = 0;
+        TUnitPlacement placement;
+        placement.pos = _roboBeamPos;
+        placement.flags = 0;
 
-        SetPosition(&v18);
+        SetPosition(&placement);
 
         if ( _world->_isNetGame )
         {
@@ -817,45 +817,45 @@ void NC_STACK_yparobo::TurnRoboAboutWorldUpAxis(float angle)
     _roboColls.lastTurnAngle = angle;
 }
 
-size_t NC_STACK_yparobo::checkCollisions(float a2)
+size_t NC_STACK_yparobo::checkCollisions(float dtime)
 {
     bool isViewer = getBACT_viewer();
-    int v81 = getBACT_inputting();
-    int v79 = getBACT_exactCollisions();
+    int inputting = getBACT_inputting();
+    int exactCollisions = getBACT_exactCollisions();
 
     if ( _position == _old_pos )
         return 0;
 
-    TCollisionNormal arg88_2;
-    arg88_2.normal = vec3d(0.0, 0.0, 0.0);
+    TCollisionNormal avgNormal;
+    avgNormal.normal = vec3d(0.0, 0.0, 0.0);
 
-    int v86 = 0;
+    int hitCount = 0;
 
-    TRayIntersection arg136;
+    TRayIntersection ray;
 
     for (const World::TRoboColl &rcoll : _roboColls.roboColls)
     {
-        if ( !v81 || _primTtype )
+        if ( !inputting || _primTtype )
         {
             vec3d tmp = rcoll.prev_coll_pos;
             vec3d t = _position + _rotation.Transform( rcoll.coll_pos );
 
-            arg136.stPos = tmp;
-            arg136.flags = 0;
+            ray.stPos = tmp;
+            ray.flags = 0;
 
-            float v82 = (tmp.XZ() - t.XZ()).length();
+            float moveDist = (tmp.XZ() - t.XZ()).length();
 
-            if ( v82 <= 1.0 )
-                arg136.vect = _fly_dir * 300.0;
+            if ( moveDist <= 1.0 )
+                ray.vect = _fly_dir * 300.0;
             else
-                arg136.vect = vec3d::X0Z( (t.XZ() - tmp.XZ()) * 300.0 / v82 );
+                ray.vect = vec3d::X0Z( (t.XZ() - tmp.XZ()) * 300.0 / moveDist );
 
-            _world->IntersectRay(&arg136);
+            _world->IntersectRay(&ray);
 
 
-            if ( arg136.isect )
+            if ( ray.isect )
             {
-                if ( arg136.tVal * 300.0 >= rcoll.robo_coll_radius + v82)
+                if ( ray.tVal * 300.0 >= rcoll.robo_coll_radius + moveDist)
                 {
                     _status_flg &= ~BACT_STFLAG_LCRASH;
                     _status_flg |= BACT_STFLAG_UPWRD;
@@ -863,10 +863,10 @@ size_t NC_STACK_yparobo::checkCollisions(float a2)
                 }
                 else if ( rcoll.robo_coll_radius > 0.01 )
                 {
-                    TCollisionNormal arg88;
-                    arg88.normal = arg136.skel->polygons[ arg136.polyID ].Normal();
+                    TCollisionNormal collNormal;
+                    collNormal.normal = ray.skel->polygons[ ray.polyID ].Normal();
 
-                    Recoil(&arg88);
+                    Recoil(&collNormal);
 
                     if ( fabs(_roboColls.lastTurnAngle) > 0.0 )
                     {
@@ -875,21 +875,21 @@ size_t NC_STACK_yparobo::checkCollisions(float a2)
                         _roboColls.lastTurnAngle = 0;
                     }
 
-                    TSectorInfo arg130;
-                    arg130.pos_x = arg136.isectPos.x;
-                    arg130.pos_z = arg136.isectPos.z;
+                    TSectorInfo sectInfo;
+                    sectInfo.pos_x = ray.isectPos.x;
+                    sectInfo.pos_z = ray.isectPos.z;
 
-                    _world->GetSectorInfo(&arg130);
+                    _world->GetSectorInfo(&sectInfo);
 
-                    if ( v81 || arg130.pcell->PurposeType == cellArea::PT_NONE )
+                    if ( inputting || sectInfo.pcell->PurposeType == cellArea::PT_NONE )
                     {
-                        TSectorDamage v60;
-                        v60.pos = arg136.isectPos;
-                        v60.unit = NULL;
-                        v60.OwnerID = World::OWNER_RECALC;
-                        v60.energy = v82 * 15000.0 / a2;
+                        TSectorDamage sectorDamage;
+                        sectorDamage.pos = ray.isectPos;
+                        sectorDamage.unit = NULL;
+                        sectorDamage.OwnerID = World::OWNER_RECALC;
+                        sectorDamage.energy = moveDist * 15000.0 / dtime;
 
-                        ChangeSectorEnergy(&v60);
+                        ChangeSectorEnergy(&sectorDamage);
                     }
 
                     _fly_dir_length *= 0.4;
@@ -901,23 +901,23 @@ size_t NC_STACK_yparobo::checkCollisions(float a2)
         }
 
 
-        int v26 = _world->IsNearViewer(this);
+        int nearViewer = _world->IsNearViewer(this);
 
-        if ( (isViewer || (v26 && v79)) && rcoll.robo_coll_radius > 0.01 )
+        if ( (isViewer || (nearViewer && exactCollisions)) && rcoll.robo_coll_radius > 0.01 )
         {
             vec3d tmp = rcoll.prev_coll_pos;
             vec3d t = _position + _rotation.Transform( rcoll.coll_pos );
 
-            TSphereCollisionQuery arg137;
-            arg137.pos = tmp;
+            TSphereCollisionQuery sphereQuery;
+            sphereQuery.pos = tmp;
 
-            float v83 = (tmp.XZ() - t.XZ()).length();
+            float moveDist = (tmp.XZ() - t.XZ()).length();
 
-            if ( v83 <= 1.0 )
-                arg137.dir = _fly_dir;
+            if ( moveDist <= 1.0 )
+                sphereQuery.dir = _fly_dir;
             else
             {
-                arg137.dir = vec3d::X0Z( (t.XZ() - tmp.XZ()) ) / v83;
+                sphereQuery.dir = vec3d::X0Z( (t.XZ() - tmp.XZ()) ) / moveDist;
 
                 // TYPO??
                 /*arg137.pos2.x = 1.0 / v83 * (t.x - tmp.x);
@@ -925,63 +925,63 @@ size_t NC_STACK_yparobo::checkCollisions(float a2)
                 arg137.pos2.z = 1.0 / v83 * (t.x - tmp.x); */
             }
 
-            TSphereContact v57[32];
+            TSphereContact contacts[32];
 
-            arg137.radius = rcoll.robo_coll_radius;
-            arg137.collisions = v57;
-            arg137.flags = 0;
-            arg137.coll_max = 32;
+            sphereQuery.radius = rcoll.robo_coll_radius;
+            sphereQuery.collisions = contacts;
+            sphereQuery.flags = 0;
+            sphereQuery.coll_max = 32;
 
-            _world->FindSphereCollisions(&arg137);
+            _world->FindSphereCollisions(&sphereQuery);
 
-            if ( arg137.coll_count )
+            if ( sphereQuery.coll_count )
             {
-                v86++;
+                hitCount++;
 
-                float v89 = v83 * 15000.0;
+                float crashEnergy = moveDist * 15000.0;
 
                 vec3d ttmp(0.0, 0.0, 0.0);
 
-                for (int j = arg137.coll_count - 1; j >= 0; j--)
+                for (int j = sphereQuery.coll_count - 1; j >= 0; j--)
                 {
-                    TSphereContact *clzn = &arg137.collisions[j];
+                    TSphereContact *clzn = &sphereQuery.collisions[j];
 
                     ttmp += clzn->normal;
 
-                    TSectorInfo arg130;
-                    arg130.pos_x = clzn->pos1.x;
-                    arg130.pos_z = clzn->pos1.z;
+                    TSectorInfo sectInfo;
+                    sectInfo.pos_x = clzn->pos1.x;
+                    sectInfo.pos_z = clzn->pos1.z;
 
-                    _world->GetSectorInfo(&arg130);
+                    _world->GetSectorInfo(&sectInfo);
 
-                    if ( v81 || arg130.pcell->PurposeType == cellArea::PT_NONE )
+                    if ( inputting || sectInfo.pcell->PurposeType == cellArea::PT_NONE )
                     {
-                        TSectorDamage v60;
-                        v60.pos = clzn->pos1;
-                        v60.unit = NULL;
-                        v60.OwnerID = World::OWNER_RECALC;
-                        v60.energy = v89 / a2;
+                        TSectorDamage sectorDamage;
+                        sectorDamage.pos = clzn->pos1;
+                        sectorDamage.unit = NULL;
+                        sectorDamage.OwnerID = World::OWNER_RECALC;
+                        sectorDamage.energy = crashEnergy / dtime;
 
-                        ChangeSectorEnergy(&v60);
+                        ChangeSectorEnergy(&sectorDamage);
                     }
                 }
 
-                float v84 = ttmp.length();
+                float normalLen = ttmp.length();
 
-                if ( v84 != 0.0 )
-                    arg88_2.normal += ttmp / v84;
+                if ( normalLen != 0.0 )
+                    avgNormal.normal += ttmp / normalLen;
                 else
-                    arg88_2.normal += _fly_dir;
+                    avgNormal.normal += _fly_dir;
             }
 
-            if ( v86 )
+            if ( hitCount )
             {
-                arg88_2.normal /= (float)v86;
+                avgNormal.normal /= (float)hitCount;
 
                 _position = _old_pos;
 
 
-                Recoil(&arg88_2);
+                Recoil(&avgNormal);
 
                 if ( fabs(_roboColls.lastTurnAngle) > 0.0 )
                 {
@@ -999,15 +999,15 @@ size_t NC_STACK_yparobo::checkCollisions(float a2)
 
     _status_flg &= ~BACT_STFLAG_LCRASH;
 
-    arg136.stPos = _position;
-    arg136.vect = vec3d::OY( _height * 1.5 ) + _fly_dir.X0Z() * 100.0;
-    arg136.flags = 0;
+    ray.stPos = _position;
+    ray.vect = vec3d::OY( _height * 1.5 ) + _fly_dir.X0Z() * 100.0;
+    ray.flags = 0;
 
-    _world->IntersectRay(&arg136);
+    _world->IntersectRay(&ray);
 
-    if ( arg136.isect )
+    if ( ray.isect )
     {
-        if ( arg136.tVal < 0.66 )
+        if ( ray.tVal < 0.66 )
         {
             _target_dir.y = -1.0;
             _status_flg |= BACT_STFLAG_UPWRD;
@@ -1032,11 +1032,11 @@ void NC_STACK_yparobo::wallow(update_msg *arg)
     {
         if (gun.gun_obj)
         {
-            TUnitPlacement v11;
-            v11.pos = _position + _rotation.Transpose().Transform(gun.pos);
-            v11.flags = 4;
+            TUnitPlacement placement;
+            placement.pos = _position + _rotation.Transpose().Transform(gun.pos);
+            placement.flags = 4;
 
-            gun.gun_obj->SetPosition(&v11);
+            gun.gun_obj->SetPosition(&placement);
         }
     }
 }
@@ -1063,11 +1063,11 @@ bool NC_STACK_yparobo::IsNotUserControlled()
 
 void NC_STACK_yparobo::AI_doMove(update_msg *arg)
 {
-    move_msg arg74;
+    move_msg moveMsg;
 
     UpdateCollisionPointPositions();
 
-    float v49 = arg->frameTime / 1000.0;
+    float dtime = arg->frameTime / 1000.0;
 
     _roboFlotage = _mass * 9.80665;
 
@@ -1077,13 +1077,13 @@ void NC_STACK_yparobo::AI_doMove(update_msg *arg)
     if ( _target_dir.y > 0.7 )
         _roboFlotage = _mass * 0.91 * 9.80665;
 
-    float v39;
+    float targetDist;
     if ( _primTtype )
-        v39 = _target_vec.XZ().length();
+        targetDist = _target_vec.XZ().length();
     else
-        v39 = 0.0;
+        targetDist = 0.0;
 
-    if ( v39 >= 100.0 )
+    if ( targetDist >= 100.0 )
     {
         if ( _status_flg & BACT_STFLAG_UPWRD )
         {
@@ -1092,11 +1092,11 @@ void NC_STACK_yparobo::AI_doMove(update_msg *arg)
             _roboFlotage = _mass * 2.5 * 9.80665;
             _thraction = 0;
 
-            float v38 = 1.0 - v49 * 4.0;
-            if ( v38 < 0.0 )
-                v38 = 0.1;
+            float damping = 1.0 - dtime * 4.0;
+            if ( damping < 0.0 )
+                damping = 0.1;
 
-            _fly_dir_length *= v38;
+            _fly_dir_length *= damping;
         }
         else if ( _primTtype )
         {
@@ -1109,40 +1109,40 @@ void NC_STACK_yparobo::AI_doMove(update_msg *arg)
 
         if ( !(_status_flg & BACT_STFLAG_UPWRD) )
         {
-            float v52 = _rotation.AxisZ().XZ().length();
-            float v51 = _target_dir.XZ().length();
+            float forwardLen = _rotation.AxisZ().XZ().length();
+            float targetDirLen = _target_dir.XZ().length();
 
-            if ( v52 <= 0.0001 || v51 <= 0.0001 )
+            if ( forwardLen <= 0.0001 || targetDirLen <= 0.0001 )
             {
                 _slider_time = 0;
                 _status_flg &= ~BACT_STFLAG_XLEFT;
             }
             else
             {
-                float v47 = _target_dir.XZ().dot( _rotation.AxisZ().XZ() ) / (v51 * v52);
+                float cosAngle = _target_dir.XZ().dot( _rotation.AxisZ().XZ() ) / (targetDirLen * forwardLen);
 
-                float v23 = clp_acos(v47);
+                float turnAngle = clp_acos(cosAngle);
 
-                float v24 = fabs(v23);
+                float absAngle = fabs(turnAngle);
 
-                if ( v24 >= 0.001 )
+                if ( absAngle >= 0.001 )
                 {
-                    float mxx = v49 * _maxrot;
+                    float mxx = dtime * _maxrot;
 
-                    if ( v24 > mxx )
-                        v23 = mxx;
+                    if ( absAngle > mxx )
+                        turnAngle = mxx;
 
                     if ( _rotation.AxisZ().XZ().cross( _target_dir.XZ() ) < 0.0 )
-                        v23 = -v23;
+                        turnAngle = -turnAngle;
 
-                    float v28;
+                    float turnRamp;
 
-                    if ( v23 <= 0.0 )
+                    if ( turnAngle <= 0.0 )
                     {
                         if ( !(_status_flg & BACT_STFLAG_XLEFT) || !_slider_time )
                             _slider_time = arg->gTime;
 
-                        v28 = (arg->gTime - _slider_time) * 0.9 * 0.001 + 0.1;
+                        turnRamp = (arg->gTime - _slider_time) * 0.9 * 0.001 + 0.1;
                         _status_flg |= BACT_STFLAG_XLEFT;
                     }
                     else
@@ -1150,23 +1150,23 @@ void NC_STACK_yparobo::AI_doMove(update_msg *arg)
                         if ( _status_flg & BACT_STFLAG_XLEFT || !_slider_time )
                             _slider_time = arg->gTime;
 
-                        v28 = (arg->gTime - _slider_time) * 0.9 * 0.001 + 0.1;
+                        turnRamp = (arg->gTime - _slider_time) * 0.9 * 0.001 + 0.1;
                         _status_flg &= ~BACT_STFLAG_XLEFT;
                     }
 
-                    if ( v28 > 1.0 )
-                        v28 = 1.0;
+                    if ( turnRamp > 1.0 )
+                        turnRamp = 1.0;
 
-                    v23 *= v28;
+                    turnAngle *= turnRamp;
 
-                    TurnRoboAboutWorldUpAxis(v23);
+                    TurnRoboAboutWorldUpAxis(turnAngle);
                 }
             }
         }
 
-        arg74.period = v49;
-        arg74.flag = 0;
-        arg74.thrustDir = _target_vec.X0Z() / v39;
+        moveMsg.period = dtime;
+        moveMsg.flag = 0;
+        moveMsg.thrustDir = _target_vec.X0Z() / targetDist;
     }
     else
     {
@@ -1178,17 +1178,17 @@ void NC_STACK_yparobo::AI_doMove(update_msg *arg)
                     !(_roboState & ROBOSTATE_BUILDPOWER) &&
                     !(_roboState & ROBOSTATE_BUILDSAFE) )
             {
-                bool v14 = IsNotUserControlled();
+                bool notUserControlled = IsNotUserControlled();
 
-                if ( v14 && _roboWFlags & 1 )
+                if ( notUserControlled && _roboWFlags & 1 )
                 {
-                    float v18;
+                    float liftMass;
                     if ( _status_flg & BACT_STFLAG_UPWRD )
-                        v18 = _mass * 1.5;
+                        liftMass = _mass * 1.5;
                     else
-                        v18 = _mass * 0.82;
+                        liftMass = _mass * 0.82;
 
-                    _roboFlotage = v18 * 9.80665;
+                    _roboFlotage = liftMass * 9.80665;
                 }
                 else
                 {
@@ -1196,9 +1196,9 @@ void NC_STACK_yparobo::AI_doMove(update_msg *arg)
                         _fly_dir_length *= 0.35;
                 }
 
-                if ( v14 && _roboWFlags & 2 )
+                if ( notUserControlled && _roboWFlags & 2 )
                 {
-                    TurnRoboAboutOwnUpAxis(_maxrot * 0.3 * v49);
+                    TurnRoboAboutOwnUpAxis(_maxrot * 0.3 * dtime);
                 }
             }
         }
@@ -1212,30 +1212,30 @@ void NC_STACK_yparobo::AI_doMove(update_msg *arg)
                 _fly_dir.z = 0;
                 _fly_dir.x = 0;
 
-                setTarget_msg v34;
-                v34.tgt_type = BACT_TGT_TYPE_NONE;
-                v34.priority = 0;
-                SetTarget(&v34);
+                setTarget_msg targetMsg;
+                targetMsg.tgt_type = BACT_TGT_TYPE_NONE;
+                targetMsg.priority = 0;
+                SetTarget(&targetMsg);
             }
         }
-        arg74.thrustDir = vec3d(0.0, 0.0, 0.0);
-        arg74.flag = 0;
-        arg74.period = v49;
+        moveMsg.thrustDir = vec3d(0.0, 0.0, 0.0);
+        moveMsg.flag = 0;
+        moveMsg.period = dtime;
     }
 
-    Move(&arg74);
+    Move(&moveMsg);
 }
 
 void NC_STACK_yparobo::ClearSquadSecondaryTargets(NC_STACK_ypabact *bact)
 {
-    setTarget_msg arg67;
-    arg67.tgt_type = BACT_TGT_TYPE_NONE;
-    arg67.priority = 1;
+    setTarget_msg targetMsg;
+    targetMsg.tgt_type = BACT_TGT_TYPE_NONE;
+    targetMsg.priority = 1;
 
-    bact->SetTarget(&arg67);
+    bact->SetTarget(&targetMsg);
 
     for( NC_STACK_ypabact* &node : bact->_kidList )
-        node->SetTarget(&arg67);
+        node->SetTarget(&targetMsg);
 }
 
 void NC_STACK_yparobo::CopyWaypointsToSquad(NC_STACK_ypabact *bact)
@@ -1277,13 +1277,13 @@ int NC_STACK_yparobo::IsCommanderClosestToTarget(NC_STACK_ypabact *bact)
 
     vec3d tmp2 = bact->_position - tmp;
 
-    float v19 = tmp2.length();
+    float commanderDist = tmp2.length();
 
     for( NC_STACK_ypabact* &node : bact->_kidList )
     {
         vec3d tmp3 = node->_position - tmp;
 
-        if ( tmp3.length() < v19 )
+        if ( tmp3.length() < commanderDist )
             return 0;
     }
     return 1;
@@ -1291,15 +1291,15 @@ int NC_STACK_yparobo::IsCommanderClosestToTarget(NC_STACK_ypabact *bact)
 
 void NC_STACK_yparobo::doUserCommands(update_msg *arg)
 {
-    setTarget_msg arg67;
-    TUnitSpawn arg146;
-    setState_msg arg78;
-    TReorgOrder arg109;
-    TBuildingPlacement arg148;
-    TRoboMessage arg134;
-    TPathRequest arg124;
+    setTarget_msg targetMsg;
+    TUnitSpawn spawn;
+    setState_msg stateMsg;
+    TReorgOrder reorg;
+    TBuildingPlacement placement;
+    TRoboMessage roboMsg;
+    TPathRequest pathReq;
 
-    int v6;
+    int sent;
 
     switch ( arg->user_action )
     {
@@ -1308,25 +1308,25 @@ void NC_STACK_yparobo::doUserCommands(update_msg *arg)
 
         if ( arg->target_Sect )
         {
-            arg67.tgt_pos.x = arg->target_point.x;
-            arg67.tgt_pos.z = arg->target_point.z;
-            arg67.tgt_type = BACT_TGT_TYPE_CELL;
+            targetMsg.tgt_pos.x = arg->target_point.x;
+            targetMsg.tgt_pos.z = arg->target_point.z;
+            targetMsg.tgt_type = BACT_TGT_TYPE_CELL;
         }
         else
         {
-            arg67.tgt_type = BACT_TGT_TYPE_UNIT;
-            arg67.tgt.pbact = arg->target_Bact;
+            targetMsg.tgt_type = BACT_TGT_TYPE_UNIT;
+            targetMsg.tgt.pbact = arg->target_Bact;
         }
 
-        arg67.priority = 0;
-        arg->selectBact->SetTarget(&arg67);
+        targetMsg.priority = 0;
+        arg->selectBact->SetTarget(&targetMsg);
 
         if ( !IsCommanderClosestToTarget(arg->selectBact) )
         {
-            arg109.unit = NULL;
-            arg109.mode = 6;
+            reorg.unit = NULL;
+            reorg.mode = 6;
 
-            arg->selectBact->ReorganizeGroup(&arg109);
+            arg->selectBact->ReorganizeGroup(&reorg);
         }
 
         if ( arg->selectBact->_host_station != arg->selectBact->_parent &&
@@ -1334,11 +1334,11 @@ void NC_STACK_yparobo::doUserCommands(update_msg *arg)
             arg->selectBact = arg->selectBact->_parent;
 
         if ( arg->target_Sect )
-            v6 = SendSquadToPosition(arg->selectBact, arg->target_point.x, arg->target_point.z);
+            sent = SendSquadToPosition(arg->selectBact, arg->target_point.x, arg->target_point.z);
         else
-            v6 = SendSquadToUnit(arg->selectBact, arg->target_Bact);
+            sent = SendSquadToUnit(arg->selectBact, arg->target_Bact);
 
-        if ( !v6 )
+        if ( !sent )
         {
             if ( _world->_GameShell )
                 SFXEngine::SFXe.startSound(&_world->_GameShell->samples1_info, World::SOUND_ID_ERROR);
@@ -1346,43 +1346,43 @@ void NC_STACK_yparobo::doUserCommands(update_msg *arg)
         else
         {
 
-            NC_STACK_ypabact *v8 = arg->selectBact;
+            NC_STACK_ypabact *commander = arg->selectBact;
 
-            if ( v8->_parent != v8->_host_station &&
-                 v8->_parent )
-                v8 = v8->_parent;
+            if ( commander->_parent != commander->_host_station &&
+                 commander->_parent )
+                commander = commander->_parent;
 
-            arg134.unit = v8;
-            arg134.param2 = 0;
-            arg134.param1 = 0;
-            arg134.param3 = 0;
-            arg134.priority = 38;
+            roboMsg.unit = commander;
+            roboMsg.param2 = 0;
+            roboMsg.param1 = 0;
+            roboMsg.param3 = 0;
+            roboMsg.priority = 38;
 
-            if ( v8->_primTtype == BACT_TGT_TYPE_CELL )
+            if ( commander->_primTtype == BACT_TGT_TYPE_CELL )
             {
-                if ( v8->_primT.pcell->owner == _owner )
+                if ( commander->_primT.pcell->owner == _owner )
                 {
-                    arg134.msgID = 15;
+                    roboMsg.msgID = 15;
                 }
                 else
                 {
-                    arg134.msgID = 16;
+                    roboMsg.msgID = 16;
                 }
                 
-                placeMessage(&arg134);
+                placeMessage(&roboMsg);
             }
-            else if ( v8->_primTtype == BACT_TGT_TYPE_UNIT )
+            else if ( commander->_primTtype == BACT_TGT_TYPE_UNIT )
             {
-                if ( v8->_primT.pbact->_owner == _owner )
+                if ( commander->_primT.pbact->_owner == _owner )
                 {
-                    arg134.msgID = 15;
+                    roboMsg.msgID = 15;
                 }
                 else
                 {
-                    arg134.msgID = 16;
+                    roboMsg.msgID = 16;
                 }
 
-                placeMessage(&arg134);
+                placeMessage(&roboMsg);
             }
         }
         ClearSquadSecondaryTargets(arg->selectBact);
@@ -1392,26 +1392,26 @@ void NC_STACK_yparobo::doUserCommands(update_msg *arg)
     case World::DOACTION_ADD_UNIT1:
         if ( arg->energy <= _roboEnergyLife )
         {
-            arg146.pos = arg->target_point;
-            arg146.vehicle_id = arg->protoID;
+            spawn.pos = arg->target_point;
+            spawn.vehicle_id = arg->protoID;
 
-            NC_STACK_ypabact *newbact = _world->CreateVehicle(&arg146);
+            NC_STACK_ypabact *newbact = _world->CreateVehicle(&spawn);
 
             if ( newbact )
             {
-                arg67.tgt_type = BACT_TGT_TYPE_CELL;
-                arg67.priority = 0;
-                arg67.tgt_pos.x = (arg146.pos.x - _position.x) * 4.0 + _position.x;
-                arg67.tgt_pos.y = arg146.pos.y;
-                arg67.tgt_pos.z = (arg146.pos.z - _position.z) * 4.0 + _position.z;
+                targetMsg.tgt_type = BACT_TGT_TYPE_CELL;
+                targetMsg.priority = 0;
+                targetMsg.tgt_pos.x = (spawn.pos.x - _position.x) * 4.0 + _position.x;
+                targetMsg.tgt_pos.y = spawn.pos.y;
+                targetMsg.tgt_pos.z = (spawn.pos.z - _position.z) * 4.0 + _position.z;
 
-                newbact->SetTarget(&arg67);
+                newbact->SetTarget(&targetMsg);
 
-                arg78.newStatus = BACT_STATUS_CREATE;
-                arg78.setFlags = 0;
-                arg78.unsetFlags = 0;
+                stateMsg.newStatus = BACT_STATUS_CREATE;
+                stateMsg.setFlags = 0;
+                stateMsg.unsetFlags = 0;
 
-                newbact->SetState(&arg78);
+                newbact->SetState(&stateMsg);
 
                 newbact->_scale_time = newbact->_energy_max * 0.2;
                 newbact->_commandID = nextCommandID;
@@ -1443,8 +1443,8 @@ void NC_STACK_yparobo::doUserCommands(update_msg *arg)
                 else
                     newbact->setBACT_aggression(60);
 
-                int v67 = getBACT_bactCollisions();
-                newbact->setBACT_bactCollisions(v67);
+                int bactCollisions = getBACT_bactCollisions();
+                newbact->setBACT_bactCollisions(bactCollisions);
 
                 newbact->_host_station = this;
                 _roboEnergyLife -= arg->energy;
@@ -1459,16 +1459,16 @@ void NC_STACK_yparobo::doUserCommands(update_msg *arg)
     case World::DOACTION_ADD_UNIT2:
         if ( arg->energy <= _roboEnergyLife )
         {
-            arg146.pos = arg->target_point;
-            arg146.vehicle_id = arg->protoID;
-            NC_STACK_ypabact *newbact2 = _world->CreateVehicle(&arg146);
+            spawn.pos = arg->target_point;
+            spawn.vehicle_id = arg->protoID;
+            NC_STACK_ypabact *newbact2 = _world->CreateVehicle(&spawn);
 
             if ( newbact2 )
             {
-                arg78.newStatus = BACT_STATUS_CREATE;
-                arg78.setFlags = 0;
-                arg78.unsetFlags = 0;
-                newbact2->SetState(&arg78);
+                stateMsg.newStatus = BACT_STATUS_CREATE;
+                stateMsg.setFlags = 0;
+                stateMsg.unsetFlags = 0;
+                newbact2->SetState(&stateMsg);
 
                 newbact2->_scale_time = newbact2->_energy_max * 0.2;
                 newbact2->_owner = _owner;
@@ -1495,8 +1495,8 @@ void NC_STACK_yparobo::doUserCommands(update_msg *arg)
                     _world->NetBroadcastMessage(&nvMsg, sizeof(nvMsg), true);
                 }
 
-                int v67 = getBACT_bactCollisions();
-                newbact2->setBACT_bactCollisions(v67);
+                int bactCollisions = getBACT_bactCollisions();
+                newbact2->setBACT_bactCollisions(bactCollisions);
 
                 newbact2->_host_station = this;
                 _roboEnergyLife -= arg->energy;
@@ -1510,12 +1510,12 @@ void NC_STACK_yparobo::doUserCommands(update_msg *arg)
     case World::DOACTION_6:
         if ( arg->energy <= _roboEnergyLife )
         {
-            arg148.owner = _owner;
-            arg148.blg_ID = arg->protoID;
-            arg148.instant = 0;
-            arg148.CellId = arg->target_Sect->CellId;
-            arg148.flags = 0;
-            if ( _world->CreateBuilding(&arg148) )
+            placement.owner = _owner;
+            placement.blg_ID = arg->protoID;
+            placement.instant = 0;
+            placement.CellId = arg->target_Sect->CellId;
+            placement.flags = 0;
+            if ( _world->CreateBuilding(&placement) )
             {
                 _roboEnergyLife -= arg->energy;
 
@@ -1561,7 +1561,7 @@ void NC_STACK_yparobo::doUserCommands(update_msg *arg)
         arg->selectBact->_status_flg |= BACT_STFLAG_WAYPOINT;
         arg->selectBact->_m_cmdID = 0;
 
-        int v11 = 0;
+        int hasGroundUnits = 0;
 
         if ( arg->selectBact->_bact_type != BACT_TYPES_TANK && arg->selectBact->_bact_type != BACT_TYPES_CAR )
         {
@@ -1569,31 +1569,31 @@ void NC_STACK_yparobo::doUserCommands(update_msg *arg)
             {
                 if ( node->_bact_type == BACT_TYPES_TANK || node->_bact_type == BACT_TYPES_CAR )
                 {
-                    v11 = 1;
+                    hasGroundUnits = 1;
                     break;
                 }
             }
         }
         else
-            v11 = 1;
+            hasGroundUnits = 1;
 
-        if ( v11 )
+        if ( hasGroundUnits )
         {
-            arg124.from = arg->selectBact->_position.XZ();
-            arg124.to = arg->target_point.XZ();
-            arg124.steps_cnt = 32;
-            arg124.tgt_type = 1;
+            pathReq.from = arg->selectBact->_position.XZ();
+            pathReq.to = arg->target_point.XZ();
+            pathReq.steps_cnt = 32;
+            pathReq.tgt_type = 1;
 
-            int v14 = PathFinder(&arg124);
+            int pathFound = PathFinder(&pathReq);
 
-            if ( v14 && arg124.steps_cnt > 0)
+            if ( pathFound && pathReq.steps_cnt > 0)
             {
-                for (int i = 0; i < arg124.steps_cnt; i++)
+                for (int i = 0; i < pathReq.steps_cnt; i++)
                 {
-                    arg->selectBact->_waypoints[i].x = arg124.waypoints[i].x;
-                    arg->selectBact->_waypoints[i].z = arg124.waypoints[i].z;
+                    arg->selectBact->_waypoints[i].x = pathReq.waypoints[i].x;
+                    arg->selectBact->_waypoints[i].z = pathReq.waypoints[i].z;
                 }
-                arg->selectBact->_waypoints_count = arg124.steps_cnt;
+                arg->selectBact->_waypoints_count = pathReq.steps_cnt;
             }
             else
             {
@@ -1614,11 +1614,11 @@ void NC_STACK_yparobo::doUserCommands(update_msg *arg)
 
         arg->selectBact->_current_waypoint = 0;
 
-        arg67.tgt_pos.x = arg->selectBact->_waypoints[0].x;
-        arg67.tgt_pos.z = arg->selectBact->_waypoints[0].z;
-        arg67.priority = 0;
-        arg67.tgt_type = BACT_TGT_TYPE_CELL;
-        arg->selectBact->SetTarget(&arg67);
+        targetMsg.tgt_pos.x = arg->selectBact->_waypoints[0].x;
+        targetMsg.tgt_pos.z = arg->selectBact->_waypoints[0].z;
+        targetMsg.priority = 0;
+        targetMsg.tgt_type = BACT_TGT_TYPE_CELL;
+        arg->selectBact->SetTarget(&targetMsg);
 
         CopyWaypointsToSquad(arg->selectBact);
         ClearSquadSecondaryTargets(arg->selectBact);
@@ -1629,8 +1629,8 @@ void NC_STACK_yparobo::doUserCommands(update_msg *arg)
     case World::DOACTION_WP_ADD:
         if ( arg->selectBact->_waypoints_count < 32 && (arg->selectBact->_status_flg & BACT_STFLAG_WAYPOINT) )
         {
-            int v72 = arg->selectBact->_waypoints_count;
-            int v20 = 0;
+            int wpCount = arg->selectBact->_waypoints_count;
+            int hasGroundUnits = 0;
 
             if ( arg->selectBact->_bact_type != BACT_TYPES_TANK && arg->selectBact->_bact_type != BACT_TYPES_CAR )
             {
@@ -1638,35 +1638,35 @@ void NC_STACK_yparobo::doUserCommands(update_msg *arg)
                 {
                     if ( nod->_bact_type == BACT_TYPES_TANK || nod->_bact_type == BACT_TYPES_CAR )
                     {
-                        v20 = 1;
+                        hasGroundUnits = 1;
                         break;
                     }
                 }
             }
             else
-                v20 = 1;
+                hasGroundUnits = 1;
 
-            if ( v20 )
+            if ( hasGroundUnits )
             {
-                arg124.from = arg->selectBact->_waypoints[v72 - 1].XZ();
-                arg124.to = arg->target_point.XZ();
-                arg124.steps_cnt = 32 - v72;
-                arg124.tgt_type = 1;
+                pathReq.from = arg->selectBact->_waypoints[wpCount - 1].XZ();
+                pathReq.to = arg->target_point.XZ();
+                pathReq.steps_cnt = 32 - wpCount;
+                pathReq.tgt_type = 1;
 
-                if ( PathFinder(&arg124) && arg124.steps_cnt > 0 )
+                if ( PathFinder(&pathReq) && pathReq.steps_cnt > 0 )
                 {
-                    for (int i = 0; i < arg124.steps_cnt; i++)
+                    for (int i = 0; i < pathReq.steps_cnt; i++)
                     {
-                        arg->selectBact->_waypoints[i + v72].x = arg124.waypoints[i].x;
-                        arg->selectBact->_waypoints[i + v72].z = arg124.waypoints[i].z;
+                        arg->selectBact->_waypoints[i + wpCount].x = pathReq.waypoints[i].x;
+                        arg->selectBact->_waypoints[i + wpCount].z = pathReq.waypoints[i].z;
                     }
-                    arg->selectBact->_waypoints_count += arg124.steps_cnt;
+                    arg->selectBact->_waypoints_count += pathReq.steps_cnt;
 
                 }
                 else
                 {
-                    arg->selectBact->_waypoints[v72].x = arg->target_point.x;
-                    arg->selectBact->_waypoints[v72].z = arg->target_point.z;
+                    arg->selectBact->_waypoints[wpCount].x = arg->target_point.x;
+                    arg->selectBact->_waypoints[wpCount].z = arg->target_point.z;
                     arg->selectBact->_waypoints_count++;
 
                     if ( _world->_GameShell )
@@ -1675,19 +1675,19 @@ void NC_STACK_yparobo::doUserCommands(update_msg *arg)
             }
             else
             {
-                arg->selectBact->_waypoints[v72].x = arg->target_point.x;
-                arg->selectBact->_waypoints[v72].z = arg->target_point.z;
+                arg->selectBact->_waypoints[wpCount].x = arg->target_point.x;
+                arg->selectBact->_waypoints[wpCount].z = arg->target_point.z;
                 arg->selectBact->_waypoints_count++;
             }
             if ( !(arg->selectBact->_status_flg & BACT_STFLAG_WAYPOINT) )
             {
                 arg->selectBact->_status_flg |= BACT_STFLAG_WAYPOINT;
 
-                arg67.tgt_pos.x = arg->selectBact->_waypoints[v72].x;
-                arg67.tgt_pos.z = arg->selectBact->_waypoints[v72].z;
-                arg67.priority = 0;
-                arg67.tgt_type = BACT_TGT_TYPE_CELL;
-                arg->selectBact->SetTarget(&arg67);
+                targetMsg.tgt_pos.x = arg->selectBact->_waypoints[wpCount].x;
+                targetMsg.tgt_pos.z = arg->selectBact->_waypoints[wpCount].z;
+                targetMsg.priority = 0;
+                targetMsg.tgt_type = BACT_TGT_TYPE_CELL;
+                arg->selectBact->SetTarget(&targetMsg);
             }
             CopyWaypointsToSquad(arg->selectBact);
         }
@@ -1788,15 +1788,15 @@ void NC_STACK_yparobo::buildRadar(update_msg *arg)
 {
     Common::Point pt( _roboBuildingCellID % _wrldSectors.x, _roboBuildingCellID / _wrldSectors.x );
 
-    float v35 = arg->frameTime * 0.001;
+    float dtime = arg->frameTime * 0.001;
 
     if ( _world->SectorAt(_roboBuildingCellID).PurposeType != cellArea::PT_NONE )
     {
-        setTarget_msg arg67;
-        arg67.tgt_type = BACT_TGT_TYPE_NONE;
-        arg67.priority = 0;
+        setTarget_msg targetMsg;
+        targetMsg.tgt_type = BACT_TGT_TYPE_NONE;
+        targetMsg.priority = 0;
 
-        SetTarget(&arg67);
+        SetTarget(&targetMsg);
         _roboBuildingDuty = 0;
     }
     else
@@ -1805,11 +1805,11 @@ void NC_STACK_yparobo::buildRadar(update_msg *arg)
 
         if ( build_id == -1 )
         {
-            setTarget_msg arg67;
-            arg67.tgt_type = BACT_TGT_TYPE_NONE;
-            arg67.priority = 0;
+            setTarget_msg targetMsg;
+            targetMsg.tgt_type = BACT_TGT_TYPE_NONE;
+            targetMsg.priority = 0;
 
-            SetTarget(&arg67);
+            SetTarget(&targetMsg);
             _roboBuildingDuty = 0;
         }
         else
@@ -1817,52 +1817,52 @@ void NC_STACK_yparobo::buildRadar(update_msg *arg)
             Common::Point dist = _cellId.AbsDistance( pt );
             if ( dist.x > 1 || dist.y > 1 ) // More than one sector distance
             {
-                setTarget_msg arg67;
-                GetBuildSiteApproachTarget(_roboBuildingCellID, &arg67);
+                setTarget_msg targetMsg;
+                GetBuildSiteApproachTarget(_roboBuildingCellID, &targetMsg);
 
-                arg67.tgt_type = BACT_TGT_TYPE_CELL_IND;
+                targetMsg.tgt_type = BACT_TGT_TYPE_CELL_IND;
 
-                SetTarget(&arg67);
+                SetTarget(&targetMsg);
             }
             else if ( dist ) // Not null distance (1 sector distance)
             {
-                setTarget_msg arg67;
-                arg67.tgt_type = BACT_TGT_TYPE_NONE;
-                arg67.priority = 0;
-                SetTarget(&arg67);
+                setTarget_msg targetMsg;
+                targetMsg.tgt_type = BACT_TGT_TYPE_NONE;
+                targetMsg.priority = 0;
+                SetTarget(&targetMsg);
 
                 vec2d t = World::SectorIDToCenterPos2( pt ) - _position.XZ();
 
                 t.normalise();
 
-                float v41 = t.dot( _rotation.AxisZ().XZ() );
+                float cosAngle = t.dot( _rotation.AxisZ().XZ() );
 
-                if ( v41 <= 0.9 )
+                if ( cosAngle <= 0.9 )
                 {
-                    float a2 = clp_acos(v41);
+                    float turnAngle = clp_acos(cosAngle);
 
                     if ( t.cross( _rotation.AxisZ().XZ() ) > 0.0 )
-                        a2 = -a2;
+                        turnAngle = -turnAngle;
 
-                    if ( a2 < -_maxrot * v35 )
-                        a2 = -_maxrot * v35;
+                    if ( turnAngle < -_maxrot * dtime )
+                        turnAngle = -_maxrot * dtime;
 
-                    if ( a2 > _maxrot * v35 )
-                        a2 = _maxrot * v35;
+                    if ( turnAngle > _maxrot * dtime )
+                        turnAngle = _maxrot * dtime;
 
-                    TurnRoboAboutWorldUpAxis(a2);
+                    TurnRoboAboutWorldUpAxis(turnAngle);
                 }
                 else
                 {
-                    TBuildingPlacement arg148;
+                    TBuildingPlacement placement;
 
-                    arg148.owner = _owner;
-                    arg148.blg_ID = build_id;
-                    arg148.CellId = pt;
-                    arg148.instant = 0;
-                    arg148.flags = 0;
+                    placement.owner = _owner;
+                    placement.blg_ID = build_id;
+                    placement.CellId = pt;
+                    placement.instant = 0;
+                    placement.flags = 0;
 
-                    if ( _world->CreateBuilding(&arg148) )
+                    if ( _world->CreateBuilding(&placement) )
                     {
                         const World::TBuildingProto &proto = _world->GetBuildProtos().at(build_id);
 
@@ -1883,11 +1883,11 @@ void NC_STACK_yparobo::buildRadar(update_msg *arg)
                     }
                     else
                     {
-                        setTarget_msg arg67_1;
-                        arg67_1.tgt_type = BACT_TGT_TYPE_NONE;
-                        arg67_1.priority = 0;
+                        setTarget_msg abortTargetMsg;
+                        abortTargetMsg.tgt_type = BACT_TGT_TYPE_NONE;
+                        abortTargetMsg.priority = 0;
 
-                        SetTarget(&arg67_1);
+                        SetTarget(&abortTargetMsg);
 
                         _roboBuildingDuty = 0;
                     }
@@ -1895,13 +1895,13 @@ void NC_STACK_yparobo::buildRadar(update_msg *arg)
             }
             else
             {
-                setTarget_msg arg67;
+                setTarget_msg targetMsg;
 
-                GetBuildSiteApproachTarget(_roboBuildingCellID, &arg67);
+                GetBuildSiteApproachTarget(_roboBuildingCellID, &targetMsg);
 
-                arg67.tgt_type = BACT_TGT_TYPE_CELL_IND;
+                targetMsg.tgt_type = BACT_TGT_TYPE_CELL_IND;
 
-                SetTarget(&arg67);
+                SetTarget(&targetMsg);
             }
         }
     }
@@ -1947,33 +1947,33 @@ void NC_STACK_yparobo::buildPower(update_msg *arg)
 {
     Common::Point pt(_roboBuildingCellID % _wrldSectors.x, _roboBuildingCellID / _wrldSectors.x);
 
-    float v38 = arg->frameTime * 0.001;
+    float dtime = arg->frameTime * 0.001;
 
     if ( _world->SectorAt( _roboBuildingCellID ).PurposeType != cellArea::PT_NONE )
     {
-        setTarget_msg arg67;
-        arg67.tgt_type = BACT_TGT_TYPE_NONE;
-        arg67.priority = 0;
-        SetTarget(&arg67);
+        setTarget_msg targetMsg;
+        targetMsg.tgt_type = BACT_TGT_TYPE_NONE;
+        targetMsg.priority = 0;
+        SetTarget(&targetMsg);
 
         _roboBuildingDuty = 0;
     }
     else
     {
-        TReloadRatios arg176;
-        arg176.owner = _owner;
-        _world->GetReloadRatios(&arg176);
+        TReloadRatios reloadRatios;
+        reloadRatios.owner = _owner;
+        _world->GetReloadRatios(&reloadRatios);
 
-        if ( _world->SectorAt( _roboBuildingCellID ).energy_power != 255 && ( arg176.ratioClamped >= 0.9 || arg176.ratioClamped <= 0.001) )
+        if ( _world->SectorAt( _roboBuildingCellID ).energy_power != 255 && ( reloadRatios.ratioClamped >= 0.9 || reloadRatios.ratioClamped <= 0.001) )
         {
             int bldid = FindBestBldPowerStation();
 
             if ( bldid == -1 )
             {
-                setTarget_msg arg67;
-                arg67.tgt_type = BACT_TGT_TYPE_NONE;
-                arg67.priority = 0;
-                SetTarget(&arg67);
+                setTarget_msg targetMsg;
+                targetMsg.tgt_type = BACT_TGT_TYPE_NONE;
+                targetMsg.priority = 0;
+                SetTarget(&targetMsg);
                 _roboBuildingDuty = 0;
             }
             else
@@ -1981,49 +1981,49 @@ void NC_STACK_yparobo::buildPower(update_msg *arg)
                 Common::Point dist = _cellId.AbsDistance( pt );
                 if ( dist.x > 1 || dist.y > 1 ) // More than one sector distance
                 {
-                    setTarget_msg arg67;
-                    GetBuildSiteApproachTarget(_roboBuildingCellID, &arg67);
-                    arg67.tgt_type = BACT_TGT_TYPE_CELL_IND;
-                    SetTarget(&arg67);
+                    setTarget_msg targetMsg;
+                    GetBuildSiteApproachTarget(_roboBuildingCellID, &targetMsg);
+                    targetMsg.tgt_type = BACT_TGT_TYPE_CELL_IND;
+                    SetTarget(&targetMsg);
                 }
                 else if ( dist ) // Not null distance (1 sector distance)
                 {
-                    setTarget_msg arg67;
-                    arg67.tgt_type = BACT_TGT_TYPE_NONE;
-                    arg67.priority = 0;
-                    SetTarget(&arg67);
+                    setTarget_msg targetMsg;
+                    targetMsg.tgt_type = BACT_TGT_TYPE_NONE;
+                    targetMsg.priority = 0;
+                    SetTarget(&targetMsg);
 
                     vec2d t = World::SectorIDToCenterPos2( pt ) - _position.XZ();
 
                     t.normalise();
 
-                    float v44 = t.dot( _rotation.AxisZ().XZ() );
+                    float cosAngle = t.dot( _rotation.AxisZ().XZ() );
 
-                    if ( v44 <= 0.9 )
+                    if ( cosAngle <= 0.9 )
                     {
-                        float a2 = clp_acos(v44);
+                        float turnAngle = clp_acos(cosAngle);
 
                         if ( t.cross( _rotation.AxisZ().XZ() ) > 0.0 )
-                            a2 = -a2;
+                            turnAngle = -turnAngle;
 
-                        if ( a2 < -_maxrot * v38 )
-                            a2 = -_maxrot * v38;
+                        if ( turnAngle < -_maxrot * dtime )
+                            turnAngle = -_maxrot * dtime;
 
-                        if ( a2 > _maxrot * v38 )
-                            a2 = _maxrot * v38;
+                        if ( turnAngle > _maxrot * dtime )
+                            turnAngle = _maxrot * dtime;
 
-                        TurnRoboAboutWorldUpAxis(a2);
+                        TurnRoboAboutWorldUpAxis(turnAngle);
                     }
                     else
                     {
-                        TBuildingPlacement arg148;
-                        arg148.owner = _owner;
-                        arg148.blg_ID = bldid;
-                        arg148.CellId = pt;
-                        arg148.instant = 0;
-                        arg148.flags = 0;
+                        TBuildingPlacement placement;
+                        placement.owner = _owner;
+                        placement.blg_ID = bldid;
+                        placement.CellId = pt;
+                        placement.instant = 0;
+                        placement.flags = 0;
 
-                        if ( _world->CreateBuilding(&arg148) )
+                        if ( _world->CreateBuilding(&placement) )
                         {
                             const World::TBuildingProto &proto = _world->GetBuildProtos().at(bldid);
 
@@ -2044,29 +2044,29 @@ void NC_STACK_yparobo::buildPower(update_msg *arg)
                         }
                         else
                         {
-                            setTarget_msg arg67_1;
-                            arg67_1.tgt_type = BACT_TGT_TYPE_NONE;
-                            arg67_1.priority = 0;
-                            SetTarget(&arg67_1);
+                            setTarget_msg abortTargetMsg;
+                            abortTargetMsg.tgt_type = BACT_TGT_TYPE_NONE;
+                            abortTargetMsg.priority = 0;
+                            SetTarget(&abortTargetMsg);
                             _roboBuildingDuty = 0;
                         }
                     }
                 }
                 else
                 {
-                    setTarget_msg arg67;
-                    GetBuildSiteApproachTarget(_roboBuildingCellID, &arg67);
-                    arg67.tgt_type = BACT_TGT_TYPE_CELL_IND;
-                    SetTarget(&arg67);
+                    setTarget_msg targetMsg;
+                    GetBuildSiteApproachTarget(_roboBuildingCellID, &targetMsg);
+                    targetMsg.tgt_type = BACT_TGT_TYPE_CELL_IND;
+                    SetTarget(&targetMsg);
                 }
             }
         }
         else
         {
-            setTarget_msg arg67;
-            arg67.tgt_type = BACT_TGT_TYPE_NONE;
-            arg67.priority = 0;
-            SetTarget(&arg67);
+            setTarget_msg targetMsg;
+            targetMsg.tgt_type = BACT_TGT_TYPE_NONE;
+            targetMsg.priority = 0;
+            SetTarget(&targetMsg);
             _roboBuildingDuty = 0;
         }
     }
@@ -2114,15 +2114,15 @@ void NC_STACK_yparobo::buildSafe(update_msg *arg)
     // Copy of sub4_sub0 with minor changes
     Common::Point pt(_roboBuildingCellID % _wrldSectors.x, _roboBuildingCellID / _wrldSectors.x);
 
-    float v35 = arg->frameTime * 0.001;
+    float dtime = arg->frameTime * 0.001;
 
     if ( _world->SectorAt( _roboBuildingCellID ).PurposeType != cellArea::PT_NONE )
     {
-        setTarget_msg arg67;
-        arg67.tgt_type = BACT_TGT_TYPE_NONE;
-        arg67.priority = 0;
+        setTarget_msg targetMsg;
+        targetMsg.tgt_type = BACT_TGT_TYPE_NONE;
+        targetMsg.priority = 0;
 
-        SetTarget(&arg67);
+        SetTarget(&targetMsg);
         _roboBuildingDuty = 0;
     }
     else
@@ -2131,11 +2131,11 @@ void NC_STACK_yparobo::buildSafe(update_msg *arg)
 
         if ( build_id == -1 )
         {
-            setTarget_msg arg67;
-            arg67.tgt_type = BACT_TGT_TYPE_NONE;
-            arg67.priority = 0;
+            setTarget_msg targetMsg;
+            targetMsg.tgt_type = BACT_TGT_TYPE_NONE;
+            targetMsg.priority = 0;
 
-            SetTarget(&arg67);
+            SetTarget(&targetMsg);
             _roboBuildingDuty = 0;
         }
         else
@@ -2143,52 +2143,52 @@ void NC_STACK_yparobo::buildSafe(update_msg *arg)
             Common::Point dist = _cellId.AbsDistance( pt );
             if ( dist.x > 1 || dist.y > 1 ) // More than one sector distance
             {
-                setTarget_msg arg67;
-                GetBuildSiteApproachTarget(_roboBuildingCellID, &arg67);
+                setTarget_msg targetMsg;
+                GetBuildSiteApproachTarget(_roboBuildingCellID, &targetMsg);
 
-                arg67.tgt_type = BACT_TGT_TYPE_CELL_IND;
+                targetMsg.tgt_type = BACT_TGT_TYPE_CELL_IND;
 
-                SetTarget(&arg67);
+                SetTarget(&targetMsg);
             }
             else if ( dist ) // Not null distance (1 sector distance)
             {
-                setTarget_msg arg67;
-                arg67.tgt_type = BACT_TGT_TYPE_NONE;
-                arg67.priority = 0;
-                SetTarget(&arg67);
+                setTarget_msg targetMsg;
+                targetMsg.tgt_type = BACT_TGT_TYPE_NONE;
+                targetMsg.priority = 0;
+                SetTarget(&targetMsg);
 
                 vec2d t = World::SectorIDToCenterPos2( pt ) - _position.XZ();
 
                 t.normalise();
 
-                float v41 = t.dot( _rotation.AxisZ().XZ() );
+                float cosAngle = t.dot( _rotation.AxisZ().XZ() );
 
-                if ( v41 <= 0.9 )
+                if ( cosAngle <= 0.9 )
                 {
-                    float a2 = clp_acos(v41);
+                    float turnAngle = clp_acos(cosAngle);
 
                     if ( t.cross( _rotation.AxisZ().XZ() ) > 0.0 )
-                        a2 = -a2;
+                        turnAngle = -turnAngle;
 
-                    if ( a2 < -_maxrot * v35 )
-                        a2 = -_maxrot * v35;
+                    if ( turnAngle < -_maxrot * dtime )
+                        turnAngle = -_maxrot * dtime;
 
-                    if ( a2 > _maxrot * v35 )
-                        a2 = _maxrot * v35;
+                    if ( turnAngle > _maxrot * dtime )
+                        turnAngle = _maxrot * dtime;
 
-                    TurnRoboAboutWorldUpAxis(a2);
+                    TurnRoboAboutWorldUpAxis(turnAngle);
                 }
                 else
                 {
-                    TBuildingPlacement arg148;
+                    TBuildingPlacement placement;
 
-                    arg148.owner = _owner;
-                    arg148.blg_ID = build_id;
-                    arg148.CellId = pt;
-                    arg148.instant = 0;
-                    arg148.flags = 0;
+                    placement.owner = _owner;
+                    placement.blg_ID = build_id;
+                    placement.CellId = pt;
+                    placement.instant = 0;
+                    placement.flags = 0;
 
-                    if ( _world->CreateBuilding(&arg148) )
+                    if ( _world->CreateBuilding(&placement) )
                     {
                         const World::TBuildingProto &proto = _world->GetBuildProtos().at(build_id);
 
@@ -2209,11 +2209,11 @@ void NC_STACK_yparobo::buildSafe(update_msg *arg)
                     }
                     else
                     {
-                        setTarget_msg arg67_1;
-                        arg67_1.tgt_type = BACT_TGT_TYPE_NONE;
-                        arg67_1.priority = 0;
+                        setTarget_msg abortTargetMsg;
+                        abortTargetMsg.tgt_type = BACT_TGT_TYPE_NONE;
+                        abortTargetMsg.priority = 0;
 
-                        SetTarget(&arg67_1);
+                        SetTarget(&abortTargetMsg);
 
                         _roboBuildingDuty = 0;
                     }
@@ -2221,13 +2221,13 @@ void NC_STACK_yparobo::buildSafe(update_msg *arg)
             }
             else
             {
-                setTarget_msg arg67;
+                setTarget_msg targetMsg;
 
-                GetBuildSiteApproachTarget(_roboBuildingCellID, &arg67);
+                GetBuildSiteApproachTarget(_roboBuildingCellID, &targetMsg);
 
-                arg67.tgt_type = BACT_TGT_TYPE_CELL_IND;
+                targetMsg.tgt_type = BACT_TGT_TYPE_CELL_IND;
 
-                SetTarget(&arg67);
+                SetTarget(&targetMsg);
             }
 
         }
@@ -2240,16 +2240,16 @@ void NC_STACK_yparobo::changePlace()
     
     if ( _world->IsGamePlaySector(pt) )
     {
-        float v12 = _cellId.LengthTo<float>( pt );
+        float cellDist = _cellId.LengthTo<float>( pt );
 
-        if ( v12 >= 0.1 )
+        if ( cellDist >= 0.1 )
         {
-            setTarget_msg arg67;
-            arg67.tgt_type = BACT_TGT_TYPE_CELL_IND;
-            arg67.priority = 0;
-            arg67.tgt_pos = World::SectorIDToCenterPos3( pt );
+            setTarget_msg targetMsg;
+            targetMsg.tgt_type = BACT_TGT_TYPE_CELL_IND;
+            targetMsg.priority = 0;
+            targetMsg.tgt_pos = World::SectorIDToCenterPos3( pt );
 
-            SetTarget(&arg67);
+            SetTarget(&targetMsg);
         }
         else
         {
@@ -2271,10 +2271,10 @@ void NC_STACK_yparobo::changePlace()
             _roboState &= ~(ROBOSTATE_READYRADAR | ROBOSTATE_READYPOWER
                                  | ROBOSTATE_READYSAFE | ROBOSTATE_FOUNDPLACE);
 
-            setTarget_msg arg67;
-            arg67.tgt_type = BACT_TGT_TYPE_NONE;
-            arg67.priority = 0;
-            SetTarget(&arg67);
+            setTarget_msg targetMsg;
+            targetMsg.tgt_type = BACT_TGT_TYPE_NONE;
+            targetMsg.priority = 0;
+            SetTarget(&targetMsg);
 
             if ( _roboNewAI )
                 _roboPositionDelay = _roboTimeScale * (100 - _roboEpChangePlace) / 100;
@@ -2289,18 +2289,18 @@ void NC_STACK_yparobo::changePlace()
 
 NC_STACK_ypabact *NC_STACK_yparobo::AllocForce(robo_loct1 *arg)
 {
-    int v72 = 0;
-    float v73 = 0.0;
+    int useDock = 0;
+    float costFactor = 0.0;
 
-    int v85 = -1;
-    int v86 = -1;
-    int v87 = -1;
+    int bestProtoId = -1;
+    int secondProtoId = -1;
+    int thirdProtoId = -1;
 
-    int v75 = 10000000;
-    int v2 = 0;
-    int v77 = 0;
-    int v82 = -2;
-    float v76 = 153600.0;
+    int bestEnergyDiff = 10000000;
+    int idleCount = 0;
+    int idleNearby = 0;
+    int bestRating = -2;
+    float bestTargetDist = 153600.0;
     NC_STACK_ypabact *selectedCommander = NULL;
 
     for (NC_STACK_ypabact* &node : _kidList)
@@ -2308,52 +2308,52 @@ NC_STACK_ypabact *NC_STACK_yparobo::AllocForce(robo_loct1 *arg)
         //Unused flag
         if ( node->_status == BACT_STATUS_IDLE && /*!( node->status_flg & BACT_STFLAG_AKKU ) &&*/ !( node->_status_flg & BACT_STFLAG_UNUSE ) && !( node->_status_flg & BACT_STFLAG_ESCAPE ) &&  node->_bact_type != BACT_TYPES_GUN )
         {
-            v2++;
+            idleCount++;
 
-            int v8 = _world->TestVehicle(node->_vehicleID, arg->job);
+            int rating = _world->TestVehicle(node->_vehicleID, arg->job);
 
             Common::Point tmp = _cellId.AbsDistance( node->_cellId );
             if ( tmp.x < 2 && tmp.y < 2 )
-                v77 = 1;
+                idleNearby = 1;
 
-            if ( v8 > -1 && v8 >= v82 )
+            if ( rating > -1 && rating >= bestRating )
             {
 
-                TSummaryQuery arg81;
-                arg81.enrg_type = 1;
-                arg81.enrg_sum = 0;
-                node->GetSummary(&arg81);
+                TSummaryQuery squadEnergyQuery;
+                squadEnergyQuery.enrg_type = 1;
+                squadEnergyQuery.enrg_sum = 0;
+                node->GetSummary(&squadEnergyQuery);
 
-                int v11 = abs(arg81.enrg_sum - arg->energ);
-                int v15 = 0;
+                int energyDiff = abs(squadEnergyQuery.enrg_sum - arg->energ);
+                int isBetter = 0;
 
-                int v16;
+                int energyRatio;
 
-                if ( v11 )
-                    v16 = arg->energ / v11;
+                if ( energyDiff )
+                    energyRatio = arg->energ / energyDiff;
                 else
-                    v16 = 6;
+                    energyRatio = 6;
 
-                float v78 = (node->_position.XZ() - arg->tgt_pos.XZ()).length();
+                float targetDist = (node->_position.XZ() - arg->tgt_pos.XZ()).length();
 
-                if ( v16 <= 5 )
+                if ( energyRatio <= 5 )
                 {
-                    if ( v11 < v75 )
+                    if ( energyDiff < bestEnergyDiff )
                     {
-                        v15 = 1;
+                        isBetter = 1;
                     }
                 }
-                else if ( v78 < v76 )
+                else if ( targetDist < bestTargetDist )
                 {
-                    v15 = 1;
+                    isBetter = 1;
                 }
 
-                if ( v8 > v82 || (v8 == v82 && v15) )
+                if ( rating > bestRating || (rating == bestRating && isBetter) )
                 {
-                    v75 = v11;
-                    v76 = v78;
+                    bestEnergyDiff = energyDiff;
+                    bestTargetDist = targetDist;
                     selectedCommander = node;
-                    v82 = v8;
+                    bestRating = rating;
                 }
 
             }
@@ -2362,56 +2362,56 @@ NC_STACK_ypabact *NC_STACK_yparobo::AllocForce(robo_loct1 *arg)
 
     if ( !(_roboState & ROBOSTATE_DOCKINUSE) )
     {
-        TSummaryQuery arg81_2;
-        arg81_2.enrg_sum = 0;
-        arg81_2.enrg_type = 3;
+        TSummaryQuery unitCountQuery;
+        unitCountQuery.enrg_sum = 0;
+        unitCountQuery.enrg_type = 3;
 
-        GetSummary(&arg81_2);
+        GetSummary(&unitCountQuery);
 
-        v85 = -1;
-        v86 = -1;
-        v87 = -1;
+        bestProtoId = -1;
+        secondProtoId = -1;
+        thirdProtoId = -1;
 
-        v73 = arg81_2.enrg_sum * 0.05 + 1.0;
+        costFactor = unitCountQuery.enrg_sum * 0.05 + 1.0;
 
         int i = 0;
         for ( const World::TVhclProto &proto : _world->GetVhclProtos() )
         {
             if ( proto.model_id != BACT_TYPES_NOPE )
             {
-                float v20 = _energy_max * 0.2;
-                int v67 = _energy - v20;
+                float reserveEnergy = _energy_max * 0.2;
+                int availableEnergy = _energy - reserveEnergy;
 
                 if ( _roboState & ROBOSTATE_BUILDROBO )
-                    v67 += _roboVehicleSpare;
+                    availableEnergy += _roboVehicleSpare;
 
                 if ( (1 << _owner) & proto.disable_enable_bitmask )
                 {
                     if ( proto.model_id != BACT_TYPES_ROBO && proto.model_id != BACT_TYPES_GUN && proto.model_id != BACT_TYPES_MISSLE )
                     {
-                        if ( v67 > ((float)proto.energy * v73) )
+                        if ( availableEnergy > ((float)proto.energy * costFactor) )
                         {
-                            int v80 = _world->TestVehicle(i, arg->job);
+                            int rating = _world->TestVehicle(i, arg->job);
 
-                            int v27 = 0;
-                            if ( v2 < (_wrldSectors.x + _wrldSectors.y) / 5 )
-                                v27 = 1;
+                            int preferNew = 0;
+                            if ( idleCount < (_wrldSectors.x + _wrldSectors.y) / 5 )
+                                preferNew = 1;
 
                             if ( _energy < ((float)_energy_max * 0.9) )
-                                v27 = 0;
+                                preferNew = 0;
 
                             if ( _roboState & ROBOSTATE_DOCKINUSE )
-                                v27 = 0;
+                                preferNew = 0;
 
-                            if ( v77 )
-                                v27 = 0;
+                            if ( idleNearby )
+                                preferNew = 0;
 
-                            if ( v80 > -1 && (v80 > v82 || (v80 == v82 && v27)) )
+                            if ( rating > -1 && (rating > bestRating || (rating == bestRating && preferNew)) )
                             {
-                                v82 = v80;
-                                v87 = v86;
-                                v86 = v85;
-                                v85 = i;
+                                bestRating = rating;
+                                thirdProtoId = secondProtoId;
+                                secondProtoId = bestProtoId;
+                                bestProtoId = i;
                             }
                         }
                     }
@@ -2425,49 +2425,49 @@ NC_STACK_ypabact *NC_STACK_yparobo::AllocForce(robo_loct1 *arg)
     //there must be switch, but it's originally deleted
     //arg->field_34;
 
-    if ( v85 == -1 && !selectedCommander )
+    if ( bestProtoId == -1 && !selectedCommander )
         return NULL;
 
-    if ( v85 == -1 )
+    if ( bestProtoId == -1 )
     {
         if ( !(_roboState & ROBOSTATE_DOCKINUSE) )
         {
-            TSummaryQuery arg81_3;
-            arg81_3.enrg_type = 1;
-            arg81_3.enrg_sum = 0;
+            TSummaryQuery squadEnergyQuery;
+            squadEnergyQuery.enrg_type = 1;
+            squadEnergyQuery.enrg_sum = 0;
 
-            selectedCommander->GetSummary(&arg81_3);
+            selectedCommander->GetSummary(&squadEnergyQuery);
 
-            if ( arg81_3.enrg_sum < arg->energ )
+            if ( squadEnergyQuery.enrg_sum < arg->energ )
             {
                 _roboDockUser = selectedCommander->_commandID;
-                _roboDockEnerg = arg->energ - arg81_3.enrg_sum;
-                v72 = 1;
+                _roboDockEnerg = arg->energ - squadEnergyQuery.enrg_sum;
+                useDock = 1;
             }
         }
     }
     else
     {
-        int v32 = _clock % 10;
-        int v33;
+        int roll = _clock % 10;
+        int protoId;
 
-        if ( v32 <= 8 || v87 == -1 )
+        if ( roll <= 8 || thirdProtoId == -1 )
         {
-            if ( v32 <= 5 || v86 == -1 )
-                v33 = v85;
+            if ( roll <= 5 || secondProtoId == -1 )
+                protoId = bestProtoId;
             else
-                v33 = v86;
+                protoId = secondProtoId;
         }
         else
         {
-            v33 = v87;
+            protoId = thirdProtoId;
         }
 
-        TUnitSpawn arg146;
-        arg146.vehicle_id = v33;
-        arg146.pos = _position + _roboDockPos;
+        TUnitSpawn spawn;
+        spawn.vehicle_id = protoId;
+        spawn.pos = _position + _roboDockPos;
 
-        NC_STACK_ypabact *newUnit = _world->CreateVehicle(&arg146);
+        NC_STACK_ypabact *newUnit = _world->CreateVehicle(&spawn);
 
         if ( !newUnit )
             return NULL;
@@ -2478,8 +2478,8 @@ NC_STACK_ypabact *NC_STACK_yparobo::AllocForce(robo_loct1 *arg)
         newUnit->_owner = _owner;
         newUnit->_host_station = this;
 
-        int v69 = getBACT_bactCollisions();
-        newUnit->setBACT_bactCollisions(v69);
+        int bactCollisions = getBACT_bactCollisions();
+        newUnit->setBACT_bactCollisions(bactCollisions);
 
         AddSubject(newUnit);
         if ( _world->_isNetGame )
@@ -2514,47 +2514,47 @@ NC_STACK_ypabact *NC_STACK_yparobo::AllocForce(robo_loct1 *arg)
 
         newUnit->ChangeEscapeFlag(false);
 
-        setState_msg arg78;
-        arg78.newStatus = BACT_STATUS_CREATE;
-        arg78.setFlags = 0;
-        arg78.unsetFlags = 0;
+        setState_msg stateMsg;
+        stateMsg.newStatus = BACT_STATUS_CREATE;
+        stateMsg.setFlags = 0;
+        stateMsg.unsetFlags = 0;
 
-        newUnit->SetState(&arg78);
+        newUnit->SetState(&stateMsg);
 
 
-        setTarget_msg arg67;
-        arg67.tgt_type = BACT_TGT_TYPE_CELL;
-        arg67.priority = 0;
-        arg67.tgt_pos.x = _rotation.m20 * World::CVSectorLength * 0.5 + _position.x;
-        arg67.tgt_pos.z = _rotation.m22 * World::CVSectorLength * 0.5 + _position.z;
+        setTarget_msg targetMsg;
+        targetMsg.tgt_type = BACT_TGT_TYPE_CELL;
+        targetMsg.priority = 0;
+        targetMsg.tgt_pos.x = _rotation.m20 * World::CVSectorLength * 0.5 + _position.x;
+        targetMsg.tgt_pos.z = _rotation.m22 * World::CVSectorLength * 0.5 + _position.z;
 
-        newUnit->SetTarget(&arg67);
+        newUnit->SetTarget(&targetMsg);
 
-        int v70 = (float)newUnit->_energy_max * v73;
+        int unitCost = (float)newUnit->_energy_max * costFactor;
 
         if ( _roboState & ROBOSTATE_BUILDROBO )
         {
-            if ( v70 > _roboVehicleSpare )
+            if ( unitCost > _roboVehicleSpare )
             {
-                _energy -= v70 - _roboVehicleSpare;
+                _energy -= unitCost - _roboVehicleSpare;
                 _roboVehicleSpare = 0;
             }
             else
             {
-                _roboVehicleSpare -= v70;
+                _roboVehicleSpare -= unitCost;
             }
         }
         else
         {
-            _energy -= v70;
+            _energy -= unitCost;
         }
 
         selectedCommander = newUnit;
-        v72 = 1;
+        useDock = 1;
         _world->HistoryAktCreate(newUnit);
     }
 
-    if ( v72 )
+    if ( useDock )
     {
         _roboState |= (ROBOSTATE_SETDOCKTARGET | ROBOSTATE_DOCKINUSE);
         _roboDockTargetBact = arg->tgt_bact;
@@ -2569,13 +2569,13 @@ NC_STACK_ypabact *NC_STACK_yparobo::AllocForce(robo_loct1 *arg)
     }
     else
     {
-        setTarget_msg arg67_2;
-        arg67_2.tgt_pos = arg->tgt_pos;
-        arg67_2.priority = 0;
-        arg67_2.tgt.pbact = arg->tgt_bact;
-        arg67_2.tgt_type = arg->tgType;
+        setTarget_msg targetMsg;
+        targetMsg.tgt_pos = arg->tgt_pos;
+        targetMsg.priority = 0;
+        targetMsg.tgt.pbact = arg->tgt_bact;
+        targetMsg.tgt_type = arg->tgType;
 
-        selectedCommander->SetTarget(&arg67_2);
+        selectedCommander->SetTarget(&targetMsg);
 
         selectedCommander->setBACT_aggression(arg->aggr);
     }
@@ -2587,44 +2587,44 @@ NC_STACK_ypabact *NC_STACK_yparobo::AllocForce(robo_loct1 *arg)
 
 void NC_STACK_yparobo::buildConquer()
 {
-    TForcesRatio arg92;
-    arg92.flags = 2;
-    arg92.pos = World::SectorIDToCenterPos3( {_roboVehicleCellID % _wrldSectors.x, _roboVehicleCellID / _wrldSectors.x} );
+    TForcesRatio forcesRatio;
+    forcesRatio.flags = 2;
+    forcesRatio.pos = World::SectorIDToCenterPos3( {_roboVehicleCellID % _wrldSectors.x, _roboVehicleCellID / _wrldSectors.x} );
 
-    GetForcesRatio(&arg92);
+    GetForcesRatio(&forcesRatio);
 
-    int v20 = (arg92.enemyEnergy - arg92.ownEnergy) * 0.5;
+    int neededEnergy = (forcesRatio.enemyEnergy - forcesRatio.ownEnergy) * 0.5;
 
-    if ( v20 < 15000 )
-        v20 = 15000;
+    if ( neededEnergy < 15000 )
+        neededEnergy = 15000;
 
-    TSectorInfo arg130;
-    arg130.pos_x = arg92.pos.x;
-    arg130.pos_z = arg92.pos.z;
+    TSectorInfo sectInfo;
+    sectInfo.pos_x = forcesRatio.pos.x;
+    sectInfo.pos_z = forcesRatio.pos.z;
 
-    _world->GetSectorInfo(&arg130);
+    _world->GetSectorInfo(&sectInfo);
 
     int enrg = 0;
 
-    for ( NC_STACK_ypabact* &cell_unit : arg130.pcell->unitsList )
+    for ( NC_STACK_ypabact* &cell_unit : sectInfo.pcell->unitsList )
     {
         if ( _owner != cell_unit->_owner && cell_unit->_bact_type == BACT_TYPES_GUN && (cell_unit->_weapon != -1 || cell_unit->_mgun != -1) )
         {
             NC_STACK_ypagun *gun = dynamic_cast<NC_STACK_ypagun *>( cell_unit );
-            int a4 = gun->IsRoboGun();
+            int isRoboGun = gun->IsRoboGun();
 
-            if ( !a4 )
+            if ( !isRoboGun )
             {
                 for (NC_STACK_ypabact* &bctt : _world->_unitsList)
                 {
                     if ( bctt->_bact_type == BACT_TYPES_ROBO && bctt->_status != BACT_STATUS_DEAD && cell_unit->_owner == bctt->_owner )
                     {
-                        int v6 = bctt->_energy_max / 2;
+                        int hostEnergy = bctt->_energy_max / 2;
 
-                        if ( v6 < 120000 )
-                            v6 = 120000;
+                        if ( hostEnergy < 120000 )
+                            hostEnergy = 120000;
 
-                        enrg = v6;
+                        enrg = hostEnergy;
                         break;
                     }
                 }
@@ -2635,39 +2635,39 @@ void NC_STACK_yparobo::buildConquer()
             break;
     }
 
-    if ( enrg > v20 )
-        v20 = enrg;
+    if ( enrg > neededEnergy )
+        neededEnergy = enrg;
 
-    TRayIntersection arg136;
-    arg136.stPos = _position + _roboDockPos - vec3d::OY(100.0);
-    arg136.vect = vec3d::OY(20000.0);
-    arg136.flags = 0;
+    TRayIntersection ray;
+    ray.stPos = _position + _roboDockPos - vec3d::OY(100.0);
+    ray.vect = vec3d::OY(20000.0);
+    ray.flags = 0;
 
-    _world->IntersectRay(&arg136);
+    _world->IntersectRay(&ray);
 
-    if ( _pSector->height - arg136.isectPos.y >= 50.0 )
+    if ( _pSector->height - ray.isectPos.y >= 50.0 )
     {
-        setTarget_msg arg67;
-        arg67.tgt_pos.x = _position.x + 200.0;
-        arg67.tgt_pos.z = _position.z + 300.0;
-        arg67.priority = 0;
-        arg67.tgt_type = BACT_TGT_TYPE_CELL_IND;
+        setTarget_msg targetMsg;
+        targetMsg.tgt_pos.x = _position.x + 200.0;
+        targetMsg.tgt_pos.z = _position.z + 300.0;
+        targetMsg.priority = 0;
+        targetMsg.tgt_type = BACT_TGT_TYPE_CELL_IND;
 
-        SetTarget(&arg67);
+        SetTarget(&targetMsg);
     }
     else
     {
         robo_loct1 loct;
 
-        loct.distance = (arg92.pos.XZ() - _position.XZ()).length();
-        loct.tgt_pos = arg92.pos.X0Z();
+        loct.distance = (forcesRatio.pos.XZ() - _position.XZ()).length();
+        loct.tgt_pos = forcesRatio.pos.X0Z();
 
         loct.tgt_bact = NULL;
 
-        if ( v20 <= 20000 )
+        if ( neededEnergy <= 20000 )
             loct.energ = 20000;
         else
-            loct.energ = v20;
+            loct.energ = neededEnergy;
 
         loct.tgType = BACT_TGT_TYPE_CELL;
 
@@ -2693,78 +2693,78 @@ void NC_STACK_yparobo::buildConquer()
 
 void NC_STACK_yparobo::buildDefense()
 {
-    setTarget_msg arg132;
-    arg132.priority = _roboVehicleCommandID;
+    setTarget_msg targetMsg;
+    targetMsg.priority = _roboVehicleCommandID;
 
-    if ( GetTargetByCommandID(&arg132) )
+    if ( GetTargetByCommandID(&targetMsg) )
     {
-        TSummaryQuery arg81;
-        arg81.enrg_sum = 0;
-        arg81.enrg_type = 1;
+        TSummaryQuery squadEnergyQuery;
+        squadEnergyQuery.enrg_sum = 0;
+        squadEnergyQuery.enrg_type = 1;
 
-        arg132.tgt.pbact->GetSummary(&arg81);
+        targetMsg.tgt.pbact->GetSummary(&squadEnergyQuery);
 
-        int v18 = arg81.enrg_sum / 2;
+        int neededEnergy = squadEnergyQuery.enrg_sum / 2;
 
-        if ( v18 < 15000 )
-            v18 = 15000;
+        if ( neededEnergy < 15000 )
+            neededEnergy = 15000;
 
-        if ( arg132.tgt.pbact->_bact_type == BACT_TYPES_GUN && (arg132.tgt.pbact->_weapon != -1 || arg132.tgt.pbact->_mgun != -1) )
+        if ( targetMsg.tgt.pbact->_bact_type == BACT_TYPES_GUN && (targetMsg.tgt.pbact->_weapon != -1 || targetMsg.tgt.pbact->_mgun != -1) )
         {
-            NC_STACK_ypagun *gun = dynamic_cast<NC_STACK_ypagun *>( arg132.tgt.pbact );
-            int a4 = gun->IsRoboGun();
+            NC_STACK_ypagun *gun = dynamic_cast<NC_STACK_ypagun *>( targetMsg.tgt.pbact );
+            int isRoboGun = gun->IsRoboGun();
 
-            if ( !a4 )
+            if ( !isRoboGun )
             {
                 for (NC_STACK_ypabact* &node : _world->_unitsList)
                 {
-                    if ( node->_bact_type == BACT_TYPES_ROBO && node->_status != BACT_STATUS_DEAD && arg132.tgt.pbact->_owner == node->_owner )
+                    if ( node->_bact_type == BACT_TYPES_ROBO && node->_status != BACT_STATUS_DEAD && targetMsg.tgt.pbact->_owner == node->_owner )
                     {
-                        int v4 = node->_energy_max / 2;
+                        int hostEnergy = node->_energy_max / 2;
 
-                        if ( v4 < 120000 )
-                            v4 = 120000;
+                        if ( hostEnergy < 120000 )
+                            hostEnergy = 120000;
 
-                        v18 = v4;
+                        neededEnergy = hostEnergy;
                         break;
                     }
                 }
             }
         }
 
-        TRayIntersection arg136;
-        arg136.stPos = _position + _roboDockPos - vec3d::OY(100.0);
-        arg136.vect = vec3d::OY(20000.0);
-        arg136.flags = 0;
+        TRayIntersection ray;
+        ray.stPos = _position + _roboDockPos - vec3d::OY(100.0);
+        ray.vect = vec3d::OY(20000.0);
+        ray.flags = 0;
 
-        _world->IntersectRay(&arg136);
+        _world->IntersectRay(&ray);
 
-        if ( _pSector->height - arg136.isectPos.y >= 50.0 )
+        if ( _pSector->height - ray.isectPos.y >= 50.0 )
         {
-            arg132.tgt_pos.x = _position.x + 200.0;
-            arg132.tgt_pos.z = _position.z + 300.0;
-            arg132.priority = 0;
-            arg132.tgt_type = BACT_TGT_TYPE_CELL_IND;
+            targetMsg.tgt_pos.x = _position.x + 200.0;
+            targetMsg.tgt_pos.z = _position.z + 300.0;
+            targetMsg.priority = 0;
+            targetMsg.tgt_type = BACT_TGT_TYPE_CELL_IND;
 
-            SetTarget(&arg132);
+            SetTarget(&targetMsg);
         }
         else
         {
             robo_loct1 loct;
-            loct.distance = (arg132.tgt.pbact->_position.XZ() - _position.XZ()).length();
-            loct.tgt_pos = arg132.tgt.pbact->_position;
+            loct.distance = (targetMsg.tgt.pbact->_position.XZ() - _position.XZ()).length();
+            loct.tgt_pos = targetMsg.tgt.pbact->_position;
 
-            int v9 = v18;
-            if ( v9 >= 40000 )
-                v9 = 40000;
+            int cappedEnergy = neededEnergy;
+            if ( cappedEnergy >= 40000 )
+                cappedEnergy = 40000;
 
-            loct.energ = v9;
+            loct.energ = cappedEnergy;
             loct.tgType = BACT_TGT_TYPE_UNIT;
-            loct.tgt_bact = arg132.tgt.pbact;
+            loct.tgt_bact = targetMsg.tgt.pbact;
             loct.command_id = _roboVehicleCommandID;
             loct.aggr = 60;
 
-            if ( arg132.tgt.pbact->_bact_type != BACT_TYPES_TANK && arg132.tgt.pbact->_bact_type != BACT_TYPES_CAR && arg132.tgt.pbact->_bact_type != BACT_TYPES_HOVER )
+            if ( targetMsg.tgt.pbact->_bact_type != BACT_TYPES_TANK && targetMsg.tgt.pbact->_bact_type != BACT_TYPES_CAR && targetMsg.tgt.pbact->_bact_type != BACT_TYPES_HOVER )
             {
                 loct.bad = 2;
                 loct.want = 32;
@@ -2779,7 +2779,7 @@ void NC_STACK_yparobo::buildDefense()
                 loct.forbidden = 1;
             }
 
-            switch ( arg132.tgt.pbact->_bact_type )
+            switch ( targetMsg.tgt.pbact->_bact_type )
             {
             case BACT_TYPES_TANK:
             case BACT_TYPES_CAR:
@@ -2813,38 +2813,38 @@ void NC_STACK_yparobo::buildDefense()
 
 void NC_STACK_yparobo::buildRobo()
 {
-    setTarget_msg arg132;
-    arg132.priority = _roboVehicleCommandID;
-    if ( GetTargetByCommandID(&arg132) )
+    setTarget_msg targetMsg;
+    targetMsg.priority = _roboVehicleCommandID;
+    if ( GetTargetByCommandID(&targetMsg) )
     {
-        TRayIntersection arg136;
-        arg136.stPos = _position + _roboDockPos - vec3d::OY(100.0);
-        arg136.vect = vec3d::OY(20000.0);
-        arg136.flags = 0;
+        TRayIntersection ray;
+        ray.stPos = _position + _roboDockPos - vec3d::OY(100.0);
+        ray.vect = vec3d::OY(20000.0);
+        ray.flags = 0;
 
-        _world->IntersectRay(&arg136);
+        _world->IntersectRay(&ray);
 
-        if ( _pSector->height - arg136.isectPos.y >= 50.0 )
+        if ( _pSector->height - ray.isectPos.y >= 50.0 )
         {
-            arg132.tgt_pos.x = _position.x + 200.0;
-            arg132.tgt_pos.z = _position.z + 300.0;
-            arg132.tgt_type = BACT_TGT_TYPE_CELL_IND;
-            arg132.priority = 0;
-            SetTarget(&arg132);
+            targetMsg.tgt_pos.x = _position.x + 200.0;
+            targetMsg.tgt_pos.z = _position.z + 300.0;
+            targetMsg.tgt_type = BACT_TGT_TYPE_CELL_IND;
+            targetMsg.priority = 0;
+            SetTarget(&targetMsg);
         }
         else
         {
             robo_loct1 loct;
-            loct.distance = (arg132.tgt.pbact->_position.XZ() - _position.XZ()).length();
-            loct.tgt_pos = arg132.tgt.pbact->_position;
+            loct.distance = (targetMsg.tgt.pbact->_position.XZ() - _position.XZ()).length();
+            loct.tgt_pos = targetMsg.tgt.pbact->_position;
 
-            int v6 = arg132.tgt.pbact->_energy_max / 2;
-            if ( v6 < 120000 )
-                v6 = 120000;
+            int forceEnergy = targetMsg.tgt.pbact->_energy_max / 2;
+            if ( forceEnergy < 120000 )
+                forceEnergy = 120000;
 
-            loct.energ = v6;
+            loct.energ = forceEnergy;
             loct.tgType = BACT_TGT_TYPE_UNIT;
-            loct.tgt_bact = arg132.tgt.pbact;
+            loct.tgt_bact = targetMsg.tgt.pbact;
             loct.command_id = _roboVehicleCommandID;
             loct.aggr = 60;
             loct.want = 32;
@@ -2862,7 +2862,7 @@ void NC_STACK_yparobo::buildRobo()
                     if ( !ataker.squadCommandID )
                     {
                         ataker.squadCommandID = force->_commandID;
-                        ataker.targetCommandID = arg132.tgt.pbact->_commandID;
+                        ataker.targetCommandID = targetMsg.tgt.pbact->_commandID;
                         break;
                     }
                 }
@@ -2882,22 +2882,22 @@ void NC_STACK_yparobo::buildRobo()
 
 void NC_STACK_yparobo::buildReconnoitre()
 {
-    TRayIntersection arg136;
-    arg136.stPos = _position + _roboDockPos - vec3d::OY(100.0);
-    arg136.vect = vec3d::OY(20000.0);
-    arg136.flags = 0;
+    TRayIntersection ray;
+    ray.stPos = _position + _roboDockPos - vec3d::OY(100.0);
+    ray.vect = vec3d::OY(20000.0);
+    ray.flags = 0;
 
-    _world->IntersectRay(&arg136);
+    _world->IntersectRay(&ray);
 
-    if ( _pSector->height - arg136.isectPos.y >= 50.0 )
+    if ( _pSector->height - ray.isectPos.y >= 50.0 )
     {
-        setTarget_msg arg67;
-        arg67.tgt_pos.x = _position.x + 200.0;
-        arg67.tgt_pos.z = _position.z + 300.0;
-        arg67.tgt_type = BACT_TGT_TYPE_CELL_IND;
-        arg67.priority = 0;
+        setTarget_msg targetMsg;
+        targetMsg.tgt_pos.x = _position.x + 200.0;
+        targetMsg.tgt_pos.z = _position.z + 300.0;
+        targetMsg.tgt_type = BACT_TGT_TYPE_CELL_IND;
+        targetMsg.priority = 0;
 
-        SetTarget(&arg67);
+        SetTarget(&targetMsg);
     }
     else
     {
@@ -3163,17 +3163,17 @@ void NC_STACK_yparobo::AI_service(update_msg *arg)
 {
     if ( _roboDockUser )
     {
-        int v4 = 0;
+        int dockUserFound = 0;
         for( NC_STACK_ypabact* &node : _kidList )
         {
             if (_roboDockUser == node->_commandID)
             {
-                v4 = 1;
+                dockUserFound = 1;
                 break;
             }
         }
 
-        if ( !v4 )
+        if ( !dockUserFound )
         {
             _roboDockTime = 0;
             _roboDockUser = 0;
@@ -3203,7 +3203,7 @@ void NC_STACK_yparobo::AI_solveTrouble(update_msg *arg)
     {
         _roboTestEnemyTime = arg->gTime;
 
-        int v3 = (float)_energy / (float)_energy_max < 0.1;
+        int energyCritical = (float)_energy / (float)_energy_max < 0.1;
 
         for (NC_STACK_ypabact* &unit : _kidList )
         {
@@ -3211,24 +3211,24 @@ void NC_STACK_yparobo::AI_solveTrouble(update_msg *arg)
             {
                 if ( unit->_bact_type != BACT_TYPES_GUN )
                 {
-                    int v7;
+                    int recall;
 
-                    if ( v3 )
+                    if ( energyCritical )
                     {
-                        v7 = 1;
+                        recall = 1;
                         unit->_status_flg &= ~BACT_STFLAG_UNUSE;
                     }
                     else
                     {
-                        v7 = !(unit->_status_flg & BACT_STFLAG_UNUSE) && !unit->_secndTtype;
+                        recall = !(unit->_status_flg & BACT_STFLAG_UNUSE) && !unit->_secndTtype;
                     }
 
-                    float v10 = unit->_position.x - _position.x;
-                    float v11 = unit->_position.z - _position.z;
+                    float dx = unit->_position.x - _position.x;
+                    float dz = unit->_position.z - _position.z;
 
-                    if ( (v10 * v10 + v11 * v11) < 4320000.0 && unit->_primTtype == BACT_TGT_TYPE_UNIT && this == unit->_primT.pbact )
+                    if ( (dx * dx + dz * dz) < 4320000.0 && unit->_primTtype == BACT_TGT_TYPE_UNIT && this == unit->_primT.pbact )
                     {
-                        if ( v3 )
+                        if ( energyCritical )
                         {
                             unit->setBACT_aggression(99);
                             unit->_status_flg &= ~BACT_STFLAG_ESCAPE;
@@ -3239,15 +3239,15 @@ void NC_STACK_yparobo::AI_solveTrouble(update_msg *arg)
                         }
                     }
 
-                    if ( v7 )
+                    if ( recall )
                     {
-                        setTarget_msg arg67;
+                        setTarget_msg targetMsg;
 
-                        arg67.tgt_type = BACT_TGT_TYPE_UNIT;
-                        arg67.priority = 0;
-                        arg67.tgt.pbact = this;
+                        targetMsg.tgt_type = BACT_TGT_TYPE_UNIT;
+                        targetMsg.priority = 0;
+                        targetMsg.tgt.pbact = this;
 
-                        unit->SetTarget(&arg67);
+                        unit->SetTarget(&targetMsg);
                     }
                 }
             }
@@ -3264,17 +3264,17 @@ void NC_STACK_yparobo::AI_clearAttackerSlots()
         {
             if ( ataker.squadCommandID )
             {
-                int v6 = 0;
+                int squadFound = 0;
                 for (NC_STACK_ypabact* &node : _kidList )
                 {
                     if (node->_commandID == ataker.squadCommandID)
                     {
-                        v6 = 1;
+                        squadFound = 1;
                         break;
                     }
                 }
 
-                if ( !v6 )
+                if ( !squadFound )
                 {
                     ataker.squadCommandID = 0;
                     ataker.targetCommandID = 0;
@@ -3300,28 +3300,28 @@ void NC_STACK_yparobo::searchEnemyRobo()
                 {
                     if (kbct->_status != BACT_STATUS_DEAD)
                     {
-                        float v14 = (kbct->_position.XZ() - unit->_position.XZ()).square();
+                        float distSq = (kbct->_position.XZ() - unit->_position.XZ()).square();
 
-                        if ( !sel || v14 < selfl )
+                        if ( !sel || distSq < selfl )
                         {
                             sel = kbct;
-                            selfl = v14;
+                            selfl = distSq;
                         }
                     }
                 }
 
                 if ( sel )
                 {
-                    TRoboMessage v12;
+                    TRoboMessage msg;
 
-                    v12.msgID = 6;
-                    v12.param1 = unit->_owner;
-                    v12.priority = 48;
-                    v12.unit = sel;
-                    v12.param2 = 0;
-                    v12.param3 = 0;
+                    msg.msgID = 6;
+                    msg.param1 = unit->_owner;
+                    msg.priority = 48;
+                    msg.unit = sel;
+                    msg.param2 = 0;
+                    msg.param3 = 0;
 
-                    placeMessage(&v12);
+                    placeMessage(&msg);
                 }
             }
         }
@@ -3330,22 +3330,22 @@ void NC_STACK_yparobo::searchEnemyRobo()
 
 void NC_STACK_yparobo::usersRoboEnergyCheck()
 {
-    float v1 = (float)_energy / (float)_energy_max;
+    float energyRatio = (float)_energy / (float)_energy_max;
 
-    if ( v1 < 0.2 )
+    if ( energyRatio < 0.2 )
     {
-        if ( v1 < 0.07 )
-            v1 = 0.01;
+        if ( energyRatio < 0.07 )
+            energyRatio = 0.01;
 
-        TRoboMessage v2;
-        v2.msgID = 40;
-        v2.param2 = 0;
-        v2.param3 = 0;
-        v2.priority = 98;
-        v2.param1 = (v1 * 60000.0 * 5.0);
-        v2.unit = this;
+        TRoboMessage msg;
+        msg.msgID = 40;
+        msg.param2 = 0;
+        msg.param3 = 0;
+        msg.priority = 98;
+        msg.param1 = (energyRatio * 60000.0 * 5.0);
+        msg.unit = this;
 
-        placeMessage(&v2);
+        placeMessage(&msg);
     }
 }
 
@@ -3353,7 +3353,7 @@ void NC_STACK_yparobo::checkCommander()
 {
     bool userRobo =  (this == _world->getYW_userHostStation());
 
-    float v31;
+    float energyRatio;
 
     for ( NC_STACK_ypabact* &commander : _kidList )
     {
@@ -3371,63 +3371,63 @@ void NC_STACK_yparobo::checkCommander()
 
         if ( commander->_status_flg & BACT_STFLAG_ESCAPE )
         {
-            if ( commander->GetFightMotivation(&v31) )
+            if ( commander->GetFightMotivation(&energyRatio) )
             {
                 if ( commander->_owner == commander->_pSector->owner && commander->_pSector->energy_power )
                 {
-                    setTarget_msg arg67;
-                    arg67.tgt_type = BACT_TGT_TYPE_CELL;
-                    arg67.priority = 0;
-                    arg67.tgt_pos = commander->_position;
+                    setTarget_msg targetMsg;
+                    targetMsg.tgt_type = BACT_TGT_TYPE_CELL;
+                    targetMsg.priority = 0;
+                    targetMsg.tgt_pos = commander->_position;
 
-                    commander->SetTarget(&arg67);
+                    commander->SetTarget(&targetMsg);
                 }
 
                 commander->ChangeEscapeFlag(false);
 
                 if ( userRobo )
                 {
-                    TRoboMessage arg134;
-                    arg134.param1 = commander->_commandID;
-                    arg134.msgID = 10;
-                    arg134.param3 = 0;
-                    arg134.param2 = 0;
-                    arg134.unit = commander;
-                    arg134.priority = 28;
+                    TRoboMessage msg;
+                    msg.param1 = commander->_commandID;
+                    msg.msgID = 10;
+                    msg.param3 = 0;
+                    msg.param2 = 0;
+                    msg.unit = commander;
+                    msg.priority = 28;
 
-                    placeMessage(&arg134);
+                    placeMessage(&msg);
                 }
             }
             continue;
         }
 
-        if ( commander->GetFightMotivation(&v31) )
+        if ( commander->GetFightMotivation(&energyRatio) )
         {
-            if ( v31 < 0.5 && userRobo )
+            if ( energyRatio < 0.5 && userRobo )
             {
-                TSummaryQuery arg81;
-                arg81.enrg_sum = 0;
-                arg81.enrg_type = 3;
+                TSummaryQuery summary;
+                summary.enrg_sum = 0;
+                summary.enrg_type = 3;
 
-                commander->GetSummary(&arg81);
+                commander->GetSummary(&summary);
 
-                int v18 = arg81.enrg_sum;
+                int squadSize = summary.enrg_sum;
 
-                arg81.enrg_sum = 0;
-                arg81.enrg_type = 5;
-                commander->GetSummary(&arg81);
+                summary.enrg_sum = 0;
+                summary.enrg_type = 5;
+                commander->GetSummary(&summary);
 
-                if ( v18 < arg81.enrg_sum )
+                if ( squadSize < summary.enrg_sum )
                 {
-                    TRoboMessage arg134;
-                    arg134.param1 = 20000;
-                    arg134.param3 = 0;
-                    arg134.param2 = 0;
-                    arg134.msgID = 18;
-                    arg134.unit = commander;
-                    arg134.priority = 42;
+                    TRoboMessage msg;
+                    msg.param1 = 20000;
+                    msg.param3 = 0;
+                    msg.param2 = 0;
+                    msg.msgID = 18;
+                    msg.unit = commander;
+                    msg.priority = 42;
 
-                    placeMessage(&arg134);
+                    placeMessage(&msg);
                 }
             }
 
@@ -3463,52 +3463,52 @@ void NC_STACK_yparobo::checkCommander()
 
             if ( commander->IsNeedsWaypoints() )
             {
-                TPathRequest arg124;
-                arg124.steps_cnt = 32;
-                arg124.from = commander->_position.XZ();
-                arg124.to = _position.XZ();
-                arg124.tgt_type = 1;
+                TPathRequest pathRequest;
+                pathRequest.steps_cnt = 32;
+                pathRequest.from = commander->_position.XZ();
+                pathRequest.to = _position.XZ();
+                pathRequest.tgt_type = 1;
 
-                if ( ! commander->PathFinder(&arg124) )
+                if ( ! commander->PathFinder(&pathRequest) )
                     break;
 
-                if ( arg124.steps_cnt > 1 )
+                if ( pathRequest.steps_cnt > 1 )
                 {
-                    arg124.steps_cnt = 32;
-                    commander->SetPath(&arg124);
+                    pathRequest.steps_cnt = 32;
+                    commander->SetPath(&pathRequest);
 
                     commander->_m_cmdID = _commandID;
                     commander->_m_owner = _owner;
                 }
                 else
                 {
-                    setTarget_msg arg67;
-                    arg67.tgt.pbact = this;
-                    arg67.priority = 0;
-                    arg67.tgt_type = BACT_TGT_TYPE_UNIT;
-                    commander->SetTarget(&arg67);
+                    setTarget_msg targetMsg;
+                    targetMsg.tgt.pbact = this;
+                    targetMsg.priority = 0;
+                    targetMsg.tgt_type = BACT_TGT_TYPE_UNIT;
+                    commander->SetTarget(&targetMsg);
                 }
             }
             else
             {
-                setTarget_msg arg67;
-                arg67.tgt.pbact = this;
-                arg67.tgt_type = BACT_TGT_TYPE_UNIT;
-                arg67.priority = 0;
-                commander->SetTarget(&arg67);
+                setTarget_msg targetMsg;
+                targetMsg.tgt.pbact = this;
+                targetMsg.tgt_type = BACT_TGT_TYPE_UNIT;
+                targetMsg.priority = 0;
+                commander->SetTarget(&targetMsg);
             }
 
             if ( userRobo )
             {
-                TRoboMessage arg134;
-                arg134.param1 = commander->_commandID;
-                arg134.param3 = 0;
-                arg134.param2 = 0;
-                arg134.msgID = 9;
-                arg134.unit = commander;
-                arg134.priority = 40;
+                TRoboMessage msg;
+                msg.param1 = commander->_commandID;
+                msg.param3 = 0;
+                msg.param2 = 0;
+                msg.msgID = 9;
+                msg.unit = commander;
+                msg.priority = 40;
 
-                placeMessage(&arg134);
+                placeMessage(&msg);
 
                 if ( _world->_isNetGame  )
                 {
@@ -3547,14 +3547,14 @@ void NC_STACK_yparobo::checkCommander()
                              realbact->_parent )
                             realbact = realbact->_parent;
 
-                        TRoboMessage arg134;
-                        arg134.param1 = 0;
-                        arg134.param3 = 0;
-                        arg134.param2 = 0;
-                        arg134.msgID = 19;
-                        arg134.unit = realbact;
-                        arg134.priority = 34;
-                        placeMessage(&arg134);
+                        TRoboMessage msg;
+                        msg.param1 = 0;
+                        msg.param3 = 0;
+                        msg.param2 = 0;
+                        msg.msgID = 19;
+                        msg.unit = realbact;
+                        msg.priority = 34;
+                        placeMessage(&msg);
                         break;
                     }
                 }
@@ -3565,8 +3565,8 @@ void NC_STACK_yparobo::checkCommander()
 
 void NC_STACK_yparobo::checkDanger()
 {
-    int v11 = 0;
-    int v12;
+    int enemyNear = 0;
+    int enemyCommandId;
 
     for(int i = -1; i <= 1; i++)
     {
@@ -3576,12 +3576,12 @@ void NC_STACK_yparobo::checkDanger()
 
             if ( _world->IsGamePlaySector(pt) )
             {
-                for ( NC_STACK_ypabact* &v7 : _world->SectorAt(pt).unitsList )
+                for ( NC_STACK_ypabact* &unit : _world->SectorAt(pt).unitsList )
                 {
-                    if (v7->_owner != _owner && v7->_status != BACT_STATUS_DEAD && v7->_weapon != -1 && v7->_mgun != -1)
+                    if (unit->_owner != _owner && unit->_status != BACT_STATUS_DEAD && unit->_weapon != -1 && unit->_mgun != -1)
                     {
-                        v11 = 1;
-                        v12 = v7->_commandID;
+                        enemyNear = 1;
+                        enemyCommandId = unit->_commandID;
                         break;
                     }
                 }
@@ -3590,19 +3590,19 @@ void NC_STACK_yparobo::checkDanger()
         }
     }
 
-    if ( v11 )
+    if ( enemyNear )
     {
         if ( !(_roboState & ROBOSTATE_DANGER) && _roboState & ROBOSTATE_PLAYERROBO )
         {
-            TRoboMessage arg134;
-            arg134.msgID = 13;
-            arg134.param1 = v12;
-            arg134.param3 = 0;
-            arg134.param2 = 0;
-            arg134.unit = this;
-            arg134.priority = 99;
+            TRoboMessage msg;
+            msg.msgID = 13;
+            msg.param1 = enemyCommandId;
+            msg.param3 = 0;
+            msg.param2 = 0;
+            msg.unit = this;
+            msg.priority = 99;
 
-            placeMessage(&arg134);
+            placeMessage(&msg);
         }
 
         _roboState |= ROBOSTATE_DANGER;
@@ -3637,25 +3637,25 @@ int NC_STACK_yparobo::RateSectorForRadar(const Common::Point &sc)
     if ( cell.PurposeType != cellArea::PT_NONE )
         return -1;
 
-    float v8 = _cellId.LengthTo<float>( sc );
+    float distance = _cellId.LengthTo<float>( sc );
 
-    float v14 = ( v8 <= 0.01 ? 500.0 : 1000.0 / v8 );
+    float rating = ( distance <= 0.01 ? 500.0 : 1000.0 / distance );
 
-    int v9 = 0;
+    int hasUnseenNeighbor = 0;
 
     for (Common::Point ds : NearDxy)
     {
         if ( !_world->SectorAt(sc + ds).IsCanSee(_owner) )
         {
-            v9 = 1;
-            v14 += 10.0;
+            hasUnseenNeighbor = 1;
+            rating += 10.0;
         }
     }
 
-    if (  !v9 || _world->IsSectorBorder(sc, 2) )
+    if (  !hasUnseenNeighbor || _world->IsSectorBorder(sc, 2) )
         return -1;
 
-    return v14;
+    return rating;
 }
 
 int NC_STACK_yparobo::RateSectorForRecon(const Common::Point &sc)
@@ -3665,20 +3665,20 @@ int NC_STACK_yparobo::RateSectorForRecon(const Common::Point &sc)
     if ( cell.IsCanSee(_owner) )
         return -1;
 
-    float v13 = _cellId.LengthTo<float>( sc );
+    float rating = _cellId.LengthTo<float>( sc );
 
-    if ( v13 <= 0.01 )
-        v13 = 0.0;
+    if ( rating <= 0.01 )
+        rating = 0.0;
 
     for (Common::Point ds : NearDxy)
     {
         if ( !_world->SectorAt(sc + ds).IsCanSee(_owner) )
         {
-            v13 += 5.0;
+            rating += 5.0;
         }
     }
 
-    return v13;
+    return rating;
 }
 
 int NC_STACK_yparobo::RateSectorForFlak(const Common::Point &sc)
@@ -3702,25 +3702,25 @@ int NC_STACK_yparobo::RateSectorForFlak(const Common::Point &sc)
     if ( cell.owner != _owner || cell.PurposeType != cellArea::PT_NONE )
         return -1;
 
-    float v9 = _cellId.LengthTo<float>( sc );
+    float distance = _cellId.LengthTo<float>( sc );
 
-    float v14;
+    float rating;
 
-    if ( v9 <= 0.01 )
-        v14 = 500.0;
+    if ( distance <= 0.01 )
+        rating = 500.0;
     else
-        v14 = 1000.0 / v9;
+        rating = 1000.0 / distance;
 
     for (Common::Point ds : NearDxy)
     {
         cellArea &cll = _world->SectorAt(sc + ds);
 
         if ( cll.PurposeType != cellArea::PT_NONE && _owner == cll.owner)
-            v14 += 5.0;
+            rating += 5.0;
 
     }
 
-    return v14;
+    return rating;
 }
 
 int NC_STACK_yparobo::RateSectorForPowerStation(const Common::Point &sc)
@@ -3750,13 +3750,13 @@ int NC_STACK_yparobo::RateSectorForPowerStation(const Common::Point &sc)
     if ( cell.owner != _owner )
         return -1;
 
-    float v9 = _cellId.LengthTo<float>( sc );
-    float v26 = v9 <= 0.01 ? 500.0 : 1000.0 / v9;
+    float distance = _cellId.LengthTo<float>( sc );
+    float distanceRating = distance <= 0.01 ? 500.0 : 1000.0 / distance;
 
-    if ( v9 > 8.0 )
+    if ( distance > 8.0 )
         return -1;
 
-    float v27 = v26 + (255 - cell.energy_power) / 3.0;
+    float rating = distanceRating + (255 - cell.energy_power) / 3.0;
 
     for (Common::Point ds : NearDxy)
     {
@@ -3764,17 +3764,17 @@ int NC_STACK_yparobo::RateSectorForPowerStation(const Common::Point &sc)
 
         if ( cll.owner == _owner )
         {
-            int v11 = cll.GetEnergy();
-            v27 += (255 - v11) * 0.05 + 10.0;
+            int neighborEnergy = cll.GetEnergy();
+            rating += (255 - neighborEnergy) * 0.05 + 10.0;
         }
 
         if ( cll.PurposeType == cellArea::PT_POWERSTATION )
-            v27 *= 0.7;
+            rating *= 0.7;
     }
 
-    v27 -= 5.0 * cell.unitsList.size();
+    rating -= 5.0 * cell.unitsList.size();
 
-    return v27;
+    return rating;
 }
 
 int32_t NC_STACK_yparobo::RateSectorForConquer(const Common::Point &sc)
@@ -3784,13 +3784,13 @@ int32_t NC_STACK_yparobo::RateSectorForConquer(const Common::Point &sc)
     if ( cell.owner == _owner )
         return -1;
 
-    float v7 = _cellId.LengthTo<float>( sc );
+    float distance = _cellId.LengthTo<float>( sc );
     int32_t val = 0;
 
-    if ( v7 <= 0.01 )
+    if ( distance <= 0.01 )
         val = 1500;
     else
-        val = 1000.0 / v7;
+        val = 1000.0 / distance;
 
     if ( cell.IsCanSee(_owner) )
     {
@@ -3835,7 +3835,7 @@ int32_t NC_STACK_yparobo::RateSectorForConquer(const Common::Point &sc)
 
 int NC_STACK_yparobo::CountOwnFlakSectors()
 {
-    int v4 = 0;
+    int count = 0;
 
     for (cellArea &cll : _world->Sectors())
     {
@@ -3846,11 +3846,11 @@ int NC_STACK_yparobo::CountOwnFlakSectors()
                 if ( bct->_bact_type == BACT_TYPES_GUN && bct->_status != BACT_STATUS_DEAD && _owner == bct->_owner )
                 {
                     NC_STACK_ypagun *gun = dynamic_cast<NC_STACK_ypagun *>( bct );
-                    int a4 = gun->IsRoboGun();
+                    int isRoboGun = gun->IsRoboGun();
 
-                    if ( a4 == 0 && ( bct->_weapon != -1 || bct->_mgun != -1 ) )
+                    if ( isRoboGun == 0 && ( bct->_weapon != -1 || bct->_mgun != -1 ) )
                     {
-                        v4++;
+                        count++;
                         break;
                     }
                 }
@@ -3858,12 +3858,12 @@ int NC_STACK_yparobo::CountOwnFlakSectors()
         }
     }
 
-    return v4;
+    return count;
 }
 
 int NC_STACK_yparobo::CountOwnRadarSectors()
 {
-    int v4 = 0;
+    int count = 0;
 
     for (cellArea &cll : _world->Sectors())
     {
@@ -3874,11 +3874,11 @@ int NC_STACK_yparobo::CountOwnRadarSectors()
                 if ( bct->_bact_type == BACT_TYPES_GUN && bct->_status != BACT_STATUS_DEAD && _owner == bct->_owner )
                 {
                     NC_STACK_ypagun *gun = dynamic_cast<NC_STACK_ypagun *>( bct );
-                    int a4 = gun->IsRoboGun();
+                    int isRoboGun = gun->IsRoboGun();
 
-                    if ( a4 == 0 && bct->_weapon == -1 && bct->_mgun == -1 )
+                    if ( isRoboGun == 0 && bct->_weapon == -1 && bct->_mgun == -1 )
                     {
-                        v4++;
+                        count++;
                         break;
                     }
                 }
@@ -3886,33 +3886,33 @@ int NC_STACK_yparobo::CountOwnRadarSectors()
         }
     }
 
-    return v4;
+    return count;
 }
 
 int NC_STACK_yparobo::CountOwnedSectors()
 {
-    int v4 = 0;
+    int count = 0;
 
     for (cellArea &cll : _world->Sectors())
     {
         if ( cll.owner == _owner )
-            v4++;
+            count++;
     }
 
-    return v4;
+    return count;
 }
 
 int NC_STACK_yparobo::CountUnseenSectors()
 {
-    int v4 = 0;
+    int count = 0;
 
     for (cellArea &cll : _world->Sectors())
     {
         if ( !cll.IsCanSee(_owner) )
-            v4++;
+            count++;
     }
 
-    return v4;
+    return count;
 }
 
 int NC_STACK_yparobo::IsEnemyRoboNear()
@@ -3970,24 +3970,24 @@ float NC_STACK_yparobo::RateEnemyTarget(NC_STACK_ypabact *bact)
     if ( bact->_status_flg & BACT_STFLAG_DEATH1 )
         return -1.0;
 
-    float v8 = _cellId.LengthTo<float>( bact->_cellId );
+    float rating = _cellId.LengthTo<float>( bact->_cellId );
 
-    if (v8 != 0.0)
-        v8 = 100.0 / v8;
+    if (rating != 0.0)
+        rating = 100.0 / rating;
     else
-        v8 = 200.0;
+        rating = 200.0;
 
     if ( bact->_pSector->owner == _owner )
-        v8 += 100.0;
+        rating += 100.0;
 
-    return v8;
+    return rating;
 }
 
-int NC_STACK_yparobo::FindDefenseTarget(int *a2, Common::Point *pCellId)
+int NC_STACK_yparobo::FindDefenseTarget(int *commandId, Common::Point *pCellId)
 {
-    float v32 = -0.5;
+    float bestRating = -0.5;
 
-    int v29 = 0;
+    int bestCommandId = 0;
     
     if (_kidRef)
     {
@@ -3998,7 +3998,7 @@ int NC_STACK_yparobo::FindDefenseTarget(int *a2, Common::Point *pCellId)
                 Common::Point dist = _cellId.AbsDistance( node->_cellId );
                 if ( dist.x <= 2 && dist.y <= 2 )
                 {
-                    *a2 = node->_commandID;
+                    *commandId = node->_commandID;
                     *pCellId = node->_cellId;
 
                     return 500;
@@ -4009,23 +4009,23 @@ int NC_STACK_yparobo::FindDefenseTarget(int *a2, Common::Point *pCellId)
 
                     if ( (ndbct->_gid & 0xF) == _roboEnemyDiv )
                     {
-                        int v26 = 0;
+                        int isRoboGun = 0;
 
                         if ( ndbct->_bact_type == BACT_TYPES_GUN )
                         {
                             NC_STACK_ypagun *gun = dynamic_cast<NC_STACK_ypagun *>( ndbct );
-                            v26 = gun->IsRoboGun();
+                            isRoboGun = gun->IsRoboGun();
                         }
 
                         if ( ndbct->_pSector->IsCanSee(_owner) )
                         {
-                            if ( ndbct->_status != BACT_STATUS_DEAD && !v26 )
+                            if ( ndbct->_status != BACT_STATUS_DEAD && !isRoboGun )
                             {
                                 float tmp = RateEnemyTarget(ndbct);
-                                if ( tmp > v32 )
+                                if ( tmp > bestRating )
                                 {
-                                    v32 = tmp;
-                                    v29 = ndbct->_commandID;
+                                    bestRating = tmp;
+                                    bestCommandId = ndbct->_commandID;
                                     *pCellId = ndbct->_cellId;
                                 }
                             }
@@ -4041,20 +4041,20 @@ int NC_STACK_yparobo::FindDefenseTarget(int *a2, Common::Point *pCellId)
     if ( _roboEnemyDiv > 15 )
         _roboEnemyDiv = 0;
 
-    if ( v32 < 0.0 )
+    if ( bestRating < 0.0 )
     {
-        *a2 = 0;
+        *commandId = 0;
         return -1;
     }
 
-    *a2 = v29;
-    return v32;
+    *commandId = bestCommandId;
+    return bestRating;
 }
 
-int NC_STACK_yparobo::FindEnemyRoboTarget(int *a2, Common::Point *pCellId)
+int NC_STACK_yparobo::FindEnemyRoboTarget(int *commandId, Common::Point *pCellId)
 {
-    float v32 = -0.5;
-    int v21 = 0;
+    float bestRating = -0.5;
+    int bestCommandId = 0;
 
     if (_kidRef)
     {
@@ -4064,11 +4064,11 @@ int NC_STACK_yparobo::FindEnemyRoboTarget(int *a2, Common::Point *pCellId)
             {
                 if ( node->_pSector->IsCanSee(_owner) )
                 {
-                    float v13 = RateEnemyTarget(node);
-                    if ( v13 > v32 )
+                    float rating = RateEnemyTarget(node);
+                    if ( rating > bestRating )
                     {
-                        v21 = node->_commandID;
-                        v32 = v13;
+                        bestCommandId = node->_commandID;
+                        bestRating = rating;
                         *pCellId = node->_cellId;
                     }
                 }
@@ -4076,20 +4076,20 @@ int NC_STACK_yparobo::FindEnemyRoboTarget(int *a2, Common::Point *pCellId)
         }
     }
 
-    if ( v32 < 0.0 )
+    if ( bestRating < 0.0 )
     {
-        *a2 = 0;
+        *commandId = 0;
         return -1;
     }
 
-    *a2 = v21;
-    return v32;
+    *commandId = bestCommandId;
+    return bestRating;
 }
 
 
 int NC_STACK_yparobo::RateAreaControl(const Common::Point &cellId)
 {
-    float v14 = 0.0;
+    float controlRating = 0.0;
 
     for (int i = -1; i <= 1; i++)
     {
@@ -4097,30 +4097,30 @@ int NC_STACK_yparobo::RateAreaControl(const Common::Point &cellId)
         {
             cellArea &cll = _world->SectorAt( cellId + Common::Point(i, j) );
 
-            TReloadRatios arg176;
-            arg176.owner = cll.owner;
+            TReloadRatios reloadRatios;
+            reloadRatios.owner = cll.owner;
 
-            _world->GetReloadRatios(&arg176);
+            _world->GetReloadRatios(&reloadRatios);
 
-            float v15;
+            float cellWeight;
 
             if ( i || j )
-                v15 = 1.0;
+                cellWeight = 1.0;
             else
-                v15 = 3.0;
+                cellWeight = 3.0;
 
             if ( _owner == cll.owner )
-                v14 += cll.energy_power * arg176.ratioClamped + v15;
+                controlRating += cll.energy_power * reloadRatios.ratioClamped + cellWeight;
             else
-                v14 -= cll.energy_power * arg176.ratioClamped + v15;
+                controlRating -= cll.energy_power * reloadRatios.ratioClamped + cellWeight;
 
             for ( NC_STACK_ypabact* &bct : cll.unitsList )
             {
-                float v16 = 0;
+                float unitWeight = 0;
 
                 if ( bct->_bact_type == BACT_TYPES_ROBO && bct != this )
                 {
-                    v16 = 5.0;
+                    unitWeight = 5.0;
                 }
                 else
                 {
@@ -4129,22 +4129,22 @@ int NC_STACK_yparobo::RateAreaControl(const Common::Point &cellId)
                         NC_STACK_ypagun *gun = dynamic_cast<NC_STACK_ypagun *>( bct );
 
                         if ( !gun->IsRoboGun() )
-                            v16 = 1.0;
+                            unitWeight = 1.0;
                     }
                 }
 
-                if ( v16 > 0.0 )
+                if ( unitWeight > 0.0 )
                 {
                     if ( bct->_owner == _owner )
-                        v14 += v16;
+                        controlRating += unitWeight;
                     else
-                        v14 -= v16;
+                        controlRating -= unitWeight;
                 }
             }
         }
     }
 
-    return v14;
+    return controlRating;
 }
 
 int NC_STACK_yparobo::RateSectorForRelocation()
@@ -4152,36 +4152,36 @@ int NC_STACK_yparobo::RateSectorForRelocation()
     Common::Point pt( _roboPositionCellIndex % _wrldSectors.x, _roboPositionCellIndex / _wrldSectors.x);
 
     int a1_4 = RateAreaControl(_cellId);
-    int v14 = RateAreaControl( pt );
+    int targetRating = RateAreaControl( pt );
 
-    float v12 = _cellId.LengthTo<float>( pt );
+    float distance = _cellId.LengthTo<float>( pt );
 
-    if ( v12 > 0.0 && a1_4 < v14 )
-        v14 = ((float)v14 * (1.0 - v12 * 0.8 / 91.0));
+    if ( distance > 0.0 && a1_4 < targetRating )
+        targetRating = ((float)targetRating * (1.0 - distance * 0.8 / 91.0));
 
-    if ( v14 <= a1_4 )
+    if ( targetRating <= a1_4 )
         return -1;
 
-    return v14;
+    return targetRating;
 }
 
 void NC_STACK_yparobo::AI_checkWorld(update_msg *arg)
 {
-    int v6 = 1;
+    int doSearch = 1;
     if ( _roboNewAI )
     {
         _roboConqDelay -= arg->frameTime;
         if ( _roboConqDelay > 0 )
-            v6 = 0;
+            doSearch = 0;
     }
 
-    TCommanderSearch arg128;
+    TCommanderSearch commanderSearch;
 
-    if ( _roboEpConquer && v6 )
+    if ( _roboEpConquer && doSearch )
     {
-        int v89 = (_wrldSectors.y + _wrldSectors.x) / 20 + 1;
+        int scanCount = (_wrldSectors.y + _wrldSectors.x) / 20 + 1;
 
-        for (int i = v89; i > 0; i--)
+        for (int i = scanCount; i > 0; i--)
         {
             if ( _wrldSectors.x * _wrldSectors.y == _roboConqCellIndex )
             {
@@ -4194,18 +4194,18 @@ void NC_STACK_yparobo::AI_checkWorld(update_msg *arg)
 
             if ( _world->IsGamePlaySector(pt) )
             {
-                int v12 = RateSectorForConquer(pt);
-                if ( v12 > _roboConqValue )
+                int conquerRating = RateSectorForConquer(pt);
+                if ( conquerRating > _roboConqValue )
                 {
-                    arg128.flags = 2;
-                    arg128.tgType = BACT_TGT_TYPE_CELL;
-                    arg128.tgt_pos = World::SectorIDToCenterPos3(pt);
+                    commanderSearch.flags = 2;
+                    commanderSearch.tgType = BACT_TGT_TYPE_CELL;
+                    commanderSearch.tgt_pos = World::SectorIDToCenterPos3(pt);
 
-                    FindMatchingCommander(&arg128);
+                    FindMatchingCommander(&commanderSearch);
 
-                    if ( !arg128.found_comm )
+                    if ( !commanderSearch.found_comm )
                     {
-                        _roboConqValue = v12;
+                        _roboConqValue = conquerRating;
                         _roboConqCellID = _roboConqCellIndex;
                         _roboConqCell = &_world->SectorAt( _roboConqCellIndex );
                         _roboConqTime = arg->gTime;
@@ -4223,35 +4223,35 @@ void NC_STACK_yparobo::AI_checkWorld(update_msg *arg)
         _roboState &= ~ROBOSTATE_READYCONQUER;
     }
 
-    v6 = 1;
+    doSearch = 1;
     if ( _roboNewAI )
     {
         _roboEnemyDelay -= arg->frameTime;
 
         if ( _roboEnemyDelay > 0 )
-            v6 = 0;
+            doSearch = 0;
     }
 
     if ( IsEnemyUnitNear() )
-        v6 = 1;
+        doSearch = 1;
 
-    if ( _roboEpDefense && v6 )
+    if ( _roboEpDefense && doSearch )
     {
         Common::Point cellId;
-        int v91;
+        int enemyCommandId;
 
-        int v17 = FindDefenseTarget(&v91, &cellId);
-        if ( v17 > _roboEnemyValue )
+        int defenseRating = FindDefenseTarget(&enemyCommandId, &cellId);
+        if ( defenseRating > _roboEnemyValue )
         {
-            arg128.flags = 2;
-            arg128.tgType = BACT_TGT_TYPE_UNIT;
-            arg128.prim_comm_id = v91;
-            FindMatchingCommander(&arg128);
+            commanderSearch.flags = 2;
+            commanderSearch.tgType = BACT_TGT_TYPE_UNIT;
+            commanderSearch.prim_comm_id = enemyCommandId;
+            FindMatchingCommander(&commanderSearch);
 
-            if ( !arg128.found_comm )
+            if ( !commanderSearch.found_comm )
             {
-                _roboEnemyValue = v17;
-                _roboEnemyCommandID = v91;
+                _roboEnemyValue = defenseRating;
+                _roboEnemyCommandID = enemyCommandId;
                 _roboEnemyTime = arg->gTime;
                 _roboEnemyCellID = cellId.y * _wrldSectors.x + cellId.x;
             }
@@ -4264,39 +4264,39 @@ void NC_STACK_yparobo::AI_checkWorld(update_msg *arg)
         _roboState &= ~ROBOSTATE_READYDEFENSE;
     }
 
-    v6 = 1;
+    doSearch = 1;
     if ( _roboNewAI )
     {
         _roboDangerDelay -= arg->frameTime;
         if ( _roboDangerDelay > 0 )
-            v6 = 0;
+            doSearch = 0;
     }
 
     if ( IsEnemyRoboNear() )
-        v6 = 1;
+        doSearch = 1;
 
-    if ( _roboEpRobo && v6 )
+    if ( _roboEpRobo && doSearch )
     {
         Common::Point cellId;
-        int v91;
-        int v22 = FindEnemyRoboTarget(&v91, &cellId);
+        int enemyCommandId;
+        int enemyRoboRating = FindEnemyRoboTarget(&enemyCommandId, &cellId);
 
-        if ( v22 > _roboDangerValue )
+        if ( enemyRoboRating > _roboDangerValue )
         {
-            TCommanderSearch arg128_1;
+            TCommanderSearch roboSearch;
             // TODO(bug): tgt_pos and tgt are left unset, but FindMatchingCommander turns
             // tgt_pos into a sector for unit searches too, and reads tgt when
             // prim_comm_id is 0.
-            arg128_1.flags = 2;
-            arg128_1.tgType = BACT_TGT_TYPE_UNIT;
-            arg128_1.prim_comm_id = v91;
+            roboSearch.flags = 2;
+            roboSearch.tgType = BACT_TGT_TYPE_UNIT;
+            roboSearch.prim_comm_id = enemyCommandId;
 
-            FindMatchingCommander(&arg128_1);
+            FindMatchingCommander(&roboSearch);
 
-            if ( !arg128_1.found_comm )
+            if ( !roboSearch.found_comm )
             {
-                _roboDangerValue = v22;
-                _roboDangerCommandID = v91;
+                _roboDangerValue = enemyRoboRating;
+                _roboDangerCommandID = enemyCommandId;
                 _roboDangerTime = arg->gTime;
                 _roboDangerCellID = _wrldSectors.x * cellId.y + cellId.x;
             }
@@ -4309,19 +4309,19 @@ void NC_STACK_yparobo::AI_checkWorld(update_msg *arg)
         _roboState &= ~ROBOSTATE_READYROBO;
     }
 
-    v6 = 1;
+    doSearch = 1;
     if ( _roboNewAI )
     {
         _roboPositionDelay -= arg->frameTime;
         if ( _roboPositionDelay > 0 )
-            v6 = 0;
+            doSearch = 0;
     }
 
-    if ( _roboEpChangePlace && v6 )
+    if ( _roboEpChangePlace && doSearch )
     {
-        int v25 = (_wrldSectors.x + _wrldSectors.y) / 10 + 1;
+        int scanCount = (_wrldSectors.x + _wrldSectors.y) / 10 + 1;
 
-        for (int i = v25; i > 0; i--)
+        for (int i = scanCount; i > 0; i--)
         {
             if ( _wrldSectors.x * _wrldSectors.y == _roboPositionCellIndex )
             {
@@ -4332,10 +4332,10 @@ void NC_STACK_yparobo::AI_checkWorld(update_msg *arg)
 
             if ( _world->IsGamePlaySector( {_roboPositionCellIndex % _wrldSectors.x, _roboPositionCellIndex / _wrldSectors.x} ) )
             {
-                int v34 = RateSectorForRelocation();
-                if ( v34 > _roboPositionValue )
+                int relocationRating = RateSectorForRelocation();
+                if ( relocationRating > _roboPositionValue )
                 {
-                    _roboPositionValue = v34;
+                    _roboPositionValue = relocationRating;
                     _roboPositionCellID = _roboPositionCellIndex;
                     _roboPositionTime = arg->gTime;
                 }
@@ -4350,34 +4350,34 @@ void NC_STACK_yparobo::AI_checkWorld(update_msg *arg)
         _roboState &= ~ROBOSTATE_FOUNDPLACE;
     }
 
-    TReloadRatios v85;
-    v85.owner = _owner;
-    _world->GetReloadRatios(&v85);
+    TReloadRatios reloadRatios;
+    reloadRatios.owner = _owner;
+    _world->GetReloadRatios(&reloadRatios);
 
-    v6 = 1;
+    doSearch = 1;
     if ( _roboNewAI )
     {
         _roboPowerDelay -= arg->frameTime;
         if ( _roboPowerDelay > 0 )
-            v6 = 0;
+            doSearch = 0;
     }
 
-    if ( v85.ratioClamped == 0.0 )
+    if ( reloadRatios.ratioClamped == 0.0 )
     {
         if ( _roboEpPower )
-            v6 = 1;
+            doSearch = 1;
     }
 
-    float v93;
+    float powerRatioThreshold;
     if ( _roboEpPower )
-        v93 = 100.0 / (float)_roboEpPower * 0.9;
+        powerRatioThreshold = 100.0 / (float)_roboEpPower * 0.9;
     else
-        v93 = 0.89999998;
+        powerRatioThreshold = 0.89999998;
 
-    if ( _roboEpPower && (v85.ratioPositive > v93 || v85.ratioClamped < 0.0001) && v6 )
+    if ( _roboEpPower && (reloadRatios.ratioPositive > powerRatioThreshold || reloadRatios.ratioClamped < 0.0001) && doSearch )
     {
-        int v99 = (_wrldSectors.x + _wrldSectors.y) / 20 + 1;
-        for (int i = v99; i > 0; i--)
+        int scanCount = (_wrldSectors.x + _wrldSectors.y) / 20 + 1;
+        for (int i = scanCount; i > 0; i--)
         {
             if ( _wrldSectors.x * _wrldSectors.y == _roboPowerCellIndex )
             {
@@ -4390,10 +4390,10 @@ void NC_STACK_yparobo::AI_checkWorld(update_msg *arg)
 
             if ( _world->IsGamePlaySector(pt) )
             {
-                int v46 = RateSectorForPowerStation(pt);
-                if ( v46 > _roboPowerValue )
+                int powerRating = RateSectorForPowerStation(pt);
+                if ( powerRating > _roboPowerValue )
                 {
-                    _roboPowerValue = v46;
+                    _roboPowerValue = powerRating;
                     _roboPowerCell = &_world->SectorAt( _roboPowerCellIndex );
                     _roboPowerCellID = _roboPowerCellIndex;
                     _roboPowerTime = arg->gTime;
@@ -4409,19 +4409,19 @@ void NC_STACK_yparobo::AI_checkWorld(update_msg *arg)
         _roboState &= ~ROBOSTATE_READYPOWER;
     }
 
-    v6 = 1;
+    doSearch = 1;
     if ( _roboNewAI )
     {
         _roboRadarDelay -= arg->frameTime;
         if ( _roboRadarDelay > 0 )
-            v6 = 0;
+            doSearch = 0;
     }
 
-    if ( _roboEpRadar && (CountUnseenSectors() / 64 > CountOwnRadarSectors()) && v6 )
+    if ( _roboEpRadar && (CountUnseenSectors() / 64 > CountOwnRadarSectors()) && doSearch )
     {
-        int v48 = (_wrldSectors.y + _wrldSectors.x) / 20 + 1;
+        int scanCount = (_wrldSectors.y + _wrldSectors.x) / 20 + 1;
 
-        for(int i = v48; i > 0; i--)
+        for(int i = scanCount; i > 0; i--)
         {
             if ( _wrldSectors.x * _wrldSectors.y == _roboRadarCellIndex )
             {
@@ -4434,11 +4434,11 @@ void NC_STACK_yparobo::AI_checkWorld(update_msg *arg)
 
             if ( _world->IsGamePlaySector(pt) )
             {
-                int v58 = RateSectorForRadar(pt);
+                int radarRating = RateSectorForRadar(pt);
 
-                if ( v58 > _roboRadarValue )
+                if ( radarRating > _roboRadarValue )
                 {
-                    _roboRadarValue = v58;
+                    _roboRadarValue = radarRating;
                     _roboRadarCell = &_world->SectorAt( _roboRadarCellIndex );
                     _roboRadarCellID = _roboRadarCellIndex;
                     _roboRadarTime = arg->gTime;
@@ -4455,25 +4455,25 @@ void NC_STACK_yparobo::AI_checkWorld(update_msg *arg)
     }
 
 
-    v6 = 1;
+    doSearch = 1;
     if ( _roboNewAI )
     {
         _roboSafetyDelay -= arg->frameTime;
         if ( _roboSafetyDelay > 0 )
-            v6 = 0;
+            doSearch = 0;
     }
 
-    int v92;
+    int sectorsPerFlak;
     if ( _roboEpSafety )
-        v92 = 10 * (100 / _roboEpSafety);
+        sectorsPerFlak = 10 * (100 / _roboEpSafety);
     else
-        v92 = 10;
+        sectorsPerFlak = 10;
 
-    if ( _roboEpSafety && (CountOwnedSectors() / v92) >= CountOwnFlakSectors() && v6 )
+    if ( _roboEpSafety && (CountOwnedSectors() / sectorsPerFlak) >= CountOwnFlakSectors() && doSearch )
     {
-        int v60 = (_wrldSectors.y + _wrldSectors.x) / 20 + 1;
+        int scanCount = (_wrldSectors.y + _wrldSectors.x) / 20 + 1;
 
-        for(int i = v60; i > 0; i--)
+        for(int i = scanCount; i > 0; i--)
         {
             if ( _wrldSectors.x * _wrldSectors.y == _roboSafetyCellIndex )
             {
@@ -4486,11 +4486,11 @@ void NC_STACK_yparobo::AI_checkWorld(update_msg *arg)
 
             if ( _world->IsGamePlaySector(pt) )
             {
-                int v71 = RateSectorForFlak(pt);
+                int flakRating = RateSectorForFlak(pt);
 
-                if ( v71 > _roboSafetyValue )
+                if ( flakRating > _roboSafetyValue )
                 {
-                    _roboSafetyValue = v71;
+                    _roboSafetyValue = flakRating;
                     _roboSafetyCell = &_world->SectorAt( _roboSafetyCellIndex );
                     _roboSafetyCellID = _roboSafetyCellIndex;
                     _roboSafetyTime = arg->gTime;
@@ -4507,19 +4507,19 @@ void NC_STACK_yparobo::AI_checkWorld(update_msg *arg)
     }
 
 
-    v6 = 1;
+    doSearch = 1;
     if ( _roboNewAI )
     {
         _roboExploreDelay -= arg->frameTime;
         if ( _roboExploreDelay > 0 )
-            v6 = 0;
+            doSearch = 0;
     }
 
-    if ( _roboEpRecon && v6 )
+    if ( _roboEpRecon && doSearch )
     {
-        int v90 = (_wrldSectors.y + _wrldSectors.x) / 20 + 1;
+        int scanCount = (_wrldSectors.y + _wrldSectors.x) / 20 + 1;
 
-        for (int i = v90; i > 0; i-- )
+        for (int i = scanCount; i > 0; i-- )
         {
             if ( _wrldSectors.x * _wrldSectors.y == _roboExploreCellIndex )
             {
@@ -4532,20 +4532,20 @@ void NC_STACK_yparobo::AI_checkWorld(update_msg *arg)
 
             if ( _world->IsGamePlaySector(pt) )
             {
-                int v81 = RateSectorForRecon(pt);
+                int reconRating = RateSectorForRecon(pt);
 
-                if ( v81 > _roboExploreValue )
+                if ( reconRating > _roboExploreValue )
                 {
-                    TCommanderSearch arg128_1;
-                    arg128_1.tgType = BACT_TGT_TYPE_CELL;
-                    arg128_1.flags = 2;
-                    arg128_1.tgt_pos = World::SectorIDToCenterPos3(pt);
+                    TCommanderSearch reconSearch;
+                    reconSearch.tgType = BACT_TGT_TYPE_CELL;
+                    reconSearch.flags = 2;
+                    reconSearch.tgt_pos = World::SectorIDToCenterPos3(pt);
 
-                    FindMatchingCommander(&arg128_1);
+                    FindMatchingCommander(&reconSearch);
 
-                    if ( !arg128_1.found_comm )
+                    if ( !reconSearch.found_comm )
                     {
-                        _roboExploreValue = v81;
+                        _roboExploreValue = reconRating;
                         _roboExploreCellID = _roboExploreCellIndex;
                         _roboExploreCell = &_world->SectorAt( _roboExploreCellIndex );
                         _roboExploreTime = arg->gTime;
@@ -4565,7 +4565,7 @@ void NC_STACK_yparobo::AI_checkWorld(update_msg *arg)
 
 void NC_STACK_yparobo::AI_layer3(update_msg *arg)
 {
-    int a4 = getBACT_bactCollisions();
+    int bactCollisions = getBACT_bactCollisions();
 
     float tmp = _target_vec.length();
 
@@ -4579,7 +4579,7 @@ void NC_STACK_yparobo::AI_layer3(update_msg *arg)
         if ( _roboState & ROBOSTATE_MOVE )
             doBeamUpdate(arg->frameTime);
 
-        if ( !a4 || ! CollisionWithBact(arg->frameTime) )
+        if ( !bactCollisions || ! CollisionWithBact(arg->frameTime) )
         {
             checkCollisions(arg->frameTime * 0.001);
 
@@ -4620,12 +4620,12 @@ void NC_STACK_yparobo::AI_layer3(update_msg *arg)
 void NC_STACK_yparobo::UpdateViewerLookAngles(update_msg *arg)
 {
     TInputState *inpt = arg->inpt;
-    float v18 = arg->frameTime / 1000.0;
+    float frameSec = arg->frameTime / 1000.0;
 
 
     if ( inpt->Sliders[1] < -0.001 )
     {
-        _viewer_vert_angle += inpt->Sliders[1] * _maxrot * v18 * 2.0;
+        _viewer_vert_angle += inpt->Sliders[1] * _maxrot * frameSec * 2.0;
 
         if ( _viewer_vert_angle > _viewer_max_up )
             _viewer_vert_angle = _viewer_max_up;
@@ -4635,7 +4635,7 @@ void NC_STACK_yparobo::UpdateViewerLookAngles(update_msg *arg)
     }
     else if (inpt->Sliders[1] > 0.001)
     {
-        _viewer_vert_angle += inpt->Sliders[1] * _maxrot * v18 * 2.0;
+        _viewer_vert_angle += inpt->Sliders[1] * _maxrot * frameSec * 2.0;
 
         if ( _viewer_vert_angle > _viewer_max_up )
             _viewer_vert_angle = _viewer_max_up;
@@ -4646,7 +4646,7 @@ void NC_STACK_yparobo::UpdateViewerLookAngles(update_msg *arg)
 
     if ( inpt->Sliders[0] < -0.001 )
     {
-        _viewer_horiz_angle -= inpt->Sliders[0] * _maxrot * v18 * 2.0;
+        _viewer_horiz_angle -= inpt->Sliders[0] * _maxrot * frameSec * 2.0;
 
         if ( _viewer_max_side < 3.15 )
         {
@@ -4659,7 +4659,7 @@ void NC_STACK_yparobo::UpdateViewerLookAngles(update_msg *arg)
     }
     else if (inpt->Sliders[0] > 0.001)
     {
-        _viewer_horiz_angle -= inpt->Sliders[0] * _maxrot * v18 * 2.0;
+        _viewer_horiz_angle -= inpt->Sliders[0] * _maxrot * frameSec * 2.0;
 
         if ( _viewer_max_side < 3.15 )
         {
@@ -4674,21 +4674,21 @@ void NC_STACK_yparobo::UpdateViewerLookAngles(update_msg *arg)
 
 void NC_STACK_yparobo::User_layer(update_msg *arg)
 {
-    int a4 = getBACT_bactCollisions();
+    int bactCollisions = getBACT_bactCollisions();
 
-    float v36 = _target_vec.length();
+    float targetDist = _target_vec.length();
 
-    if ( v36 <= 0.0 )
+    if ( targetDist <= 0.0 )
         _target_dir = vec3d(0.0, 0.0, 0.0);
     else
-        _target_dir = _target_vec / v36;
+        _target_dir = _target_vec / targetDist;
 
     if ( _status == BACT_STATUS_NORMAL )
     {
         if ( _roboState & ROBOSTATE_MOVE )
             doBeamUpdate(arg->frameTime);
 
-        if ( !a4 || !CollisionWithBact(arg->frameTime) )
+        if ( !bactCollisions || !CollisionWithBact(arg->frameTime) )
         {
             checkCommander();
             checkDanger();
@@ -4714,12 +4714,12 @@ void NC_STACK_yparobo::User_layer(update_msg *arg)
     }
     else if ( _status == BACT_STATUS_IDLE )
     {
-        setState_msg arg78;
-        arg78.newStatus = BACT_STATUS_NORMAL;
-        arg78.setFlags = 0;
-        arg78.unsetFlags = 0;
+        setState_msg stateMsg;
+        stateMsg.newStatus = BACT_STATUS_NORMAL;
+        stateMsg.setFlags = 0;
+        stateMsg.unsetFlags = 0;
 
-        SetState(&arg78);
+        SetState(&stateMsg);
 
         _status_flg &= ~BACT_STFLAG_LAND;
     }
@@ -4729,29 +4729,29 @@ void NC_STACK_yparobo::Move(move_msg *arg)
 {
     _old_pos = _position;
 
-    vec3d v63;
+    vec3d gravity;
     if ( _status == BACT_STATUS_DEAD )
-        v63 = vec3d::OY(_mass * 39.2266);
+        gravity = vec3d::OY(_mass * 39.2266);
     else
-        v63 = vec3d::OY(_mass * 9.80665);
+        gravity = vec3d::OY(_mass * 9.80665);
 
 
-    vec3d v52(0.0, 0.0, 0.0);
+    vec3d buoyancy(0.0, 0.0, 0.0);
     if ( !(arg->flag & 1) )
-        v52 = vec3d::OY(-_roboFlotage);
+        buoyancy = vec3d::OY(-_roboFlotage);
 
-    vec3d v51(0.0, 0.0, 0.0);
+    vec3d thrust(0.0, 0.0, 0.0);
     if ( !(arg->flag & 1) )
-        v51 = arg->thrustDir * _thraction;
+        thrust = arg->thrustDir * _thraction;
 
-    vec3d v57 = v63 + v51 - _fly_dir * (_fly_dir_length * _airconst) + v52;
+    vec3d totalForce = gravity + thrust - _fly_dir * (_fly_dir_length * _airconst) + buoyancy;
 
-    if ( v57.length() > 0.0 )
+    if ( totalForce.length() > 0.0 )
     {
-        vec3d v67 = _fly_dir * _fly_dir_length + v57 * (arg->period / _mass);
+        vec3d velocity = _fly_dir * _fly_dir_length + totalForce * (arg->period / _mass);
 
-        _fly_dir_length = v67.normalise();
-        _fly_dir = v67;
+        _fly_dir_length = velocity.normalise();
+        _fly_dir = velocity;
     }
 
     if ( fabs(_fly_dir_length) > 0.1 )
@@ -4763,26 +4763,26 @@ void NC_STACK_yparobo::Move(move_msg *arg)
     {
         if (gun.gun_obj)
         {
-            TUnitPlacement arg80;
-            arg80.pos = _position + _rotation.Transpose().Transform( gun.pos );
-            arg80.flags = 4;
+            TUnitPlacement gunPlacement;
+            gunPlacement.pos = _position + _rotation.Transpose().Transform( gun.pos );
+            gunPlacement.flags = 4;
 
-            gun.gun_obj->SetPosition(&arg80);
+            gun.gun_obj->SetPosition(&gunPlacement);
         }
     }
 
     _soundcarrier.Sounds[0].Pitch = _pitch;
     _soundcarrier.Sounds[0].Volume = _volume;
 
-    float v60 = fabs(_fly_dir_length) / (_force / _airconst_static) * 1.4;
+    float pitchFactor = fabs(_fly_dir_length) / (_force / _airconst_static) * 1.4;
 
     if ( _soundcarrier.Sounds[0].PSample )
-        _soundcarrier.Sounds[0].Pitch = (_soundcarrier.Sounds[0].PSample->SampleRate + _soundcarrier.Sounds[0].Pitch) * v60;
+        _soundcarrier.Sounds[0].Pitch = (_soundcarrier.Sounds[0].PSample->SampleRate + _soundcarrier.Sounds[0].Pitch) * pitchFactor;
 }
 
 void NC_STACK_yparobo::Die()
 {
-    int a4 = getBACT_yourLastSeconds();
+    int lastSeconds = getBACT_yourLastSeconds();
 
     uamessage_hostDie hdMsg;
 
@@ -4802,11 +4802,11 @@ void NC_STACK_yparobo::Die()
         {
             if ( !(_status_flg & BACT_STFLAG_CLEAN) )
             {
-                TRoboDestroyed arg177;
-                arg177.killerOwner = _killer_owner;
-                arg177.bact = this;
+                TRoboDestroyed roboDestroyed;
+                roboDestroyed.killerOwner = _killer_owner;
+                roboDestroyed.bact = this;
 
-                _world->HandleRoboDestroyed(&arg177); //Reown sectors for new owner
+                _world->HandleRoboDestroyed(&roboDestroyed); //Reown sectors for new owner
             }
         }
 
@@ -4829,11 +4829,11 @@ void NC_STACK_yparobo::Die()
 
                 subnode->_status_flg &= ~BACT_STFLAG_LAND;
 
-                setState_msg arg119;
-                arg119.unsetFlags = 0;
-                arg119.setFlags = 0;
-                arg119.newStatus = BACT_STATUS_CREATE;
-                subnode->SetStateInternal(&arg119);
+                setState_msg stateMsg;
+                stateMsg.unsetFlags = 0;
+                stateMsg.setFlags = 0;
+                stateMsg.newStatus = BACT_STATUS_CREATE;
+                subnode->SetStateInternal(&stateMsg);
 
                 subnode->_status = BACT_STATUS_DEAD;
 
@@ -4843,7 +4843,7 @@ void NC_STACK_yparobo::Die()
                 subnode->_soundFlags &= 0xFFFFFFF7;
                 subnode->_soundFlags |= 0x80;
 
-                subnode->setBACT_yourLastSeconds(a4);
+                subnode->setBACT_yourLastSeconds(lastSeconds);
             }
 
             node->_killer = _killer;
@@ -4855,11 +4855,11 @@ void NC_STACK_yparobo::Die()
 
             node->_status_flg &= ~BACT_STFLAG_LAND;
 
-            setState_msg arg119;
-            arg119.unsetFlags = 0;
-            arg119.setFlags = 0;
-            arg119.newStatus = BACT_STATUS_CREATE;
-            node->SetStateInternal(&arg119);
+            setState_msg stateMsg;
+            stateMsg.unsetFlags = 0;
+            stateMsg.setFlags = 0;
+            stateMsg.newStatus = BACT_STATUS_CREATE;
+            node->SetStateInternal(&stateMsg);
 
             node->_status = BACT_STATUS_DEAD;
 
@@ -4869,37 +4869,37 @@ void NC_STACK_yparobo::Die()
             node->_soundFlags &= 0xFFFFFFF7;
             node->_soundFlags |= 0x80;
 
-            node->setBACT_yourLastSeconds(a4);
+            node->setBACT_yourLastSeconds(lastSeconds);
         }
 
-        NC_STACK_ypabact *v20 = _world->getYW_userHostStation();
+        NC_STACK_ypabact *userHost = _world->getYW_userHostStation();
 
-        if ( this == v20 )
+        if ( this == userHost )
         {
             if ( !(_status_flg & BACT_STFLAG_CLEAN) )
             {
-                TRoboMessage arg134;
-                arg134.msgID = 12;
-                arg134.param1 = 0;
-                arg134.param3 = 0;
-                arg134.param2 = 0;
-                arg134.unit = this;
-                arg134.priority = 100;
+                TRoboMessage msg;
+                msg.msgID = 12;
+                msg.param1 = 0;
+                msg.param3 = 0;
+                msg.param2 = 0;
+                msg.unit = this;
+                msg.priority = 100;
 
-                placeMessage(&arg134);
+                placeMessage(&msg);
             }
         }
         else
         {
-            TRoboMessage arg134;
-            arg134.msgID = 11;
-            arg134.param1 = _owner;
-            arg134.param3 = 0;
-            arg134.param2 = 0;
-            arg134.unit = _killer;
-            arg134.priority = 50;
+            TRoboMessage msg;
+            msg.msgID = 11;
+            msg.param1 = _owner;
+            msg.param3 = 0;
+            msg.param2 = 0;
+            msg.unit = _killer;
+            msg.priority = 50;
 
-            placeMessage(&arg134);
+            placeMessage(&msg);
         }
 
         NC_STACK_ypabact::Die();
@@ -4927,8 +4927,8 @@ void NC_STACK_yparobo::Die()
 
 size_t NC_STACK_yparobo::SetPosition(TUnitPlacement *arg)
 {
-    int v5 = NC_STACK_ypabact::SetPosition(arg);
-    if ( !v5 )
+    int placed = NC_STACK_ypabact::SetPosition(arg);
+    if ( !placed )
         return 0;
 
     _roboFlotage = _mass * 9.80665;
@@ -4937,11 +4937,11 @@ size_t NC_STACK_yparobo::SetPosition(TUnitPlacement *arg)
     {
         if (gun.gun_obj)
         {
-            TUnitPlacement v11;
-            v11.pos = _position + _rotation.Transpose().Transform(gun.pos);
-            v11.flags = 4;
+            TUnitPlacement gunPlacement;
+            gunPlacement.pos = _position + _rotation.Transpose().Transform(gun.pos);
+            gunPlacement.flags = 4;
 
-            gun.gun_obj->SetPosition(&v11);
+            gun.gun_obj->SetPosition(&gunPlacement);
         }
     }
 
@@ -4953,160 +4953,160 @@ size_t NC_STACK_yparobo::SetPosition(TUnitPlacement *arg)
 // Update robo energys
 void NC_STACK_yparobo::EnergyInteract(update_msg *arg)
 {
-    float v65 = _reload_const;
-    float v63 = (_clock - _energy_time) / 1000.0;
+    float reloadConst = _reload_const;
+    float elapsedSec = (_clock - _energy_time) / 1000.0;
 
-    if ( _status != BACT_STATUS_DEAD && v63 >= 0.25 )
+    if ( _status != BACT_STATUS_DEAD && elapsedSec >= 0.25 )
     {
-        int v62 = _energy;
+        int oldEnergy = _energy;
 
-        int v61 = _roboEnergyLife;
-        int v59 = _roboEnergyMove;
+        int oldLifeEnergy = _roboEnergyLife;
+        int oldMoveEnergy = _roboEnergyMove;
 
         _energy_time = _clock;
 
-        TReloadRatios arg176;
-        arg176.owner = _pSector->owner;
+        TReloadRatios reloadRatios;
+        reloadRatios.owner = _pSector->owner;
 
-        _world->GetReloadRatios(&arg176);
+        _world->GetReloadRatios(&reloadRatios);
 
-        float v64 = _pSector->energy_power;
+        float sectorPower = _pSector->energy_power;
 
-        float v70 = v65 * v63 * v64 * arg176.ratioClamped;
+        float energyGain = reloadConst * elapsedSec * sectorPower * reloadRatios.ratioClamped;
 
         if ( IsPlayerRobo() )
         {
-            int v67 = 0;
+            int poolCount = 0;
 
-            float v68 = v70 / 6000.0;
+            float gain = energyGain / 6000.0;
 
             if ( _pSector->owner )
             {
                 if ( _pSector->owner != _owner )
-                    v68 = -v68;
+                    gain = -gain;
             }
             else
             {
-                v68 = 0.0;
+                gain = 0.0;
             }
 
-            if ( _roboFillMode & 1 || v68 < 0.0 )
-                v67++;
+            if ( _roboFillMode & 1 || gain < 0.0 )
+                poolCount++;
 
             if ( _roboFillMode & 4 )
-                v67++;
+                poolCount++;
 
             if ( _roboFillMode & 8 )
-                v67++;
+                poolCount++;
 
-            _roboEnergyReloadPS = v65 * v64 / 6000.0;
+            _roboEnergyReloadPS = reloadConst * sectorPower / 6000.0;
 
-            if ( v67 > 0 )
+            if ( poolCount > 0 )
             {
-                int v25 = 0;
-                int v26 = 0;
-                int v66 = 0;
+                int energySum = 0;
+                int raiseStep = 0;
+                int lowerStep = 0;
 
-                v68 = v68 / (float)v67;
+                gain = gain / (float)poolCount;
 
-                if ( _roboFillMode & 1 || v68 < 0.0 )
-                    _energy += v68;
+                if ( _roboFillMode & 1 || gain < 0.0 )
+                    _energy += gain;
 
                 if ( _roboFillMode & 4 )
-                    _roboEnergyLife += v68;
+                    _roboEnergyLife += gain;
 
                 if ( _roboFillMode & 8 )
-                    _roboEnergyMove += v68;
+                    _roboEnergyMove += gain;
 
-                float v60 = v63 * v65 / 30.0;
+                float balanceAmount = elapsedSec * reloadConst / 30.0;
 
                 if ( _roboFillMode & 1 )
-                    v25 = _energy;
+                    energySum = _energy;
 
                 if ( _roboFillMode & 4 )
-                    v25 += _roboEnergyLife;
+                    energySum += _roboEnergyLife;
 
                 if ( _roboFillMode & 8 )
-                    v25 += _roboEnergyMove;
+                    energySum += _roboEnergyMove;
 
-                int v34 = v25 / v67;
-
-                if ( _roboFillMode & 1 )
-                {
-                    if ( v34 > _energy )
-                        v26++;
-                    else if ( v34 < _energy )
-                        v66++;
-                }
-
-                if ( _roboFillMode & 4 )
-                {
-                    if ( v34 > _roboEnergyLife )
-                        v26++;
-                    else if ( v34 < _roboEnergyLife )
-                        v66++;
-                }
-
-                if ( _roboFillMode & 8 )
-                {
-                    if ( v34 > _roboEnergyMove )
-                        v26++;
-                    else if ( v34 < _roboEnergyMove )
-                        v66++;
-                }
-
-                if ( v26 )
-                    v26 = (int)v60 / v26;
-
-                if ( v66 )
-                    v66 = (int)v60 / v66;
+                int average = energySum / poolCount;
 
                 if ( _roboFillMode & 1 )
                 {
-                    if ( _energy <= v34 )
-                    {
-                        _energy += v26;
+                    if ( average > _energy )
+                        raiseStep++;
+                    else if ( average < _energy )
+                        lowerStep++;
+                }
 
-                        if ( _energy >= v34 )
-                            _energy = v34;
+                if ( _roboFillMode & 4 )
+                {
+                    if ( average > _roboEnergyLife )
+                        raiseStep++;
+                    else if ( average < _roboEnergyLife )
+                        lowerStep++;
+                }
+
+                if ( _roboFillMode & 8 )
+                {
+                    if ( average > _roboEnergyMove )
+                        raiseStep++;
+                    else if ( average < _roboEnergyMove )
+                        lowerStep++;
+                }
+
+                if ( raiseStep )
+                    raiseStep = (int)balanceAmount / raiseStep;
+
+                if ( lowerStep )
+                    lowerStep = (int)balanceAmount / lowerStep;
+
+                if ( _roboFillMode & 1 )
+                {
+                    if ( _energy <= average )
+                    {
+                        _energy += raiseStep;
+
+                        if ( _energy >= average )
+                            _energy = average;
                     }
                     else
                     {
-                        _energy -= v66;
-                        if ( _energy <= v34 )
-                            _energy = v34;
+                        _energy -= lowerStep;
+                        if ( _energy <= average )
+                            _energy = average;
                     }
                 }
 
                 if ( _roboFillMode & 4 )
                 {
-                    if ( _roboEnergyLife <= v34 )
+                    if ( _roboEnergyLife <= average )
                     {
-                        _roboEnergyLife += v26;
-                        if ( _roboEnergyLife >= v34)
-                            _roboEnergyLife = v34;
+                        _roboEnergyLife += raiseStep;
+                        if ( _roboEnergyLife >= average)
+                            _roboEnergyLife = average;
                     }
                     else
                     {
-                        _roboEnergyLife -= v66;
-                        if ( _roboEnergyLife <= v34 )
-                            _roboEnergyLife = v34;
+                        _roboEnergyLife -= lowerStep;
+                        if ( _roboEnergyLife <= average )
+                            _roboEnergyLife = average;
                     }
                 }
 
                 if ( _roboFillMode & 8 )
                 {
-                    if ( v34 >= _roboEnergyMove )
+                    if ( average >= _roboEnergyMove )
                     {
-                        _roboEnergyMove += v26;
-                        if ( _roboEnergyMove >= v34)
-                            _roboEnergyMove = v34;
+                        _roboEnergyMove += raiseStep;
+                        if ( _roboEnergyMove >= average)
+                            _roboEnergyMove = average;
                     }
                     else
                     {
-                        _roboEnergyMove -= v66;
-                        if ( _roboEnergyMove <= v34 )
-                            _roboEnergyMove = v34;
+                        _roboEnergyMove -= lowerStep;
+                        if ( _roboEnergyMove <= average )
+                            _roboEnergyMove = average;
                     }
                 }
 
@@ -5114,17 +5114,17 @@ void NC_STACK_yparobo::EnergyInteract(update_msg *arg)
         }
         else
         {
-            _roboEnergyReloadPS = v65 * v64 / 7000.0;
-            float v71 = v70 / 7000.0;
+            _roboEnergyReloadPS = reloadConst * sectorPower / 7000.0;
+            float gain = energyGain / 7000.0;
             if ( _owner == _pSector->owner )
             {
-                _roboBuildSpare += v71 * 0.15;
-                _roboVehicleSpare += v71 * 0.7;
-                _energy += v71 * 0.7;
+                _roboBuildSpare += gain * 0.15;
+                _roboVehicleSpare += gain * 0.7;
+                _energy += gain * 0.7;
             }
             else
             {
-                _energy -= v71;
+                _energy -= gain;
             }
         }
 
@@ -5161,19 +5161,19 @@ void NC_STACK_yparobo::EnergyInteract(update_msg *arg)
         _roboEnergyLossFlags = 0;
         _roboEnergyLoadFlags = 0;
 
-        if ( v62 < _energy )
+        if ( oldEnergy < _energy )
             _roboEnergyLoadFlags |= 1;
-        else if ( v62 > _energy )
+        else if ( oldEnergy > _energy )
             _roboEnergyLossFlags |= 1;
 
-        if ( v61 < _roboEnergyLife )
+        if ( oldLifeEnergy < _roboEnergyLife )
             _roboEnergyLoadFlags |= 4;
-        else if ( v61 > _roboEnergyLife )
+        else if ( oldLifeEnergy > _roboEnergyLife )
             _roboEnergyLossFlags |= 4;
 
-        if ( v59 < _roboEnergyMove )
+        if ( oldMoveEnergy < _roboEnergyMove )
             _roboEnergyLoadFlags |= 8;
-        else if ( v59 > _roboEnergyMove )
+        else if ( oldMoveEnergy > _roboEnergyMove )
             _roboEnergyLossFlags |= 8;
     }
 }
@@ -5251,27 +5251,27 @@ void NC_STACK_yparobo::CorrectPositionOnLand()
 
 void NC_STACK_yparobo::DeadTimeUpdate(update_msg *arg)
 {
-    int a4 = getBACT_yourLastSeconds();
+    int lastSeconds = getBACT_yourLastSeconds();
 
     if ( !(_status_flg & BACT_STFLAG_DEATH2) )
     {
-        setState_msg arg78;
-        arg78.newStatus = BACT_STATUS_NOPE;
-        arg78.unsetFlags = 0;
-        arg78.setFlags = BACT_STFLAG_DEATH2;
-        SetState(&arg78);
+        setState_msg stateMsg;
+        stateMsg.newStatus = BACT_STATUS_NOPE;
+        stateMsg.unsetFlags = 0;
+        stateMsg.setFlags = BACT_STFLAG_DEATH2;
+        SetState(&stateMsg);
     }
 
     _status_flg |= BACT_STFLAG_LAND;
 
     if ( _owner == 0 || _vp_genesis == NULL )
     {
-        if ( a4 > 0 )
+        if ( lastSeconds > 0 )
             return;
 
-        int v31 = getBACT_inputting();
+        int isInputting = getBACT_inputting();
 
-        if ( v31 )
+        if ( isInputting )
             _status_flg |= BACT_STFLAG_NORENDER;
         else
             Release();
@@ -5279,11 +5279,11 @@ void NC_STACK_yparobo::DeadTimeUpdate(update_msg *arg)
         return;
     }
 
-    int v33 = (float)_energy_max * 0.7;
-    if ( v33 < 10000 )
-        v33 = 10000;
-    if ( v33 > 25000 )
-        v33 = 25000;
+    int plasmaTime = (float)_energy_max * 0.7;
+    if ( plasmaTime < 10000 )
+        plasmaTime = 10000;
+    if ( plasmaTime > 25000 )
+        plasmaTime = 25000;
 
     if ( _vp_extra[0].flags & EVPROTO_FLAG_ACTIVE )
     {
@@ -5293,12 +5293,12 @@ void NC_STACK_yparobo::DeadTimeUpdate(update_msg *arg)
         {
             _vp_extra[0].SetVP((NC_STACK_base::Instance *)NULL);
 
-            if ( a4 > 0 )
+            if ( lastSeconds > 0 )
                 return;
 
-            int v30 = getBACT_inputting();
+            int isInputting = getBACT_inputting();
 
-            if ( v30 )
+            if ( isInputting )
                 _status_flg |= BACT_STFLAG_NORENDER;
             else
                 Release();
@@ -5306,21 +5306,21 @@ void NC_STACK_yparobo::DeadTimeUpdate(update_msg *arg)
             return;
         }
 
-        _vp_extra[0].scale = sqrt((float)_scale_time / (float)v33) * 0.75;
+        _vp_extra[0].scale = sqrt((float)_scale_time / (float)plasmaTime) * 0.75;
 
         if ( _vp_extra[0].scale < 0.0 )
             _vp_extra[0].scale = 0;
 
-        float v16 = _maxrot * 2.0 * ((float)arg->frameTime / 1000.0);
+        float spinAngle = _maxrot * 2.0 * ((float)arg->frameTime / 1000.0);
 
-        _vp_extra[0].rotate = mat3x3::RotateY(v16) * _vp_extra[0].rotate;
+        _vp_extra[0].rotate = mat3x3::RotateY(spinAngle) * _vp_extra[0].rotate;
 
-        if ( a4 <= 0 )
+        if ( lastSeconds <= 0 )
             _status_flg |= BACT_STFLAG_NORENDER;
     }
     else
     {
-        _scale_time = v33;
+        _scale_time = plasmaTime;
         _vp_extra[0].scale = 0.75;
         _vp_extra[0].pos = _position;
         _vp_extra[0].rotate = _rotation;
@@ -5333,7 +5333,7 @@ void NC_STACK_yparobo::DeadTimeUpdate(update_msg *arg)
             sbMsg.msgID = UAMSG_STARTPLASMA;
             sbMsg.owner = _owner;
             sbMsg.scale = 0.75;
-            sbMsg.time = v33;
+            sbMsg.time = plasmaTime;
             sbMsg.id = _gid;
             sbMsg.pos = _position;
             sbMsg.dir = _rotation;
@@ -5351,26 +5351,26 @@ void NC_STACK_yparobo::FindMatchingCommander(TCommanderSearch *arg)
     {
         if ( !(node->_status_flg & BACT_STFLAG_DEATH1) )
         {
-            int v7;
+            int idOk;
 
             if ( arg->flags & 1 )
             {
                 if ( arg->comm_id == node->_commandID )
                 {
                     arg->found_comm = node;
-                    v7 = 1;
+                    idOk = 1;
                 }
                 else
                 {
-                    v7 = 0;
+                    idOk = 0;
                 }
             }
             else
             {
-                v7 = 1;
+                idOk = 1;
             }
 
-            int v21;
+            int targetOk;
             if ( arg->flags & 2 )
             {
                 if ( node->_primTtype == arg->tgType || _roboDockTargetType == arg->tgType )
@@ -5378,20 +5378,20 @@ void NC_STACK_yparobo::FindMatchingCommander(TCommanderSearch *arg)
                     Common::Point tgsec = World::PositionToSectorID(arg->tgt_pos);
                     Common::Point rbtg;
 
-                    uint32_t v16;
+                    uint32_t targetCmdId;
                     if ( node->_commandID == _roboDockUser && _roboDockUser )
                     {
                         rbtg = World::PositionToSectorID( _roboDockTargetPos );
-                        v16 = _roboDockTargetCommandID;
+                        targetCmdId = _roboDockTargetCommandID;
                     }
                     else
                     {
                         rbtg = World::PositionToSectorID( node->_primTpos );
-                        v16 = node->_primT_cmdID;
+                        targetCmdId = node->_primT_cmdID;
                     }
 
                     if ( (arg->tgType == BACT_TGT_TYPE_UNIT && !arg->prim_comm_id && arg->tgt.pbact == node->_primT.pbact)
-                            || (arg->tgType == BACT_TGT_TYPE_UNIT && arg->prim_comm_id != 0 && v16 == arg->prim_comm_id)
+                            || (arg->tgType == BACT_TGT_TYPE_UNIT && arg->prim_comm_id != 0 && targetCmdId == arg->prim_comm_id)
                             || (arg->tgType == BACT_TGT_TYPE_CELL && rbtg == tgsec) )
                     {
                         arg->found_comm = node;
@@ -5399,17 +5399,17 @@ void NC_STACK_yparobo::FindMatchingCommander(TCommanderSearch *arg)
                 }
                 // TODO(bug): v21 stays 0 even when this commander matches, so with flag 2
                 // the loop never stops early and the last match wins, not the first.
-                v21 = 0;
+                targetOk = 0;
             }
             else
             {
-                v21 = 1;
+                targetOk = 1;
             }
 
-            int v26;
+            int distanceOk;
             if ( !(arg->flags & 4) )
             {
-                v26 = 1;
+                distanceOk = 1;
             }
             else
             {
@@ -5431,20 +5431,20 @@ void NC_STACK_yparobo::FindMatchingCommander(TCommanderSearch *arg)
                     {
                         arg->found_comm = node;
 
-                        v26 = 1;
+                        distanceOk = 1;
                     }
                     else
                     {
-                        v26 = 0;
+                        distanceOk = 0;
                     }
                 }
                 else
                 {
-                    v26 = 0;
+                    distanceOk = 0;
                 }
             }
 
-            if ( v7 && v21 && v26 )
+            if ( idOk && targetOk && distanceOk )
                 break;
         }
     }
@@ -5513,14 +5513,14 @@ bool NC_STACK_yparobo::MakeSquad(const std::vector<int> &VhclIDS, vec3d pos, boo
     size_t curid = 0;
     int col = sqrt(VhclIDS.size()) + 2;
 
-    TUnitSpawn arg146;
-    arg146.pos.y = pos.y;
-    arg146.pos.x = 100.0 * (curid % col - col / 2.0) + pos.x;
-    arg146.pos.z = 100.0 * (curid / col) + pos.z;
+    TUnitSpawn spawn;
+    spawn.pos.y = pos.y;
+    spawn.pos.x = 100.0 * (curid % col - col / 2.0) + pos.x;
+    spawn.pos.z = 100.0 * (curid / col) + pos.z;
     
-    arg146.vehicle_id = VhclIDS[0];
+    spawn.vehicle_id = VhclIDS[0];
 
-    NC_STACK_ypabact *squad_commander = _world->CreateVehicle(&arg146); //Create first bact
+    NC_STACK_ypabact *squad_commander = _world->CreateVehicle(&spawn); //Create first bact
 
     if ( !squad_commander )
         return false;
@@ -5535,38 +5535,38 @@ bool NC_STACK_yparobo::MakeSquad(const std::vector<int> &VhclIDS, vec3d pos, boo
     squad_commander->_host_station = this;
     squad_commander->_aggr = 60;
 
-    setState_msg arg78;
-    arg78.newStatus = BACT_STATUS_NORMAL;
-    arg78.setFlags = 0;
-    arg78.unsetFlags = 0;
+    setState_msg stateMsg;
+    stateMsg.newStatus = BACT_STATUS_NORMAL;
+    stateMsg.setFlags = 0;
+    stateMsg.unsetFlags = 0;
 
-    squad_commander->SetState(&arg78);
+    squad_commander->SetState(&stateMsg);
 
-    setTarget_msg arg67;
-    arg67.tgt_type = BACT_TGT_TYPE_CELL;
-    arg67.priority = 0;
-    arg67.tgt_pos.x = arg146.pos.x;
-    arg67.tgt_pos.z = arg146.pos.z;
+    setTarget_msg targetMsg;
+    targetMsg.tgt_type = BACT_TGT_TYPE_CELL;
+    targetMsg.priority = 0;
+    targetMsg.tgt_pos.x = spawn.pos.x;
+    targetMsg.tgt_pos.z = spawn.pos.z;
 
-    squad_commander->SetTarget(&arg67); //Set target
+    squad_commander->SetTarget(&targetMsg); //Set target
 
     for ( curid = 1; curid < VhclIDS.size(); curid++)
     {
-        arg146.vehicle_id = VhclIDS[VhclIDS.size() - curid]; // CHECK IT Why from end ?
+        spawn.vehicle_id = VhclIDS[VhclIDS.size() - curid]; // CHECK IT Why from end ?
 
-        arg146.pos.x = 100.0 * (curid % col - col / 2.0) + pos.x;
-        arg146.pos.z = 100.0 * (curid / col) + pos.z;
+        spawn.pos.x = 100.0 * (curid % col - col / 2.0) + pos.x;
+        spawn.pos.z = 100.0 * (curid / col) + pos.z;
 
-        NC_STACK_ypabact *next_bact = (NC_STACK_ypabact *)_world->CreateVehicle(&arg146);
+        NC_STACK_ypabact *next_bact = (NC_STACK_ypabact *)_world->CreateVehicle(&spawn);
 
         if ( !next_bact )
             break;
 
         squad_commander->AddSubject(next_bact); // Add to squad commander list
 
-        arg67.tgt_pos.x = arg146.pos.x;
-        arg67.tgt_pos.z = arg146.pos.z;
-        next_bact->SetTarget(&arg67); //Set target
+        targetMsg.tgt_pos.x = spawn.pos.x;
+        targetMsg.tgt_pos.z = spawn.pos.z;
+        next_bact->SetTarget(&targetMsg); //Set target
 
         next_bact->setBACT_bactCollisions( getBACT_bactCollisions() );
 
@@ -5578,7 +5578,7 @@ bool NC_STACK_yparobo::MakeSquad(const std::vector<int> &VhclIDS, vec3d pos, boo
         next_bact->_host_station = this;
         next_bact->_aggr = 60;
 
-        next_bact->SetState(&arg78);
+        next_bact->SetState(&stateMsg);
     }
 
     nextCommandID++;
@@ -5592,7 +5592,7 @@ bool NC_STACK_yparobo::MakeSquad(const std::vector<int> &VhclIDS, vec3d pos, boo
 
 int NC_STACK_yparobo::ShouldPlaceMessage(TRoboMessage *arg)
 {
-    int v2 = 1;
+    int shouldPlace = 1;
 
     switch(arg->msgID)
     {
@@ -5601,9 +5601,9 @@ int NC_STACK_yparobo::ShouldPlaceMessage(TRoboMessage *arg)
         NC_STACK_ypabact *bacto = _world->getYW_userVehicle();
 
         if ( bacto->_bact_type != BACT_TYPES_MISSLE )
-            v2 = 1;
+            shouldPlace = 1;
         else
-            v2 = 0;
+            shouldPlace = 0;
     }
     break;
 
@@ -5611,24 +5611,24 @@ int NC_STACK_yparobo::ShouldPlaceMessage(TRoboMessage *arg)
     case 3:
     case 4:
         if ( arg->param1 == lastRoboMsgByType[ arg->msgID ].param1 && arg->param2 == lastRoboMsgByType[ arg->msgID ].param2 )
-            v2 = 0;
+            shouldPlace = 0;
         else
-            v2 = 1;
+            shouldPlace = 1;
         break;
 
     case 6:
-        v2 = (_clock - lastEnemyHostFoundMsgTime[ arg->param1 ] > 45000) || lastEnemyHostFoundMsgTime[ arg->param1 ] == 0;
+        shouldPlace = (_clock - lastEnemyHostFoundMsgTime[ arg->param1 ] > 45000) || lastEnemyHostFoundMsgTime[ arg->param1 ] == 0;
         lastEnemyHostFoundMsgTime[ arg->param1 ] = _clock;
         break;
 
     case 7:
-        v2 = 1;
+        shouldPlace = 1;
         if ( arg->unit && arg->unit->_bact_type == BACT_TYPES_GUN )
         {
             NC_STACK_ypagun *gun = dynamic_cast<NC_STACK_ypagun *>( arg->unit );
 
             if ( gun->IsRoboGun() )
-                v2 = 0;
+                shouldPlace = 0;
         }
 
         break;
@@ -5637,9 +5637,9 @@ int NC_STACK_yparobo::ShouldPlaceMessage(TRoboMessage *arg)
     case 10:
     case 13:
         if ( arg->param1 == lastRoboMsgByType[arg->msgID].param1 )
-            v2 = 0;
+            shouldPlace = 0;
         else
-            v2 = 1;
+            shouldPlace = 1;
         break;
 
     case 5:
@@ -5652,7 +5652,7 @@ int NC_STACK_yparobo::ShouldPlaceMessage(TRoboMessage *arg)
     case 33:
     case 34:
     case 35:
-        v2 = 1;
+        shouldPlace = 1;
         break;
 
     case 18:
@@ -5660,10 +5660,10 @@ int NC_STACK_yparobo::ShouldPlaceMessage(TRoboMessage *arg)
         if ( (_clock - lastRoboMsgByType[ arg->msgID ].lastTime) > arg->param1 )
         {
             lastRoboMsgByType[ arg->msgID ].lastTime = _clock;
-            v2 = 1;
+            shouldPlace = 1;
         }
         else
-            v2 = 0;
+            shouldPlace = 0;
 
         break;
 
@@ -5671,14 +5671,14 @@ int NC_STACK_yparobo::ShouldPlaceMessage(TRoboMessage *arg)
         break;
     }
 
-    if ( v2 )
+    if ( shouldPlace )
     {
         lastRoboMsgByType[arg->msgID].param1 = arg->param1;
         lastRoboMsgByType[arg->msgID].param2 = arg->param2;
         lastRoboMsgByType[arg->msgID].param3 = arg->param3;
     }
 
-    return v2;
+    return shouldPlace;
 }
 
 int NC_STACK_yparobo::placeMessage(TRoboMessage *arg)
@@ -5689,66 +5689,66 @@ int NC_STACK_yparobo::placeMessage(TRoboMessage *arg)
     if ( !ShouldPlaceMessage(arg) )
         return 0;
 
-    TInfoMessage v8;
-    v8.Priority = arg->priority;
-    v8.unit = arg->unit;
-    v8.MsgID = arg->msgID;
+    TInfoMessage infoMsg;
+    infoMsg.Priority = arg->priority;
+    infoMsg.unit = arg->unit;
+    infoMsg.MsgID = arg->msgID;
     
     switch ( arg->msgID )
     {
     case 2:
-        v8.txt = Locale::Text::Feedback(Locale::FEEDBACK_SECTCONQ);
+        infoMsg.txt = Locale::Text::Feedback(Locale::FEEDBACK_SECTCONQ);
         break;
 
     case 6:
-        v8.txt =  Locale::Text::Feedback(Locale::FEEDBACK_FOUNDEHS);
+        infoMsg.txt =  Locale::Text::Feedback(Locale::FEEDBACK_FOUNDEHS);
         break;
 
     case 11:
-        v8.txt = Locale::Text::Feedback(Locale::FEEDBACK_HSDESTR);
+        infoMsg.txt = Locale::Text::Feedback(Locale::FEEDBACK_HSDESTR);
         break;
 
     case 12:
-        v8.txt = Locale::Text::Feedback(Locale::FEEDBACK_OWNHSDESTR);
+        infoMsg.txt = Locale::Text::Feedback(Locale::FEEDBACK_OWNHSDESTR);
         break;
 
     case 13:
-        v8.txt = Locale::Text::Feedback(Locale::FEEDBACK_ENMYNEARHS);
+        infoMsg.txt = Locale::Text::Feedback(Locale::FEEDBACK_ENMYNEARHS);
         break;
 
     case 18:
-        v8.txt = Locale::Text::Feedback(Locale::FEEDBACK_REQSUP);
+        infoMsg.txt = Locale::Text::Feedback(Locale::FEEDBACK_REQSUP);
         break;
 
     case 31:
-        v8.txt = Locale::Text::Feedback(Locale::FEEDBACK_FLAKDESTR);
+        infoMsg.txt = Locale::Text::Feedback(Locale::FEEDBACK_FLAKDESTR);
         break;
 
     case 32:
-        v8.txt = Locale::Text::Feedback(Locale::FEEDBACK_RADARDESTR);
+        infoMsg.txt = Locale::Text::Feedback(Locale::FEEDBACK_RADARDESTR);
         break;
 
     case 33:
-        v8.txt = Locale::Text::Feedback(Locale::FEEDBACK_ATKPS);
+        infoMsg.txt = Locale::Text::Feedback(Locale::FEEDBACK_ATKPS);
         break;
 
     case 34:
-        v8.txt = Locale::Text::Feedback(Locale::FEEDBACK_ATKFLAK);
+        infoMsg.txt = Locale::Text::Feedback(Locale::FEEDBACK_ATKFLAK);
         break;
 
     case 35:
-        v8.txt = Locale::Text::Feedback(Locale::FEEDBACK_ATKRADAR);
+        infoMsg.txt = Locale::Text::Feedback(Locale::FEEDBACK_ATKRADAR);
         break;
 
     case 40:
-        v8.txt = Locale::Text::Feedback(Locale::FEEDBACK_HSENERGY);
+        infoMsg.txt = Locale::Text::Feedback(Locale::FEEDBACK_HSENERGY);
         break;
 
     default:
         break;
     }
     
-    _world->ShowMessage(&v8);
+    _world->ShowMessage(&infoMsg);
 
     return 1;
 }
@@ -5762,9 +5762,9 @@ void NC_STACK_yparobo::UpdateGateBeamOut()
         {
             bool isNotViewBeaming = false;
 
-            for ( NC_STACK_ypabact* &v1 : _pSector->unitsList )
+            for ( NC_STACK_ypabact* &sectorUnit : _pSector->unitsList )
             {
-                if ( v1->_status == BACT_STATUS_BEAM && v1->_owner == _owner && !v1->getBACT_viewer() )
+                if ( sectorUnit->_status == BACT_STATUS_BEAM && sectorUnit->_owner == _owner && !sectorUnit->getBACT_viewer() )
                 {
                     isNotViewBeaming = true;
                     break;
@@ -5810,7 +5810,7 @@ void NC_STACK_yparobo::UpdateGateBeamOut()
 
         _world->_levelInfo.Buddies.clear();
 
-        int v15 = 0;
+        int beamDelay = 0;
 
         for ( NC_STACK_ypabact* &bct : _pSector->unitsList )
         {
@@ -5819,17 +5819,17 @@ void NC_STACK_yparobo::UpdateGateBeamOut()
                 if ( bct->_bact_type != BACT_TYPES_ROBO && bct->_bact_type != BACT_TYPES_MISSLE && bct->_bact_type != BACT_TYPES_GUN && bct->_owner == _owner )
                 {
                     vec2d temp = World::SectorIDToCenterPos2( _cellId );
-                    float v17 = fabs(bct->_position.x - temp.x);
-                    float v29 = fabs(bct->_position.z - temp.y);
+                    float dx = fabs(bct->_position.x - temp.x);
+                    float dz = fabs(bct->_position.z - temp.y);
 
-                    if ( v17 <= 450.0 || v29 <= 450.0 )
+                    if ( dx <= 450.0 || dz <= 450.0 )
                     {
                         bct->_status = BACT_STATUS_BEAM;
 
                         bct->_scale_time = 0;
 
-                        bct->_scale_delay = v15 + 1000;
-                        v15 += 400;
+                        bct->_scale_delay = beamDelay + 1000;
+                        beamDelay += 400;
                     }
                 }
             }

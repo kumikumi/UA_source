@@ -2203,7 +2203,7 @@ public:
     
     void HandleGuiInput(TInputState *inpt);
     void ConfirmDialogHandleInput(TInputState *inpt);
-    void ConfirmDialogLayoutItems(int a2);
+    void ConfirmDialogLayoutItems(int pressedFlags);
     void SquadManagerShowStatusTooltip(NC_STACK_ypabact *bact);
     bool SquadManagerIsDragValid();
     
@@ -2222,7 +2222,7 @@ public:
     int SquadManagerBeginDrag(TClickBoxInf *winpt);
     void yw_SMAN_MouseSelect(TClickBoxInf *winp);
     void SquadManager_InputHandle(TInputState *inpt);
-    NC_STACK_ypabact * SquadManagerPickUnit(int sqid, int a3);
+    NC_STACK_ypabact * SquadManagerPickUnit(int sqid, int btnX);
     
     bool recorder_create_camera();
     void recorder_updateObjectList(TGameRecorder *rcrd, float blend, int period);
@@ -2264,7 +2264,7 @@ public:
     
     
     bool CheckUnitDoubleClick(TClickBoxInf *winp);
-    int HandleWaypointMode(TInputState *arg, int a3);
+    int HandleWaypointMode(TInputState *arg, int action);
     int UserActBeamCheck();
     int UserActBuildCheck();
     int UserActCreateCheck(TClickBoxInf *winp);
@@ -2272,9 +2272,9 @@ public:
     
     int yw_MouseFindCreationPoint(TClickBoxInf *winp);
     
-    void OpenConfirmDialog(const std::string &a2, GuiBase *lstvw);
+    void OpenConfirmDialog(const std::string &text, GuiBase *lstvw);
     void NetSendExitMsg(uint8_t normExit);
-    void ConfirmOpenHelp(const std::string &a2);
+    void ConfirmOpenHelp(const std::string &url);
     
     void LoadKeyNames();
     

@@ -245,14 +245,14 @@ protected:
     void AI_solveTrouble(update_msg *arg);
     void AI_checkWorld(update_msg *arg);
 
-    void doBeamUpdate(int a2);
+    void doBeamUpdate(int frameTime);
     void doUserCommands(update_msg *arg);
     void wallow(update_msg *arg);
     void searchEnemyRobo();
     void usersRoboEnergyCheck();
 
     void checkDanger();
-    size_t checkCollisions(float a2);
+    size_t checkCollisions(float dtime);
     
     bool IsNotUserControlled();
     void UpdateCollisionPointPositions();
@@ -260,8 +260,8 @@ protected:
     int RateSectorForFlak(const Common::Point &sc);
     int RateSectorForRecon(const Common::Point &sc);
     int RateSectorForRelocation();
-    int FindEnemyRoboTarget(int *a2, Common::Point *pCellId);
-    int FindDefenseTarget(int *a2, Common::Point *pCellId);
+    int FindEnemyRoboTarget(int *commandId, Common::Point *pCellId);
+    int FindDefenseTarget(int *commandId, Common::Point *pCellId);
     int IsEnemyUnitNear();
     int IsEnemyRoboNear();
     int RateSectorForPowerStation(const Common::Point &sc);
@@ -281,7 +281,7 @@ protected:
     int IsCommanderClosestToTarget(NC_STACK_ypabact *bact);
     void SendSquadAgainstEnemyRobo(NC_STACK_ypabact *unit1, NC_STACK_ypabact *unit2);
     void UpdateRoboAttackSquad(NC_STACK_ypabact *unit, TRoboAttackSlot *rbt);
-    int SendSquadToPosition(NC_STACK_ypabact *bact, float a2, float a3);
+    int SendSquadToPosition(NC_STACK_ypabact *bact, float x, float z);
     int SendSquadToUnit(NC_STACK_ypabact *bact, NC_STACK_ypabact *bact2);
     
     void RotateGunsAroundAxis(const vec3d &vaxis, float angle);

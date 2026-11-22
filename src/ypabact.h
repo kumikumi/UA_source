@@ -530,7 +530,7 @@ public:
     bool IsNeedsWaypoints() const;
     bool IsAnyKidWithoutSecondUnitTarget() const;
     
-    void UpdateVisor(NC_STACK_ypabact *bact2, int a3);
+    void UpdateVisor(NC_STACK_ypabact *bact2, int noWeaponSight);
     void NetBroadcastReorder(NC_STACK_ypabact *bact2, int mode);
     void StartDestFX(const World::DestFX &fx);
 
@@ -746,6 +746,6 @@ protected:
     NC_STACK_ypaworld *_world;
 };
 
-void ShrinkAndSpinPlasma(NC_STACK_ypabact *bact, int a2, int a3, float a4);
+void ShrinkAndSpinPlasma(NC_STACK_ypabact *bact, int plasmaDuration, int frameTime, float maxScale);
 
 #endif // YBACT_H_INCLUDED
