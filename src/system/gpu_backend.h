@@ -119,6 +119,7 @@ protected:
         uint32_t FirstIndex = 0;
         uint32_t FirstCoords = 0;
         bool HasCoords = false;
+        bool ForceField = false; // Drawn with the force field layer, see forcefield.slang
     };
 
     // Data waiting for the next copy pass
@@ -189,8 +190,13 @@ protected:
     static TPipelineDesc DecodePipeline(uint32_t key);
 
     // The render states the legacy OpenGL renderer would set for the node
-    void NodeStates(const TRenderNode *node, uint32_t *pipeline, bool *linear,
-                    TGpuInstance *inst) const;
+    void NodeStates(const TRenderNode *node, const TMeshAlloc &alloc, uint32_t *pipeline,
+                    bool *linear, TGpuInstance *inst) const;
+
+    // Whether the mesh is textured with the original force field animation
+    static bool IsForceField(const TMesh *mesh);
+    static std::vector<tUtV> ForceFieldCoords(const TMesh *mesh);
+    void DrawForceField(SDL_GPUCommandBuffer *cmd);
 
     void QueueNodes(std::list<TRenderNode *> &list, bool keepOrder);
 
@@ -233,6 +239,8 @@ protected:
     SDL_GPUShader *_vsQuad = NULL;
     SDL_GPUShader *_fsQuad = NULL;
     SDL_GPUShader *_fsColorEffects = NULL;
+    SDL_GPUShader *_fsForceField = NULL;
+    SDL_GPUGraphicsPipeline *_forceFieldPipeline = NULL;
 
     std::unordered_map<uint32_t, SDL_GPUGraphicsPipeline *> _pipelines;
 
@@ -257,6 +265,8 @@ protected:
     SDL_GPUTexture *_textures = NULL;
     uint32_t _textureLayers = 0;
     uint32_t _nextLayer = 1;
+    uint32_t _forceFieldLayer = 0; // Drawn each frame a force field is seen
+    bool _forceFieldSeen = false;
     std::vector<uint32_t> _freeLayers;
     SDL_GPUTextureFormat _textureFormat = SDL_GPU_TEXTUREFORMAT_INVALID;
 

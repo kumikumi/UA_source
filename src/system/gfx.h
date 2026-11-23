@@ -603,6 +603,12 @@ public:
     
     float GetAlpha() const { return _alpha / 255.0; };
     
+    // The game time of the frame being drawn, in timer ticks (1/1024 s):
+    // between the last two simulation steps, as the units are drawn. For
+    // effects that animate at the frame rate.
+    void SetAnimationTime(double ticks) { _animationTime = ticks; };
+    double GetAnimationTime() const { return _animationTime; };
+
     const mat4x4f &GetProjectionMatrix() const { return _frustum; }; 
     float GetProjectionNear() const { return _frustumNear; }; 
     float GetProjectionFar() const { return _frustumFar; }; 
@@ -695,6 +701,8 @@ protected:
     mat4x4f _frustum;
     float _frustumNear;
     float _frustumFar;
+
+    double _animationTime = 0.0;
 
     vec3d _normClr;
     vec3d _invClr;

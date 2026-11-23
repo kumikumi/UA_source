@@ -151,6 +151,7 @@ if(UA_GPU_RENDERER)
     set(SHADER_SOURCES
         ${SHADER_SRC_DIR}/common.slang
         ${SHADER_SRC_DIR}/composite.slang
+        ${SHADER_SRC_DIR}/forcefield.slang
         ${SHADER_SRC_DIR}/world.slang)
 
     # Entry point, its file and its stage
@@ -160,7 +161,8 @@ if(UA_GPU_RENDERER)
         fsWorldAlphaTest world     fragment
         vsQuad           composite vertex
         fsQuad           composite fragment
-        fsColorEffects   composite fragment)
+        fsColorEffects   composite fragment
+        fsForceField     forcefield fragment)
 
     set(SHADER_OUTPUTS "")
     set(SHADER_NAMES "")

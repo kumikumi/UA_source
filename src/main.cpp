@@ -219,6 +219,8 @@ int ProcessGameplayFrame(int32_t frameTicks, bool timeFrozen)
         renderArg.DTime = frameTicks;
         renderArg.Input = &renderInput;
 
+        GFX::Engine.SetAnimationTime(world_update_arg.TimeStamp - (1.0 - stepFraction) * SimStepTicks);
+
         ypaworld->RenderFrame(&renderArg, stepFraction);
 
         if ( benchmark.IsActive() && !benchmark.FrameDrawn(ypaworld) )

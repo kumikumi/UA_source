@@ -83,7 +83,10 @@ VertexOut vsWorld(VertexIn i)
 // environment, then fogs towards black and fades out with distance.
 float4 Shade(VertexOut i)
 {
-    float4 tex = textures.Sample(float3(i.uv, float(i.layer)));
+    // The samplers clamp, as the original's textures need. With no mipmaps,
+    // wrapping here repeats a texture without a visible seam.
+    float2 uv = (i.flags & INST_WRAP) != 0 ? frac(i.uv) : i.uv;
+    float4 tex = textures.Sample(float3(uv, float(i.layer)));
     float4 c;
 
     if ((i.flags & INST_REPLACE) != 0)

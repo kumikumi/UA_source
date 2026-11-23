@@ -6,6 +6,8 @@
 #include "gpu_shaders.h"
 #include "inivals.h"
 #include "perf.h"
+#include "../bitmap.h"
+#include "../utils.h"
 
 #ifdef __APPLE__
 #include <objc/message.h>
@@ -22,6 +24,9 @@ typedef uint32_t uint;
 #include "../shaders/common.slang"
 
 const uint32_t NO_FRAME_COORDS = 0xFFFFFFFF;
+
+// A node's sorting key: its pipeline and filtering above its mesh's id
+const int MESH_ID_BITS = 27;
 
 // All textures the game draws in 3D are this size
 const uint32_t TEXTURE_SIZE = 256;
@@ -235,7 +240,7 @@ void GPUBackend::Init(SDL_Window *window)
     SDL_GPUTextureCreateInfo tci = {};
     tci.type = SDL_GPU_TEXTURETYPE_2D_ARRAY;
     tci.format = _textureFormat;
-    tci.usage = SDL_GPU_TEXTUREUSAGE_SAMPLER;
+    tci.usage = SDL_GPU_TEXTUREUSAGE_SAMPLER | SDL_GPU_TEXTUREUSAGE_COLOR_TARGET;
     tci.width = TEXTURE_SIZE;
     tci.height = TEXTURE_SIZE;
     tci.layer_count_or_depth = _textureLayers;
@@ -244,6 +249,8 @@ void GPUBackend::Init(SDL_Window *window)
 
     std::vector<uint8_t> white(TEXTURE_SIZE * TEXTURE_SIZE * 4, 0xFF);
     _pending.push_back({TPendingUpload::TEXTURE_LAYER, 0, Stage(white.data(), white.size(), 256), (uint32_t)white.size()});
+
+    _forceFieldLayer = _nextLayer++;
 
     // Every pipeline the world may need, now rather than in the middle of
     // the game, the first time something is drawn with it
@@ -294,7 +301,10 @@ void GPUBackend::Deinit()
 
     _pipelines.clear();
 
-    for (SDL_GPUShader *s : {_vsWorld, _fsWorld, _fsWorldAlphaTest, _vsQuad, _fsQuad, _fsColorEffects})
+    if (_forceFieldPipeline)
+        SDL_ReleaseGPUGraphicsPipeline(_device, _forceFieldPipeline);
+
+    for (SDL_GPUShader *s : {_vsWorld, _fsWorld, _fsWorldAlphaTest, _vsQuad, _fsQuad, _fsColorEffects, _fsForceField})
     {
         if (s)
             SDL_ReleaseGPUShader(_device, s);
@@ -412,6 +422,33 @@ void GPUBackend::CreatePipelinesAndSamplers()
     _vsQuad = LoadShader("vsQuad", SDL_GPU_SHADERSTAGE_VERTEX, 0, 0, 1);
     _fsQuad = LoadShader("fsQuad", SDL_GPU_SHADERSTAGE_FRAGMENT, 1, 0, 0);
     _fsColorEffects = LoadShader("fsColorEffects", SDL_GPU_SHADERSTAGE_FRAGMENT, 1, 0, 1);
+    _fsForceField = LoadShader("fsForceField", SDL_GPU_SHADERSTAGE_FRAGMENT, 0, 0, 1);
+
+    // The force field is drawn into a layer of the texture array
+    SDL_GPUVertexBufferDescription corners = {};
+    corners.slot = 0;
+    corners.pitch = sizeof(QUAD_CORNERS[0]);
+    corners.input_rate = SDL_GPU_VERTEXINPUTRATE_VERTEX;
+    SDL_GPUVertexAttribute corner = {0, 0, SDL_GPU_VERTEXELEMENTFORMAT_FLOAT2, 0};
+
+    SDL_GPUColorTargetDescription layer = {};
+    layer.format = _textureFormat;
+
+    SDL_GPUGraphicsPipelineCreateInfo pci = {};
+    pci.vertex_shader = _vsQuad;
+    pci.fragment_shader = _fsForceField;
+    pci.vertex_input_state.vertex_buffer_descriptions = &corners;
+    pci.vertex_input_state.num_vertex_buffers = 1;
+    pci.vertex_input_state.vertex_attributes = &corner;
+    pci.vertex_input_state.num_vertex_attributes = 1;
+    pci.primitive_type = SDL_GPU_PRIMITIVETYPE_TRIANGLESTRIP;
+    pci.rasterizer_state.cull_mode = SDL_GPU_CULLMODE_NONE;
+    pci.target_info.color_target_descriptions = &layer;
+    pci.target_info.num_color_targets = 1;
+    _forceFieldPipeline = SDL_CreateGPUGraphicsPipeline(_device, &pci);
+
+    if (!_forceFieldPipeline)
+        printf("SDL_GPU: force field pipeline failed: %s\n", SDL_GetError());
 
     SDL_GPUSamplerCreateInfo sci = {};
     sci.address_mode_u = SDL_GPU_SAMPLERADDRESSMODE_CLAMP_TO_EDGE;
@@ -666,6 +703,73 @@ void GPUBackend::FreeTexture(ResBitmap *bitm)
     bitm->hwTex = 0;
 }
 
+bool GPUBackend::IsForceField(const TMesh *mesh)
+{
+    // The animations of FX2.ILBM's force field patch: the map border's
+    // walls and the dome of an open beam gate, the same in every set
+    static const char *names[] = {"05079601.ANM", "05079602.ANM", "05079603.ANM", "08079601.ANM"};
+
+    if (!(mesh->Mat.Flags & RFLAGS_DYNAMIC_TEXTURE) || !mesh->Mat.TexSource)
+        return false;
+
+    std::string name = mesh->Mat.TexSource->getRsrc_name();
+
+    for (const char *n : names)
+    {
+        if (!StriCmp(name, n))
+            return true;
+    }
+
+    return false;
+}
+
+std::vector<tUtV> GPUBackend::ForceFieldCoords(const TMesh *mesh)
+{
+    // The force field's tile size, which a sector's 1200 is a multiple of:
+    // the border walls are 1200 wide and 2700 tall, the beam gates' domes
+    // 900 across
+    const float FORCE_FIELD_TILE = 600.0;
+
+    std::vector<tUtV> coords(mesh->Vertexes.size());
+
+    // A polygon's vertices follow each other, its first with TexCoordId 0
+    size_t first = 0;
+    while (first < mesh->Vertexes.size())
+    {
+        size_t end = first + 1;
+        while (end < mesh->Vertexes.size() && mesh->Vertexes[end].TexCoordId != 0)
+            end++;
+
+        // Newell's normal of the polygon
+        vec3f n(0.0, 0.0, 0.0);
+        for (size_t i = first; i < end; i++)
+        {
+            const vec3f &a = mesh->Vertexes[i].Pos;
+            const vec3f &b = mesh->Vertexes[(i + 1 < end) ? i + 1 : first].Pos;
+            n.x += (a.y - b.y) * (a.z + b.z);
+            n.y += (a.z - b.z) * (a.x + b.x);
+            n.z += (a.x - b.x) * (a.y + b.y);
+        }
+
+        for (size_t i = first; i < end; i++)
+        {
+            const vec3f &p = mesh->Vertexes[i].Pos;
+
+            // y points down, as the texture's v does
+            if (fabs(n.y) >= fabs(n.x) && fabs(n.y) >= fabs(n.z))
+                coords[i] = tUtV(p.x / FORCE_FIELD_TILE, p.z / FORCE_FIELD_TILE);
+            else if (fabs(n.x) >= fabs(n.z))
+                coords[i] = tUtV(p.z / FORCE_FIELD_TILE, p.y / FORCE_FIELD_TILE);
+            else
+                coords[i] = tUtV(p.x / FORCE_FIELD_TILE, p.y / FORCE_FIELD_TILE);
+        }
+
+        first = end;
+    }
+
+    return coords;
+}
+
 void GPUBackend::MakeMeshBuffers(TMesh *mesh)
 {
     if (mesh->HwVertexBuf)
@@ -692,7 +796,16 @@ void GPUBackend::MakeMeshBuffers(TMesh *mesh)
     TMeshAlloc &alloc = _meshAllocs[id];
     alloc.FirstVertex = _vertexRanges.Alloc(vertexCount);
     alloc.FirstIndex = _indexRanges.Alloc(indexCount);
-    alloc.HasCoords = !mesh->CoordsCache.empty();
+    alloc.ForceField = IsForceField(mesh);
+    alloc.HasCoords = !mesh->CoordsCache.empty() && !alloc.ForceField;
+
+    // The force field's texture repeats every FORCE_FIELD_TILE model units,
+    // projected onto each polygon along the axis it faces most: neighbouring
+    // walls and border sectors continue each other's pattern
+    std::vector<tUtV> forceFieldUV;
+
+    if (alloc.ForceField)
+        forceFieldUV = ForceFieldCoords(mesh);
 
     uint32_t size = vertexCount * sizeof(TGpuVertex);
     uint32_t offset = Stage(NULL, size);
@@ -706,8 +819,16 @@ void GPUBackend::MakeMeshBuffers(TMesh *mesh)
         g.Pos[0] = v.Pos.x;
         g.Pos[1] = v.Pos.y;
         g.Pos[2] = v.Pos.z;
-        g.UV[0] = v.TexCoord.tu;
-        g.UV[1] = v.TexCoord.tv;
+        if (alloc.ForceField)
+        {
+            g.UV[0] = forceFieldUV[i].tu;
+            g.UV[1] = forceFieldUV[i].tv;
+        }
+        else
+        {
+            g.UV[0] = v.TexCoord.tu;
+            g.UV[1] = v.TexCoord.tv;
+        }
         g.Color[0] = v.Color.r;
         g.Color[1] = v.Color.g;
         g.Color[2] = v.Color.b;
@@ -795,6 +916,7 @@ void GPUBackend::StartFrame()
     _commands.clear();
     _instances.clear();
     _surfaceLayers = 0;
+    _forceFieldSeen = false;
 
     if (!_cmd)
         _cmd = SDL_AcquireGPUCommandBuffer(_device);
@@ -825,7 +947,8 @@ void GPUBackend::BeginScene(const mat4x4f &projection)
     memcpy(_projection, rows, sizeof(_projection));
 }
 
-void GPUBackend::NodeStates(const TRenderNode *nod, uint32_t *pipeline, bool *linear, TGpuInstance *inst) const
+void GPUBackend::NodeStates(const TRenderNode *nod, const TMeshAlloc &alloc, uint32_t *pipeline,
+                            bool *linear, TGpuInstance *inst) const
 {
     // As GLBackend::RenderingMeshOld sets the legacy OpenGL states
     uint32_t flags = nod->Flags;
@@ -842,7 +965,7 @@ void GPUBackend::NodeStates(const TRenderNode *nod, uint32_t *pipeline, bool *li
 
     *linear = (Engine._filter != 0);
 
-    bool textured = (flags & RFLAGS_TEXTURED) && nod->Tex && nod->Tex->hwTex;
+    bool textured = (flags & RFLAGS_TEXTURED) && ((nod->Tex && nod->Tex->hwTex) || alloc.ForceField);
 
     if ( flags & RFLAGS_SHADED )
         texBlend = 2;
@@ -931,12 +1054,16 @@ void GPUBackend::NodeStates(const TRenderNode *nod, uint32_t *pipeline, bool *li
     if (falloff)
         instFlags |= INST_FALLOFF;
 
-    inst->Misc[0] = textured ? nod->Tex->hwTex : 0;
+    // The force field's texture repeats over its polygons
+    if (alloc.ForceField)
+        instFlags |= INST_WRAP;
+
+    inst->Misc[0] = !textured ? 0 : (alloc.ForceField ? _forceFieldLayer : nod->Tex->hwTex);
     inst->Misc[1] = NO_FRAME_COORDS;
     inst->Misc[2] = instFlags;
     inst->Misc[3] = 0;
 
-    if ( textured && (flags & RFLAGS_DYNAMIC_TEXTURE) && nod->coordsID >= 0
+    if ( textured && alloc.HasCoords && (flags & RFLAGS_DYNAMIC_TEXTURE) && nod->coordsID >= 0
          && nod->coordsID < (int32_t)nod->Mesh->CoordsCache.size() )
         inst->Misc[1] = nod->Mesh->CoordsCache[nod->coordsID].BufferPos;
 
@@ -1003,9 +1130,13 @@ void GPUBackend::QueueNodes(std::list<TRenderNode *> &list, bool keepOrder)
         _slotInstances.emplace_back();
 
         TGpuInstance &inst = _slotInstances.back();
+        const TMeshAlloc &alloc = _meshAllocs[meshId];
         uint32_t pipeline;
         bool linear;
-        NodeStates(node, &pipeline, &linear, &inst);
+        NodeStates(node, alloc, &pipeline, &linear, &inst);
+
+        if (alloc.ForceField)
+            _forceFieldSeen = true;
 
         const mat4x4 &t = node->TForm;
         inst.Rows[0][0] = t.m00;  inst.Rows[0][1] = t.m01;  inst.Rows[0][2] = t.m02;  inst.Rows[0][3] = t.m03;
@@ -1013,7 +1144,7 @@ void GPUBackend::QueueNodes(std::list<TRenderNode *> &list, bool keepOrder)
         inst.Rows[2][0] = t.m20;  inst.Rows[2][1] = t.m21;  inst.Rows[2][2] = t.m22;  inst.Rows[2][3] = t.m23;
 
         uint64_t state = (pipeline << 1) | (linear ? 1 : 0);
-        _nodeKeys.push_back({(state << 27) | meshId, slot});
+        _nodeKeys.push_back({(state << MESH_ID_BITS) | meshId, slot});
 
         System::Perf.Count(System::PerfStats::CNT_TRIANGLES, mesh->Indixes.size() / 3);
     }
@@ -1029,7 +1160,7 @@ void GPUBackend::QueueNodes(std::list<TRenderNode *> &list, bool keepOrder)
 
     while (i < n)
     {
-        uint64_t state = keys[i].Key >> 27;
+        uint64_t state = keys[i].Key >> MESH_ID_BITS;
 
         TBatch batch;
         batch.Pipeline = state >> 1;
@@ -1037,7 +1168,7 @@ void GPUBackend::QueueNodes(std::list<TRenderNode *> &list, bool keepOrder)
         batch.FirstCommand = _commands.size();
         batch.Commands = 0;
 
-        while (i < n && (keys[i].Key >> 27) == state)
+        while (i < n && (keys[i].Key >> MESH_ID_BITS) == state)
         {
             uint64_t key = keys[i].Key;
             size_t end = i + 1;
@@ -1045,7 +1176,7 @@ void GPUBackend::QueueNodes(std::list<TRenderNode *> &list, bool keepOrder)
             while (end < n && keys[end].Key == key)
                 end++;
 
-            const TMeshAlloc &alloc = _meshAllocs[key & 0x7FFFFFF];
+            const TMeshAlloc &alloc = _meshAllocs[key & ((1 << MESH_ID_BITS) - 1)];
 
             SDL_GPUIndexedIndirectDrawCommand cmd;
             cmd.num_indices = _slotNodes[keys[i].Slot]->Mesh->Indixes.size();
@@ -1175,7 +1306,7 @@ void GPUBackend::UploadPending(SDL_GPUCommandBuffer *cmd)
             SDL_GPUTextureCreateInfo tci = {};
             tci.type = SDL_GPU_TEXTURETYPE_2D_ARRAY;
             tci.format = _textureFormat;
-            tci.usage = SDL_GPU_TEXTUREUSAGE_SAMPLER;
+            tci.usage = SDL_GPU_TEXTUREUSAGE_SAMPLER | SDL_GPU_TEXTUREUSAGE_COLOR_TARGET;
             tci.width = TEXTURE_SIZE;
             tci.height = TEXTURE_SIZE;
             tci.layer_count_or_depth = layers;
@@ -1379,6 +1510,38 @@ void GPUBackend::FlushScreenSurface(SDL_Surface *screen)
     SDL_EndGPUCopyPass(pass);
 }
 
+void GPUBackend::DrawForceField(SDL_GPUCommandBuffer *cmd)
+{
+    if (!_forceFieldPipeline)
+        return;
+
+    SDL_GPUColorTargetInfo target = {};
+    target.texture = _textures;
+    target.layer_or_depth_plane = _forceFieldLayer;
+    target.load_op = SDL_GPU_LOADOP_DONT_CARE; // Every texel is drawn
+    target.store_op = SDL_GPU_STOREOP_STORE;
+
+    SDL_GPURenderPass *pass = SDL_BeginGPURenderPass(cmd, &target, 1, NULL);
+    SDL_BindGPUGraphicsPipeline(pass, _forceFieldPipeline);
+
+    float scale[4] = {1.0, 1.0, 0.0, 0.0};
+    SDL_PushGPUVertexUniformData(cmd, 0, scale, sizeof(scale));
+
+    // The shader's animation loops every 64 seconds; the double keeps the
+    // time exact however long the game runs
+    double seconds = Engine.GetAnimationTime() / 1024.0;
+    float params[4] = {(float)fmod(seconds, 64.0), GFXEngine::can_destblend ? 1.0f : 0.0f, 0.0, 0.0};
+    if (params[0] < 0.0)
+        params[0] += 64.0;
+    SDL_PushGPUFragmentUniformData(cmd, 0, params, sizeof(params));
+
+    SDL_GPUBufferBinding corners = {_quadBuffer, 0};
+    SDL_BindGPUVertexBuffers(pass, 0, &corners, 1);
+    SDL_DrawGPUPrimitives(pass, 4, 1, 0, 0);
+
+    SDL_EndGPURenderPass(pass);
+}
+
 void GPUBackend::EnsureDepth(uint32_t w, uint32_t h)
 {
     if (_depth && _depthW == w && _depthH == h)
@@ -1410,6 +1573,9 @@ uint64_t GPUBackend::EndFrame(SDL_Surface *screen)
     UploadFrameData(pass);
     AddScreenSurfaceLayer(pass, screen);
     SDL_EndGPUCopyPass(pass);
+
+    if (_forceFieldSeen)
+        DrawForceField(_cmd);
 
     SDL_GPUTexture *swapchain = NULL;
     Uint32 w = 0, h = 0;
