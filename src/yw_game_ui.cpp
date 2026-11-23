@@ -249,6 +249,7 @@ void CreateEnergyPanel(NC_STACK_ypaworld *yw)
                                         up_panel.gaugeWidth,   up_panel.panelHeight);
 
     up_panel.cmdCommands.reserve(512);
+    FontUA::set_end(&up_panel.cmdCommands); // Nothing to draw until the first update
 
     Input::Engine.AddClickBoxFront(&up_panel);
 }
