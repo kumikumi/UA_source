@@ -13,9 +13,9 @@ struct TSectorCollision
 // For rendering
 struct TRenderingSector
 {
-    cellArea *p_cell;
-    int dword4;
-    int dword8;
+    cellArea *Cell;
+    int InMap;   // The sector is on the map
+    int Visible; // Its bounding box is in view
 };
 
 

@@ -1483,33 +1483,33 @@ NC_STACK_ypabact *NC_STACK_ypaworld::yw_createUnit( int model_id)
 
 
 
-void NC_STACK_ypaworld::RenderAdditionalBeeBox(Common::Point sect, TRenderingSector *sct, baseRender_msg *bs77)
+void NC_STACK_ypaworld::CheckSectorVisibility(Common::Point sect, TRenderingSector *sct, baseRender_msg *rndrParams)
 {
-    sct->dword8 = 0;
-    sct->dword4 = 0;
+    sct->Visible = 0;
+    sct->InMap = 0;
 
     if ( IsSector( sect ) )
     {
-        sct->dword4 = 1;
-        sct->p_cell = &_cells( sect );
+        sct->InMap = 1;
+        sct->Cell = &_cells( sect );
 
         vec3d pos = World::SectorIDToCenterPos3( sect );
-        pos.y = sct->p_cell->height;
+        pos.y = sct->Cell->height;
 
         _beeBox->SetPosition(pos);
 
-        if ( _beeBox->Render(bs77, NULL) )
+        if ( _beeBox->Render(rndrParams, NULL) )
         {
-            sct->dword8 = 1;
+            sct->Visible = 1;
         }
     }
 }
 
-void NC_STACK_ypaworld::RenderSector(TRenderingSector *sct, baseRender_msg *bs77)
+void NC_STACK_ypaworld::RenderSector(TRenderingSector *sct, baseRender_msg *rndrParams)
 {
-    if ( sct->dword8 )
+    if ( sct->Visible )
     {
-        cellArea *pcell = sct->p_cell;
+        cellArea *pcell = sct->Cell;
 
         int constructing = 0;
 
@@ -1547,7 +1547,7 @@ void NC_STACK_ypaworld::RenderSector(TRenderingSector *sct, baseRender_msg *bs77
         {
             for (int xx = 0; xx < subCount; xx++)
             {
-                vec3d pos = sct->p_cell->CenterPos + vec3d((subOffset + xx) * 300.0, 0.0, (subOffset + zz) * 300.0);
+                vec3d pos = sct->Cell->CenterPos + vec3d((subOffset + xx) * 300.0, 0.0, (subOffset + zz) * 300.0);
 
                 if ( constructing )
                 {
@@ -1560,7 +1560,7 @@ void NC_STACK_ypaworld::RenderSector(TRenderingSector *sct, baseRender_msg *bs77
                     
                     NC_STACK_base::CheckOpts( &pcell->BldVPOpts.At(xx, zz), bld );
                     
-                    bld->Render(bs77, pcell->BldVPOpts.At(xx, zz));
+                    bld->Render(rndrParams, pcell->BldVPOpts.At(xx, zz));
 
                     bld->SetStatic(true);
                 }
@@ -1572,17 +1572,17 @@ void NC_STACK_ypaworld::RenderSector(TRenderingSector *sct, baseRender_msg *bs77
                     
                     NC_STACK_base::CheckOpts( &pcell->BldVPOpts.At(xx, zz), bld );
                     
-                    bld->Render(bs77, pcell->BldVPOpts.At(xx, zz));
+                    bld->Render(rndrParams, pcell->BldVPOpts.At(xx, zz));
                 }
             }
         }
     }
 
-    for ( NC_STACK_ypabact* &bact : sct->p_cell->unitsList )
+    for ( NC_STACK_ypabact* &bact : sct->Cell->unitsList )
     {
-        if ( sct->dword8 || bact->_bact_type == BACT_TYPES_ROBO)
+        if ( sct->Visible || bact->_bact_type == BACT_TYPES_ROBO)
         {
-            bact->Render(bs77);
+            bact->Render(rndrParams);
             System::Perf.Count(System::PerfStats::CNT_UNITS);
         }
     }
@@ -1809,16 +1809,16 @@ void NC_STACK_ypaworld::RenderFillers(baseRender_msg *arg)
             TRenderingSector &sct = rendering_sectors[j][i];
             TRenderingSector &sct2 = rendering_sectors[j + 1][i];
             
-            if (sct.dword4 == 1 && sct2.dword4 == 1 && (sct.dword8 == 1 || sct2.dword8 == 1))
+            if (sct.InMap == 1 && sct2.InMap == 1 && (sct.Visible == 1 || sct2.Visible == 1))
             {
                 float h;
-                if (rendering_sectors[j + 1][i + 1].dword4 == 1)
-                    h = rendering_sectors[j + 1][i + 1].p_cell->averg_height;
+                if (rendering_sectors[j + 1][i + 1].InMap == 1)
+                    h = rendering_sectors[j + 1][i + 1].Cell->averg_height;
                 else
-                    h = sct2.p_cell->averg_height;
+                    h = sct2.Cell->averg_height;
                     
-                TCellFillerCh &filler = _cellsVFCache( sct2.p_cell->CellId.x - 1, sct2.p_cell->CellId.y );
-                PrepareFiller(sct.p_cell, sct2.p_cell, sct2.p_cell->averg_height, h, true, &filler);
+                TCellFillerCh &filler = _cellsVFCache( sct2.Cell->CellId.x - 1, sct2.Cell->CellId.y );
+                PrepareFiller(sct.Cell, sct2.Cell, sct2.Cell->averg_height, h, true, &filler);
                 filler.Render(arg);
             }
         }
@@ -1831,16 +1831,16 @@ void NC_STACK_ypaworld::RenderFillers(baseRender_msg *arg)
             TRenderingSector &sct = rendering_sectors[j][i];
             TRenderingSector &sct2 = rendering_sectors[j][i + 1];
             
-            if (sct.dword4 == 1 && sct2.dword4 == 1 && (sct.dword8 == 1 || sct2.dword8 == 1))
+            if (sct.InMap == 1 && sct2.InMap == 1 && (sct.Visible == 1 || sct2.Visible == 1))
             {
                 float h;
-                if (rendering_sectors[j + 1][i + 1].dword4 == 1)
-                    h = rendering_sectors[j + 1][i + 1].p_cell->averg_height;
+                if (rendering_sectors[j + 1][i + 1].InMap == 1)
+                    h = rendering_sectors[j + 1][i + 1].Cell->averg_height;
                 else
-                    h = sct2.p_cell->averg_height;
+                    h = sct2.Cell->averg_height;
                     
-                TCellFillerCh &filler = _cellsHFCache( sct2.p_cell->CellId.x, sct2.p_cell->CellId.y - 1 );
-                PrepareFiller(sct.p_cell, sct2.p_cell, sct2.p_cell->averg_height, h, false, &filler);
+                TCellFillerCh &filler = _cellsHFCache( sct2.Cell->CellId.x, sct2.Cell->CellId.y - 1 );
+                PrepareFiller(sct.Cell, sct2.Cell, sct2.Cell->averg_height, h, false, &filler);
                 filler.Render(arg);
             }
         }
@@ -1881,8 +1881,8 @@ void NC_STACK_ypaworld::RenderGame(TUpdateArgs *bs64, int drawGui)
     {
         for (TRenderingSector &sct : row)
         {
-            sct.dword4 = 0;
-            sct.dword8 = 0;
+            sct.InMap = 0;
+            sct.Visible = 0;
         }
     }
 
@@ -1895,10 +1895,10 @@ void NC_STACK_ypaworld::RenderGame(TUpdateArgs *bs64, int drawGui)
         {
             TRenderingSector *sct = &rendering_sectors[radius + j][radius - rowOffset];
 
-            RenderAdditionalBeeBox( _viewerBact->_cellId + Common::Point(j, -rowOffset), 
+            CheckSectorVisibility( _viewerBact->_cellId + Common::Point(j, -rowOffset), 
                                     sct, &rndrs);
 
-            if ( sct->dword4 )
+            if ( sct->InMap )
                 RenderSector(sct, &rndrs);
 
         }
@@ -1909,10 +1909,10 @@ void NC_STACK_ypaworld::RenderGame(TUpdateArgs *bs64, int drawGui)
             {
                 TRenderingSector *sct = &rendering_sectors[radius + j][radius + rowOffset];
 
-                RenderAdditionalBeeBox( _viewerBact->_cellId + Common::Point(j, rowOffset), 
+                CheckSectorVisibility( _viewerBact->_cellId + Common::Point(j, rowOffset), 
                                         sct, &rndrs);
 
-                if ( sct->dword4 )
+                if ( sct->InMap )
                     RenderSector(sct, &rndrs);
             }
         }

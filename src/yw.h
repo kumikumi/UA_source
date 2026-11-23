@@ -2115,8 +2115,8 @@ public:
     void DrawMapRegions();
     
     void RenderGame(TUpdateArgs *bs64, int drawGui);
-    void RenderAdditionalBeeBox(Common::Point sect, TRenderingSector *sct, baseRender_msg *bs77);
-    void RenderSector(TRenderingSector *sct, baseRender_msg *bs77);
+    void CheckSectorVisibility(Common::Point sect, TRenderingSector *sct, baseRender_msg *rndrParams);
+    void RenderSector(TRenderingSector *sct, baseRender_msg *rndrParams);
     void yw_renderSky(baseRender_msg *rndr_params);
     void RenderSuperItems(baseRender_msg *arg);
     void RenderSuperWave(vec2d pos, vec2d fromPos, baseRender_msg *arg);
