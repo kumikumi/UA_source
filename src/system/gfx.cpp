@@ -2893,7 +2893,7 @@ uint8_t *GFXEngine::MakeScreenCopy(int *ow, int *oh)
 
     uint8_t *buf = (uint8_t *)malloc(res.x * res.y * 3);
 
-    glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
+    glPixelStorei(GL_PACK_ALIGNMENT, 1); // Rows aren't padded to 4 bytes
     glReadBuffer(GL_FRONT);
     glReadPixels(0, 0, res.x, res.y, GL_RGB, GL_UNSIGNED_BYTE, buf);
 
@@ -2912,7 +2912,7 @@ uint8_t *GFXEngine::MakeDepthScreenCopy(int *ow, int *oh)
 
     uint8_t *buf = (uint8_t *)malloc(res.x * res.y);
 
-    glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
+    glPixelStorei(GL_PACK_ALIGNMENT, 1); // Rows aren't padded to 4 bytes
     glReadBuffer(GL_FRONT);
     glReadPixels(0, 0, res.x, res.y, GL_DEPTH_COMPONENT, GL_UNSIGNED_BYTE, buf);
 
