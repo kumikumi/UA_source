@@ -218,6 +218,37 @@ void GPUBackend::Init(SDL_Window *window)
 
     std::vector<uint8_t> white(TEXTURE_SIZE * TEXTURE_SIZE * 4, 0xFF);
     _pending.push_back({TPendingUpload::TEXTURE_LAYER, 0, Stage(white.data(), white.size(), 256), (uint32_t)white.size()});
+
+    // Every pipeline the world may need, now rather than in the middle of
+    // the game, the first time something is drawn with it
+    uint64_t start = System::PerfStats::Now();
+
+    for (int floatTarget = 0; floatTarget <= (_colorEffects ? 1 : 0); floatTarget++)
+    {
+        for (PipelineKind kind : {PIPE_WORLD, PIPE_WORLD_ALPHATEST})
+        {
+            for (BlendMode blend : {BLEND_NONE, BLEND_ALPHA, BLEND_ADD, BLEND_ALPHA_ADD})
+            {
+                for (int depth = 0; depth < 4; depth++)
+                {
+                    TPipelineDesc desc;
+                    desc.Kind = kind;
+                    desc.Blend = blend;
+                    desc.DepthTest = depth & 1;
+                    desc.DepthWrite = (depth >> 1) & 1;
+                    desc.FloatTarget = floatTarget;
+
+                    if (desc.DepthWrite && !desc.DepthTest)
+                        continue;
+
+                    GetPipeline(EncodePipeline(desc));
+                }
+            }
+        }
+    }
+
+    printf("SDL_GPU: %d pipelines made in %.0f ms\n", (int)_pipelines.size(),
+           System::PerfStats::TicksToMs(System::PerfStats::Now() - start));
 }
 
 void GPUBackend::Deinit()
