@@ -436,7 +436,7 @@ void ZNDServer::ProcessRegularPkt(Pkt* pkt)
 void ZNDServer::Start(uint16_t port)
 {
     mode = MODE_SERVER;
-    sock = SDLNet_UDP_Open(port);
+    sock = UDP_Open(port);
 
     users.Init();
     sLobby.Init( GenerateID(), "", true );

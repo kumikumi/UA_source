@@ -2,7 +2,7 @@
 #define ENGINE_MOVIE_H_INCLUDED
 
 #include <string>
-#include <SDL2/SDL.h>
+#include <SDL3/SDL.h>
 
 namespace System
 {
@@ -29,7 +29,7 @@ private:
     void ProcessFrame(uint32_t tm);
     void ProcessAudio();
     
-    static int EventsWatcher(void *, SDL_Event *event);
+    static bool EventsWatcher(void *, SDL_Event *event);
     
 public:
     static TMovie Instance;

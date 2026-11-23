@@ -2,11 +2,12 @@
 #define COMMON_H_INCLUDED
 
 #include <inttypes.h>
+#include <math.h>
 #include <vector>
 #include <array>
 #include <deque>
 #include <utility>
-#include <SDL2/SDL.h>
+#include <SDL3/SDL.h>
 
 #ifdef ABS
 #undef ABS

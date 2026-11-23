@@ -1,7 +1,7 @@
 CC = gcc
 CXX = g++
 
-lib2ndnet.a: client.o client_threads.o server.o server_session.o server_threads.o single.o single_threads.o zndNet.o
+lib2ndnet.a: client.o client_threads.o server.o server_session.o server_threads.o single.o single_threads.o udp.o zndNet.o
 	ar rcs ../$@ $^
 
 client.o: client.cpp
@@ -23,6 +23,9 @@ single.o: single.cpp
 	$(CXX) -fPIC -c -o $@ $<
 
 single_threads.o: single_threads.cpp
+	$(CXX) -fPIC -c -o $@ $<
+
+udp.o: udp.cpp
 	$(CXX) -fPIC -c -o $@ $<
 
 zndNet.o: zndNet.cpp

@@ -5,7 +5,7 @@
 #include "inttypes.h"
 #include "crc32.h"
 #include "env.h"
-#include <SDL2/SDL_timer.h>
+#include <SDL3/SDL_timer.h>
 
 
 int read_yes_no_status(const std::string &file, int result)

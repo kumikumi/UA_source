@@ -1,7 +1,6 @@
 #include <string>
 #include <list>
-#include <SDL2/SDL_image.h>
-#include <SDL2/SDL_net.h>
+#include <SDL3_net/SDL_net.h>
 #include "../fmtlib/printf.h"
 
 #include "system.h"
@@ -126,7 +125,7 @@ void ScanFonts()
                     TTF_Font *fnt = TTF_OpenFont(nod->getPath().c_str(), 12);
                     if (fnt)
                     {
-                        FontsList.push_back( FontNode(nod->getPath(), TTF_FontFaceFamilyName(fnt), TTF_FontFaceStyleName(fnt)) );
+                        FontsList.push_back( FontNode(nod->getPath(), TTF_GetFontFamilyName(fnt), TTF_GetFontStyleName(fnt)) );
 
                         TTF_CloseFont(fnt);
                     }
@@ -219,7 +218,7 @@ void Init(bool oldGL)
 {
     EventHandlers.clear();
 
-    if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_EVENTS | SDL_INIT_JOYSTICK | SDL_INIT_HAPTIC) < 0)
+    if (!SDL_Init(SDL_INIT_VIDEO | SDL_INIT_EVENTS | SDL_INIT_JOYSTICK | SDL_INIT_HAPTIC))
     {
         printf("Couldn't initialize SDL: %s", SDL_GetError());
         return;
@@ -242,10 +241,19 @@ void Init(bool oldGL)
     // The game renders at whatever size the window has, so start with most of
     // the desktop rather than a fixed resolution.
     SDL_Rect usable;
-    if (SDL_GetDisplayUsableBounds(0, &usable) == 0)
+    if (SDL_GetDisplayUsableBounds(SDL_GetPrimaryDisplay(), &usable))
         winRes = ResRatio(usable.w * 3 / 4, usable.h * 3 / 4);
 
-    window = SDL_CreateWindow("OpenUA (Urban Assault)", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, winRes.W, winRes.H, SDL_WINDOW_RESIZABLE | SDL_WINDOW_OPENGL);
+    SDL_PropertiesID props = SDL_CreateProperties();
+    SDL_SetStringProperty(props, SDL_PROP_WINDOW_CREATE_TITLE_STRING, "OpenUA (Urban Assault)");
+    SDL_SetNumberProperty(props, SDL_PROP_WINDOW_CREATE_X_NUMBER, SDL_WINDOWPOS_CENTERED);
+    SDL_SetNumberProperty(props, SDL_PROP_WINDOW_CREATE_Y_NUMBER, SDL_WINDOWPOS_CENTERED);
+    SDL_SetNumberProperty(props, SDL_PROP_WINDOW_CREATE_WIDTH_NUMBER, winRes.W);
+    SDL_SetNumberProperty(props, SDL_PROP_WINDOW_CREATE_HEIGHT_NUMBER, winRes.H);
+    SDL_SetBooleanProperty(props, SDL_PROP_WINDOW_CREATE_RESIZABLE_BOOLEAN, true);
+    SDL_SetBooleanProperty(props, SDL_PROP_WINDOW_CREATE_OPENGL_BOOLEAN, true);
+    window = SDL_CreateWindowWithProperties(props);
+    SDL_DestroyProperties(props);
 
     if (!window)
     {
@@ -254,8 +262,11 @@ void Init(bool oldGL)
     }
 
     int drawW, drawH;
-    SDL_GL_GetDrawableSize(window, &drawW, &drawH);
+    SDL_GetWindowSizeInPixels(window, &drawW, &drawH);
     winRes = ResRatio(drawW, drawH);
+
+    // SDL2 delivered text input events from the start; SDL3 only once asked.
+    SDL_StartTextInput(window);
 
     cont = SDL_GL_CreateContext(window);
 
@@ -276,19 +287,17 @@ void Init(bool oldGL)
 
     ScanFonts();
 
-    IMG_Init(IMG_INIT_JPG | IMG_INIT_PNG | IMG_INIT_TIF | IMG_INIT_WEBP);
-
-    SDLNet_Init();
+    NET_Init();
 }
 
 void Deinit()
 {
-    IMG_Quit();
+    NET_Quit();
 
     FontsList.clear();
 
     if (cont)
-        SDL_GL_DeleteContext(cont);
+        SDL_GL_DestroyContext(cont);
 
     if (window)
         SDL_DestroyWindow(window);
@@ -304,29 +313,19 @@ bool ProcessEvents()
     {
         switch(event.type)
         {
-        case SDL_WINDOWEVENT:
+        case SDL_EVENT_WINDOW_RESIZED:
+        case SDL_EVENT_WINDOW_PIXEL_SIZE_CHANGED:
         {
-            switch(event.window.event)
-            {
-            case SDL_WINDOWEVENT_RESIZED:
-            case SDL_WINDOWEVENT_SIZE_CHANGED:
-
-                int w, h;
-                SDL_GL_GetDrawableSize(window, &w, &h);
-                winRes = ResRatio(w, h);
-                break;
-
-            case SDL_WINDOWEVENT_CLOSE:
-                return true;
-
-            default:
-                break;
-            }
-
+            int w, h;
+            SDL_GetWindowSizeInPixels(window, &w, &h);
+            winRes = ResRatio(w, h);
         }
         break;
+
+        case SDL_EVENT_WINDOW_CLOSE_REQUESTED:
+            return true;
         
-        case SDL_QUIT:
+        case SDL_EVENT_QUIT:
             return true;
 
         default:
@@ -335,7 +334,7 @@ bool ProcessEvents()
         
         for(SDL_EventFilter &e : EventHandlers)
         {
-            if ( (e)(NULL, &event) == 0 )
+            if ( !(e)(NULL, &event) )
                 break;
         }
     }
@@ -363,11 +362,17 @@ void SetFullscreen(bool fullscreen)
     if (!window || fullscreen == IsFullscreen())
         return;
 
-    SDL_SetWindowFullscreen(window, fullscreen ? SDL_WINDOW_FULLSCREEN_DESKTOP : 0);
+    // Without a fullscreen display mode set, this is borderless fullscreen.
+    SDL_SetWindowFullscreen(window, fullscreen);
 
-    // Some platforms resize asynchronously; the size event updates winRes again.
+    // SDL3 changes the window in the background, as when macOS animates it
+    // into fullscreen. Wait for the new size, as SDL2 did, so that the game
+    // lays out its screen once. Should the wait time out, the size event
+    // updates winRes later.
+    SDL_SyncWindow(window);
+
     int w, h;
-    SDL_GL_GetDrawableSize(window, &w, &h);
+    SDL_GetWindowSizeInPixels(window, &w, &h);
     winRes = ResRatio(w, h);
 }
 
@@ -381,15 +386,15 @@ int GetRefreshRate()
     if (!window)
         return 0;
 
-    int display = SDL_GetWindowDisplayIndex(window);
-    if (display < 0)
+    SDL_DisplayID display = SDL_GetDisplayForWindow(window);
+    if (!display)
         return 0;
 
-    SDL_DisplayMode mode;
-    if (SDL_GetCurrentDisplayMode(display, &mode) != 0)
+    const SDL_DisplayMode *mode = SDL_GetCurrentDisplayMode(display);
+    if (!mode)
         return 0;
 
-    return mode.refresh_rate;
+    return (int)(mode->refresh_rate + 0.5f); // 59.94 Hz counts as 60, as in SDL2
 }
 
 void SetReleativeMouse(bool mode)
@@ -397,10 +402,10 @@ void SetReleativeMouse(bool mode)
     if (mode != curRelMouse)
     {
         if (mode)
-            SDL_SetRelativeMouseMode(SDL_TRUE);
+            SDL_SetWindowRelativeMouseMode(window, true);
         else
         {
-            SDL_SetRelativeMouseMode(SDL_FALSE);
+            SDL_SetWindowRelativeMouseMode(window, false);
 
             int WW = 0, WH = 0;
             SDL_GetWindowSize(window, &WW, &WH);
@@ -427,7 +432,8 @@ void EventsDeleteHandler(SDL_EventFilter func)
 void PostQuitMessage()
 {
     SDL_Event event;
-    event.type = SDL_QUIT;
+    SDL_zero(event);
+    event.type = SDL_EVENT_QUIT;
     SDL_PushEvent(&event);
 }
 

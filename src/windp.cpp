@@ -134,8 +134,8 @@ bool NC_STACK_windp::Connect(const std::string &connString)
     if (connType != 2)
         return false;
     
-    IPaddress server;
-    if ( SDLNet_ResolveHost(&server, connString.c_str(), 61234) != 0)
+    ZNDNet::IPaddress server;
+    if ( !ZNDNet::ResolveHost(&server, connString.c_str(), 61234) )
         return false;
     
     zcli->Start(_myName, server);

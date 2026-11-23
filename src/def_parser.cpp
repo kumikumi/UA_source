@@ -1,5 +1,5 @@
 #include <limits>
-#include <SDL2/SDL_messagebox.h>
+#include <SDL3/SDL_messagebox.h>
 
 #include "def_parser.h"
 #include "utils.h"

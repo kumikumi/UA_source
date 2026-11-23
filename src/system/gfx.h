@@ -458,7 +458,7 @@ public:
     static uint32_t FpsMaxTicks;
 
 protected:
-    static SDL_PixelFormat *_pixfmt;
+    static const SDL_PixelFormatDetails *_pixfmt;
     static GLint _glPixfmt, _glPixtype;
     static bool _staticInited;
     
@@ -536,7 +536,7 @@ private:
     
     uint32_t CursPix(uint8_t *data, int ofs, int bpp);
     
-    static int EventsWatcher(void *, SDL_Event *event);
+    static bool EventsWatcher(void *, SDL_Event *event);
 
 public:
     virtual size_t ReadIniSettings();
@@ -622,9 +622,12 @@ public:
     virtual void ConvAlphaPalette(UA_PALETTE *dst, const UA_PALETTE &src, bool transp);
 
     virtual SDL_Surface *CreateSurfaceScreenFormat(int width, int height);
+
+    // 8 bits per pixel, with 256 palette entries that start out white.
+    static SDL_Surface *CreateIndexedSurface(int width, int height);
     virtual SDL_Surface *ConvertToScreenFormat(SDL_Surface *src);
     
-    static SDL_Surface *ConvertSDLSurface(SDL_Surface *src, const SDL_PixelFormat * fmt);
+    static SDL_Surface *ConvertSDLSurface(SDL_Surface *src, SDL_PixelFormat fmt);
         
     void fpsLimitter(int value);
     void UpdateFpsLimit();

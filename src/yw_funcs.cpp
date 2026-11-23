@@ -65,7 +65,7 @@ TileMap * NC_STACK_ypaworld::yw_LoadFont(const std::string &fontname)
         return NULL;
     }
 
-    SDL_SetColorKey(tileset->img->GetSwTex(), SDL_TRUE, SDL_MapRGB(tileset->img->GetSwTex()->format, 255, 255, 0));
+    SDL_SetSurfaceColorKey(tileset->img->GetSwTex(), true, SDL_MapSurfaceRGB(tileset->img->GetSwTex(), 255, 255, 0));
 
     tileset->h = std::stol(fntHeight, NULL, 0);
 
@@ -138,7 +138,7 @@ TileMap * NC_STACK_ypaworld::yw_LoadTileSet(const std::string &bitmap, Common::P
         return NULL;
     }
 
-    SDL_SetColorKey(tileset->img->GetSwTex(), SDL_TRUE, SDL_MapRGB(tileset->img->GetSwTex()->format, 255, 255, 0));
+    SDL_SetSurfaceColorKey(tileset->img->GetSwTex(), true, SDL_MapSurfaceRGB(tileset->img->GetSwTex(), 255, 255, 0));
 
     tileset->h = chrSz.y;
 

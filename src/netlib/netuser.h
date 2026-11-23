@@ -43,8 +43,6 @@ struct NetUser
     {
         ID = 0;
         name = "";
-        addr.host = 0;
-        addr.port = 0;
         sesID = 0;
         status = STATUS_DISCONNECTED;
 

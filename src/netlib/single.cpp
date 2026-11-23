@@ -12,7 +12,7 @@ ZNDSingle::ZNDSingle(const std::string &servstring)
 void ZNDSingle::Start(const std::string &name, uint16_t port, const std::string &sname, uint32_t max_players)
 {
     mode = MODE_SINGLE;
-    sock = SDLNet_UDP_Open(port);
+    sock = UDP_Open(port);
 
     users.Init();
 
@@ -412,7 +412,7 @@ void ZNDSingle::DisconnectUser(NetUser *usr, uint8_t type)
 
 void ZNDSingle::ShowSession(bool show)
 {
-    if (SDL_LockMutex(eSyncMutex) == 0)
+    SDL_LockMutex(eSyncMutex);
     {
         session.open = show;
         SDL_UnlockMutex(eSyncMutex);
@@ -448,7 +448,7 @@ void ZNDSingle::CloseSession()
 
 void ZNDSingle::CloseSession(uint32_t closeTime)
 {
-    if (SDL_LockMutex(eSyncMutex) == 0)
+    SDL_LockMutex(eSyncMutex);
     {
         if (!session.closeTimer)
         {
@@ -471,7 +471,7 @@ void ZNDSingle::CloseSession(uint32_t closeTime)
 
 void ZNDSingle::KickUser(uint64_t _ID)
 {
-    if (SDL_LockMutex(eSyncMutex) == 0)
+    SDL_LockMutex(eSyncMutex);
     {
         NetUser *usr = users.FindByID(_ID);
         if (usr && usr->net)
@@ -489,7 +489,7 @@ bool ZNDSingle::GetUsers(UserInfoVect &dst)
     if (!ME.IsOnline())
         return false;
 
-    if (SDL_LockMutex(eSyncMutex) == 0)
+    SDL_LockMutex(eSyncMutex);
     {
         dst.resize(session.users.size());
 
@@ -516,7 +516,7 @@ bool ZNDSingle::GetUser(UserInfo &dst, const char *name)
 
     bool res = false;
 
-    if (SDL_LockMutex(eSyncMutex) == 0)
+    SDL_LockMutex(eSyncMutex);
     {
         for(NetUserList::iterator it = session.users.begin(); it != session.users.end(); it++)
         {
@@ -543,7 +543,7 @@ bool ZNDSingle::GetUser(UserInfo &dst, uint64_t _ID)
 
     bool res = false;
 
-    if (SDL_LockMutex(eSyncMutex) == 0)
+    SDL_LockMutex(eSyncMutex);
     {
         for(NetUserList::iterator it = session.users.begin(); it != session.users.end(); it++)
         {
@@ -573,7 +573,7 @@ void ZNDSingle::SendData(uint64_t to, void *data, uint32_t sz, uint8_t flags, ui
     if (channel >= ZNDNET_USER_SCHNLS)
         channel = ZNDNET_USER_SCHNLS - 1;
 
-    if (SDL_LockMutex(eSyncMutex) == 0)
+    SDL_LockMutex(eSyncMutex);
     {
         NetUser *usr = users.FindByID(to);
         if (usr)
@@ -598,7 +598,7 @@ void ZNDSingle::BroadcastData(void *data, uint32_t sz, uint8_t flags, uint8_t ch
     if (channel >= ZNDNET_USER_SCHNLS)
         channel = ZNDNET_USER_SCHNLS - 1;
 
-    if (SDL_LockMutex(eSyncMutex) == 0)
+    SDL_LockMutex(eSyncMutex);
     {
         RefData *rfdat = USRDataGenData(ME.ID, true, session.ID, data, sz);
 

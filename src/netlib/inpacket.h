@@ -114,8 +114,6 @@ struct InRawPkt
         {
             data = NULL;
             len = 0;
-            addr.host = 0;
-            addr.port = 0;
         }
     }
 

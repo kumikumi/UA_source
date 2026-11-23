@@ -65,7 +65,7 @@ rsrc * NC_STACK_bitmap::CreateResource(IDVList &stak)
                 }
                 else
                 {
-                    intern->swTex = SDL_CreateRGBSurface(0, width, height, 8, 0, 0, 0, 0);
+                    intern->swTex = GFX::GFXEngine::CreateIndexedSurface(width, height);
                     if ( !intern->swTex )
                     {
                         delete intern;
@@ -89,7 +89,7 @@ size_t NC_STACK_bitmap::FreeResource(rsrc *res)
             GFX::Engine.FreeTexture(intern);
 
         if ( intern->swTex )
-            SDL_FreeSurface(intern->swTex);
+            SDL_DestroySurface(intern->swTex);
 
         if ( intern->palette )
             delete intern->palette;

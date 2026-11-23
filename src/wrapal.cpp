@@ -1,4 +1,4 @@
-#include <SDL2/SDL_timer.h>
+#include <SDL3/SDL_timer.h>
 
 #include <math.h>
 #include <stdio.h>
@@ -141,7 +141,7 @@ walsmpl *waldev::newSample()
 {
     walsmpl *tmp = new walsmpl(this);
 
-    if (SDL_LockMutex(mutex) == 0)
+    SDL_LockMutex(mutex);
     {
         sample_list.push_back(tmp);
 
@@ -154,7 +154,7 @@ walmus *waldev::createMusicPlayer()
 {
     walmus *tmp = new walmus(this);
 
-    if (SDL_LockMutex(mutex) == 0)
+    SDL_LockMutex(mutex);
     {
         sample_list.push_back(tmp);
 
@@ -167,7 +167,7 @@ WALStream *waldev::CreateStream()
 {
     WALStream *tmp = new WALStream(this);
 
-    if (SDL_LockMutex(mutex) == 0)
+    SDL_LockMutex(mutex);
     {
         sample_list.push_back(tmp);
 
@@ -178,7 +178,7 @@ WALStream *waldev::CreateStream()
 
 void waldev::deleteSample(CTsmpl *smpl)
 {
-    if (SDL_LockMutex(mutex) == 0)
+    SDL_LockMutex(mutex);
     {
 
         for(std::list<CTsmpl *>::iterator it = sample_list.begin(); it != sample_list.end(); ++it)
@@ -202,7 +202,7 @@ void waldev::master_volume(int vol)
 
 bool waldev::update()
 {
-    if (SDL_LockMutex(mutex) == 0)
+    SDL_LockMutex(mutex);
     {
         for(std::list<CTsmpl *>::iterator it = sample_list.begin(); it != sample_list.end(); ++it)
         {
@@ -286,7 +286,7 @@ void walsmpl::_reset()
 
 void walsmpl::address(void *start, size_t size, int freq, ALenum format)
 {
-    if ( SDL_LockMutex(_mutex) == 0)
+    SDL_LockMutex(_mutex);
     {
         alCheck(alSourceStop(_source));
 
@@ -309,7 +309,7 @@ void walsmpl::address(void *start, size_t size, int freq, ALenum format)
 
 void walsmpl::position(size_t newpos)
 {
-    if ( SDL_LockMutex(_mutex) == 0)
+    SDL_LockMutex(_mutex);
     {
         if (newpos >= 0 && newpos < _len)
         {
@@ -378,7 +378,7 @@ walmus::~walmus()
 
 bool walmus::open(const std::string &fname)
 {
-    if ( SDL_LockMutex(_mutex) == 0)
+    SDL_LockMutex(_mutex);
     {
         _clearQueue();
         _status = SMPL_STATUS_STOPPED;
@@ -496,7 +496,7 @@ CTsmpl::~CTsmpl()
 
 void CTsmpl::update()
 {
-    if ( SDL_TryLockMutex(_mutex) == 0) // we can't wait!
+    if ( SDL_TryLockMutex(_mutex) ) // we can't wait!
     {
         if ( _status == SMPL_STATUS_PLAYING )
         {
@@ -592,7 +592,7 @@ void CTsmpl::_clearQueue()
 
 void CTsmpl::EOS_callback( void (*func)(void *) )
 {
-    if ( SDL_LockMutex(_mutex) == 0)
+    SDL_LockMutex(_mutex);
     {
         _eosfunc = func;
 
@@ -602,7 +602,7 @@ void CTsmpl::EOS_callback( void (*func)(void *) )
 
 void CTsmpl::volume(int vol)
 {
-    if ( SDL_LockMutex(_mutex) == 0)
+    SDL_LockMutex(_mutex);
     {
         _cVolume = (float)vol / 127.0;
         alCheck(alSourcef(_source, AL_GAIN, _cVolume * _mVolume));
@@ -613,7 +613,7 @@ void CTsmpl::volume(int vol)
 
 void CTsmpl::setMasterVolume(int vol)
 {
-    if ( SDL_LockMutex(_mutex) == 0)
+    SDL_LockMutex(_mutex);
     {
         _mVolume = (float)vol / 127.0;
         alCheck(alSourcef(_source, AL_GAIN, _cVolume * _mVolume));
@@ -624,7 +624,7 @@ void CTsmpl::setMasterVolume(int vol)
 
 void CTsmpl::loop_count(int loops)
 {
-    if ( SDL_LockMutex(_mutex) == 0)
+    SDL_LockMutex(_mutex);
     {
         _loops = loops;
 
@@ -816,7 +816,7 @@ void CTsmpl::_reset()
 
 void CTsmpl::reset()
 {
-    if ( SDL_LockMutex(_mutex) == 0)
+    SDL_LockMutex(_mutex);
     {
         _reset();
 
@@ -826,7 +826,7 @@ void CTsmpl::reset()
 
 void CTsmpl::stop()
 {
-    if ( SDL_LockMutex(_mutex) == 0)
+    SDL_LockMutex(_mutex);
     {
         _stop();
 
@@ -836,7 +836,7 @@ void CTsmpl::stop()
 
 void CTsmpl::pan(int _pan)
 {
-    if ( SDL_LockMutex(_mutex) == 0)
+    SDL_LockMutex(_mutex);
     {
         float perc = ((float)_pan - 64.0) / 64.0;
 
@@ -850,7 +850,7 @@ void CTsmpl::pan(int _pan)
 
 void CTsmpl::playback_rate(int newfreq)
 {
-    if ( SDL_LockMutex(_mutex) == 0)
+    SDL_LockMutex(_mutex);
     {
         alCheck(alSourcef(_source, AL_PITCH, (float)newfreq / (float)_freq));
 
@@ -860,7 +860,7 @@ void CTsmpl::playback_rate(int newfreq)
 
 void CTsmpl::play()
 {
-    if ( SDL_LockMutex(_mutex) == 0)
+    SDL_LockMutex(_mutex);
     {
         if ( _status == SMPL_STATUS_PLAYING )
             _stop(); //Rewind, clear flags
@@ -916,7 +916,7 @@ void WALStream::SetFormat(ALenum fmt, uint32_t freq)
 
 void WALStream::Feed(void *data, size_t sz, int32_t ts)
 {
-    if ( SDL_LockMutex(_mutex) == 0)
+    SDL_LockMutex(_mutex);
     {
         _status = SMPL_STATUS_PLAYING;
         _endStreamed = false;

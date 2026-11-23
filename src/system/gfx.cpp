@@ -1,5 +1,5 @@
 #include "../fmtlib/printf.h"
-#include <SDL2/SDL_opengl.h>
+#include <SDL3/SDL_opengl.h>
 
 #if defined(__APPLE__) && defined(__MACH__)
 #include <OpenGL/glext.h>
@@ -29,7 +29,7 @@ int GFXEngine::can_destblend;
 int GFXEngine::can_stippling;
 uint32_t GFXEngine::FpsMaxTicks = 1000/60;
 
-SDL_PixelFormat *GFXEngine::_pixfmt = NULL;
+const SDL_PixelFormatDetails *GFXEngine::_pixfmt = NULL;
 GLint GFXEngine::_glPixfmt, GFXEngine::_glPixtype;
 bool GFXEngine::_staticInited = false;
 
@@ -88,22 +88,21 @@ void GFXEngine::StaticInit()
 
     _staticInited = true;
     
-    SDL_DisplayMode curr;
-    SDL_GetCurrentDisplayMode(0, &curr);
+    const SDL_DisplayMode *curr = SDL_GetCurrentDisplayMode( SDL_GetPrimaryDisplay() );
     
-    switch(curr.format)
+    switch(curr ? curr->format : SDL_PIXELFORMAT_UNKNOWN)
     {
-        case SDL_PIXELFORMAT_RGB888:
+        case SDL_PIXELFORMAT_XRGB8888:
         case SDL_PIXELFORMAT_ARGB8888:
-            _pixfmt = SDL_AllocFormat( SDL_PIXELFORMAT_ARGB8888 );
+            _pixfmt = SDL_GetPixelFormatDetails( SDL_PIXELFORMAT_ARGB8888 );
             _glPixfmt = GL_BGRA;
             _glPixtype = GL_UNSIGNED_BYTE;
             break;
         
-        case SDL_PIXELFORMAT_BGR888:
+        case SDL_PIXELFORMAT_XBGR8888:
         case SDL_PIXELFORMAT_ABGR8888:
         default:
-            _pixfmt = SDL_AllocFormat( SDL_PIXELFORMAT_ABGR8888 );
+            _pixfmt = SDL_GetPixelFormatDetails( SDL_PIXELFORMAT_ABGR8888 );
             _glPixfmt = GL_RGBA;
             _glPixtype = GL_UNSIGNED_BYTE;
             break;
@@ -200,7 +199,7 @@ void GFXEngine::DrawTextEntry(const ScreenText *txt)
 
                 if ( txt->flag & 0xE )
                 {
-                    TTF_SizeUTF8(_font.ttfFont, txt->string.c_str(), &cx, &cy);
+                    TTF_GetStringSize(_font.ttfFont, txt->string.c_str(), 0, &cx, &cy);
                 }
 
                 int p1 = txt->p1;
@@ -245,7 +244,7 @@ void GFXEngine::DrawTextEntry(const ScreenText *txt)
                     }
                 }
 
-                SDL_SetClipRect(Screen(), &clipRect);
+                SDL_SetSurfaceClipRect(Screen(), &clipRect);
 
 
                 int textY = ((p4 - _font.height) / 2) - 2 + p2;
@@ -265,12 +264,12 @@ void GFXEngine::DrawTextEntry(const ScreenText *txt)
 
                 if (_solidFont)
                 {
-                    tmp = TTF_RenderUTF8_Solid(_font.ttfFont, txt->string.c_str(), clr);
+                    tmp = TTF_RenderText_Solid(_font.ttfFont, txt->string.c_str(), 0, clr);
                     SDL_SetSurfaceBlendMode(tmp, SDL_BLENDMODE_NONE);
                 }
                 else
                 {
-                    tmp = TTF_RenderUTF8_Blended(_font.ttfFont, txt->string.c_str(), clr);
+                    tmp = TTF_RenderText_Blended(_font.ttfFont, txt->string.c_str(), 0, clr);
                     SDL_SetSurfaceBlendMode(tmp, SDL_BLENDMODE_BLEND);
                 }
                 
@@ -291,12 +290,12 @@ void GFXEngine::DrawTextEntry(const ScreenText *txt)
 
                     if (_solidFont)
                     {
-                        SDL_SetPaletteColors(tmp->format->palette, &clr, 1, 1);
+                        SDL_SetPaletteColors(SDL_GetSurfacePalette(tmp), &clr, 1, 1);
                     }
                     else
                     {
-                        SDL_FreeSurface(tmp);
-                        tmp = TTF_RenderUTF8_Blended(_font.ttfFont, txt->string.c_str(), clr);
+                        SDL_DestroySurface(tmp);
+                        tmp = TTF_RenderText_Blended(_font.ttfFont, txt->string.c_str(), 0, clr);
                         if (tmp)
                             SDL_SetSurfaceBlendMode(tmp, SDL_BLENDMODE_BLEND);
                     }
@@ -309,11 +308,11 @@ void GFXEngine::DrawTextEntry(const ScreenText *txt)
                         want.y = textY;
 
                         SDL_BlitSurface(tmp, NULL, Screen(), &want);
-                        SDL_FreeSurface(tmp);
+                        SDL_DestroySurface(tmp);
                     }
 
 
-                    SDL_SetClipRect(Screen(), NULL);
+                    SDL_SetSurfaceClipRect(Screen(), NULL);
                 }
             }
         }
@@ -368,7 +367,7 @@ int GFXEngine::GetTextWidth(const std::string &text)
     int w = 0, h = 0;
 
     if ( _font.ttfFont )
-        TTF_SizeUTF8(_font.ttfFont, text.c_str(), &w, &h);
+        TTF_GetStringSize(_font.ttfFont, text.c_str(), 0, &w, &h);
 
     return w;
 }
@@ -650,7 +649,7 @@ size_t GFXEngine::DrawBitmapNormalized(TBitmapBlitParams *arg)
     SDL_Rect src = r1;
     SDL_Rect dst = r2;
     
-    SDL_BlitScaled(arg->pbitm->swTex, &src, Screen(), &dst);
+    SDL_BlitSurfaceScaled(arg->pbitm->swTex, &src, Screen(), &dst, SDL_SCALEMODE_NEAREST);
     
     return 1;
 }
@@ -697,7 +696,7 @@ size_t GFXEngine::DrawClippedBitmapNormalized(TBitmapBlitParams *arg)
     
         SDL_Rect src = r1;
         SDL_Rect dst = r2;
-        SDL_BlitScaled(arg->pbitm->swTex, &src, Screen(), &dst);
+        SDL_BlitSurfaceScaled(arg->pbitm->swTex, &src, Screen(), &dst, SDL_SCALEMODE_NEAREST);
     }
 
     return 1;
@@ -1072,7 +1071,7 @@ void GFXEngine::RenderingMeshOld(TRenderNode *nod)
     {
         _states.AlphaTest = true;        
 
-        if ( _pixfmt->BytesPerPixel != 1 )
+        if ( _pixfmt->bytes_per_pixel != 1 )
         {
             _states.SrcBlend = GL_SRC_ALPHA;//D3DBLEND_SRCALPHA;, 
             _states.DstBlend = GL_ONE_MINUS_SRC_ALPHA;//D3DBLEND_INVSRCALPHA;
@@ -1248,7 +1247,7 @@ void GFXEngine::RenderingMesh(TRenderNode *nod)
     {
         _states.AlphaTest = true;        
 
-        if ( _pixfmt->BytesPerPixel != 1 )
+        if ( _pixfmt->bytes_per_pixel != 1 )
         {
             _states.SrcBlend = GL_SRC_ALPHA;//D3DBLEND_SRCALPHA;, 
             _states.DstBlend = GL_ONE_MINUS_SRC_ALPHA;//D3DBLEND_INVSRCALPHA;
@@ -1449,7 +1448,7 @@ void GFXEngine::ProcessDrawSeq(const CmdStream &drawSeq, const CmdIncludes *incl
     
     int normalCopy;
 
-    int bytesPerColor = Screen()->format->BytesPerPixel;
+    int bytesPerColor = SDL_BYTESPERPIXEL(Screen()->format);
 
     int32_t curPos = 0;
     const CmdStream *curStream = &drawSeq;
@@ -1791,7 +1790,7 @@ void GFXEngine::BeginFrame()
 {
     System::Perf.FrameStart();
 
-    SDL_FillRect(Screen(), NULL, SDL_MapRGBA(Screen()->format, 0, 0, 0, 0) );
+    SDL_FillSurfaceRect(Screen(), NULL, SDL_MapSurfaceRGBA(Screen(), 0, 0, 0, 0) );
     
     Common::Point scrSz = System::GetResolution();
     glViewport(0, 0, scrSz.x, scrSz.y);
@@ -1889,7 +1888,7 @@ bool GFXEngine::AllocTexture(ResBitmap *bitm)
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
 
-        if (bitm->swTex->format->format == _pixfmt->format)
+        if (bitm->swTex->format == _pixfmt->format)
         {
             SDL_LockSurface(bitm->swTex);
             glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, bitm->width, bitm->height, 0, _glPixfmt, _glPixtype, bitm->swTex->pixels);
@@ -1897,13 +1896,13 @@ bool GFXEngine::AllocTexture(ResBitmap *bitm)
         }
         else
         {
-            SDL_Surface *conv = ConvertSDLSurface(bitm->swTex, _pixfmt);
+            SDL_Surface *conv = ConvertSDLSurface(bitm->swTex, _pixfmt->format);
             
             SDL_LockSurface(conv);
             glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, bitm->width, bitm->height, 0, _glPixfmt, _glPixtype, conv->pixels);
             SDL_UnlockSurface(conv);
             
-            SDL_FreeSurface(conv);
+            SDL_DestroySurface(conv);
         }
     }
 
@@ -2128,7 +2127,7 @@ void GFXEngine::draw2DandFlush()
     
     DrawScreenSurface();
 
-    SDL_FillRect(Screen(), NULL, SDL_MapRGBA(Screen()->format, 0, 0, 0, 0) );
+    SDL_FillSurfaceRect(Screen(), NULL, SDL_MapSurfaceRGBA(Screen(), 0, 0, 0, 0) );
     
     if (_colorEffects)
         Glext::GLBindFramebuffer(GL_FRAMEBUFFER, _fbo);
@@ -2232,44 +2231,31 @@ void GFXEngine::ConvAlphaPalette(UA_PALETTE *dst, const UA_PALETTE &src, bool tr
 
 SDL_Surface *GFXEngine::CreateSurfaceScreenFormat(int width, int height)
 {
-#if SDL_VERSION_ATLEAST(2,0,5)
-    return SDL_CreateRGBSurfaceWithFormat(0, width, height, _pixfmt->BitsPerPixel, _pixfmt->format);
-#else
-    return SDL_CreateRGBSurface(0, width, height, _pixfmt->BitsPerPixel, _pixfmt->Rmask, _pixfmt->Gmask, _pixfmt->Bmask, _pixfmt->Amask );
-#endif
+    return SDL_CreateSurface(width, height, _pixfmt->format);
+}
+
+SDL_Surface *GFXEngine::CreateIndexedSurface(int width, int height)
+{
+    SDL_Surface *surface = SDL_CreateSurface(width, height, SDL_PIXELFORMAT_INDEX8);
+
+    // Unlike SDL2's, SDL3's indexed surfaces come without a palette.
+    if (surface && !SDL_CreateSurfacePalette(surface))
+    {
+        SDL_DestroySurface(surface);
+        return NULL;
+    }
+
+    return surface;
 }
 
 SDL_Surface *GFXEngine::ConvertToScreenFormat(SDL_Surface *src)
 {
-    return ConvertSDLSurface(src, _pixfmt);
+    return ConvertSDLSurface(src, _pixfmt->format);
 }
 
-SDL_Surface * GFXEngine::ConvertSDLSurface(SDL_Surface *src, const SDL_PixelFormat * fmt)
+SDL_Surface * GFXEngine::ConvertSDLSurface(SDL_Surface *src, SDL_PixelFormat fmt)
 {
-#if (SDL_COMPILEDVERSION == SDL_VERSIONNUM(2, 0, 12))
-    /***
-     * Workaround for bug with convertation of surface with palette introduced
-     * in SDL2 2.0.12 and fixed soon but after release.
-     ***/
-    if (src->format->BytesPerPixel == 1)
-    {
-#if SDL_VERSION_ATLEAST(2,0,5)
-        SDL_Surface *tmp = SDL_CreateRGBSurfaceWithFormat(0, src->w, src->h, fmt->BitsPerPixel, fmt->format);
-#else
-        SDL_Surface *tmp = SDL_CreateRGBSurface(0, src->w, src->h, fmt->BitsPerPixel, fmt->Rmask, fmt->Gmask, fmt->Bmask, fmt->Amask );
-#endif
-        SDL_BlendMode blend = SDL_BLENDMODE_NONE;
-        SDL_GetSurfaceBlendMode(src, &blend);
-        SDL_SetSurfaceBlendMode(src, SDL_BLENDMODE_NONE);
-        SDL_BlitSurface(src, NULL, tmp, NULL);
-        SDL_SetSurfaceBlendMode(src, blend);
-        return tmp;
-    }
-    else
-        return SDL_ConvertSurface(src, fmt, 0);
-#else
-    return SDL_ConvertSurface(src, fmt, 0);
-#endif
+    return SDL_ConvertSurface(src, fmt);
 }
 
 void GFXEngine::fpsLimitter(int value)
@@ -2304,14 +2290,17 @@ void GFXEngine::SetVsync(bool enabled)
 {
     if ( !enabled )
         SDL_GL_SetSwapInterval(0);
-    else if ( System::IniConf::GfxVsync.Get<int>() != 2 || SDL_GL_SetSwapInterval(-1) == -1 )
+    else if ( System::IniConf::GfxVsync.Get<int>() != 2 || !SDL_GL_SetSwapInterval(-1) )
         SDL_GL_SetSwapInterval(1); // Adaptive (-1) is not supported everywhere
 }
 
 std::string GFXEngine::GetRendererInfo()
 {
     std::string vsync;
-    switch ( SDL_GL_GetSwapInterval() )
+    int interval = 0;
+    SDL_GL_GetSwapInterval(&interval);
+
+    switch ( interval )
     {
         case 0:
             vsync = "off";
@@ -2538,7 +2527,7 @@ SDL_Cursor *GFXEngine::LoadCursor(const std::string &name)
     delete fil;
 
 
-    SDL_Surface *cursr = SDL_CreateRGBSurface(0, width, height, 32, 0xFF, 0xFF00, 0xFF0000, 0xFF000000);
+    SDL_Surface *cursr = SDL_CreateSurface(width, height, SDL_PIXELFORMAT_ABGR8888); // Bytes R, G, B, A
 
     for (int y = 0; y < height; y++)
     {
@@ -2573,7 +2562,7 @@ SDL_Cursor *GFXEngine::LoadCursor(const std::string &name)
 
     SDL_Cursor* cursor = SDL_CreateColorCursor(cursr, hotX, hotY);
 
-    SDL_FreeSurface(cursr);
+    SDL_DestroySurface(cursr);
 
     return cursor;
 }
@@ -2724,7 +2713,7 @@ void GFXEngine::Deinit()
     }
     
     if (ScreenSurface)
-        SDL_FreeSurface(ScreenSurface);
+        SDL_DestroySurface(ScreenSurface);
     
     ScreenSurface = NULL;
     
@@ -2770,32 +2759,24 @@ GFXEngine::~GFXEngine()
     Deinit();
 }
 
-int GFXEngine::EventsWatcher(void *, SDL_Event *event)
+bool GFXEngine::EventsWatcher(void *, SDL_Event *event)
 {
     switch(event->type)
     {
-    case SDL_WINDOWEVENT:
-    {
-        switch(event->window.event)
-        {
-        case SDL_WINDOWEVENT_RESIZED:
-        case SDL_WINDOWEVENT_SIZE_CHANGED:
-            Instance.UpdateFBOSizes();
-            break;
-#if SDL_VERSION_ATLEAST(2, 0, 18)
-        case SDL_WINDOWEVENT_DISPLAY_CHANGED:
-            Instance.UpdateFpsLimit(); // The new display may refresh at another rate
-            break;
-#endif
-        default:
-            break;
-        }
+    case SDL_EVENT_WINDOW_RESIZED:
+    case SDL_EVENT_WINDOW_PIXEL_SIZE_CHANGED:
+        Instance.UpdateFBOSizes();
+        break;
 
-    }
-    break;
+    case SDL_EVENT_WINDOW_DISPLAY_CHANGED:
+        Instance.UpdateFpsLimit(); // The new display may refresh at another rate
+        break;
+
+    default:
+        break;
     }
     
-    return 1; // This event can be passed to another event watcher
+    return true; // This event can be passed to another event watcher
 }
 
 void GFXEngine::SetCursor(int curID, int force)
@@ -2810,14 +2791,14 @@ void GFXEngine::SetCursor(int curID, int force)
     if ( sett )
     {
         if ( curID == 0 )
-            SDL_ShowCursor(SDL_DISABLE);
+            SDL_HideCursor();
         else if ( curID <= 11 )
         {
             if ( cursors[curID - 1] )
                 SDL_SetCursor( cursors[curID - 1] );
 
             if (!CurrentCursorID)
-                SDL_ShowCursor(SDL_ENABLE);
+                SDL_ShowCursor();
         }
 
     }
@@ -2938,12 +2919,12 @@ void GFXEngine::DrawLine(SDL_Surface *surface, const Common::Line &line, uint8_t
          !Common::Rect(surface->w, surface->h).IsIn(line.P2()) )
         return;
     
-    int rilWidth = surface->pitch / surface->format->BytesPerPixel;
+    int rilWidth = surface->pitch / SDL_BYTESPERPIXEL(surface->format);
 
     int xCount = line.Width();
     int yCount = line.Height();
 
-    uint32_t color = SDL_MapRGBA(surface->format, cr, cg, cb, 255);
+    uint32_t color = SDL_MapSurfaceRGBA(surface, cr, cg, cb, 255);
 
     int stepAdd, stepOdd;
     int steps, subSteps;
@@ -2987,9 +2968,9 @@ void GFXEngine::DrawLine(SDL_Surface *surface, const Common::Line &line, uint8_t
     
     void *surfPos = (void *) ((uint8_t *) surface->pixels 
                     + line.y1 * surface->pitch 
-                    + line.x1 * surface->format->BytesPerPixel );
+                    + line.x1 * SDL_BYTESPERPIXEL(surface->format) );
 
-    switch(surface->format->BytesPerPixel)
+    switch(SDL_BYTESPERPIXEL(surface->format))
     {
         case 1:
         {
@@ -3060,7 +3041,7 @@ void GFXEngine::DrawLine(SDL_Surface *surface, const Common::Line &line, uint8_t
 
 void GFXEngine::BlitScaleMasked(SDL_Surface *src, Common::Rect sRect, SDL_Surface *mask, uint8_t index, SDL_Surface *dst, Common::Rect dRect)
 {
-    if (mask->format->BitsPerPixel != 8)
+    if (SDL_BITSPERPIXEL(mask->format) != 8)
         return;
         
     if (src->w != mask->w || src->h != mask->h)
@@ -3077,9 +3058,9 @@ void GFXEngine::BlitScaleMasked(SDL_Surface *src, Common::Rect sRect, SDL_Surfac
         return;
     
     // Try fast
-    if (src->format->format == dst->format->format)
+    if (src->format == dst->format)
     {
-        switch(src->format->BytesPerPixel)
+        switch(SDL_BYTESPERPIXEL(src->format))
         {
             case 2:
             {
@@ -3157,8 +3138,13 @@ void GFXEngine::BlitScaleMasked(SDL_Surface *src, Common::Rect sRect, SDL_Surfac
         SDL_LockSurface(mask);
         SDL_LockSurface(dst);
 
-        uint8_t sbpp = src->format->BytesPerPixel;
-        uint8_t dbpp = dst->format->BytesPerPixel;
+        uint8_t sbpp = SDL_BYTESPERPIXEL(src->format);
+        uint8_t dbpp = SDL_BYTESPERPIXEL(dst->format);
+
+        const SDL_PixelFormatDetails *sfmt = SDL_GetPixelFormatDetails(src->format);
+        const SDL_PixelFormatDetails *dfmt = SDL_GetPixelFormatDetails(dst->format);
+        SDL_Palette *spal = SDL_GetSurfacePalette(src);
+        SDL_Palette *dpal = SDL_GetSurfacePalette(dst);
         
         int32_t dY = (sRect.Height() << 16) / dRect.Height();
         int32_t dX = (sRect.Width()  << 16) / dRect.Width();
@@ -3182,8 +3168,8 @@ void GFXEngine::BlitScaleMasked(SDL_Surface *src, Common::Rect sRect, SDL_Surfac
                     for(int i = 0; i < sbpp; i++)
                         clr |= spix[i] << (i * 8);
                     
-                    SDL_GetRGB(clr, src->format, &r, &g, &b);
-                    clr = SDL_MapRGB(dst->format, r, g, b);
+                    SDL_GetRGB(clr, sfmt, spal, &r, &g, &b);
+                    clr = SDL_MapRGB(dfmt, dpal, r, g, b);
                     
                     for(int i = 0; i < dbpp; i++)
                         dBuf[i] = (clr >> (i * 8)) & 0xFF;
@@ -3212,13 +3198,13 @@ void GFXEngine::DrawFillIntCpy(SDL_Surface *src, const Common::Rect &sRect, SDL_
                     
     if (dw > sw)
     {
-        uint8_t *psrc = (uint8_t *)src->pixels + sRect.top * src->pitch + sRect.left * src->format->BytesPerPixel;
-        uint8_t *pdst = (uint8_t *)dst->pixels + dRect.top * dst->pitch + dRect.left * dst->format->BytesPerPixel;
+        uint8_t *psrc = (uint8_t *)src->pixels + sRect.top * src->pitch + sRect.left * SDL_BYTESPERPIXEL(src->format);
+        uint8_t *pdst = (uint8_t *)dst->pixels + dRect.top * dst->pitch + dRect.left * SDL_BYTESPERPIXEL(dst->format);
         
         const int32_t nit = dw / sw;
-        const int32_t nit2 = (dw % sw) * dst->format->BytesPerPixel;
-        const int32_t cpsz = sw * dst->format->BytesPerPixel;
-        const int32_t skipdst = dst->pitch - dw * dst->format->BytesPerPixel + nit2;
+        const int32_t nit2 = (dw % sw) * SDL_BYTESPERPIXEL(dst->format);
+        const int32_t cpsz = sw * SDL_BYTESPERPIXEL(dst->format);
+        const int32_t skipdst = dst->pitch - dw * SDL_BYTESPERPIXEL(dst->format) + nit2;
                 
         int sptch = src->pitch;
         
@@ -3247,10 +3233,10 @@ void GFXEngine::DrawFillIntCpy(SDL_Surface *src, const Common::Rect &sRect, SDL_
     }
     else
     {
-        uint8_t *psrc = (uint8_t *)src->pixels + sRect.top * src->pitch + sRect.left * src->format->BytesPerPixel;
-        uint8_t *pdst = (uint8_t *)dst->pixels + dRect.top * dst->pitch + dRect.left * dst->format->BytesPerPixel;
+        uint8_t *psrc = (uint8_t *)src->pixels + sRect.top * src->pitch + sRect.left * SDL_BYTESPERPIXEL(src->format);
+        uint8_t *pdst = (uint8_t *)dst->pixels + dRect.top * dst->pitch + dRect.left * SDL_BYTESPERPIXEL(dst->format);
         
-        const int32_t cpsz = dw * dst->format->BytesPerPixel;
+        const int32_t cpsz = dw * SDL_BYTESPERPIXEL(dst->format);
         const int32_t skipdst = dst->pitch;
                 
         int sptch = src->pitch;
@@ -3289,18 +3275,18 @@ void GFXEngine::DrawFillIntCKey(SDL_Surface *src, const Common::Rect &sRect, SDL
     SDL_LockSurface(dst);
     
     uint32_t clrKey = 0;
-    SDL_GetColorKey(src, &clrKey);
+    SDL_GetSurfaceColorKey(src, &clrKey);
                 
     if (dw > sw)
     {
-        const int32_t skipdst = dst->pitch - dw * dst->format->BytesPerPixel;
-        uint8_t *psrc = (uint8_t *)src->pixels + sRect.top * src->pitch + sRect.left * src->format->BytesPerPixel;
-        uint8_t *pdst = (uint8_t *)dst->pixels + dRect.top * dst->pitch + dRect.left * dst->format->BytesPerPixel;
+        const int32_t skipdst = dst->pitch - dw * SDL_BYTESPERPIXEL(dst->format);
+        uint8_t *psrc = (uint8_t *)src->pixels + sRect.top * src->pitch + sRect.left * SDL_BYTESPERPIXEL(src->format);
+        uint8_t *pdst = (uint8_t *)dst->pixels + dRect.top * dst->pitch + dRect.left * SDL_BYTESPERPIXEL(dst->format);
         
         const int32_t nit = dw / sw;
         const int32_t nit2 = dw % sw;
         
-        const int sz = dst->format->BytesPerPixel;
+        const int sz = SDL_BYTESPERPIXEL(dst->format);
         
         int sptch = src->pitch;
         
@@ -3346,11 +3332,11 @@ void GFXEngine::DrawFillIntCKey(SDL_Surface *src, const Common::Rect &sRect, SDL
     }
     else
     {
-        const int32_t skipdst = dst->pitch - dw * dst->format->BytesPerPixel;
-        uint8_t *psrc = (uint8_t *)src->pixels + sRect.top * src->pitch + sRect.left * src->format->BytesPerPixel;
-        uint8_t *pdst = (uint8_t *)dst->pixels + dRect.top * dst->pitch + dRect.left * dst->format->BytesPerPixel;
+        const int32_t skipdst = dst->pitch - dw * SDL_BYTESPERPIXEL(dst->format);
+        uint8_t *psrc = (uint8_t *)src->pixels + sRect.top * src->pitch + sRect.left * SDL_BYTESPERPIXEL(src->format);
+        uint8_t *pdst = (uint8_t *)dst->pixels + dRect.top * dst->pitch + dRect.left * SDL_BYTESPERPIXEL(dst->format);
         
-        const int sz = dst->format->BytesPerPixel;
+        const int sz = SDL_BYTESPERPIXEL(dst->format);
         
         int sptch = src->pitch;
         
@@ -3398,15 +3384,15 @@ void GFXEngine::DrawFillIntACpy(SDL_Surface* src, const Common::Rect& sRect, SDL
     
     if (dw > sw)
     {
-        const int32_t skipdst = dst->pitch - dw * dst->format->BytesPerPixel;
-        uint8_t *psrc = (uint8_t *)src->pixels + sRect.top * src->pitch + sRect.left * src->format->BytesPerPixel;
-        uint8_t *pdst = (uint8_t *)dst->pixels + dRect.top * dst->pitch + dRect.left * dst->format->BytesPerPixel;
+        const int32_t skipdst = dst->pitch - dw * SDL_BYTESPERPIXEL(dst->format);
+        uint8_t *psrc = (uint8_t *)src->pixels + sRect.top * src->pitch + sRect.left * SDL_BYTESPERPIXEL(src->format);
+        uint8_t *pdst = (uint8_t *)dst->pixels + dRect.top * dst->pitch + dRect.left * SDL_BYTESPERPIXEL(dst->format);
         
         const int32_t nit = dw / sw;
         const int32_t nit2 = dw % sw;
-        uint32_t amask = src->format->Amask;
+        uint32_t amask = SDL_GetPixelFormatDetails(src->format)->Amask;
         
-        const int sz = dst->format->BytesPerPixel;
+        const int sz = SDL_BYTESPERPIXEL(dst->format);
         
         int sptch = src->pitch;
         
@@ -3452,14 +3438,14 @@ void GFXEngine::DrawFillIntACpy(SDL_Surface* src, const Common::Rect& sRect, SDL
     }
     else
     {
-        const int32_t skipdst = dst->pitch - dw * dst->format->BytesPerPixel;
-        uint8_t *psrc = (uint8_t *)src->pixels + sRect.top * src->pitch + sRect.left * src->format->BytesPerPixel;
-        uint8_t *pdst = (uint8_t *)dst->pixels + dRect.top * dst->pitch + dRect.left * dst->format->BytesPerPixel;
+        const int32_t skipdst = dst->pitch - dw * SDL_BYTESPERPIXEL(dst->format);
+        uint8_t *psrc = (uint8_t *)src->pixels + sRect.top * src->pitch + sRect.left * SDL_BYTESPERPIXEL(src->format);
+        uint8_t *pdst = (uint8_t *)dst->pixels + dRect.top * dst->pitch + dRect.left * SDL_BYTESPERPIXEL(dst->format);
         
-        const int sz = dst->format->BytesPerPixel;
+        const int sz = SDL_BYTESPERPIXEL(dst->format);
         
         int sptch = src->pitch;
-        uint32_t amask = src->format->Amask;
+        uint32_t amask = SDL_GetPixelFormatDetails(src->format)->Amask;
         
         int ln = 0;
         uint8_t *psrcl = psrc;
@@ -3497,16 +3483,11 @@ void GFXEngine::DrawFill(SDL_Surface *src, const Common::Rect &sRect, SDL_Surfac
     if (sRect.IsEmpty() || dRect.IsEmpty())
         return;
     
-    if (src->format->format == dst->format->format)
+    if (src->format == dst->format)
     {     
-#if SDL_VERSION_ATLEAST(2, 0, 9)
-        if (SDL_HasColorKey(src))
-#else
-        uint32_t tmp;
-        if (SDL_GetColorKey(src, &tmp) == 0)
-#endif
+        if (SDL_SurfaceHasColorKey(src))
         {
-            switch(src->format->BytesPerPixel)
+            switch(SDL_BYTESPERPIXEL(src->format))
             {
 
                 case 2:
@@ -3523,9 +3504,9 @@ void GFXEngine::DrawFill(SDL_Surface *src, const Common::Rect &sRect, SDL_Surfac
         }
         else
         {
-            if (src->format->Amask)
+            if (SDL_ISPIXELFORMAT_ALPHA(src->format))
             {
-                switch(src->format->BytesPerPixel)
+                switch(SDL_BYTESPERPIXEL(src->format))
                 {
 
                     case 2:
@@ -3593,9 +3574,9 @@ void GFXEngine::GetGlPixTypeFmt(GLint *format, GLint *type)
 void GFXEngine::RecreateScreenSurface()
 {
     if ( ScreenSurface )
-        SDL_FreeSurface(ScreenSurface);
+        SDL_DestroySurface(ScreenSurface);
 
-    ScreenSurface = SDL_CreateRGBSurface(0, _resolution.x, _resolution.y, _pixfmt->BitsPerPixel, _pixfmt->Rmask, _pixfmt->Gmask, _pixfmt->Bmask, _pixfmt->Amask);
+    ScreenSurface = SDL_CreateSurface(_resolution.x, _resolution.y, _pixfmt->format);
 
     if ( !screenTex )
         glGenTextures(1, &screenTex);

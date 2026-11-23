@@ -1,4 +1,6 @@
 #define GLOBAL
+// Gives Windows GUI programs their WinMain entry point, as SDL2main did.
+#include <SDL3/SDL_main.h>
 #include "system/fsmgr.h"
 #include "system/system.h"
 #include "env.h"

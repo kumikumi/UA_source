@@ -12,8 +12,6 @@ struct AddrSeq
 
     AddrSeq()
     {
-        addr.host = 0;
-        addr.port = 0;
         seq = 0;
     }
 
@@ -30,7 +28,7 @@ struct AddrSeq
 
     inline bool operator== (const AddrSeq& b)
     {
-        return addr.host == b.addr.host && addr.port == b.addr.port && seq == b.seq;
+        return addr == b.addr && seq == b.seq;
     };
 };
 

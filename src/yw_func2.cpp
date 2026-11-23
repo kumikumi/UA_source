@@ -4006,8 +4006,8 @@ void UserData::GameShellUiHandleInput()
                 char * clpbrd = SDL_GetClipboardText();
                 if (clpbrd)
                 {
-                    IPaddress tmp;
-                    if (SDLNet_ResolveHost(&tmp, clpbrd, 0) == 0)
+                    ZNDNet::IPaddress tmp;
+                    if (ZNDNet::ResolveHost(&tmp, clpbrd, 0))
                     {
                         netName = clpbrd;
                         netNameCurPos = netName.size();

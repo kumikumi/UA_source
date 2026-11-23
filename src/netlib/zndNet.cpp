@@ -90,7 +90,7 @@ void ZNDNet::ConfirmQueueCheck()
 
         if (tcur >= dta->timeout)
         {
-            if ( SDL_LockMutex(confirmQueueMutex) == 0 )
+            SDL_LockMutex(confirmQueueMutex);
             {
                 it = confirmQueue.erase(it);
                 SDL_UnlockMutex(confirmQueueMutex);
@@ -145,7 +145,7 @@ void ZNDNet::ConfirmReceive(AddrSeq _seq)
         SendingData *dta = *it;
         if (dta->addr == _seq)
         {
-            if ( SDL_LockMutex(confirmQueueMutex) == 0 )
+            SDL_LockMutex(confirmQueueMutex);
             {
                 it = confirmQueue.erase(it);
                 SDL_UnlockMutex(confirmQueueMutex);
@@ -171,7 +171,7 @@ void ZNDNet::ConfirmRetry(AddrSeq _seq, uint32_t from, uint32_t to)
         {
             if (dta->pdata->size() > from && dta->pdata->size() >= to )
             {
-                if ( SDL_LockMutex(confirmQueueMutex) == 0 )
+                SDL_LockMutex(confirmQueueMutex);
                 {
                     it = confirmQueue.erase(it);
                     SDL_UnlockMutex(confirmQueueMutex);
@@ -220,7 +220,7 @@ void ZNDNet::Events_Push(Event *evnt)
         return;
     }
 
-    if (SDL_LockMutex(eEventMutex) == 0)
+    SDL_LockMutex(eEventMutex);
     {
         while (eEventList.size() >= EVENTS_MAX || (eEventDataSize + evnt->size) >= EVENTS_DATA_MAX)
         {
@@ -249,7 +249,7 @@ Event *ZNDNet::Events_Pop()
     if ( eEventList.empty() )
         return NULL;
 
-    if (SDL_LockMutex(eEventMutex) == 0)
+    SDL_LockMutex(eEventMutex);
     {
         Event *tmp = eEventList.front();
         eEventList.pop_front();
@@ -266,7 +266,7 @@ Event *ZNDNet::Events_Pop()
 
 void ZNDNet::Events_ClearByType(uint32_t type)
 {
-    if (SDL_LockMutex(eEventMutex) == 0)
+    SDL_LockMutex(eEventMutex);
     {
         for(EventList::iterator it = eEventList.begin(); it != eEventList.end();)
         {
@@ -286,7 +286,7 @@ void ZNDNet::Events_ClearByType(uint32_t type)
 
 void ZNDNet::Events_Clear()
 {
-    if (SDL_LockMutex(eEventMutex) == 0)
+    SDL_LockMutex(eEventMutex);
     {
         for(EventList::iterator it = eEventList.begin(); it != eEventList.end(); it = eEventList.erase(it))
             delete (*it);
@@ -302,7 +302,7 @@ void ZNDNet::Events_Clear()
 
 Event *ZNDNet::Events_PeekByType(uint32_t type)
 {
-    if (SDL_LockMutex(eEventMutex) == 0)
+    SDL_LockMutex(eEventMutex);
     {
         for(EventList::iterator it = eEventList.begin(); it != eEventList.end(); it++)
         {
@@ -326,7 +326,7 @@ Event *ZNDNet::Events_WaitForMsg(uint32_t type, uint32_t time)
 {
     uint32_t nextID = 0;
 
-    if (SDL_LockMutex(eEventMutex) == 0)
+    SDL_LockMutex(eEventMutex);
     {
         eEventWaitLock++;
 
@@ -357,7 +357,7 @@ Event *ZNDNet::Events_WaitForMsg(uint32_t type, uint32_t time)
 
         if (nextID < eEventNextID) // If new packets arrived
         {
-            if (SDL_LockMutex(eEventMutex) == 0) //lock it for iterate
+            SDL_LockMutex(eEventMutex); //lock it for iterate
             {
                 for(EventList::iterator it = eEventList.begin(); it != eEventList.end(); it++)
                 {
@@ -390,7 +390,7 @@ Event *ZNDNet::Events_PopSystem()
     if ( eEventList.empty() )
         return NULL;
 
-    if (SDL_LockMutex(eEventMutex) == 0)
+    SDL_LockMutex(eEventMutex);
     {
         for(EventList::iterator it = eEventList.begin(); it != eEventList.end(); it++)
         {
@@ -418,7 +418,7 @@ void ZNDNet::Confirm_Clear(const IPaddress &addr)
         SendingData *dta = *it;
         if ( IPCMP(dta->addr.addr, addr) )
         {
-            if ( SDL_LockMutex(confirmQueueMutex) == 0 )
+            SDL_LockMutex(confirmQueueMutex);
             {
                 it = confirmQueue.erase(it);
                 SDL_UnlockMutex(confirmQueueMutex);
@@ -665,7 +665,7 @@ void ZNDNet::SrvSessionBroadcast(NetSession *ses, RefData *dat, uint8_t flags, u
     if (!ses || !dat)
         return;
 
-    if (SDL_LockMutex(sendPktListMutex) == 0)
+    SDL_LockMutex(sendPktListMutex);
     {
         for(NetUserList::iterator it = ses->users.begin(); it != ses->users.end(); it++)
         {
@@ -709,7 +709,7 @@ bool ZNDNet::SessionCheckPswd(const std::string &pswd)
 
 void ZNDNet::Recv_PushInRaw(InRawPkt *inpkt)
 {
-    if (SDL_LockMutex(recvPktListMutex) == 0)
+    SDL_LockMutex(recvPktListMutex);
     {
         recvPktList.push_back(inpkt);
         SDL_UnlockMutex(recvPktListMutex);
@@ -721,7 +721,7 @@ InRawPkt *ZNDNet::Recv_PopInRaw()
 {
     InRawPkt *ret = NULL;
 
-    if (SDL_LockMutex(recvPktListMutex) == 0)
+    SDL_LockMutex(recvPktListMutex);
     {
         if (!recvPktList.empty())
         {
@@ -740,7 +740,7 @@ void ZNDNet::Send_PushData(SendingData *data)
     if (!data)
         return;
 
-    if (SDL_LockMutex(sendPktListMutex) == 0)
+    SDL_LockMutex(sendPktListMutex);
     {
         sendPktList.push_back(data);
         SDL_UnlockMutex(sendPktListMutex);
@@ -776,7 +776,7 @@ void ZNDNet::Send_RetryData(SendingData *data, size_t from, size_t to, bool decr
 
 void ZNDNet::Send_Clear(const IPaddress &addr)
 {
-    if (SDL_LockMutex(sendModifyMutex) == 0)
+    SDL_LockMutex(sendModifyMutex);
     {
         for (SendingList::iterator it = sendPktList.begin(); it != sendPktList.end(); )
         {
@@ -796,7 +796,7 @@ void ZNDNet::Send_Clear(const IPaddress &addr)
 
 void ZNDNet::Send_Clear()
 {
-    if (SDL_LockMutex(sendModifyMutex) == 0)
+    SDL_LockMutex(sendModifyMutex);
     {
         for (SendingList::iterator it = sendPktList.begin(); it != sendPktList.end(); it = sendPktList.erase(it))
             delete *it;
@@ -807,7 +807,7 @@ void ZNDNet::Send_Clear()
 
 void ZNDNet::Recv_Clear()
 {
-    if (SDL_LockMutex(recvPktListMutex) == 0)
+    SDL_LockMutex(recvPktListMutex);
     {
         if (!recvPktList.empty())
         {

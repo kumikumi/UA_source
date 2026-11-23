@@ -348,7 +348,7 @@ rsrc * NC_STACK_ilbm::READ_ILBM(IDVList &stak, IFFile *mfil, int transp)
 
             if ( bitm )
             {
-                bitm->swTex = SDL_CreateRGBSurface(0, bitm->width, bitm->height, 8, 0, 0, 0, 0);
+                bitm->swTex = GFX::GFXEngine::CreateIndexedSurface(bitm->width, bitm->height);
                 
                 if ( ILBM__OR__VBMP )
                 {
@@ -382,7 +382,7 @@ rsrc * NC_STACK_ilbm::READ_ILBM(IDVList &stak, IFFile *mfil, int transp)
     
     if (bitm && bitm->swTex)
     {
-        if (bitm->swTex->format->palette)
+        if (SDL_Palette *surfPal = SDL_GetSurfacePalette(bitm->swTex))
         {
             UA_PALETTE *pal = bitm->palette;
             if (!pal)
@@ -393,10 +393,10 @@ rsrc * NC_STACK_ilbm::READ_ILBM(IDVList &stak, IFFile *mfil, int transp)
             {
                 UA_PALETTE tmp;
                 GFX::Engine.ConvAlphaPalette(&tmp, *pal, transp);
-                SDL_SetPaletteColors(bitm->swTex->format->palette, tmp.data(), 0, 256);
+                SDL_SetPaletteColors(surfPal, tmp.data(), 0, 256);
             }
             else
-                SDL_SetPaletteColors(bitm->swTex->format->palette, pal->data(), 0, 256);
+                SDL_SetPaletteColors(surfPal, pal->data(), 0, 256);
         }
 
         if ( convertColor )
@@ -404,7 +404,7 @@ rsrc * NC_STACK_ilbm::READ_ILBM(IDVList &stak, IFFile *mfil, int transp)
             SDL_Surface *screenFmt = GFX::Engine.ConvertToScreenFormat(bitm->swTex);
             if (screenFmt)
             {
-                SDL_FreeSurface(bitm->swTex);
+                SDL_DestroySurface(bitm->swTex);
                 bitm->swTex = screenFmt;
 
                 if (bitm->palette)

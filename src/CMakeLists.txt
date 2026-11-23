@@ -42,6 +42,7 @@ set(SOURCES
 	netlib/server_threads.cpp
 	netlib/single.cpp
 	netlib/single_threads.cpp
+	netlib/udp.cpp
 	netlib/zndNet.cpp
 	nucleas.cpp
 	obj3d.cpp
@@ -97,17 +98,10 @@ set(SOURCES
 
 find_package(PkgConfig REQUIRED)
 
-pkg_search_module(SDL2 REQUIRED sdl2)
-link_directories(${SDL2_LIBRARY_DIRS})
-
-pkg_search_module(SDL2_IMAGE REQUIRED SDL2_image)
-link_directories(${SDL2_IMAGE_LIBRARY_DIRS})
-
-pkg_search_module(SDL2_TTF REQUIRED SDL2_ttf)
-link_directories(${SDL2_TTF_LIBRARY_DIRS})
-
-pkg_search_module(SDL2_NET REQUIRED SDL2_net)
-link_directories(${SDL2_NET_LIBRARY_DIRS})
+find_package(SDL3 REQUIRED CONFIG COMPONENTS SDL3)
+find_package(SDL3_image REQUIRED CONFIG)
+find_package(SDL3_ttf REQUIRED CONFIG)
+find_package(SDL3_net REQUIRED CONFIG)
 
 pkg_search_module(VORBISFILE REQUIRED vorbisfile)
 link_directories(${VORBISFILE_LIBRARY_DIRS})
@@ -153,10 +147,10 @@ endif()
 
 
 
-target_link_libraries(UA_source ${SDL2_LIBRARIES}
-							 ${SDL2_IMAGE_LIBRARIES}
-							 ${SDL2_TTF_LIBRARIES}
-							 ${SDL2_NET_LIBRARIES}
+target_link_libraries(UA_source SDL3::SDL3
+							 SDL3_image::SDL3_image
+							 SDL3_ttf::SDL3_ttf
+							 SDL3_net::SDL3_net
 							 ${OPENGL_LIBRARIES}
 							 ${VORBISFILE_LIBRARIES}
 							 ${OPENAL_LIBRARY}
@@ -169,10 +163,6 @@ target_link_libraries(UA_source ${SDL2_LIBRARIES}
 
 target_include_directories(UA_source PUBLIC
 										${PROJECT_SOURCE_DIR} 
-										${SDL2_INCLUDE_DIRS} 
-										${SDL2_IMAGE_INCLUDE_DIRS} 
-										${SDL2_TTF_INCLUDE_DIRS}
-										${SDL2_NET_INCLUDE_DIRS}
 										${OpenGL_INCLUDE_DIR}
 										${VORBISFILE_INCLUDE_DIRS}
 										${OPENAL_INCLUDE_DIR}

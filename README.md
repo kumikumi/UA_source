@@ -11,7 +11,7 @@ Opensource reimplementation of **UrbanAssault** engine. You needed copy of origi
 </a>
 
 
-**Dependings**: SDL2, SDL2_ttf, OpenGL, OpenAL, vorbisfile(ogg), ffmpeg
+**Dependings**: SDL3, SDL3_image, SDL3_ttf, SDL3_net, OpenGL, OpenAL, vorbisfile(ogg), ffmpeg
 
 
 **Building**:

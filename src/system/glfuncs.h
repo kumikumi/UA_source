@@ -1,5 +1,5 @@
-#include <SDL2/SDL.h>
-#include <SDL2/SDL_opengl.h>
+#include <SDL3/SDL.h>
+#include <SDL3/SDL_opengl.h>
 
 #if defined(__APPLE__) && defined(__MACH__)
 #include <OpenGL/glext.h>

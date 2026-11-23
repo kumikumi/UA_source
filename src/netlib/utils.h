@@ -7,7 +7,7 @@ namespace ZNDNet
 
 inline bool IPCMP(const IPaddress &a, const IPaddress &b)
 {
-    return a.host == b.host && a.port == b.port;
+    return a == b;
 }
 
 

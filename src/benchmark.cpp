@@ -4,7 +4,7 @@
 #include <cstdlib>
 #include <cstring>
 
-#include <SDL2/SDL_image.h>
+#include <SDL3_image/SDL_image.h>
 
 #include "benchmark.h"
 #include "yw.h"
@@ -257,7 +257,7 @@ bool Benchmark::WriteScreenshot()
         return false;
 
     // The copy has the bottom line first
-    SDL_Surface *img = SDL_CreateRGBSurfaceWithFormat(0, w, h, 24, SDL_PIXELFORMAT_RGB24);
+    SDL_Surface *img = SDL_CreateSurface(w, h, SDL_PIXELFORMAT_RGB24);
     bool saved = false;
 
     if ( img )
@@ -265,8 +265,8 @@ bool Benchmark::WriteScreenshot()
         for (int y = 0; y < h; y++)
             memcpy((uint8_t *)img->pixels + y * img->pitch, pixels + (h - 1 - y) * w * 3, w * 3);
 
-        saved = (IMG_SavePNG(img, _shotFile.c_str()) == 0);
-        SDL_FreeSurface(img);
+        saved = IMG_SavePNG(img, _shotFile.c_str());
+        SDL_DestroySurface(img);
     }
 
     free(pixels);

@@ -99,41 +99,31 @@ void TMovie::Init()
 #endif
 }
 
-int TMovie::EventsWatcher(void *, SDL_Event *event)
+bool TMovie::EventsWatcher(void *, SDL_Event *event)
 {
     switch(event->type)
     {
-        case SDL_WINDOWEVENT:
-        {
-            switch(event->window.event)
+        case SDL_EVENT_WINDOW_RESIZED:
+        case SDL_EVENT_WINDOW_PIXEL_SIZE_CHANGED:
             {
-            case SDL_WINDOWEVENT_RESIZED:
-            case SDL_WINDOWEVENT_SIZE_CHANGED:
-                {
-                    Common::Point scrSz = System::GetResolution();
-                    glViewport(0, 0, scrSz.x, scrSz.y);
-                }
-                break;
-            default:
-                break;
+                Common::Point scrSz = System::GetResolution();
+                glViewport(0, 0, scrSz.x, scrSz.y);
             }
-
-        }
-        break;
+            break;
         
-        case SDL_KEYDOWN:
+        case SDL_EVENT_KEY_DOWN:
             Instance._ctx->playing = false;
-            return 0;
+            return false;
 
-        case SDL_KEYUP:
-        case SDL_TEXTINPUT:
-        case SDL_MOUSEBUTTONDOWN:
-        case SDL_MOUSEBUTTONUP:
-        case SDL_MOUSEMOTION:
-            return 0;
+        case SDL_EVENT_KEY_UP:
+        case SDL_EVENT_TEXT_INPUT:
+        case SDL_EVENT_MOUSE_BUTTON_DOWN:
+        case SDL_EVENT_MOUSE_BUTTON_UP:
+        case SDL_EVENT_MOUSE_MOTION:
+            return false;
     }
     
-    return 1; // This event can be passed to another event watcher
+    return true; // This event can be passed to another event watcher
 }
 
 
