@@ -492,7 +492,7 @@ void NC_STACK_base::ChangeScale(const vec3d &v, int flag)
     }
 }
 
-size_t NC_STACK_base::Render(baseRender_msg *arg, Instance * inst, bool doCopy /* = false */)
+size_t NC_STACK_base::Render(baseRender_msg *arg, Instance * inst)
 {
     int isVisible = 0;
 
@@ -565,13 +565,7 @@ size_t NC_STACK_base::Render(baseRender_msg *arg, Instance * inst, bool doCopy /
                     rend.Flags |= GFX::RFLAGS_FALLOFF;
             }
 
-            if (doCopy)
-            {
-                rend.LocalMesh = msh;
-                rend.Mesh = &rend.LocalMesh;
-            }
-            else
-                rend.Mesh = &msh;            
+            rend.Mesh = &msh;
             
             rend.TForm = skel132.tform;
             rend.TimeStamp = arg->globTime;
@@ -609,92 +603,6 @@ size_t NC_STACK_base::Render(baseRender_msg *arg, Instance * inst, bool doCopy /
     }
 
     return isVisible;
-}
-
-size_t NC_STACK_base::RenderImmediately(baseRender_msg *arg, Instance * inst)
-{
-    int rendered = 0;
-
-    if ( _skeleton )
-    {
-        _transform.CalcGlobal();
-
-        TF::TForm3D *view = TF::Engine.GetViewPoint();
-
-        TSkeletonTransformParams skel132;
-        skel132.minZ = arg->minZ;
-        skel132.maxZ = arg->maxZ;
-        skel132.tform = view->CalcSclRot;
-
-        if ( !(_transform.flags & TF::TForm3D::FLAG_NO_WRLD_ROT) )
-            skel132.tform *= (_transform.TForm - view->CalcPos);
-        else
-            skel132.tform *= mat4x4(_transform.CalcPos - view->CalcPos);
-        
-        _renderMsg.timeStamp = arg->globTime;
-        _renderMsg.frameTime = arg->frameTime;
-        _renderMsg.minZ = arg->minZ;
-        _renderMsg.maxZ = arg->maxZ;
-        _renderMsg.ViewTForm = view;
-        _renderMsg.OwnerTForm = &_transform;
-        _renderMsg.flags = arg->flags;
-        
-        float distance = skel132.tform.Transform( _transform.Pos ).length();
-        
-        bool newsky = System::IniConf::GfxNewSky.Get<bool>();
-        float transDist = System::IniConf::GfxSkyDistance.Get<int>();
-        
-        for(GFX::TMesh &msh : Meshes)
-        {
-            GFX::TRenderNode rend( GFX::TRenderNode::TYPE_MESH );
-            rend.Distance = distance;
-            rend.Color = msh.Mat.Color;
-            rend.Flags = msh.Mat.Flags | arg->flags;
-            
-            if (newsky)
-            {
-                if ( skel132.tform.Transform(msh.BoundBox.Min + _transform.Pos).XZ().length() >= transDist ||
-                     skel132.tform.Transform(msh.BoundBox.Max + _transform.Pos).XZ().length() >= transDist )
-                    rend.Flags |= GFX::RFLAGS_FALLOFF;
-            }
-
-            rend.Mesh = &msh;            
-            rend.TForm = skel132.tform;
-            rend.TimeStamp = arg->globTime;
-            rend.FrameTime = arg->frameTime;
-            arg->SetFog(&rend, _renderMsg.fadeStart, _renderMsg.fadeLength);
-
-            GFX::GFXEngine::Instance.RenderNode(&rend);
-        }
-        
-        if (inst)
-        {
-            for (NC_STACK_ade::InstanceOpts *ade : inst->Particles)
-            {
-                if (ade)
-                    (static_cast<NC_STACK_particle*>(ade->Ade))->Emit(&_renderMsg, ade);
-            }
-        }
-    }
-
-    if (!inst || inst->Bas != this)
-    {
-        for (NC_STACK_base *kd : _KIDS)
-        {
-            if ( kd->RenderImmediately(arg) )
-                rendered = 1;
-        }
-    }
-    else
-    {
-        for (NC_STACK_base::Instance *kd : inst->KidsOpts)
-        {
-            if ( kd->Bas->RenderImmediately(arg, kd) )
-                rendered = 1;
-        }
-    }
-
-    return rendered;
 }
 
 

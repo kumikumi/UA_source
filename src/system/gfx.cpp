@@ -119,7 +119,6 @@ GFXEngine::GFXEngine()
         c = {0, 0, 0, 0};
     
     _forcesoftcursor = 0;
-    _field_38 = 0;
     _txt16bit = 0;
     _use_simple_d3d = 0;
     _disable_lowres = 0;

@@ -75,18 +75,6 @@ struct TSkeletonTransformParams
     float maxZ;
 };
 
-struct TSkeletonPolygonParams
-{
-    int polyID;
-    int flags;
-    tUtV *texCoords;
-    float minZ;
-    float maxZ;
-    float shadeVal;
-    float fadeStart;
-    float fadeLength;
-};
-
 class NC_STACK_skeleton: public NC_STACK_rsrc
 {
 public:
@@ -95,7 +83,6 @@ public:
     virtual size_t FreeResource(rsrc *pres);
     virtual size_t RecalcPolygonPlane(int *arg);
     virtual size_t TransformAndCull(TSkeletonTransformParams *arg);
-    virtual bool PreparePolygon(TSkeletonPolygonParams *arg);
 
     NC_STACK_skeleton() {};
     virtual ~NC_STACK_skeleton() {};
@@ -119,7 +106,6 @@ public:
     virtual int getSKEL_polyCount();
 
 protected:
-    bool PolygonCheckInvisible(const std::vector<UAskeleton::Vertex> &in, const UAskeleton::Polygon &pol, std::vector<vec3d> *out);
     bool TransformVertexes(TSkeletonTransformParams *arg, const std::vector<UAskeleton::Vertex> &in, std::vector<UAskeleton::Vertex> *out);
 
 

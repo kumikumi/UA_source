@@ -253,7 +253,6 @@ struct TRenderNode
     uint8_t Type = TYPE_MESH;
     
     TMesh *Mesh = NULL;
-    TMesh LocalMesh;
     
     int32_t coordsID = -1;
     
@@ -707,7 +706,6 @@ private:
 
 public:
     int _forcesoftcursor;
-    int _field_38;
     int _txt16bit;
     int _use_simple_d3d;
     int _disable_lowres;

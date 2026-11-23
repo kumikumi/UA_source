@@ -147,8 +147,7 @@ public:
     virtual void SetScale(const vec3d &v, int flag = UF_XYZ);
     virtual void ChangeScale(const vec3d &v, int flag = UF_XYZ);
     
-    virtual size_t Render(baseRender_msg *arg, Instance * inst = NULL, bool doCopy = false);
-    virtual size_t RenderImmediately(baseRender_msg *arg, Instance * inst = NULL);
+    virtual size_t Render(baseRender_msg *arg, Instance * inst = NULL);
     
     virtual void RecalcInternal(bool kids = false);
     
