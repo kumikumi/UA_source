@@ -440,8 +440,11 @@ bool NC_STACK_ypaworld::SimulationStep(TUpdateArgs *arg)
     if ( _replayRecorder->do_record )
         recorder_update_time(this, arg->DTime);
 
+    // The user's unit sets these again as it updates; frames drawn until the
+    // next step show them as they are.
     _guiVisor.mgunSight = 0;
     _guiVisor.weaponSight = 0;
+    _guiVisor.target = NULL;
 
     _ownerOldCellUserUnit = _userUnit->_pSector->owner;
 
@@ -5764,6 +5767,7 @@ void NC_STACK_ypaworld::PlayReplayFrame(TUpdateArgs *arg)
 
     _guiVisor.mgunSight = 0;
     _guiVisor.weaponSight = 0;
+    _guiVisor.target = NULL;
 
     if ( repl->play_state != 1 )
         AdvanceReplay(repl, arg->DTime);

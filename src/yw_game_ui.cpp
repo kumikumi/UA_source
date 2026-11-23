@@ -9179,8 +9179,6 @@ void DrawHud(NC_STACK_ypaworld *yw)
     FontUA::set_end(&buf);
 
     GFX::Engine.ProcessDrawSeq(buf);
-
-    yw->_guiVisor.target = NULL;
 }
 
 
