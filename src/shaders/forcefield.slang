@@ -10,8 +10,8 @@
 // and narrow, so that on the walls they are about the size and shape of the
 // patch's, and they shimmer in the distance about as much, as neither has
 // mipmaps. Nothing moves: as in the original, from one moment to the next
-// some patches are there and others gone. Every couple of seconds, each at
-// its own time, a shard flares up in a tenth of a second to a new shape and
+// some patches are there and others gone. Every few seconds, each at its
+// own time, a shard flares up in a fifth of a second to a new shape and
 // color, then fades on its own down through the colors, crumbling, until it
 // is dim or clear; and the shards' frayed edges crackle. The texture tiles
 // seamlessly, and the animation repeats every LOOP seconds without a jump:
@@ -167,11 +167,11 @@ float Shards(float2 uv, int2 n, uint seed, float s, float steps, float slope, fl
         }
     }
 
-    // The flare up to the next state takes the last 0.1 seconds of the step
+    // The flare up to the next state takes the last 0.2 seconds of the step
     Step step = Steps(Key(nearestCell, n, seed + 1u), s, steps);
     float now = Shard(step.a, uv, offset, slope, step.f * step.seconds, fade);
     float next = Shard(step.b, uv, offset, slope, 0.0, fade);
-    return lerp(now, next, Change(step, 0.1));
+    return lerp(now, next, Change(step, 0.2));
 }
 
 // Splinters, to fray the shards' edges: noise in thin streaks
@@ -185,10 +185,10 @@ float Splinters(float2 uv, uint seed, float s)
 float2 Fields(float2 uv, float s)
 {
     // Cells of about 5 by 43 texels and 6 by 51, so 12 by 100 units and 15
-    // by 120 on the walls. Both flare about every 2 seconds; the veil fades
-    // over a couple of seconds, the glow's quicker flashes in under one.
-    float veil = Shards(uv, int2(48, 6), 10u, s, 32.0, 0.6, 2.0) + Splinters(uv, 11u, s);
-    float glow = Shards(uv, int2(40, 5), 20u, s, 32.0, 0.6, 0.8) + Splinters(uv, 21u, s);
+    // by 120 on the walls. The veil flares about every 4 seconds and fades
+    // over a couple; the glow's rarer flashes, about every 16, in under two.
+    float veil = Shards(uv, int2(48, 6), 10u, s, 16.0, 1.0, 2.0) + Splinters(uv, 11u, s);
+    float glow = Shards(uv, int2(40, 5), 20u, s, 4.0, 1.0, 1.6) + Splinters(uv, 21u, s);
     return float2(veil, glow);
 }
 
