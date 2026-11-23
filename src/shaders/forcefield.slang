@@ -9,11 +9,13 @@
 // original's four colors, with no blends between them. The shards are tall
 // and narrow, so that on the walls they are about the size and shape of the
 // patch's, and they shimmer in the distance about as much, as neither has
-// mipmaps. Nothing drifts: the shards churn in place, their edges sweeping
-// back and forth and their corners circling. The texture tiles seamlessly,
-// and the animation repeats every LOOP seconds without a jump: everything
-// that moves makes a whole number of turns per loop. See world.slang for the
-// binding rules.
+// mipmaps. Nothing moves: as in the original, from one moment to the next
+// some patches are there and others gone. Every shard holds its shape and
+// color for a second or so, then flares up or dies down to a new one within
+// a fraction of a second, each at its own time, and the shards' frayed edges
+// crackle the same way. The texture tiles seamlessly, and the animation
+// repeats every LOOP seconds without a jump: everything changes a whole
+// number of times per loop. See world.slang for the binding rules.
 
 struct ForceFieldUniforms
 {
@@ -36,45 +38,94 @@ uint HashU(uint x)
     return x;
 }
 
-// Four numbers from 0 to 1 for a lattice point, the lattice wrapping around
-// every n points so that the pattern tiles
-float4 Hash4(int2 p, int2 n, uint seed)
+// A random number for a lattice point, the lattice wrapping around every n
+// points so that the pattern tiles
+uint Key(int2 p, int2 n, uint seed)
 {
     int2 w = ((p % n) + n) % n;
-    uint h = HashU(uint(w.x) * 1597334677u ^ uint(w.y) * 3812015801u ^ (uint(n.x * 31 + n.y) + seed) * 2654435761u);
-    uint g = HashU(h ^ 0x9e3779b9u);
-    return float4(float(h & 0xFFFFu), float(h >> 16), float(g & 0xFFFFu), float(g >> 16)) / 65535.0;
+    return HashU(uint(w.x) * 1597334677u ^ uint(w.y) * 3812015801u ^ (uint(n.x * 31 + n.y) + seed) * 2654435761u);
 }
 
-// From -1 to 1, swinging back and forth a whole number of times per loop: at
-// a random phase h.x, either way round by h.y, and from half to one and a
-// half times `turns` by h.z
-float Swing(float4 h, float s, float turns)
+// Four numbers from 0 to 1 from a random number
+float4 Rand4(uint key)
 {
-    return sin(TAU * (h.x + s * floor(turns * (0.5 + h.z)) * (h.y < 0.5 ? 1.0 : -1.0)));
+    uint g = HashU(key ^ 0x9e3779b9u);
+    return float4(float(key & 0xFFFFu), float(key >> 16), float(g & 0xFFFFu), float(g >> 16)) / 65535.0;
+}
+
+// A lattice point's states over time: it holds one for a while, then quickly
+// changes to the next, a whole number of times per loop, from half to one and
+// a half times `steps`, at a random phase. The two states as random numbers,
+// how far time is into the step, from 0 to 1, and the step's length in
+// seconds.
+struct Step
+{
+    uint a;
+    uint b;
+    float f;
+    float seconds;
+};
+
+Step Steps(uint key, float s, float steps)
+{
+    float4 h = Rand4(key);
+    int n = max(int(steps * (0.5 + h.z)), 1);
+    float x = s * float(n) + h.x;
+    int k = int(floor(x));
+
+    Step step;
+    step.a = HashU(key + uint(k % n) * 0x9e3779b9u);
+    step.b = HashU(key + uint((k + 1) % n) * 0x9e3779b9u);
+    step.f = x - floor(x);
+    step.seconds = LOOP / float(n);
+    return step;
+}
+
+// From 0 to 1, how far the change to the step's next state has got, the
+// change taking the last `seconds` of the step
+float Change(Step step, float seconds)
+{
+    return smoothstep(1.0 - seconds / step.seconds, 1.0, step.f);
+}
+
+// From -1 to 1, a state's level: as likely as the sine of a random angle
+float Level(uint state)
+{
+    return sin(TAU * float(state & 0xFFFFu) / 65535.0);
 }
 
 // Smooth noise from 0 to 1 with n.x by n.y lattice cells per tile, whose
-// lattice values swing up and down in place
-float Noise(float2 uv, int2 n, uint seed, float s, float turns)
+// lattice values step from one random level to the next
+float Noise(float2 uv, int2 n, uint seed, float s, float steps)
 {
     float2 p = uv * float2(n);
     int2 i = int2(floor(p));
     float2 f = p - floor(p);
     f = f * f * (3.0 - 2.0 * f);
 
-    float a = Swing(Hash4(i, n, seed), s, turns);
-    float b = Swing(Hash4(i + int2(1, 0), n, seed), s, turns);
-    float c = Swing(Hash4(i + int2(0, 1), n, seed), s, turns);
-    float d = Swing(Hash4(i + int2(1, 1), n, seed), s, turns);
-    return 0.5 + 0.5 * lerp(lerp(a, b, f.x), lerp(c, d, f.x), f.y);
+    float v[4];
+    for (int j = 0; j < 4; j++)
+    {
+        Step step = Steps(Key(i + int2(j & 1, j >> 1), n, seed), s, steps);
+        v[j] = lerp(Level(step.a), Level(step.b), Change(step, 0.15));
+    }
+
+    return 0.5 + 0.5 * lerp(lerp(v[0], v[1], f.x), lerp(v[2], v[3], f.x), f.y);
 }
 
-// Shards: the cells nearest to points that circle in place, n.x by n.y of
-// them per tile. Each cell's value ramps across it in its own direction and
-// swings up and down, so that thresholds cut it along straight lines that
-// sweep back and forth.
-float Shards(float2 uv, int2 n, uint seed, float s, float turns, float slope)
+// A shard's value at offset from its cell's point: a level, and a ramp across
+// the cell in a random direction
+float Shard(uint state, float2 offset, float slope)
+{
+    float dir = TAU * float(state >> 16) / 65535.0;
+    return 0.5 + 0.3 * Level(state) + slope * dot(offset, float2(cos(dir), sin(dir)));
+}
+
+// Shards: the cells nearest to n.x by n.y points per tile. Each cell's value
+// ramps across it, so that thresholds cut it along straight lines. Every so
+// often a cell quickly changes to a new level and ramp: a patch appears,
+// changes its shape and color or vanishes.
+float Shards(float2 uv, int2 n, uint seed, float s, float steps, float slope)
 {
     float2 p = uv * float2(n);
     int2 cell = int2(floor(p));
@@ -83,14 +134,12 @@ float Shards(float2 uv, int2 n, uint seed, float s, float turns, float slope)
     float nearest = 8.0;
     int2 nearestCell = cell;
     float2 offset = float2(0.0, 0.0);
-    float4 h = float4(0.0, 0.0, 0.0, 0.0);
 
     for (int y = -1; y <= 1; y++)
     {
         for (int x = -1; x <= 1; x++)
         {
-            float4 k = Hash4(cell + int2(x, y), n, seed);
-            float angle = TAU * (k.x + s * 2.0 * (k.y < 0.5 ? 1.0 : -1.0));
+            float angle = TAU * Rand4(Key(cell + int2(x, y), n, seed)).x;
             float2 d = f - (float2(x, y) + 0.5 + 0.3 * float2(cos(angle), sin(angle)));
             float dist = dot(d, d);
 
@@ -99,35 +148,31 @@ float Shards(float2 uv, int2 n, uint seed, float s, float turns, float slope)
                 nearest = dist;
                 nearestCell = cell + int2(x, y);
                 offset = d;
-                h = k;
             }
         }
     }
 
-    float dir = TAU * h.z;
-    return 0.5 + 0.3 * Swing(Hash4(nearestCell, n, seed + 1u), s, turns)
-         + slope * dot(offset, float2(cos(dir), sin(dir)));
+    // A patch flares up quickly and dies down a little more slowly
+    Step step = Steps(Key(nearestCell, n, seed + 1u), s, steps);
+    float t = Change(step, Level(step.b) > Level(step.a) ? 0.1 : 0.25);
+    return lerp(Shard(step.a, offset, slope), Shard(step.b, offset, slope), t);
 }
 
 // Splinters, to fray the shards' edges: noise in thin streaks
 float Splinters(float2 uv, uint seed, float s)
 {
-    return 0.12 * (Noise(uv, int2(96, 24), seed, s, 32.0) - 0.5)
-         + 0.12 * (Noise(uv, int2(192, 12), seed + 1u, s, 32.0) - 0.5);
+    return 0.12 * (Noise(uv, int2(96, 24), seed, s, 48.0) - 0.5)
+         + 0.12 * (Noise(uv, int2(192, 12), seed + 1u, s, 48.0) - 0.5);
 }
 
 // The veil and the glow at uv, at s from 0 to 1 over the loop
 float2 Fields(float2 uv, float s)
 {
-    // A warp that sways each point around in a little loop, by up to 2
-    // texels across and 3 up and down
-    float2 warp = float2(Noise(uv, int2(8, 4), 1u, s, 16.0), Noise(uv, int2(8, 4), 2u, s, 16.0)) - 0.5;
-    float2 p = uv + float2(4.0, 6.0) / 256.0 * warp;
-
     // Cells of about 5 by 43 texels and 6 by 51, so 12 by 100 units and 15
-    // by 120 on the walls
-    float veil = Shards(p, int2(48, 6), 10u, s, 16.0, 0.6) + Splinters(p, 11u, s);
-    float glow = Shards(p, int2(40, 5), 20u, s, 12.0, 0.6) + Splinters(p, 21u, s);
+    // by 120 on the walls. The veil's change about every 1.5 seconds, the
+    // glow's, quicker to flicker, about every 0.6.
+    float veil = Shards(uv, int2(48, 6), 10u, s, 48.0, 0.6) + Splinters(uv, 11u, s);
+    float glow = Shards(uv, int2(40, 5), 20u, s, 112.0, 0.6) + Splinters(uv, 21u, s);
     return float2(veil, glow);
 }
 
@@ -142,11 +187,11 @@ float4 fsForceField(float4 pos : SV_Position, float2 uv : TEXCOORD0) : SV_Target
     // blue, 37% azure and 23% cyan.
     float4 color;
 
-    if (field.y > 0.733)
+    if (field.y > 0.707)
         color = float4(130.0, 236.0, 255.0, 41.0) / 255.0;
-    else if (field.x > 0.519)
+    else if (field.x > 0.518)
         color = float4(66.0, 112.0, 255.0, 50.0) / 255.0;
-    else if (field.x > 0.195)
+    else if (field.x > 0.197)
         color = float4(0.0, 0.0, 255.0, 26.0) / 255.0;
     else
         color = float4(0.0, 0.0, 0.0, 0.0);
