@@ -37,10 +37,9 @@ const std::array<vec3d, 8> GFXEngine::_clrEff
 ,   vec3d(1.4,  1.08,  1.12)
 ,   vec3d(0.3,  0.60, 0.7)};
 
-std::vector<TGFXDeviceInfo> GFXEngine::_devices
-{
-    TGFXDeviceInfo("Opengl", "<primary>")         
-};
+// The renderers' GUIDs in env/guid3d.def, where the options save the choice
+static const std::string DEVICE_GPU = "<sdl_gpu>";
+static const std::string DEVICE_GL = "<opengl>";
 
 
 bool TRenderNode::CompareSolid(TRenderNode *a, TRenderNode *b)
@@ -1219,58 +1218,27 @@ const std::vector<TGFXDeviceInfo>& GFXEngine::GetDevices()
 
 void GFXEngine::SetDeviceByGUID(const std::string &guid, bool writefile)
 {
-    std::string guidWrite = guid;
-    
-    bool found = false;
-    for( TGFXDeviceInfo &dev: _devices )
+    // An unknown GUID, such as "<primary>" from before there were two
+    // renderers, chooses the one in use
+    TGFXDeviceInfo *chosen = NULL;
+
+    for (TGFXDeviceInfo &dev : _devices)
     {
         if (dev.guid == guid)
-        {
-            dev.isCurrent = true;
-            found = true;
-        }
-        else
-            dev.isCurrent = false;
+            chosen = &dev;
     }
-    
-    if ( !found )
+
+    for (TGFXDeviceInfo &dev : _devices)
     {
-        for( TGFXDeviceInfo &dev: _devices )
-        {
-            if (dev.guid == "<primary>")
-            {
-                dev.isCurrent = true;
-                found = true;
-                guidWrite = "<primary>";
-            }
-        }
-        
-        for( TGFXDeviceInfo &dev: _devices )
-        {
-            if (dev.guid == "<software>")
-            {
-                dev.isCurrent = true;
-                found = true;
-                guidWrite = "<software>";
-            }
-        }
-        
-        if (!_devices.empty())
-        {
-            TGFXDeviceInfo &dev = _devices[0];
-            found = true;
-            dev.isCurrent = true;
-            guidWrite = dev.guid;
-        }
+        if (!chosen && dev.isCurrent)
+            chosen = &dev;
     }
-    
-    if (writefile)
-    {
-        if (guidWrite == "<primary>" || guidWrite == "<software>")
-            out_guid_to_file("env/guid3d.def", guidWrite);
-        else
-            out_guid_to_file("env/guid3d.def", "<error>");
-    }
+
+    for (TGFXDeviceInfo &dev : _devices)
+        dev.isChosen = (&dev == chosen);
+
+    if (writefile && chosen)
+        out_guid_to_file("env/guid3d.def", chosen->guid);
 }
 
 
@@ -1753,32 +1721,65 @@ void GFXEngine::Init()
 {
     StaticInit();
 
-    // It lives until the program ends: objects destroyed at exit still free
-    // their textures and buffers through it.
-    _backend = NULL;
-
-#ifdef UA_GPU_RENDERER
-    // gfx.renderer, or -renderer on the command line: "gpu" or "gl"
+    // The renderer chosen in the options, else gfx.renderer, unless
+    // -renderer on the command line says otherwise: "gpu" or "gl"
+    std::string chosen = read_guid("env/guid3d.def");
     std::string renderer = System::IniConf::GfxRenderer.Get<std::string>();
+
+    if (chosen == DEVICE_GPU)
+        renderer = "gpu";
+    else if (chosen == DEVICE_GL)
+        renderer = "gl";
+
     std::vector<std::string> &cmdLine = System::GetCmdLineArray();
     int32_t arg = System::FindCmdLineArg("-renderer");
 
     if (arg >= 0 && arg + 1 < (int32_t)cmdLine.size())
         renderer = cmdLine[arg + 1];
 
+    // It lives until the program ends: objects destroyed at exit still free
+    // their textures and buffers through it.
+    _backend = NULL;
+    bool gpuInUse = false;
+
+#ifdef UA_GPU_RENDERER
+    std::string gpuDriver;
+
     if (renderer != "gl")
-        _backend = GPUBackend::Create();
+    {
+        GPUBackend *gpu = GPUBackend::Create();
+        if (gpu)
+        {
+            gpuDriver = gpu->GetDriver();
+            gpuInUse = true;
+            _backend = gpu;
+        }
+    }
+
+    // SDL_GPU is in the options whenever the system has a device for it
+    if (!gpuInUse)
+        gpuDriver = GPUBackend::AvailableDriver();
+
+    if (!gpuDriver.empty())
+    {
+        _devices.emplace_back(GPUBackend::DeviceName(gpuDriver), DEVICE_GPU);
+        _devices.back().isCurrent = gpuInUse;
+    }
 #endif
 
     if (!_backend)
         _backend = new GLBackend();
+
+    _devices.emplace_back("OpenGL", DEVICE_GL);
+    _devices.back().isCurrent = !gpuInUse;
 
     SDL_PropertiesID windowProps = SDL_CreateProperties();
     _backend->PrepareWindow(windowProps);
     System::OpenWindow(windowProps);
     SDL_DestroyProperties(windowProps);
 
-    SetDeviceByGUID( read_guid("env/guid3d.def") );
+    // Not saved: should SDL_GPU fail, using OpenGL instead must not stick
+    SetDeviceByGUID(chosen, false);
     
     System::EventsAddHandler(EventsWatcher);
     

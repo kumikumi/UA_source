@@ -3223,14 +3223,10 @@ bool NC_STACK_ypaworld::CreateVideoControls()
     
     for ( const GFX::TGFXDeviceInfo &dev : devices )
     {
-        if ( dev.isCurrent )
+        if ( dev.isChosen )
         {
-            _GameShell->win3d_guid = dev.guid ;
-
-            if ( !StriCmp(dev.name, "software") )
-                _GameShell->win3d_name = Locale::Text::Advanced(Locale::ADV_SOFTWARE);
-            else
-                _GameShell->win3d_name = dev.name;
+            _GameShell->win3d_guid = dev.guid;
+            _GameShell->win3d_name = dev.Caption();
 
             curDevIndex = devIndex;
             break;

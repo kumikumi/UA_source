@@ -44,6 +44,15 @@ public:
     // NULL if the system has no device SDL_GPU can use
     static GPUBackend *Create();
 
+    // The driver SDL_GPU would use, such as "metal", without making a
+    // device; empty if it has none
+    static std::string AvailableDriver();
+
+    // For the options: the driver's API, such as "Metal"
+    static std::string DeviceName(const std::string &driver);
+
+    std::string GetDriver() const { return SDL_GetGPUDeviceDriver(_device); };
+
     void PrepareWindow(SDL_PropertiesID props) override;
     void Init(SDL_Window *window) override;
     void Deinit() override;

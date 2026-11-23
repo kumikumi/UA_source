@@ -144,6 +144,32 @@ GPUBackend *GPUBackend::Create()
     return new GPUBackend(device);
 }
 
+std::string GPUBackend::AvailableDriver()
+{
+    // SDL_CreateGPUDevice takes the first of these that works
+    for (int i = 0; i < SDL_GetNumGPUDrivers(); i++)
+    {
+        const char *driver = SDL_GetGPUDriver(i);
+
+        if (SDL_GPUSupportsShaderFormats(SDL_GPU_SHADERFORMAT_MSL | SDL_GPU_SHADERFORMAT_SPIRV, driver))
+            return driver;
+    }
+
+    return "";
+}
+
+std::string GPUBackend::DeviceName(const std::string &driver)
+{
+    if (driver == "metal")
+        return "Metal";
+    else if (driver == "vulkan")
+        return "Vulkan";
+    else if (driver == "direct3d12")
+        return "Direct3D 12";
+
+    return driver;
+}
+
 GPUBackend::GPUBackend(SDL_GPUDevice *device)
 : _device(device)
 {

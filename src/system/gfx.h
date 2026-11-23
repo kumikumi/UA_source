@@ -334,14 +334,19 @@ struct windd_dlgBox
 };
 
 
+// A renderer, as the options list them
 struct TGFXDeviceInfo
 {
     std::string name;
     std::string guid;
-    bool isCurrent = false;
+    bool isCurrent = false; // In use
+    bool isChosen = false;  // Chosen in the options: in use from the next start
     
     TGFXDeviceInfo(const std::string &__name, const std::string &__guid)
     : name(__name), guid(__guid) {}
+
+    // The name, telling when the renderer is not the one in use
+    std::string Caption() const { return isCurrent ? name : name + " (after restart)"; }
 };
 
 struct ScreenText
@@ -517,6 +522,9 @@ public:
     virtual void ShowTextInputDialog(windd_dlgBox *dlgBox);
     
     virtual const std::vector<TGFXDeviceInfo>& GetDevices();
+
+    // Chooses the renderer for the next start, saving the choice unless
+    // writefile is false
     virtual void SetDeviceByGUID(const std::string &guid, bool writefile = true);
 
     
@@ -691,7 +699,7 @@ protected:
     vec3d _normClr;
     vec3d _invClr;
     
-    static std::vector<TGFXDeviceInfo> _devices;
+    std::vector<TGFXDeviceInfo> _devices;
 };
     
 static constexpr GFXEngine &Engine = GFXEngine::Instance;

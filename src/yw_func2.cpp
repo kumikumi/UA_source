@@ -1090,7 +1090,7 @@ void UserData::ApplyOptions()
                 win3d_name = conf3DName;
                 win3d_guid = conf3DGuid;
 
-                GFX::Engine.SetDeviceByGUID(win3d_guid); //Save to file current gfx device
+                GFX::Engine.SetDeviceByGUID(win3d_guid); // Saved, for the next start
 
                 forceChange = true;
             }
@@ -1894,11 +1894,7 @@ void  UserData::UpdateSelected3DDevFromList()
     if ((size_t)d3d_listvw.selectedEntry < devices.size())
     {
         const GFX::TGFXDeviceInfo &dev = devices.at(d3d_listvw.selectedEntry);
-        if ( !StriCmp(dev.name, "software") )
-            name = Locale::Text::Advanced(Locale::ADV_SOFTWARE);
-        else
-            name = dev.name;
-
+        name = dev.Caption();
         guid = dev.guid;
     }
 

@@ -2044,18 +2044,11 @@ void ypaworld_func158__d3d_list_draw(NC_STACK_ypaworld *yw, UserData *usr)
     for (int i = usr->d3d_listvw.firstShownEntries; i < j; i++)
     {
         const GFX::TGFXDeviceInfo &dev = devices.at(i);
-        
-        std::string name;
-
-        if ( !StriCmp(dev.name, "software") )
-            name = Locale::Text::Advanced(Locale::ADV_SOFTWARE);
-        else
-            name = dev.name;
 
         if ( usr->d3d_listvw.selectedEntry == i )
-            FormatSelectedListItem(yw, &usr->d3d_listvw, &usr->d3d_listvw.itemBlock, name);
+            FormatSelectedListItem(yw, &usr->d3d_listvw, &usr->d3d_listvw.itemBlock, dev.name);
         else
-            FormatListItem(yw, &usr->d3d_listvw, &usr->d3d_listvw.itemBlock, name);
+            FormatListItem(yw, &usr->d3d_listvw, &usr->d3d_listvw.itemBlock, dev.name);
     }
 
     
