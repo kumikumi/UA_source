@@ -3,6 +3,7 @@
 
 #include <array>
 #include <cstdint>
+#include <vector>
 
 namespace System
 {
@@ -43,6 +44,14 @@ public:
         std::array<uint32_t, CNT_MAX> Counters {}; // Averages per frame
     };
 
+    // One frame as measured, for the benchmark.
+    struct FrameRecord
+    {
+        uint64_t FrameTicks = 0; // From its start to the next frame's
+        std::array<uint64_t, SEC_MAX> SectionTicks {};
+        std::array<uint64_t, CNT_MAX> Counters {};
+    };
+
     // Adds the time from its construction to its destruction to a section.
     class Timer
     {
@@ -63,7 +72,12 @@ public:
 
     const Summary &GetSummary() const { return _summary; }
 
+    // Keeps every frame that ends from now on, until StopRecording.
+    void StartRecording();
+    std::vector<FrameRecord> StopRecording();
+
     static uint64_t Now();
+    static double TicksToMs(uint64_t ticks);
 
 private:
     std::array<uint64_t, SEC_MAX> _frameTicks {};
@@ -78,6 +92,9 @@ private:
     std::array<uint64_t, CNT_MAX> _windowCounters {};
 
     Summary _summary;
+
+    bool _recording = false;
+    std::vector<FrameRecord> _recorded;
 };
 
 extern PerfStats Perf;

@@ -33,6 +33,7 @@
 
 #include "font.h"
 #include "yw.h"
+#include "benchmark.h"
 
 #include "button.h"
 
@@ -61,6 +62,8 @@ enum GAME_SCREEN_MODE {
 
 GAME_SCREEN_MODE GameScreenMode;
 UserData userdata;
+
+static Benchmark benchmark; // -bench
 
 // The game advances in fixed steps, so how units behave does not depend on
 // the frame rate. 60 steps per second is the rate the port ran at while it
@@ -105,7 +108,12 @@ int ProcessGameplayFrame(int32_t frameTicks, bool timeFrozen)
     // (pause, waiting for the network) draw where the last step ended.
     float stepFraction = 1.0;
 
-    if ( ypaworld->_gamePaused )
+    if ( benchmark.IsFrozen() )
+    {
+        // The same frame again: no time passes and the game does not step
+        frameTicks = 0;
+    }
+    else if ( ypaworld->_gamePaused )
     {
         // The paused screen keeps drawing, and time runs for its blinking.
         // A key ends the pause; it does not also act in the game.
@@ -210,6 +218,9 @@ int ProcessGameplayFrame(int32_t frameTicks, bool timeFrozen)
         renderArg.Input = &renderInput;
 
         ypaworld->RenderFrame(&renderArg, stepFraction);
+
+        if ( benchmark.IsActive() && !benchmark.FrameDrawn(ypaworld) )
+            return 0; // Done, quit
     }
 
     const TLevelInfo &levelInfo = ypaworld->GetLevelInfo();
@@ -804,10 +815,11 @@ int yw_initGameWithSettings()
         profileIndex++;
     }
 
+    // The benchmark goes straight to its level
     return ypaworld->LoadSettings(settingsFileName,
                                   userdata.UserName,
                                   World::SDF_ALL,
-                                  true, true) != 0;
+                                  true, !benchmark.IsActive()) != 0;
 }
 
 void ReadSnapsDir()
@@ -957,6 +969,36 @@ int InitGame()
 
 uint32_t maxTicks = 1000/60; // init on 60FPS
 
+// Leaves the menus for the benchmark's level, started as new. A level that
+// is not completed saves nothing to the player's profile; only the loading
+// screen's tip of the day moves on, as with any level started.
+static bool StartBenchmarkLevel()
+{
+    // Fullscreen: the display's resolution every time, and frame times that
+    // vary much less than in a window
+    ypaworld->SetWindowed(false);
+
+    ypaworld->CloseGameShell();
+    GameScreenMode = GAME_SCREEN_MODE_UNKNOWN;
+
+    // The same level whoever's profile it is
+    ypaworld->_levelInfo.Buddies.clear();
+
+    TLevelLoadRequest loadRequest;
+    loadRequest.lvlID = benchmark.GetLevel();
+    loadRequest.mode = 0;
+
+    if ( !ypaworld->CreateLevel(&loadRequest) )
+    {
+        ypa_log_out("Benchmark: could not start level %d\n", loadRequest.lvlID);
+        return false;
+    }
+
+    GameScreenMode = GAME_SCREEN_MODE_GAME;
+    Input::Engine.QueryInput(&input_states);
+    return true;
+}
+
 int main(int argc, char *argv[])
 {
     for(int i = 0; i < argc; ++i)
@@ -972,6 +1014,8 @@ int main(int argc, char *argv[])
     
     if (System::IniConf::DevMode.Get<bool>() || System::FindCmdLineArg("-devmode") >= 0)
         World::AllowMods(true);        
+
+    benchmark.ReadCommandLine();
     
     System::Init(!gfxVbo);
     
@@ -982,6 +1026,13 @@ int main(int argc, char *argv[])
         return 0;
 
     System::IniConf::ReadFromNucleusIni();
+
+    if ( benchmark.IsActive() && !StartBenchmarkLevel() )
+    {
+        ShutdownGame();
+        System::Deinit();
+        return 1;
+    }
 
     uint32_t ticks = 0;
 

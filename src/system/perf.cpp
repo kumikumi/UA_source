@@ -1,3 +1,5 @@
+#include <utility>
+
 #include <SDL2/SDL.h>
 
 #include "perf.h"
@@ -13,6 +15,23 @@ static const float SummaryMs = 500.0;
 uint64_t PerfStats::Now()
 {
     return SDL_GetPerformanceCounter();
+}
+
+double PerfStats::TicksToMs(uint64_t ticks)
+{
+    return ticks * 1000.0 / SDL_GetPerformanceFrequency();
+}
+
+void PerfStats::StartRecording()
+{
+    _recorded.clear();
+    _recording = true;
+}
+
+std::vector<PerfStats::FrameRecord> PerfStats::StopRecording()
+{
+    _recording = false;
+    return std::move(_recorded);
 }
 
 PerfStats::Timer::Timer(Section sec)
@@ -43,6 +62,15 @@ void PerfStats::FrameStart()
 
         for (int i = 0; i < CNT_MAX; i++)
             _windowCounters[i] += _frameCounters[i];
+
+        if (_recording)
+        {
+            FrameRecord rec;
+            rec.FrameTicks = frameTicks;
+            rec.SectionTicks = _frameTicks;
+            rec.Counters = _frameCounters;
+            _recorded.push_back(rec);
+        }
     }
     else
     {

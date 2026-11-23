@@ -12,6 +12,7 @@ set(SOURCES
 	amesh.cpp
 	bitmap.cpp
 	base.cpp
+	benchmark.cpp
 	bmpAnm.cpp
 	button.cpp
 	crc32.cpp
