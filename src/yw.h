@@ -2279,6 +2279,13 @@ public:
         }
     }
     
+    // Before the interface handles input, which sets the tooltip to show
+    void ClearTooltip()
+    {
+        _toolTipHotKeyId = -1;
+        _toolTipId = 0;
+    }
+
     std::string GetTooltipString() const
     {
         return Locale::Text::Tooltip(_toolTipId);

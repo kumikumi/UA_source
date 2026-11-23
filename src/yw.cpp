@@ -352,6 +352,10 @@ bool NC_STACK_ypaworld::SimulationStep(TUpdateArgs *arg)
     UpdateReloadRatios(this);
     UpdatePlayerInRoboGun(this);
 
+    // The interface sets the tooltip again as it handles this step's input;
+    // frames drawn until the next step keep showing it.
+    ClearTooltip();
+
     if ( !_doNotRender )
     {
         PrepareUserInput(arg->Input); //Precompute input (add mouse turn)
@@ -5379,9 +5383,6 @@ void draw_tooltip(NC_STACK_ypaworld *yw)
 
         GFX::Engine.ProcessDrawSeq(buf);
     }
-    
-    yw->_toolTipHotKeyId = -1;
-    yw->_toolTipId = 0;
 }
 
 //Make screenshot
@@ -5418,6 +5419,7 @@ void NC_STACK_ypaworld::ProcessGameShell()
     int oldMode = _GameShell->EnvMode;
     _GameShell->EnvModeChanged = false;
 
+    ClearTooltip();
     _GameShell->GameShellUiHandleInput();
 
     if ( oldMode != _GameShell->EnvMode )
