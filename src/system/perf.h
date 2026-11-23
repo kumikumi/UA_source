@@ -21,6 +21,7 @@ public:
         SEC_DRAW,    // Issuing the queued draw calls
         SEC_GUI,     // Drawing the 2D interface
         SEC_PRESENT, // Uploading the 2D layer and swapping buffers
+        SEC_WAIT,    // Waiting for the window to take a frame (SDL_GPU only)
         SEC_IDLE,    // Sleeping to keep to the fps cap
         SEC_MAX
     };

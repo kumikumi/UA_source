@@ -16,7 +16,7 @@
 static const float CameraHeight = 400.0;
 
 static const std::array<const char *, System::PerfStats::SEC_MAX> SectionNames = {
-    "sim", "scene", "draw", "gui", "present", "idle"
+    "sim", "scene", "draw", "gui", "present", "wait", "idle"
 };
 
 static const std::array<const char *, System::PerfStats::CNT_MAX> CounterNames = {

@@ -318,7 +318,7 @@ void GLBackend::BeginFrame()
     _states.Prog = _stdShaderProg;
 }
 
-void GLBackend::EndFrame(SDL_Surface *screen)
+uint64_t GLBackend::EndFrame(SDL_Surface *screen)
 {
     if (_colorEffects > 1)
     {
@@ -334,7 +334,9 @@ void GLBackend::EndFrame(SDL_Surface *screen)
         DrawFBO();
     }
     
+    // The wait for vsync is somewhere in the swap
     SDL_GL_SwapWindow(_window);
+    return 0;
 }
 
 void GLBackend::FlushScreenSurface(SDL_Surface *screen)

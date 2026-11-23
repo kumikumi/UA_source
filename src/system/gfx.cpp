@@ -1081,9 +1081,12 @@ void GFXEngine::BeginFrame()
 
 void GFXEngine::EndFrame()
 {       
-    System::PerfStats::Timer perf(System::PerfStats::SEC_PRESENT);
+    uint64_t start = System::PerfStats::Now();
+    uint64_t waited = _backend->EndFrame(ScreenSurface);
+    uint64_t took = System::PerfStats::Now() - start;
 
-    _backend->EndFrame(ScreenSurface);
+    System::Perf.AddTime(System::PerfStats::SEC_PRESENT, took - waited);
+    System::Perf.AddTime(System::PerfStats::SEC_WAIT, waited);
 }
 
 void GFXEngine::SetColorEffectsPowers(const std::vector<ColorFx> &arg)

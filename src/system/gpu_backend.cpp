@@ -1343,7 +1343,7 @@ void GPUBackend::EnsureDepth(uint32_t w, uint32_t h)
     _depthH = h;
 }
 
-void GPUBackend::EndFrame(SDL_Surface *screen)
+uint64_t GPUBackend::EndFrame(SDL_Surface *screen)
 {
     StartFrame();
 
@@ -1357,8 +1357,14 @@ void GPUBackend::EndFrame(SDL_Surface *screen)
     SDL_GPUTexture *swapchain = NULL;
     Uint32 w = 0, h = 0;
 
+    // Blocks with vsync, and without it too when the window has no free
+    // image, as macOS's run out at high frame rates
+    uint64_t waitStart = System::PerfStats::Now();
+
     if (!SDL_WaitAndAcquireGPUSwapchainTexture(_cmd, _window, &swapchain, &w, &h))
         printf("SDL_GPU: no swapchain texture: %s\n", SDL_GetError());
+
+    uint64_t waited = System::PerfStats::Now() - waitStart;
 
     // None while the window is hidden
     if (swapchain)
@@ -1370,6 +1376,8 @@ void GPUBackend::EndFrame(SDL_Surface *screen)
     SDL_SubmitGPUCommandBuffer(_cmd);
     _cmd = NULL;
     _frameStarted = false;
+
+    return waited;
 }
 
 void GPUBackend::EnsureEffectsTarget(uint32_t w, uint32_t h)

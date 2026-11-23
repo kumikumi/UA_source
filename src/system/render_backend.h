@@ -49,8 +49,10 @@ public:
 
     virtual void BeginFrame() = 0;
 
-    // Puts the screen surface over the frame and presents it.
-    virtual void EndFrame(SDL_Surface *screen) = 0;
+    // Puts the screen surface over the frame and presents it. Returns how
+    // long of that it waited for the window to take the frame, in
+    // PerfStats ticks, if it can tell.
+    virtual uint64_t EndFrame(SDL_Surface *screen) = 0;
 
     // Puts the screen surface over what is drawn so far, so that the 3D
     // drawn next goes over it.

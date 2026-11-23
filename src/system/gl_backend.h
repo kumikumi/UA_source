@@ -96,7 +96,7 @@ public:
     void WindowResized() override;
 
     void BeginFrame() override;
-    void EndFrame(SDL_Surface *screen) override;
+    uint64_t EndFrame(SDL_Surface *screen) override;
     void FlushScreenSurface(SDL_Surface *screen) override;
 
     void BeginScene(const mat4x4f &projection) override;
