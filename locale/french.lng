@@ -280,9 +280,9 @@
 328  = Pour changer de résolution ou de technologie Direct3D, cliquez dans la zone,
 329  = puis sélectionnez un nouveau paramètre. (Les performances peuvent en être
 330  = affectées). Pour plus d'informations, cliquez sur Aide.
-331  = <>
-332  = <>
-333  = <>
+331  = Pour changer de moteur de rendu, cliquez dans la zone, puis sélectionnez-en un
+332  = nouveau ; il sera utilisé au prochain démarrage. (Les performances peuvent en
+333  = être affectées). Pour plus d'informations, cliquez sur Aide.
 334  = <>
 335  = <>
 336  = <>
@@ -302,7 +302,7 @@
 350  = Curseur logiciel
 351  = Filtrage des textures
 352  = Technologie Direct3D:
-353  = <>
+353  = Moteur de rendu:
 354  = <>
 355  = <>
 356  = <>
@@ -792,7 +792,7 @@
 879  = Utilisez DrawPrimitive (l'activation peut améliorer les performances)
 880  = Mode Commande souris activé : Cliquez sur le bouton droit de la souris pour le désactiver
 881  = ERREUR : Limite des unités atteinte.
-882  = <>
+882  = Choisissez un moteur de rendu dans la liste déroulante
 883  = <>
 884  = <>
 885  = Passer en mode fenêtré

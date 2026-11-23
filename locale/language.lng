@@ -280,9 +280,9 @@
 328  = To change resolution or your Direct3D device, click the box and then select a
 329  = new setting in the drop-down list. To turn an option on or off, select or clear
 330  = its check box. For more information on each option, click Help.
-331  = <>
-332  = <>
-333  = <>
+331  = To change the renderer, click the box and then select one in the drop-down list.
+332  = The new renderer is used from the next start. To turn an option on or off,
+333  = select or clear its check box. For more information on each option, click Help.
 334  = <>
 335  = <>
 336  = <>
@@ -302,7 +302,7 @@
 350  = Software Cursor
 351  = Texture Filtering
 352  = Direct3D Device:
-353  = <>
+353  = Renderer:
 354  = <>
 355  = <>
 356  = <>
@@ -792,7 +792,7 @@
 879  = Use DrawPrimitive Calls (On May Improve Performance)
 880  = Mouse Control Mode Activated: Click Right Mouse Button to Deactivate
 881  = ERROR: Unit limit reached.
-882  = <>
+882  = Select a Renderer in the Drop-Down List
 883  = <>
 884  = <>
 885  = Switch to windowed mode

@@ -3305,7 +3305,7 @@ bool NC_STACK_ypaworld::CreateVideoControls()
         btn_64arg.xpos = 0;
         btn_64arg.ypos = vertMenuSpace + _fontH;
         btn_64arg.width = menuWidth;
-        btn_64arg.caption = Locale::Text::Dialogs(Locale::DLG_S_TXT2);
+        btn_64arg.caption = Locale::Text::Dialogs(Locale::DLG_S_RNDTXT2);
         btn_64arg.caption2.clear();
         btn_64arg.button_id = 1169;
         btn_64arg.txt_r = _iniColors[60].r;
@@ -3317,7 +3317,7 @@ bool NC_STACK_ypaworld::CreateVideoControls()
             btn_64arg.xpos = 0;
             btn_64arg.ypos = 2 * (_fontH + vertMenuSpace);
             btn_64arg.width = menuWidth;
-            btn_64arg.caption = Locale::Text::Dialogs(Locale::DLG_S_TXT3);
+            btn_64arg.caption = Locale::Text::Dialogs(Locale::DLG_S_RNDTXT3);
             btn_64arg.button_id = 1170;
             btn_64arg.caption2.clear();
 
@@ -3326,7 +3326,7 @@ bool NC_STACK_ypaworld::CreateVideoControls()
                 btn_64arg.xpos = 0;
                 btn_64arg.width = menuWidth;
                 btn_64arg.ypos = 3 * (_fontH + vertMenuSpace);
-                btn_64arg.caption = Locale::Text::Dialogs(Locale::DLG_S_TXT4);
+                btn_64arg.caption = Locale::Text::Dialogs(Locale::DLG_S_RNDTXT4);
                 btn_64arg.caption2.clear();
                 btn_64arg.button_id = 1171;
 
@@ -3339,7 +3339,7 @@ bool NC_STACK_ypaworld::CreateVideoControls()
                             btn_64arg.xpos = 0;
                             btn_64arg.ypos = 2 * (3 * (vertMenuSpace + _fontH));
                             btn_64arg.width = rowWidth * 0.4;
-                            btn_64arg.caption = Locale::Text::Dialogs(Locale::DLG_S_SEL3D);
+                            btn_64arg.caption = Locale::Text::Dialogs(Locale::DLG_S_RENDERER);
                             btn_64arg.caption2.clear();
                             btn_64arg.downCode = 0;
                             btn_64arg.upCode = 0;

@@ -164,9 +164,9 @@ enum DIALOGS
     DLG_S_ENMYINDIC = 25,
     DLG_S_ENCDAUD   = 26,
     DLG_S_TITLE     = 27,
-    DLG_S_TXT2      = 28,
-    DLG_S_TXT3      = 29,
-    DLG_S_TXT4      = 30,
+    DLG_S_RNDTXT2   = 31, // The settings' help text, since there are renderers
+    DLG_S_RNDTXT3   = 32, // rather than Direct3D devices (28 to 30 before)
+    DLG_S_RNDTXT4   = 33,
     DLG_S_RES       = 40,
     DLG_S_RESCHANGE = 41,
     DLG_S_RESWARN   = 42,
@@ -174,7 +174,7 @@ enum DIALOGS
     DLG_S_FARVIEW   = 44,
     DLG_S_SKY       = 45,
     DLG_S_SWMOUSE   = 50,
-    DLG_S_SEL3D     = 52,
+    DLG_S_RENDERER  = 53, // Was the Direct3D device, 52
     
     DLG_P_LOAD      = 60,
     DLG_P_SAVE      = 61,
@@ -364,7 +364,6 @@ enum TIP
     
     TIP_MENU_EXITDEBRIEF    = 73,
     TIP_MENU_GOTOLOADSAVE   = 74,
-    TIP_MENU_SEL3DDEV       = 75,
     TIP_MENU_SENDMSG        = 76,
     TIP_MENU_ALTJOY         = 77,
     TIP_MENU_16BITTEX       = 78,
@@ -373,6 +372,7 @@ enum TIP
     TIP_MOUSECAPTURED       = 80,
     
     TIP_UNITLIMIT           = 81,
+    TIP_MENU_SELRENDERER    = 82, // Was the 3D device, 75
     
     TIP_MENU_WINDOWED       = 85,
     

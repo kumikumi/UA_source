@@ -280,9 +280,9 @@
 328  = Direct3D-Auflösung ändern: neue Einstellung aus Kombinationsfeld wählen.
 329  = Option ein- oder ausschalten:  Kontrollkästchen aktivieren bzw. deaktivieren.
 330  = Weitere Informationen zu jeder Option erhalten Sie, wenn Sie auf 'Hilfe' klicken.
-331  = <>
-332  = <>
-333  = <>
+331  = Renderer ändern: Feld anklicken und neuen Renderer aus der Liste wählen.
+332  = Der neue Renderer gilt ab dem nächsten Start. Option ein- oder ausschalten:
+333  = Kontrollkästchen aktivieren bzw. deaktivieren. Weitere Infos unter 'Hilfe'.
 334  = <>
 335  = <>
 336  = <>
@@ -302,7 +302,7 @@
 350  = Software-Mauszeiger
 351  = Texturen-Filterung
 352  = Direct3D-Gerät:
-353  = <>
+353  = Renderer:
 354  = <>
 355  = <>
 356  = <>
@@ -792,7 +792,7 @@
 879  = Vereinfachte Grafikdarstellung verwenden ('ein' kann Leistung verbessern)
 880  = Maus-Steuerungsmodus aktiviert: Klicken Sie die rechte Maustaste, um den Modus zu deaktivieren
 881  = FEHLER: Einheiten-Limit erreicht.
-882  = <>
+882  = Wählen Sie einen Renderer aus dem Kombinationsfeld
 883  = <>
 884  = <>
 885  = Wechseln Sie in den Fenstermodus

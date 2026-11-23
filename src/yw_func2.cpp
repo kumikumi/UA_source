@@ -1405,7 +1405,7 @@ void UserData::ShowToolTip(int id)
         break;
 
     case 1172:
-        p_YW->SetShowingTooltip(Locale::TIP_MENU_SEL3DDEV);
+        p_YW->SetShowingTooltip(Locale::TIP_MENU_SELRENDERER);
         break;
 
     case 1201:
