@@ -5159,12 +5159,12 @@ void NC_STACK_ypaworld::DrawPerfOverlay(TInputState *inpt)
     const PS::Summary &perf = System::Perf.GetSummary();
 
     const std::array<std::string, 5> lines = {
-        fmt::sprintf("%.0f fps   %.1f ms   worst %.1f ms", perf.Fps, perf.FrameMs, perf.WorstMs),
+        fmt::sprintf("%.0f fps   %.2f ms   worst %.2f ms", perf.Fps, perf.FrameMs, perf.WorstMs),
 
-        fmt::sprintf("sim %.1f   scene %.1f   draw %.1f   gui %.1f   present %.1f ms",
+        fmt::sprintf("sim %.2f   scene %.2f   draw %.2f   gui %.2f   present %.2f   idle %.2f ms",
                      perf.SectionMs[PS::SEC_SIM], perf.SectionMs[PS::SEC_SCENE],
                      perf.SectionMs[PS::SEC_DRAW], perf.SectionMs[PS::SEC_GUI],
-                     perf.SectionMs[PS::SEC_PRESENT]),
+                     perf.SectionMs[PS::SEC_PRESENT], perf.SectionMs[PS::SEC_IDLE]),
 
         fmt::sprintf("%d draw calls (%d particles), %d triangles, %d texture changes",
                      perf.Counters[PS::CNT_DRAWCALLS], perf.Counters[PS::CNT_PARTICLES],

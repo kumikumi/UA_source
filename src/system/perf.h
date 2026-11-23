@@ -20,6 +20,7 @@ public:
         SEC_DRAW,    // Issuing the queued draw calls
         SEC_GUI,     // Drawing the 2D interface
         SEC_PRESENT, // Uploading the 2D layer and swapping buffers
+        SEC_IDLE,    // Sleeping to keep to the fps cap
         SEC_MAX
     };
 

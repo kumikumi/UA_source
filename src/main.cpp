@@ -6,6 +6,7 @@
 #include "includes.h"
 #include "system/gfx.h"
 #include "system/inpt.h"
+#include "system/perf.h"
 #include "winp.h"
 #include "wintimer.h"
 
@@ -1065,11 +1066,16 @@ int main(int argc, char *argv[])
                 {
                     uint16_t delay = GFX::Engine.FpsMaxTicks - diffTick;
                     ticks += delay;
+
+                    System::PerfStats::Timer perf(System::PerfStats::SEC_IDLE);
                     SDL_Delay(delay);
                 }
             }
             else
+            {
+                System::PerfStats::Timer perf(System::PerfStats::SEC_IDLE);
                 SDL_Delay(1);
+            }
         }
 
 //        fps++;
