@@ -53,6 +53,7 @@ set(SOURCES
 	sklt.cpp
 	system/fsmgr.cpp
 	system/gfx.cpp
+	system/gl_backend.cpp
 	system/glfuncs.cpp
 	system/inivals.cpp
 	system/inpt.cpp

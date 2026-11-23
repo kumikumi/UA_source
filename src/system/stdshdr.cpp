@@ -1,10 +1,10 @@
 
-#include "gfx.h"
+#include "gl_backend.h"
 
 namespace GFX
 {
 
-const std::string GFXEngine:: _stdPShaderText =
+const std::string GLBackend:: _stdPShaderText =
 "\
 #version 140\n\
 layout(std140) uniform Parameters\
@@ -34,7 +34,7 @@ void main()\
 }";
 
 
-const std::string GFXEngine:: _stdVShaderText =
+const std::string GLBackend:: _stdVShaderText =
 "\
 #version 140\n\
 layout(std140) uniform Parameters\

@@ -3,14 +3,7 @@
 
 #include <string>
 
-#if defined(__APPLE__) && defined(__MACH__)
-#include <OpenGL/gl.h>
-#else
-#include <GL/gl.h>
-#endif
-
 #include <SDL3/SDL.h>
-#include <SDL3/SDL_opengl.h>
 #include <SDL3_ttf/SDL_ttf.h>
 
 #include "common/common.h"
@@ -33,14 +26,16 @@ namespace System
         operator Common::Point() const;
     };
     
-    void Init(bool oldGL = false);
+    void Init();
     void Deinit();
+
+    // Creates the game's window, with what the graphics API needs already
+    // in props.
+    void OpenWindow(SDL_PropertiesID props);
+    SDL_Window *GetWindow();
     
     // Events update cycle
     bool ProcessEvents();
-    
-    // Draw content of backbuffer
-    void Flip();
     
     // Fullscreen is borderless over the desktop: the display mode is never changed.
     void SetFullscreen(bool fullscreen);

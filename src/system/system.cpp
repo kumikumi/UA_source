@@ -100,7 +100,6 @@ static TFontLookup FontsLookup[]
     
     
 static SDL_Window *window = NULL;
-static SDL_GLContext cont = NULL;
 static ResRatio winRes(640, 480);
 static bool curRelMouse = false;
 
@@ -214,7 +213,7 @@ TTF_Font *LoadFont(const std::string &fontname, int height)
 }
 
 
-void Init(bool oldGL)
+void Init()
 {
     EventHandlers.clear();
 
@@ -223,37 +222,29 @@ void Init(bool oldGL)
         printf("Couldn't initialize SDL: %s", SDL_GetError());
         return;
     }
-    
-    if (oldGL)
-    {
-        SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 2);
-        SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 1);
-    }
-    else
-    {
-        SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 3);
-        SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 1);
-    }
-    SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_COMPATIBILITY);
 
-    SDL_GL_SetAttribute(SDL_GL_DEPTH_SIZE, 24);
+    TTF_Init();
 
+    ScanFonts();
+
+    NET_Init();
+}
+
+void OpenWindow(SDL_PropertiesID props)
+{
     // The game renders at whatever size the window has, so start with most of
     // the desktop rather than a fixed resolution.
     SDL_Rect usable;
     if (SDL_GetDisplayUsableBounds(SDL_GetPrimaryDisplay(), &usable))
         winRes = ResRatio(usable.w * 3 / 4, usable.h * 3 / 4);
 
-    SDL_PropertiesID props = SDL_CreateProperties();
     SDL_SetStringProperty(props, SDL_PROP_WINDOW_CREATE_TITLE_STRING, "OpenUA (Urban Assault)");
     SDL_SetNumberProperty(props, SDL_PROP_WINDOW_CREATE_X_NUMBER, SDL_WINDOWPOS_CENTERED);
     SDL_SetNumberProperty(props, SDL_PROP_WINDOW_CREATE_Y_NUMBER, SDL_WINDOWPOS_CENTERED);
     SDL_SetNumberProperty(props, SDL_PROP_WINDOW_CREATE_WIDTH_NUMBER, winRes.W);
     SDL_SetNumberProperty(props, SDL_PROP_WINDOW_CREATE_HEIGHT_NUMBER, winRes.H);
     SDL_SetBooleanProperty(props, SDL_PROP_WINDOW_CREATE_RESIZABLE_BOOLEAN, true);
-    SDL_SetBooleanProperty(props, SDL_PROP_WINDOW_CREATE_OPENGL_BOOLEAN, true);
     window = SDL_CreateWindowWithProperties(props);
-    SDL_DestroyProperties(props);
 
     if (!window)
     {
@@ -264,27 +255,11 @@ void Init(bool oldGL)
     int drawW, drawH;
     SDL_GetWindowSizeInPixels(window, &drawW, &drawH);
     winRes = ResRatio(drawW, drawH);
+}
 
-    cont = SDL_GL_CreateContext(window);
-
-    if (!cont && !oldGL)
-    {
-        // macOS has no 3.x compatibility profile, so the request fails there.
-        // GL 2.1 is enough for the legacy renderer, which GFX then selects.
-        printf("Couldn't create OpenGL 3.1 context (%s), trying 2.1\n", SDL_GetError());
-        SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 2);
-        SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 1);
-        cont = SDL_GL_CreateContext(window);
-    }
-
-    if (!cont)
-        printf("Couldn't create OpenGL context: %s\n", SDL_GetError());
-
-    TTF_Init();
-
-    ScanFonts();
-
-    NET_Init();
+SDL_Window *GetWindow()
+{
+    return window;
 }
 
 void Deinit()
@@ -292,9 +267,6 @@ void Deinit()
     NET_Quit();
 
     FontsList.clear();
-
-    if (cont)
-        SDL_GL_DestroyContext(cont);
 
     if (window)
         SDL_DestroyWindow(window);
@@ -347,11 +319,6 @@ ResRatio GetRResolution()
 Common::Point GetResolution()
 {
     return Common::Point(winRes.W, winRes.H);
-}
-
-void Flip()
-{
-    SDL_GL_SwapWindow(window);
 }
 
 void SetFullscreen(bool fullscreen)

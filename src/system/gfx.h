@@ -29,7 +29,7 @@ struct ResBitmap
     int16_t height = 0;
     UA_PALETTE *palette = NULL;
     SDL_Surface *swTex = NULL;
-    GLuint hwTex = 0;
+    uint32_t hwTex = 0; // The render backend's handle
 };
 
 typedef std::vector<uint8_t> CmdStream;
@@ -84,19 +84,11 @@ namespace GFX
 #ifndef GFXSHORTINDEX    
     
 typedef uint32_t IndexType;
-#define GLINDEXTYPE GL_UNSIGNED_INT
 
 #else
 
 typedef uint16_t IndexType;
-#define GLINDEXTYPE GL_UNSIGNED_SHORT
 
-#endif
-
-#ifndef __EMSCRIPTEN__
-#define FBOTEXTYPE GL_RGBA32F
-#else
-#define FBOTEXTYPE GL_RGBA
 #endif
 
 enum RFLAGS
@@ -190,7 +182,7 @@ struct TCoordsCache
     ResBitmap *Tex = NULL;
     std::vector<tUtV> Coords;
     
-    // OpenGL
+    // Where the render backend keeps the coords
     int32_t BufferPos = 0;
 };
 
@@ -235,11 +227,9 @@ public:
             BoundBox.Add(v.Pos);
     }
     
-    // OpenGL
-    // Do not copy it!
-    GLuint glDataBuf = 0;
-    GLuint glIndexBuf = 0;
-    //GLuint glVao = 0;
+    // The render backend's handles. Do not copy them!
+    uint32_t HwVertexBuf = 0;
+    uint32_t HwIndexBuf = 0;
 };
 
 struct TRenderNode
@@ -286,55 +276,16 @@ struct TRenderNode
     static bool CompareDistance(TRenderNode *a, TRenderNode *b);
 };
     
-struct TShaderProg
+// The nodes queued for drawing, by how they are drawn
+struct TRenderQueue
 {
-    uint32_t ID = 0;
-    int32_t PosLoc = -1;
-    int32_t ColorLoc = -1;
-    int32_t UVLoc = -1;
-
-    TShaderProg() = default;
-    TShaderProg(uint32_t id);
+    std::list<TRenderNode *> Solid;
+    std::list<TRenderNode *> SkyBox;
+    std::list<TRenderNode *> ZeroTracy;
+    std::list<TRenderNode *> LumaTracy;
 };
 
-struct TColorEffectsProg : TShaderProg
-{
-    int32_t NormLoc = -1;
-    int32_t InvLoc = -1;
-    int32_t RandLoc = -1;
-    int32_t ScrSizeLoc = -1;
-    int32_t MillisecsLoc = -1;
-    
-    TColorEffectsProg() = default;
-    TColorEffectsProg(uint32_t id);
-};
-
-
-struct GfxStates
-{
-    uint32_t Tex = 0;
-    bool Shaded = true;
-    bool Stipple = false;
-    uint32_t SrcBlend = GL_ONE;
-    uint32_t DstBlend = GL_ZERO;
-    int8_t TexBlend = 2;
-    bool AlphaBlend = false;
-    bool Zwrite = true;
-    bool LinearFilter = true;
-    bool AlphaTest = false;
-    bool Fog = false;
-    float FogStart = 3496.0;
-    float FogLength = 600.0;
-    bool AFog = false;
-    float AFogStart = 3496.0;
-    float AFogLength = 600.0;
-    
-    bool DepthTest = true;
-    
-    uint32_t DataBuf = 0;
-    uint32_t IndexBuf = 0;
-    TShaderProg Prog;
-};
+class RenderBackend;
 
 struct TBitmapBlitParams
 {
@@ -459,7 +410,6 @@ public:
 
 protected:
     static const SDL_PixelFormatDetails *_pixfmt;
-    static GLint _glPixfmt, _glPixtype;
     static bool _staticInited;
     
     static void StaticInit();
@@ -469,21 +419,19 @@ public:
     void Deinit();
     
     void RecreateScreenSurface();
-    void DrawScreenSurface();
-    
-    uint32_t LoadShader(int32_t type, const std::string &fl);
-    uint32_t CompileShader(int32_t type, const std::string &string);
     
     void SetFBOBlending(int mode);
-    void DrawFBO();
-    void UpdateFBOSizes();
     
     
     SDL_Surface *Screen();
     
 
+    // The presented frame as RGB, bottom line first, in memory from malloc
     uint8_t *MakeScreenCopy(int *ow, int *oh);
-    uint8_t *MakeDepthScreenCopy(int *ow, int *oh);
+
+    // A movie's frame, shown and presented right away
+    void DrawVideoFrame(const uint8_t *rgb, int width, int height);
+    void EndVideo();
 
     
     // Fullscreen covers the desktop without changing the display mode, so the
@@ -510,7 +458,6 @@ public:
     
     
     static uint32_t GetPixelFormatU32() { return _pixfmt->format; };
-    static void GetGlPixTypeFmt(GLint *format, GLint *type);
     
     
     static void DrawLine(SDL_Surface *surface, const Common::Line &line, uint8_t cr, uint8_t cg, uint8_t cb);
@@ -609,8 +556,6 @@ public:
     virtual void setW3D_texFilt(int arg);
 
     void draw2DandFlush();
-    
-    void DrawVtxQuad(const std::array<GFX::TVertex, 4> &vtx);
 
     int LoadFontByDescr(const std::string &fontname);
     int GetTextWidth(const std::string &text); // In the font of AddScreenText's text
@@ -636,12 +581,13 @@ public:
     std::string GetRendererInfo();
 
     float GetColorEffectPower(int id);
+
+    // The color effects' multipliers for the colors and for their inverses
+    const vec3d &GetColorEffectNorm() const { return _normClr; };
+    const vec3d &GetColorEffectInv() const { return _invClr; };
     
     Common::Point ConvertPosTo2DStuff(const Common::Point &pos);
     
-    void RenderingMeshOld(TRenderNode *mesh);
-    void RenderingMesh(TRenderNode *mesh);
-    void RenderNode(TRenderNode *node);
     void Rasterize(uint32_t RasterEtapes = RASTER_ALL);
     
     void QueueRenderMesh(TRenderNode *mesh);
@@ -649,27 +595,11 @@ public:
     
     float GetAlpha() const { return _alpha / 255.0; };
     
-    GfxStates& States() { return _states; };
-    const GfxStates& GetLastStates() { return _lastStates; };
-    
-    const TShaderProg &GetStdShaderProg() { return _stdShaderProg; }; 
-    
-    void SetRenderStates(int arg);
-    
-    void BindVBOParameters(TShaderProg &shader);
-    
-    void CommitUBOParameters();
-    
-    void SetProjectionMatrix(const mat4x4f &mat);
-    void SetModelViewMatrix(const mat4x4f &mat);
-    
     const mat4x4f &GetProjectionMatrix() const { return _frustum; }; 
     float GetProjectionNear() const { return _frustumNear; }; 
     float GetProjectionFar() const { return _frustumFar; }; 
     
 protected:
-    void initPolyEngine();
-
     void DrawScreenText();
     void AddScreenText(const std::string &string, int p1, int p2, int p3, int p4, int flag);
     void DrawTextEntry(const ScreenText *txt);
@@ -702,10 +632,8 @@ private:
     int CurrentCursorID = -1;
     
     SDL_Surface *ScreenSurface = NULL;
-    GLuint screenTex = 0;
-    
-    static const std::string _stdPShaderText;
-    static const std::string _stdVShaderText;
+
+    RenderBackend *_backend = NULL;
 
 public:
     int _forcesoftcursor;
@@ -727,14 +655,9 @@ public:
 
     
     
-    std::list<TRenderNode *> _renderSolidList;
-    std::list<TRenderNode *> _renderSkyBoxList;
-    std::list<TRenderNode *> _renderZeroTracyList;
-    std::list<TRenderNode *> _renderLumaTracyList;
+    TRenderQueue _renderQueue;
     
     Common::CacheStorage<TRenderNode> _renderNodesCache;
-
-    int _sceneBeginned;
 
     ScreenFont _font;
 
@@ -742,8 +665,6 @@ public:
     float _corrH, _corrIH;
     bool _solidFont;
     
-    bool _glext = false;
-    bool _vbo = false;
     int _fpsMaxSetting = 0; // gfx.maxfps
     
     // Display class
@@ -766,62 +687,9 @@ protected:
     mat4x4f _frustum;
     float _frustumNear;
     float _frustumFar;
-    
-    uint32_t _stdPsShader = 0;
-    uint32_t _stdVsShader = 0;
-    TShaderProg _stdShaderProg;
-    
-    uint32_t _vboParams = 0;
-    
-    static constexpr int32_t _vboMProjOff = 0;   // 4 * 4 * 4 = 64
-    static constexpr int32_t _vboMViewOff = 64;  // 4 * 4 * 4 = 64
-    static constexpr int32_t _vboFogOff   = 128; // 3 * 4 = 12  ... + 4(because next vec3)
-    static constexpr int32_t _vboAFogOff  = 144; // 3 * 4 = 12
-    static constexpr int32_t _vboTextured = 156; // 4
-    static constexpr int32_t _vboFlat     = 160; // 4
-    static constexpr int32_t _vboATest    = 164; // 4
-    static constexpr int32_t _vboParamsSize = 168; 
-    static constexpr int32_t _vboParamsBlockBinding = 0;
-    
-    struct
-    {
-        mat4x4f Proj;
-        mat4x4f View;
-        float   Fog = 0.0;
-        float   FogStart = 0.0;
-        float   FogLength = 0.0;
-        float   _pad1 = 0.0;
-        float   AFog = 0.0;
-        float   AFogStart = 0.0;
-        float   AFogLength = 0.0;
-        int32_t Textured = 0;
-        int32_t Flat = 0;
-        int32_t ATest = 0;
-    } _vboStatesBlock;
-    
-    bool _vboStatesChanged = true;
-    
-    uint32_t _globalVao = 0;
-    
-    GfxStates _states;
-    GfxStates _lastStates;
-    
-    uint32_t _stdQuadDataBuf = 0;
-    uint32_t _stdQuadIndexBuf = 0;
 
     vec3d _normClr;
     vec3d _invClr;
-    
-    int32_t _colorEffects = 0;
-    
-    uint32_t _fbo = 0;
-    uint32_t _fbod = 0;
-    uint32_t _fboTex = 0;
-    int32_t _fboBlend = 0;
-    
-    uint32_t _psShader = 0;
-    uint32_t _vsShader = 0;
-    TColorEffectsProg _colorEffectsShaderProg;
     
     static std::vector<TGFXDeviceInfo> _devices;
 };

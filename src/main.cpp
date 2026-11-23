@@ -1014,14 +1014,13 @@ int main(int argc, char *argv[])
     HandleMods();
     
     System::IniConf::ReadFromNucleusIni();
-    bool gfxVbo = System::IniConf::GfxVBO.Get<bool>();
     
     if (System::IniConf::DevMode.Get<bool>() || System::FindCmdLineArg("-devmode") >= 0)
         World::AllowMods(true);        
 
     benchmark.ReadCommandLine();
     
-    System::Init(!gfxVbo);
+    System::Init();
     
     GFX::Engine.Init();
     System::Movie.Init();
@@ -1034,6 +1033,7 @@ int main(int argc, char *argv[])
     if ( benchmark.IsActive() && !StartBenchmarkLevel() )
     {
         ShutdownGame();
+        GFX::Engine.Deinit();
         System::Deinit();
         return 1;
     }
@@ -1098,6 +1098,7 @@ int main(int argc, char *argv[])
     
     ShutdownGame();
     
+    GFX::Engine.Deinit();
     System::Deinit();
 
     return 0;

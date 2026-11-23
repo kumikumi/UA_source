@@ -8,12 +8,6 @@ extern "C" {
 
 #include "movie.h"
 #include "fsmgr.h"
-
-#if defined(__APPLE__) && defined(__MACH__)
-#include <OpenGL/gl.h>
-#else
-#include <GL/gl.h>
-#endif
 #include "system.h"
 #include "sound.h"
 
@@ -70,7 +64,6 @@ struct TMovie::Context
     bool fileEOF = false;
     
     struct SwsContext *sws_ctx = NULL;
-    GLuint screenTex = 0;
     
     uint8_t *dst_data[4];
     int dst_linesize[4];    
@@ -103,14 +96,6 @@ bool TMovie::EventsWatcher(void *, SDL_Event *event)
 {
     switch(event->type)
     {
-        case SDL_EVENT_WINDOW_RESIZED:
-        case SDL_EVENT_WINDOW_PIXEL_SIZE_CHANGED:
-            {
-                Common::Point scrSz = System::GetResolution();
-                glViewport(0, 0, scrSz.x, scrSz.y);
-            }
-            break;
-        
         case SDL_EVENT_KEY_DOWN:
             Instance._ctx->playing = false;
             return false;
@@ -241,8 +226,7 @@ void TMovie::Close()
     _ctx->audioStream = -1;
     _ctx->videoStream = -1;
     
-    if (_ctx->screenTex != 0)
-        glDeleteTextures(1, &_ctx->screenTex);
+    GFX::Engine.EndVideo();
     
     if (_ctx->swr_ctx)
     {
@@ -255,8 +239,6 @@ void TMovie::Close()
         av_freep(&_ctx->adst_data[0]);
         av_freep(_ctx->adst_data);
     }
-    
-    _ctx->screenTex = 0;
 }
 
 void TMovie::ReadFrames()
@@ -398,67 +380,7 @@ void TMovie::ProcessFrame(uint32_t tm)
             _ctx->dst_data, _ctx->dst_linesize);
 
 
-    Common::Point scrSz = System::GetResolution();
-    glViewport(0, 0, scrSz.x, scrSz.y);
-    
-    GFX::Engine.SetProjectionMatrix( mat4x4f() );
-    GFX::Engine.SetModelViewMatrix( mat4x4f() );
-
-    GFX::GfxStates &pStates = GFX::Engine.States();
-    GFX::GfxStates saved = pStates;
-
-    pStates.Zwrite = false;
-    pStates.DepthTest = false;
-    pStates.AlphaBlend = false;
-    pStates.Prog = GFX::Engine.GetStdShaderProg();
-
-    GFX::Engine.SetRenderStates(0);
-    
-    glClearColor(0.0f, 0.0f, 0.0f, 1.0f );
-    glClear(GL_COLOR_BUFFER_BIT);
-    
-    if (_ctx->screenTex == 0)
-    {
-        glGenTextures(1, &_ctx->screenTex);
-        
-        pStates.Tex = _ctx->screenTex;
-        GFX::Engine.SetRenderStates(0);
-        
-        glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-    
-        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, frm->width, frm->height, 0, GL_RGB, GL_UNSIGNED_BYTE, NULL);
-    }
-    
-    pStates.Tex = _ctx->screenTex;
-    GFX::Engine.SetRenderStates(0);
-    
-    glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, frm->width, frm->height, GL_RGB, GL_UNSIGNED_BYTE, _ctx->dst_data[0]);
-    
-    double scrAspect = (double)scrSz.x / (double)scrSz.y;
-    double frmAspect = (double)frm->width / (double)frm->height;
-    double qW = 1.0;
-    double qH = 1.0;
-    if (scrAspect > frmAspect)
-        qW = frmAspect / scrAspect;
-    else if (scrAspect < frmAspect)
-        qH = scrAspect / frmAspect;
-
-    std::array<GFX::TVertex, 4> vtx = {
-        GFX::TVertex( vec3f(-1.0 * qW,  1.0 * qH, 0.0), tUtV(0.0, 0.0) ),
-        GFX::TVertex( vec3f(-1.0 * qW, -1.0 * qH, 0.0), tUtV(0.0, 1.0) ),
-        GFX::TVertex( vec3f( 1.0 * qW, -1.0 * qH, 0.0), tUtV(1.0, 1.0) ),
-        GFX::TVertex( vec3f( 1.0 * qW,  1.0 * qH, 0.0), tUtV(1.0, 0.0) ),
-    };
-    
-    GFX::Engine.DrawVtxQuad(vtx);
-
-    System::Flip();
-    
-    pStates = saved;
+    GFX::Engine.DrawVideoFrame(_ctx->dst_data[0], frm->width, frm->height);
 
     av_frame_free(&frm);
 }
