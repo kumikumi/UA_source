@@ -12,7 +12,6 @@
 
 #include <math.h>
 
-#include "gui/uamsgbox.h"
 #include "env.h"
 #include "system/movie.h"
 #include "system/inivals.h"
@@ -1610,20 +1609,6 @@ void CancelBriefing(NC_STACK_ypaworld *yw)
 {
     yw->_briefScreen.Stage = TBriefengScreen::STAGE_CANCEL;
 }
-
-void UserData::ShowMenuMsgBox(int code, const std::string &txt1, const std::string &txt2, bool okOnly)
-{
-    _menuMsgBoxCode = code;
-    
-    Gui::UAMessageBox *bx = _menuMsgBox->GetMsgBox();
-    bx->SetInform(okOnly);
-    bx->Result = 0;
-    bx->SetTexts(txt1, txt2);
-    
-    _menuMsgBox->ToFront();
-    _menuMsgBox->SetEnable(true);
-}
-
 
 void UserData::ShowConfirmDialog( int mode, const std::string &txt1, const std::string &txt2, int singleButton)
 {

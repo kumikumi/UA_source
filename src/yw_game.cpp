@@ -11,7 +11,6 @@
 
 #include "yparobo.h"
 #include "font.h"
-#include "gui/uacommon.h"
 #include "system/inivals.h"
 #include "system/perf.h"
 

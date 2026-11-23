@@ -12,7 +12,6 @@
 #include "../utils.h"
 #include "common/common.h"
 #include "../ini.h"
-#include "../gui/root.h"
 #include "../bitmap.h"
 #include "../ilbm.h"
 #include "../log.h"
@@ -1822,9 +1821,7 @@ void GFXEngine::EndFrame()
         DrawFBO();
     }    
 
-    Gui::Root::Instance.Draw(Screen());
     DrawScreenSurface();
-    Gui::Root::Instance.HwCompose();
     
     if (_colorEffects == 1)
     {
@@ -2120,9 +2117,7 @@ void GFXEngine::draw2DandFlush()
     if (_colorEffects)
         Glext::GLBindFramebuffer(GL_FRAMEBUFFER, 0);
     
-    Gui::Root::Instance.Draw(Screen());
     DrawScreenSurface();
-    Gui::Root::Instance.HwCompose();
 
     SDL_FillRect(Screen(), NULL, SDL_MapRGBA(Screen()->format, 0, 0, 0, 0) );
     
@@ -2641,7 +2636,6 @@ void GFXEngine::Init()
     ReadIniSettings();
 
     RecreateScreenSurface();
-    Gui::Instance.SetScreenSize(GetScreenSize());
     
     LoadPalette(System::IniConf::GfxPalette.Get<std::string>());
 
@@ -2838,7 +2832,6 @@ bool GFXEngine::UpdateResolution()
     SetResVariables(res);
     ApplyResolution();
     RecreateScreenSurface();
-    Gui::Instance.SetScreenSize(GetScreenSize());
     UpdateFBOSizes();
 
     return true;

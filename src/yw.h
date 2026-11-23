@@ -32,7 +32,6 @@
 #include "world/saveparsers.h"
 #include "world/nparticle.h"
 
-#include "gui/uamsgbox.h"
 
 #include "world/luaevents.h"
 #include "locale/locale.h"
@@ -693,14 +692,12 @@ public:
     
     
     NC_STACK_button *confirm_button;
-    Gui::UABlockMsgBox *_menuMsgBox = NULL;
     
     uint8_t confirmMode;
     // Kept so the dialog can be shown again after the shell is laid out anew.
     std::string confirmText1;
     std::string confirmText2;
     int confirmSingleButton = 0;
-    int _menuMsgBoxCode = 0;
 
     EnvAction envAction;
 
@@ -788,7 +785,6 @@ public:
     void GameShellUiOpenNetwork();
     int IsSaveGameOutdated();
     void ShowConfirmDialog(int mode, const std::string &txt1, const std::string &txt2, int singleButton);
-    void ShowMenuMsgBox(int code, const std::string &txt1, const std::string &txt2, bool OkOnly);
     void ReloadAllInputs();
     void InputConfCopyToBackup();
     void InputConfigRestoreDefault();
@@ -2171,10 +2167,6 @@ public:
     
     void SendCRC(int lvlid);
     
-    void UpdateGuiSettings();
-    void LoadGuiFonts();
-    void CreateNewGuiElements();
-    void DeleteNewGuiElements();
     
     void HistoryAktCreate(NC_STACK_ypabact *bact);
     void HistoryAktKill(NC_STACK_ypabact *bact);

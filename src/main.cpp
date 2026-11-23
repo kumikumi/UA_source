@@ -38,10 +38,6 @@
 
 
 
-#include "gui/widget.h"
-#include "gui/uawidgets.h"
-#include "gui/uamsgbox.h"
-#include "gui/uaempty.h"
 #include "system/movie.h"
 #include "system/inivals.h"
 #include "obj3d.h"
@@ -618,8 +614,6 @@ int ProcessNextFrame()
     else
         System::SetReleativeMouse(false);
     
-    Gui::Root::Instance.TimersUpdate( input_states.Period );
-
     if ( GameScreenMode == GAME_SCREEN_MODE_MENU )
     {
         return ProcessMenuFrame();
@@ -862,8 +856,6 @@ int InitWorldAndShell()
 
     ypaworld = Nucleus::CInit<NC_STACK_ypaworld>( { {NC_STACK_ypaworld::YW_ATT_BUILD_DATE, std::string(buildDate)} } );
     
-    Gui::UA::yw = ypaworld;
-    
     if ( !ypaworld )
     {
         ypa_log_out("Unable to init ypaworld.class\n");
@@ -985,8 +977,6 @@ int main(int argc, char *argv[])
     
     GFX::Engine.Init();
     System::Movie.Init();
-    
-    Gui::UA::Init();
 
     if ( !InitGame() )
         return 0;
@@ -994,43 +984,6 @@ int main(int argc, char *argv[])
     System::IniConf::ReadFromNucleusIni();
 
     uint32_t ticks = 0;
-    
-    Gui::Root::Instance.SetHwCompose(true);
-    ypaworld->LoadGuiFonts();
-    ypaworld->CreateNewGuiElements();
-    
-    
-    //Gui::Root::Instance.AddPortal( Common::Point(640, 480), Common::Rect(0, 0, 300, 300));
-    
-    // New gui test windows
-    /*Gui::UAWindow *smpl = new Gui::UAWindow("Test1", Common::PointRect(100, 100, 200, 300), 
-        Gui::UAWindow::FLAG_WND_RESIZEABLE | 
-        Gui::UAWindow::FLAG_WND_VSCROLL | 
-        Gui::UAWindow::FLAG_WND_CLOSE );
-    smpl->SetEnable(true);
-    smpl->SetAlpha(190);
-
-    Gui::Root::Instance.AddWidget(smpl);   
-    
-    Gui::UAWindow *smpl2 = new Gui::UAWindow("Test2", Common::PointRect(0, 0, 50, 60), 
-        Gui::UAWindow::FLAG_WND_RESIZEABLE | 
-        Gui::UAWindow::FLAG_WND_VSCROLL | 
-        Gui::UAWindow::FLAG_WND_CLOSE |
-        Gui::UAWindow::FLAG_WND_HELP | 
-        Gui::UAWindow::FLAG_WND_MAXM |
-        Gui::UAWindow::FLAG_WND_HSCROLL);
-    smpl2->SetEnable(true);*/
-    //smpl2->SetAlpha(190);
-    
-    //scl->MoveTo(100, 100);
-    //scl->ResizeWH(300, 360);
-    
-    //Gui::Root::Instance.AddWidgetPortal(0, smpl2);  
-    //Gui::Root::Instance.AddWidget(smpl2);  
-    //smpl->AddChild(smpl2);
-    
-   
-    
 
 //    int fps = 0;
 //    uint32_t fpstick = SDL_GetTicks() + 1000;
@@ -1088,10 +1041,7 @@ int main(int argc, char *argv[])
 
     }
     
-    ypaworld->DeleteNewGuiElements();
-    
     ShutdownGame();
-    Gui::UA::Deinit();
     
     System::Deinit();
 

@@ -510,11 +510,8 @@ public:
     SDL_Cursor *LoadCursor(const std::string &name);
     
     
-    static SDL_PixelFormat *GetPixelFormat() { return _pixfmt; };
     static uint32_t GetPixelFormatU32() { return _pixfmt->format; };
     static void GetGlPixTypeFmt(GLint *format, GLint *type);
-    static GLint GetGlPixFormat() { return _glPixfmt; };
-    static GLint GetGlPixType() { return _glPixtype; };
     
     
     static void DrawLine(SDL_Surface *surface, const Common::Line &line, uint8_t cr, uint8_t cg, uint8_t cb);

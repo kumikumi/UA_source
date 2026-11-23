@@ -323,8 +323,6 @@ int NC_STACK_ypaworld::load_fonts_and_icons()
 
     _upScreenBorder = _guiTiles[30]->h; // ENERGIE height
     _downScreenBorder = _iconOrderH;
-    
-    UpdateGuiSettings();
 
     return 1;
 }
@@ -2787,7 +2785,6 @@ void FreeSetData(NC_STACK_ypaworld *yw)
     }
 
     yw_freeTileSets(yw);
-    yw->UpdateGuiSettings();
 
     if ( yw->_setData )
     {

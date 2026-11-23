@@ -13,8 +13,6 @@
 #include "yparobo.h"
 #include "windp.h"
 #include "yw_net.h"
-#include "gui/uacommon.h"
-#include "gui/uamsgbox.h"
 #include "env.h"
 #include "system/inivals.h"
 #include "system/perf.h"
@@ -260,8 +258,6 @@ size_t NC_STACK_ypaworld::Init(IDVList &stak)
     }
 
     _doNotRender = false;
-    
-    UpdateGuiSettings();
 
     return 1;
 }
@@ -6586,12 +6582,10 @@ void NC_STACK_ypaworld::LoadScreenFonts()
     if ( _screenSize.x >= 512 )
     {
         GFX::Engine.LoadFontByDescr( Locale::Text::Font() );
-        Gui::UA::LoadFont( Locale::Text::Font() );
     }
     else
     {
         GFX::Engine.LoadFontByDescr( Locale::Text::SmallFont() );
-        Gui::UA::LoadFont( Locale::Text::SmallFont() );
     }
 }
 
@@ -7096,51 +7090,6 @@ int NC_STACK_ypaworld::TestVehicle(int protoID, int job)
     return -1;
 }
 
-
-void NC_STACK_ypaworld::UpdateGuiSettings()
-{
-    Gui::UA::_UATextColor = _iniColors[60];
-    Gui::UA::_UAButtonTextColor = _iniColors[68];
-
-    
-
-    /*for (uint8_t i = 0; i < ypaworld.tiles.size(); i++)
-        Gui::UA::_UATiles[i] = ypaworld.tiles[i];*/
-}
-
-void NC_STACK_ypaworld::LoadGuiFonts()
-{
-    std::string old = Common::Env.SetPrefix("rsrc", "data:set46");
-
-    Gui::UA::_UATiles[Gui::UA::TILESET_46DEFAULT] = yw_LoadFont("default.font"); //0
-    Gui::UA::_UATiles[Gui::UA::TILESET_46MAPC16] = yw_LoadFont("mapcur16.font"); //18
-    Gui::UA::_UATiles[Gui::UA::TILESET_46MAPC32] = yw_LoadFont("mapcur32.font"); //19
-    Gui::UA::_UATiles[Gui::UA::TILESET_46ENERGY] = yw_LoadFont("energy.font"); //30
-    
-    Common::Env.SetPrefix("rsrc", "data:fonts");
-    Gui::UA::_UATiles[Gui::UA::TILESET_DEFAULT]     = yw_LoadFont("default.font"); //0
-    Gui::UA::_UATiles[Gui::UA::TILESET_MENUGRAY]    = yw_LoadFont("menugray.font"); //6
-    Gui::UA::_UATiles[Gui::UA::TILESET_ICONNS]      = yw_LoadFont("icon_ns.font"); //24
-    Gui::UA::_UATiles[Gui::UA::TILESET_ICONPS]      = yw_LoadFont("icon_ps.font"); //25
-    Gui::UA::_UATiles[Gui::UA::TILESET_MAPHORZ]     = yw_LoadFont("maphorz.font"); //11
-    Gui::UA::_UATiles[Gui::UA::TILESET_MAPVERT]     = yw_LoadFont("mapvert.font"); //12
-    Gui::UA::_UATiles[Gui::UA::TILESET_MAPVERT1]    = yw_LoadFont("mapvert1.font"); //13
-
-    Common::Env.SetPrefix("rsrc", old);    
-}
-
-void NC_STACK_ypaworld::CreateNewGuiElements()
-{
-    _GameShell->_menuMsgBox = new Gui::UABlockMsgBox(Gui::UAMessageBox::TYPE_INMENU);
-    _GameShell->_menuMsgBox->SetEnable(false);
-    Gui::Root::Instance.AddWidget(_GameShell->_menuMsgBox);
-}
-
-void NC_STACK_ypaworld::DeleteNewGuiElements()
-{
-    delete _GameShell->_menuMsgBox;
-    _GameShell->_menuMsgBox = NULL;
-}
 
 SDL_Color NC_STACK_ypaworld::GetColor(int colorID)
 {

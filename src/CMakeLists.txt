@@ -20,14 +20,6 @@ set(SOURCES
 	env.cpp
 	fmtlib/format.cc
 	font.cpp
-	gui/root.cpp
-	gui/uabutton.cpp
-	gui/uacommon.cpp
-	gui/uaempty.cpp
-	gui/uamsgbox.cpp
-	gui/uascroll.cpp
-	gui/uawindow.cpp
-	gui/widget.cpp
 	idev.cpp
 	ilbm.cpp
 	image.cpp
