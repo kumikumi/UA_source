@@ -364,6 +364,16 @@ void GFXEngine::initPolyEngine()
         glDisable(GL_DITHER);
 }
 
+int GFXEngine::GetTextWidth(const std::string &text)
+{
+    int w = 0, h = 0;
+
+    if ( _font.ttfFont )
+        TTF_SizeUTF8(_font.ttfFont, text.c_str(), &w, &h);
+
+    return w;
+}
+
 int GFXEngine::LoadFontByDescr(const std::string &fontname)
 {
     std::vector<std::string> splt = Stok::Split(fontname, ",");

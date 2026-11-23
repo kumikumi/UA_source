@@ -4,6 +4,7 @@
 #include <list>
 
 #include "system/gfx.h"
+#include "system/inpt.h"
 
 class NC_STACK_ypaworld;
 

@@ -1614,8 +1614,10 @@ bool NC_STACK_ypaworld::IsVisibleMapPos(vec2d pos)
     if ( !IsGamePlaySector( pt ) || !_viewerBact )
         return false;
 
+    int radius = std::min(GetViewDistance().SectorRadius, GetMapSectorRadius());
+
     Common::Point dist = _viewerBact->_cellId.AbsDistance( pt ); 
-    if ( dist.x + dist.y <= (_renderSectors - 1) / 2 )
+    if ( dist.x + dist.y <= radius )
         return true;
 
     return false;
@@ -1796,23 +1798,25 @@ void NC_STACK_ypaworld::PrepareAllFillers()
 
 
 
-TRenderingSector rendering_sectors[YW_RENDER_SECTORS_DEF * 2][ YW_RENDER_SECTORS_DEF * 2];
+// The sectors around the viewer in this frame, one row and column more than
+// the view's diameter: RenderFillers reads one past the visible ones.
+static Common::PlaneVector<TRenderingSector> rendering_sectors;
 
-void NC_STACK_ypaworld::RenderFillers(baseRender_msg *arg)
+void NC_STACK_ypaworld::RenderFillers(baseRender_msg *arg, int diameter)
 {
     //Render landscape linking parts
-    for (int i = 0; i < _renderSectors; i++)
+    for (int i = 0; i < diameter; i++)
     {
-        for (int j = 0; j < _renderSectors - 1; j++)
+        for (int j = 0; j < diameter - 1; j++)
         {
-            TRenderingSector &sct = rendering_sectors[j][i];
-            TRenderingSector &sct2 = rendering_sectors[j + 1][i];
+            TRenderingSector &sct = rendering_sectors(j, i);
+            TRenderingSector &sct2 = rendering_sectors(j + 1, i);
             
             if (sct.InMap == 1 && sct2.InMap == 1 && (sct.Visible == 1 || sct2.Visible == 1))
             {
                 float h;
-                if (rendering_sectors[j + 1][i + 1].InMap == 1)
-                    h = rendering_sectors[j + 1][i + 1].Cell->averg_height;
+                if (rendering_sectors(j + 1, i + 1).InMap == 1)
+                    h = rendering_sectors(j + 1, i + 1).Cell->averg_height;
                 else
                     h = sct2.Cell->averg_height;
                     
@@ -1823,18 +1827,18 @@ void NC_STACK_ypaworld::RenderFillers(baseRender_msg *arg)
         }
     }
 
-    for (int i = 0; i < _renderSectors - 1; i++)
+    for (int i = 0; i < diameter - 1; i++)
     {
-        for (int j = 0; j < _renderSectors; j++)
+        for (int j = 0; j < diameter; j++)
         {
-            TRenderingSector &sct = rendering_sectors[j][i];
-            TRenderingSector &sct2 = rendering_sectors[j][i + 1];
+            TRenderingSector &sct = rendering_sectors(j, i);
+            TRenderingSector &sct2 = rendering_sectors(j, i + 1);
             
             if (sct.InMap == 1 && sct2.InMap == 1 && (sct.Visible == 1 || sct2.Visible == 1))
             {
                 float h;
-                if (rendering_sectors[j + 1][i + 1].InMap == 1)
-                    h = rendering_sectors[j + 1][i + 1].Cell->averg_height;
+                if (rendering_sectors(j + 1, i + 1).InMap == 1)
+                    h = rendering_sectors(j + 1, i + 1).Cell->averg_height;
                 else
                     h = sct2.Cell->averg_height;
                     
@@ -1867,32 +1871,46 @@ void NC_STACK_ypaworld::RenderGame(TUpdateArgs *bs64, int drawGui)
 
     rndrs.minZ = 1.0;
 
-    if ( _renderSectors == 5 )
-        rndrs.maxZ = 1500.0;
-    else
-        rndrs.maxZ = 3500.0;
+    TViewDistance view = GetViewDistance();
 
-    int span = _renderSectors - 1;
+    // However far the view reaches, the map ends. The far plane stays well
+    // behind the clip distance, as objects that start before it are drawn
+    // whole, and it never comes closer than the 8192 it always was.
+    int radius = std::min(view.SectorRadius, GetMapSectorRadius());
+    float farPlane = std::min(view.ClipDistance, GetMapDiagonal()) + 4 * World::CVSectorLength;
+    farPlane = std::max(farPlane, 8192.0f);
 
-    // Clear the whole grid: RenderFillers reads one row and column past the
-    // visible sectors, and a smaller view would otherwise reuse old entries.
-    for (auto &row : rendering_sectors)
+    rndrs.maxZ = std::min(view.ClipDistance, farPlane);
+
+    GFX::Engine.setFrustumClip(1.0, farPlane);
+
+    if ( _viewDistanceSet )
     {
-        for (TRenderingSector &sct : row)
-        {
-            sct.InMap = 0;
-            sct.Visible = 0;
-        }
+        rndrs.fogOverride = true;
+        rndrs.noFog = (view.FogEnd == TViewDistance::UNLIMITED);
+        rndrs.fogStart = view.FogStart;
+        rndrs.fogLength = view.FogEnd - view.FogStart;
     }
 
-    int radius = span / 2;
+    int diameter = 2 * radius + 1;
+
+    // Clear the whole grid, so that sectors off the map or outside the
+    // diamond drawn below don't keep entries from an earlier frame.
+    rendering_sectors.Resize(diameter + 1, diameter + 1);
+
+    for (TRenderingSector &sct : rendering_sectors)
+    {
+        sct.InMap = 0;
+        sct.Visible = 0;
+    }
+
     for (int i = 0; i <= radius; i++)
     {
         int rowOffset = radius - i;
 
         for (int j = -i; j <= i; j++)
         {
-            TRenderingSector *sct = &rendering_sectors[radius + j][radius - rowOffset];
+            TRenderingSector *sct = &rendering_sectors(radius + j, radius - rowOffset);
 
             CheckSectorVisibility( _viewerBact->_cellId + Common::Point(j, -rowOffset), 
                                     sct, &rndrs);
@@ -1906,7 +1924,7 @@ void NC_STACK_ypaworld::RenderGame(TUpdateArgs *bs64, int drawGui)
         {
             for (int j = -i; j <= i; j++)
             {
-                TRenderingSector *sct = &rendering_sectors[radius + j][radius + rowOffset];
+                TRenderingSector *sct = &rendering_sectors(radius + j, radius + rowOffset);
 
                 CheckSectorVisibility( _viewerBact->_cellId + Common::Point(j, rowOffset), 
                                         sct, &rndrs);
@@ -1920,7 +1938,7 @@ void NC_STACK_ypaworld::RenderGame(TUpdateArgs *bs64, int drawGui)
     
     RenderSuperItems(&rndrs);
 
-    RenderFillers(&rndrs);
+    RenderFillers(&rndrs, diameter);
 
     bs64->AdeCount = rndrs.adeCount;
 
@@ -5146,10 +5164,31 @@ void NC_STACK_ypaworld::debug_info_draw(TInputState *inpt)
     }
 }
 
+static const int PerfOverlayLines = 5;
+
 void NC_STACK_ypaworld::DrawPerfOverlay(TInputState *inpt)
 {
+    // F10 goes from nothing to the numbers, then the numbers with the view
+    // distance window, and back to nothing.
     if ( inpt->KbdLastHit == Input::KC_F10 )
-        _showPerfOverlay = !_showPerfOverlay;
+    {
+        if ( !_showPerfOverlay )
+        {
+            _showPerfOverlay = true;
+        }
+        else if ( _guiLoaded && _viewDistanceWindow.IsClosed() )
+        {
+            TileMap *font = GFX::Engine.GetTileset(15);
+            _viewDistanceWindow.Open(this, 16 + (PerfOverlayLines + 1) * font->h);
+        }
+        else
+        {
+            _showPerfOverlay = false;
+
+            if ( _guiLoaded )
+                _viewDistanceWindow.Close(this);
+        }
+    }
 
     if ( !_showPerfOverlay )
         return;
@@ -5157,7 +5196,7 @@ void NC_STACK_ypaworld::DrawPerfOverlay(TInputState *inpt)
     using PS = System::PerfStats;
     const PS::Summary &perf = System::Perf.GetSummary();
 
-    const std::array<std::string, 5> lines = {
+    const std::array<std::string, PerfOverlayLines> lines = {
         fmt::sprintf("%.0f fps   %.2f ms   worst %.2f ms", perf.Fps, perf.FrameMs, perf.WorstMs),
 
         fmt::sprintf("sim %.2f   scene %.2f   draw %.2f   gui %.2f   present %.2f   idle %.2f ms",

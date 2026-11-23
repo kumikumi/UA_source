@@ -576,8 +576,7 @@ size_t NC_STACK_base::Render(baseRender_msg *arg, Instance * inst, bool doCopy /
             rend.TForm = skel132.tform;
             rend.TimeStamp = arg->globTime;
             rend.FrameTime = arg->frameTime;
-            rend.FogStart = _renderMsg.fadeStart;
-            rend.FogLength = _renderMsg.fadeLength;
+            arg->SetFog(&rend, _renderMsg.fadeStart, _renderMsg.fadeLength);
 
             GFX::GFXEngine::Instance.QueueRenderMesh(&rend);
         }
@@ -663,8 +662,7 @@ size_t NC_STACK_base::RenderImmediately(baseRender_msg *arg, Instance * inst)
             rend.TForm = skel132.tform;
             rend.TimeStamp = arg->globTime;
             rend.FrameTime = arg->frameTime;
-            rend.FogStart = _renderMsg.fadeStart;
-            rend.FogLength = _renderMsg.fadeLength;
+            arg->SetFog(&rend, _renderMsg.fadeStart, _renderMsg.fadeLength);
 
             GFX::GFXEngine::Instance.RenderNode(&rend);
         }
@@ -1091,8 +1089,7 @@ void TObjectCache::Render(baseRender_msg *arg)
         rend.TForm = tf;
         rend.TimeStamp = arg->globTime;
         rend.FrameTime = arg->frameTime;
-        rend.FogStart = fadeStart;
-        rend.FogLength = fadeLength;
+        arg->SetFog(&rend, fadeStart, fadeLength);
 
         GFX::GFXEngine::Instance.QueueRenderMesh(&rend);
     }

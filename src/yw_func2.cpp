@@ -901,6 +901,65 @@ void NC_STACK_ypaworld::SetFarView(bool farvw)
     }
 }
 
+// C++14 needs the definitions, for code that takes them by reference.
+constexpr int32_t TViewDistance::ALL_SECTORS;
+constexpr float TViewDistance::UNLIMITED;
+
+TViewDistance NC_STACK_ypaworld::GetViewDistance() const
+{
+    if ( _viewDistanceSet )
+        return _viewDistance;
+
+    return GetDefaultViewDistance();
+}
+
+TViewDistance NC_STACK_ypaworld::GetDefaultViewDistance() const
+{
+    // The fog is each object's own then, which the world sets to these
+    // distances when it loads them.
+    TViewDistance view;
+    view.SectorRadius = (_renderSectors - 1) / 2;
+    view.ClipDistance = (_renderSectors == 5) ? 1500.0 : 3500.0;
+    view.FogStart = _normalVizLimit - _normalFadeLength;
+    view.FogEnd = _normalVizLimit;
+    return view;
+}
+
+void NC_STACK_ypaworld::SetViewDistance(const TViewDistance &view)
+{
+    _viewDistance = view;
+
+    if ( _viewDistance.SectorRadius < 0 )
+        _viewDistance.SectorRadius = 0;
+
+    if ( _viewDistance.ClipDistance < 1.0 )
+        _viewDistance.ClipDistance = 1.0;
+
+    // GL fog needs an end beyond its start.
+    if ( _viewDistance.FogEnd < 1.0 )
+        _viewDistance.FogEnd = 1.0;
+
+    if ( _viewDistance.FogStart > _viewDistance.FogEnd - 1.0 )
+        _viewDistance.FogStart = _viewDistance.FogEnd - 1.0;
+
+    _viewDistanceSet = true;
+}
+
+void NC_STACK_ypaworld::ResetViewDistance()
+{
+    _viewDistanceSet = false;
+}
+
+int32_t NC_STACK_ypaworld::GetMapSectorRadius() const
+{
+    return std::max(_mapSize.x + _mapSize.y - 2, 0);
+}
+
+float NC_STACK_ypaworld::GetMapDiagonal() const
+{
+    return vec2d(_mapSize.x, _mapSize.y).length() * World::CVSectorLength;
+}
+
 //Options OK
 void UserData::ApplyOptions()
 {

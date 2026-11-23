@@ -59,6 +59,29 @@ struct baseRender_msg
     float minZ = 0.;
     float maxZ = 0.;
     uint32_t flags = 0;
+
+    // While fogOverride is set, every object drawn uses this fog instead of
+    // its own, or none at all with noFog: the world's view distance setting.
+    bool fogOverride = false;
+    bool noFog = false;
+    float fogStart = 0.;
+    float fogLength = 0.;
+
+    // Gives a node the object's own fog, unless it is overridden.
+    void SetFog(GFX::TRenderNode *rend, float start, float length) const
+    {
+        if (fogOverride)
+        {
+            start = fogStart;
+            length = fogLength;
+
+            if (noFog)
+                rend->Flags &= ~GFX::RFLAGS_FOG;
+        }
+
+        rend->FogStart = start;
+        rend->FogLength = length;
+    }
 };
 
 

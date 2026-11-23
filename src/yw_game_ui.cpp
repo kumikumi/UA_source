@@ -2891,6 +2891,7 @@ int GUI_Open(NC_STACK_ypaworld *yw)
     create_exit_menu(yw);
     CreateConfirmWindow(yw);
     CreateNetGameWindow(yw);
+    yw->_viewDistanceWindow.Create(yw);
 
     yw->GuiWinAttach(&robo_map);
     yw->GuiWinAttach(&squadron_manager);
@@ -2898,6 +2899,7 @@ int GUI_Open(NC_STACK_ypaworld *yw)
     yw->GuiWinAttach(&exit_menu);
     yw->GuiWinAttach(&lstvw2);
     yw->GuiWinAttach(&netgame_wnd);
+    yw->GuiWinAttach(&yw->_viewDistanceWindow);
 
     if ( !CreateBottomBar(yw) )
     {
@@ -2907,7 +2909,9 @@ int GUI_Open(NC_STACK_ypaworld *yw)
         yw->GuiWinDetach(&squadron_manager);
         yw->GuiWinDetach(&robo_map);
         yw->GuiWinDetach(&netgame_wnd);
+        yw->GuiWinDetach(&yw->_viewDistanceWindow);
 
+        yw->_viewDistanceWindow.Free();
         FreeExitMenu(yw);
         FreeInfoLog(yw);
         FreeSquadManager(yw);
@@ -7046,6 +7050,7 @@ void NC_STACK_ypaworld::HandleGuiInput(TInputState *inpt)
             SquadManager_InputHandle(inpt);
             InfoLogHandleInput(this, inpt);
             EnergyPanelHandleInput(this, inpt);
+            _viewDistanceWindow.HandleInput(this, inpt);
         }
         BottomBarHandleInput(this, inpt);
     }
@@ -11349,7 +11354,9 @@ void NC_STACK_ypaworld::GUI_Close()
         GuiWinDetach(&squadron_manager);
         GuiWinDetach(&robo_map);
         GuiWinDetach(&netgame_wnd);
+        GuiWinDetach(&_viewDistanceWindow);
 
+        _viewDistanceWindow.Free();
         FreeExitMenu(this);
         FreeInfoLog(this);
         FreeSquadManager(this);
@@ -11394,7 +11401,7 @@ void NC_STACK_ypaworld::RelayoutGameGui()
     ClampToGuiArea(this, robo_map.altX, robo_map.altY, robo_map.altW, robo_map.altH,
                    robo_map.minWidth, robo_map.minHeight);
 
-    GuiList *windows[] = {&squadron_manager, &info_log, &exit_menu, &lstvw2, &gui_lstvw};
+    GuiList *windows[] = {&squadron_manager, &info_log, &exit_menu, &lstvw2, &gui_lstvw, &_viewDistanceWindow};
     for (GuiList *win : windows)
         win->SetRect(this, -2, -2);
 }

@@ -3,6 +3,7 @@
 
 #include <string.h>
 #include <array>
+#include <limits>
 #include <string>
 
 #include "types.h"
@@ -24,6 +25,7 @@
 
 #include "lstvw.h"
 #include "listnode.h"
+#include "yw_viewdist.h"
 
 #include "world/consts.h"
 #include "world/protos.h"
@@ -1820,6 +1822,19 @@ struct TReplayControl
 
 struct TRenderingSector;
 
+// How far the world is drawn around the viewer. Any of the limits can be
+// lifted: SectorRadius with ALL_SECTORS, the distances with UNLIMITED.
+struct TViewDistance
+{
+    static constexpr int32_t ALL_SECTORS = INT32_MAX;
+    static constexpr float UNLIMITED = std::numeric_limits<float>::infinity();
+
+    int32_t SectorRadius = 2;    // Sectors drawn around the viewer's, in steps along the grid
+    float ClipDistance = 1500.0; // Objects wholly further ahead than this are not drawn
+    float FogStart = 800.0;      // Objects fade to black between the fog distances
+    float FogEnd = 1400.0;       // UNLIMITED: no fog
+};
+
 class NC_STACK_ypaworld: public NC_STACK_nucleus //NC_STACK_base
 {
 friend class UserData;
@@ -2063,6 +2078,16 @@ public:
 
 
     void SetFarView(bool farvw);
+
+    // The view distance follows the far view option until it is set here,
+    // and again after ResetViewDistance.
+    TViewDistance GetViewDistance() const;
+    TViewDistance GetDefaultViewDistance() const; // The far view option's
+    void SetViewDistance(const TViewDistance &view);
+    void ResetViewDistance();
+    bool IsViewDistanceSet() const { return _viewDistanceSet; }
+    int32_t GetMapSectorRadius() const; // Enough sectors to draw the whole map from anywhere on it
+    float GetMapDiagonal() const;       // Nothing on the map is further away
     
     int TestVehicle(int protoID, int job);
 
@@ -2116,7 +2141,7 @@ public:
     void yw_renderSky(baseRender_msg *rndr_params);
     void RenderSuperItems(baseRender_msg *arg);
     void RenderSuperWave(vec2d pos, vec2d fromPos, baseRender_msg *arg);
-    void RenderFillers(baseRender_msg *arg);
+    void RenderFillers(baseRender_msg *arg, int diameter);
     
     void PrepareFiller(cellArea *sct, cellArea *sct2, float startCornerHeight, float endCornerHeight, bool vertical, TCellFillerCh *out, bool force = false);
     void PrepareAllFillers();
@@ -2446,6 +2471,9 @@ public:
     
     int32_t _normalVizLimit = 0;
     int32_t _normalFadeLength = 0;
+    bool _viewDistanceSet = false;
+    TViewDistance _viewDistance; // Used once _viewDistanceSet
+    ViewDistanceWindow _viewDistanceWindow; // Opened with F10, see DrawPerfOverlay
     int32_t _skyVizLimit = 0;
     int32_t _skyFadeLength = 0;
     int32_t _skyHeight = 0;

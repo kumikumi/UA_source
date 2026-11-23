@@ -77,6 +77,7 @@ set(SOURCES
 	yw.cpp
 	yw_brif.cpp
 	yw_funcs.cpp
+	yw_viewdist.cpp
 	yw_func2.cpp
 	yw_game.cpp
 	yw_game_ui.cpp
