@@ -5,13 +5,15 @@
 // polygons, 150 units wide and 900 tall, so its texels showed as thin
 // streaks, 2 units wide and 11 tall.
 //
-// Here a dim, mottled veil with faint facets has streaks of light rising
-// through it, in the original's colors and about as see-through. The texture
-// tiles seamlessly, and the animation repeats every LOOP seconds without a
-// jump: everything that moves does so by whole tiles or whole turns per loop.
-// The features are smooth, as the texture has no mipmaps, and come down to
-// about 20 units across, a little coarser than the original's: finer ones
-// would sparkle in the distance. See world.slang for the binding rules.
+// Like the patch, the texture is a mosaic of sharp edged shards in the
+// original's four colors, with no blends between them. The shards are tall
+// and narrow, so that on the walls they are about the size and shape of the
+// patch's, and they shimmer in the distance about as much, as neither has
+// mipmaps. Nothing drifts: the shards churn in place, their edges sweeping
+// back and forth and their corners circling. The texture tiles seamlessly,
+// and the animation repeats every LOOP seconds without a jump: everything
+// that moves makes a whole number of turns per loop. See world.slang for the
+// binding rules.
 
 struct ForceFieldUniforms
 {
@@ -34,102 +36,123 @@ uint HashU(uint x)
     return x;
 }
 
-// Two numbers from 0 to 1 for a lattice point, the lattice wrapping around
+// Four numbers from 0 to 1 for a lattice point, the lattice wrapping around
 // every n points so that the pattern tiles
-float2 Hash2(int2 p, int2 n)
+float4 Hash4(int2 p, int2 n, uint seed)
 {
     int2 w = ((p % n) + n) % n;
-    uint h = HashU(uint(w.x) * 1597334677u ^ uint(w.y) * 3812015801u ^ uint(n.x * 31 + n.y) * 2654435761u);
-    return float2(float(h & 0xFFFFu), float(h >> 16)) / 65535.0;
+    uint h = HashU(uint(w.x) * 1597334677u ^ uint(w.y) * 3812015801u ^ (uint(n.x * 31 + n.y) + seed) * 2654435761u);
+    uint g = HashU(h ^ 0x9e3779b9u);
+    return float4(float(h & 0xFFFFu), float(h >> 16), float(g & 0xFFFFu), float(g >> 16)) / 65535.0;
 }
 
-// Smooth noise from 0 to 1, with n.x by n.y lattice cells per tile
-float Noise(float2 uv, int2 n)
+// From -1 to 1, swinging back and forth a whole number of times per loop: at
+// a random phase h.x, either way round by h.y, and from half to one and a
+// half times `turns` by h.z
+float Swing(float4 h, float s, float turns)
+{
+    return sin(TAU * (h.x + s * floor(turns * (0.5 + h.z)) * (h.y < 0.5 ? 1.0 : -1.0)));
+}
+
+// Smooth noise from 0 to 1 with n.x by n.y lattice cells per tile, whose
+// lattice values swing up and down in place
+float Noise(float2 uv, int2 n, uint seed, float s, float turns)
 {
     float2 p = uv * float2(n);
     int2 i = int2(floor(p));
     float2 f = p - floor(p);
     f = f * f * (3.0 - 2.0 * f);
 
-    float a = Hash2(i, n).x;
-    float b = Hash2(i + int2(1, 0), n).x;
-    float c = Hash2(i + int2(0, 1), n).x;
-    float d = Hash2(i + int2(1, 1), n).x;
-    return lerp(lerp(a, b, f.x), lerp(c, d, f.x), f.y);
+    float a = Swing(Hash4(i, n, seed), s, turns);
+    float b = Swing(Hash4(i + int2(1, 0), n, seed), s, turns);
+    float c = Swing(Hash4(i + int2(0, 1), n, seed), s, turns);
+    float d = Swing(Hash4(i + int2(1, 1), n, seed), s, turns);
+    return 0.5 + 0.5 * lerp(lerp(a, b, f.x), lerp(c, d, f.x), f.y);
 }
 
-// The random brightness of the cell nearest to uv, among n.x by n.y cells
-// per tile whose points circle within them: the original's shards, stretched
-// like the lattice
-float Facets(float2 uv, int2 n, float t, int turns)
+// Shards: the cells nearest to points that circle in place, n.x by n.y of
+// them per tile. Each cell's value ramps across it in its own direction and
+// swings up and down, so that thresholds cut it along straight lines that
+// sweep back and forth.
+float Shards(float2 uv, int2 n, uint seed, float s, float turns, float slope)
 {
     float2 p = uv * float2(n);
     int2 cell = int2(floor(p));
     float2 f = p - floor(p);
 
     float nearest = 8.0;
-    float id = 0.0;
+    int2 nearestCell = cell;
+    float2 offset = float2(0.0, 0.0);
+    float4 h = float4(0.0, 0.0, 0.0, 0.0);
 
     for (int y = -1; y <= 1; y++)
     {
         for (int x = -1; x <= 1; x++)
         {
-            float2 h = Hash2(cell + int2(x, y), n);
-            float angle = TAU * (h.x + (t / LOOP) * turns * (h.y < 0.5 ? 1.0 : -1.0));
-            float2 point = float2(x, y) + 0.5 + 0.3 * float2(cos(angle), sin(angle));
-            float d = length(point - f);
+            float4 k = Hash4(cell + int2(x, y), n, seed);
+            float angle = TAU * (k.x + s * 2.0 * (k.y < 0.5 ? 1.0 : -1.0));
+            float2 d = f - (float2(x, y) + 0.5 + 0.3 * float2(cos(angle), sin(angle)));
+            float dist = dot(d, d);
 
-            if (d < nearest)
+            if (dist < nearest)
             {
-                nearest = d;
-                id = h.y;
+                nearest = dist;
+                nearestCell = cell + int2(x, y);
+                offset = d;
+                h = k;
             }
         }
     }
 
-    return id;
+    float dir = TAU * h.z;
+    return 0.5 + 0.3 * Swing(Hash4(nearestCell, n, seed + 1u), s, turns)
+         + slope * dot(offset, float2(cos(dir), sin(dir)));
+}
+
+// Splinters, to fray the shards' edges: noise in thin streaks
+float Splinters(float2 uv, uint seed, float s)
+{
+    return 0.12 * (Noise(uv, int2(96, 24), seed, s, 32.0) - 0.5)
+         + 0.12 * (Noise(uv, int2(192, 12), seed + 1u, s, 32.0) - 0.5);
+}
+
+// The veil and the glow at uv, at s from 0 to 1 over the loop
+float2 Fields(float2 uv, float s)
+{
+    // A warp that sways each point around in a little loop, by up to 2
+    // texels across and 3 up and down
+    float2 warp = float2(Noise(uv, int2(8, 4), 1u, s, 16.0), Noise(uv, int2(8, 4), 2u, s, 16.0)) - 0.5;
+    float2 p = uv + float2(4.0, 6.0) / 256.0 * warp;
+
+    // Cells of about 5 by 43 texels and 6 by 51, so 12 by 100 units and 15
+    // by 120 on the walls
+    float veil = Shards(p, int2(48, 6), 10u, s, 16.0, 0.6) + Splinters(p, 11u, s);
+    float glow = Shards(p, int2(40, 5), 20u, s, 12.0, 0.6) + Splinters(p, 21u, s);
+    return float2(veil, glow);
 }
 
 [shader("fragment")]
 float4 fsForceField(float4 pos : SV_Position, float2 uv : TEXCOORD0) : SV_Target
 {
-    float s = forceField.params.x / LOOP; // From 0 to 1 over the loop
+    float2 field = Fields(uv, forceField.params.x / LOOP);
 
-    // A slow warp, so that nothing moves quite in a straight line
-    float2 warp = float2(Noise(uv + float2(s * 2.0, 0.0), int2(3, 8)),
-                         Noise(uv + float2(0.0, s * 3.0), int2(3, 8))) - 0.5;
-    float2 p = uv + 0.03 * warp;
+    // The original's palette: clear, pure blue, azure and cyan, at alphas of
+    // 0.10, 0.20 and 0.16. The thresholds give each about its share of the
+    // original's animation, so its average color and alpha: 12% clear, 28%
+    // blue, 37% azure and 23% cyan.
+    float4 color;
 
-    // Mottled patches drifting upwards, longer than they are wide
-    float mottle = 0.15 * Noise(p + float2(0.0, s * 2.0), int2(8, 4))
-                 + 0.35 * Noise(p + float2(s, s * 4.0), int2(16, 8))
-                 + 0.50 * Noise(p + float2(0.0, s * 6.0), int2(28, 12));
-
-    // Streaks rising faster through them: more noise cells across than up,
-    // though enough up that the tile's repeats up a wall don't line them up
-    // into stripes
-    float streaks = 0.5 * Noise(p + float2(0.0, s * 8.0), int2(24, 8))
-                  + 0.5 * Noise(p + float2(0.0, s * 13.0), int2(36, 10));
-
-    // Faint shards, each pulsing at its own phase
-    float shard = Facets(p, int2(24, 8), forceField.params.x, 2);
-    shard *= 0.5 + 0.5 * sin(TAU * (shard * 5.0 + s * 20.0));
-
-    // The original's palette is pure blue, azure and cyan, at alphas of 0.10,
-    // 0.20 and 0.16, and one in eight of its texels is clear. The veil goes
-    // from blue to azure and the glow to cyan; the veil's thinnest parts are
-    // holes. The thresholds give about the original's share of each, and so
-    // its average color and alpha.
-    float veil = smoothstep(0.39, 0.60, mottle);
-    float glow = saturate(smoothstep(0.53, 0.74, streaks) + 0.2 * shard);
-    float hole = smoothstep(0.29, 0.41, mottle);
-
-    float3 rgb = lerp(float3(0.0, 0.0, 1.0), float3(0.26, 0.44, 1.0), veil);
-    rgb = lerp(rgb, float3(0.51, 0.93, 1.0), glow);
-    float alpha = lerp(lerp(0.10, 0.20, veil), 0.16, glow) * hole;
+    if (field.y > 0.733)
+        color = float4(130.0, 236.0, 255.0, 41.0) / 255.0;
+    else if (field.x > 0.519)
+        color = float4(66.0, 112.0, 255.0, 50.0) / 255.0;
+    else if (field.x > 0.195)
+        color = float4(0.0, 0.0, 255.0, 26.0) / 255.0;
+    else
+        color = float4(0.0, 0.0, 0.0, 0.0);
 
     if (forceField.params.y > 0.5)
-        return float4(rgb * alpha, 1.0);
+        return float4(color.rgb * color.a, 1.0);
 
-    return float4(rgb, alpha);
+    return color;
 }
