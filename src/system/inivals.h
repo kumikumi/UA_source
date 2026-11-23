@@ -36,6 +36,7 @@ public:
     static Common::Ini::Key GfxNewSky;
     static Common::Ini::Key GfxSkyDistance;
     static Common::Ini::Key GfxSkyLength;
+    static Common::Ini::Key GfxRenderer; // "gpu" (SDL_GPU) or "gl" (OpenGL)
     
     static Common::Ini::Key GfxMode;
     static Common::Ini::Key GfxXRes;

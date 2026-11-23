@@ -129,6 +129,82 @@ endif()
 
 find_package(Lua REQUIRED)
 
+# The SDL_GPU renderer's shaders are written in Slang (src/shaders) and
+# compiled when the game is built: to Metal Shading Language for macOS and to
+# SPIR-V for Vulkan. Without slangc, only the OpenGL renderer is built.
+option(UA_GPU_RENDERER "Build the SDL_GPU renderer (needs slangc)" ON)
+
+if(UA_GPU_RENDERER)
+    find_program(SLANGC slangc HINTS "$ENV{HOME}/.local/bin")
+
+    if(NOT SLANGC)
+        message(WARNING "slangc not found: building without the SDL_GPU renderer")
+        set(UA_GPU_RENDERER OFF)
+    endif()
+endif()
+
+if(UA_GPU_RENDERER)
+    set(SHADER_SRC_DIR "${CMAKE_CURRENT_SOURCE_DIR}/shaders")
+    set(SHADER_OUT_DIR "${CMAKE_CURRENT_BINARY_DIR}/shaders")
+    file(MAKE_DIRECTORY "${SHADER_OUT_DIR}")
+
+    set(SHADER_SOURCES
+        ${SHADER_SRC_DIR}/common.slang
+        ${SHADER_SRC_DIR}/composite.slang
+        ${SHADER_SRC_DIR}/world.slang)
+
+    # Entry point, its file and its stage
+    set(SHADER_ENTRIES
+        vsWorld          world     vertex
+        fsWorld          world     fragment
+        fsWorldAlphaTest world     fragment
+        vsQuad           composite vertex
+        fsQuad           composite fragment
+        fsColorEffects   composite fragment)
+
+    set(SHADER_OUTPUTS "")
+    set(SHADER_NAMES "")
+    list(LENGTH SHADER_ENTRIES count)
+    math(EXPR last "${count} - 1")
+
+    foreach(i RANGE 0 ${last} 3)
+        math(EXPR j "${i} + 1")
+        math(EXPR k "${i} + 2")
+        list(GET SHADER_ENTRIES ${i} entry)
+        list(GET SHADER_ENTRIES ${j} file)
+        list(GET SHADER_ENTRIES ${k} stage)
+
+        # SPIR-V 1.0 works with any Vulkan driver; slangc warns (E50011) that
+        # it is old, but the modules validate for Vulkan 1.0.
+        set(options ${SHADER_SRC_DIR}/${file}.slang -entry ${entry} -stage ${stage}
+                    -line-directive-mode none -warnings-disable 50011)
+
+        add_custom_command(
+            OUTPUT ${SHADER_OUT_DIR}/${entry}.metal ${SHADER_OUT_DIR}/${entry}.spv
+            COMMAND ${SLANGC} ${options} -target metal -o ${SHADER_OUT_DIR}/${entry}.metal
+            COMMAND ${SLANGC} ${options} -target spirv -profile spirv_1_0 -o ${SHADER_OUT_DIR}/${entry}.spv
+            DEPENDS ${SHADER_SOURCES}
+            COMMENT "Compiling shader ${entry}"
+            VERBATIM)
+
+        list(APPEND SHADER_OUTPUTS ${SHADER_OUT_DIR}/${entry}.metal ${SHADER_OUT_DIR}/${entry}.spv)
+        list(APPEND SHADER_NAMES ${entry})
+    endforeach()
+
+    string(REPLACE ";" "," SHADER_NAMES "${SHADER_NAMES}")
+
+    add_custom_command(
+        OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/gpu_shaders.cpp
+        COMMAND ${CMAKE_COMMAND} -DOUTPUT=${CMAKE_CURRENT_BINARY_DIR}/gpu_shaders.cpp
+                -DSHADER_DIR=${SHADER_OUT_DIR} -DENTRIES=${SHADER_NAMES}
+                -P ${CMAKE_CURRENT_SOURCE_DIR}/cmake/EmbedShaders.cmake
+        DEPENDS ${SHADER_OUTPUTS} ${CMAKE_CURRENT_SOURCE_DIR}/cmake/EmbedShaders.cmake
+        COMMENT "Embedding the shaders"
+        VERBATIM)
+
+    list(APPEND SOURCES system/gpu_backend.cpp ${CMAKE_CURRENT_BINARY_DIR}/gpu_shaders.cpp)
+endif()
+
 
 if (${CMAKE_SYSTEM_NAME} MATCHES "Windows")
     enable_language("RC")
@@ -168,6 +244,15 @@ target_include_directories(UA_source PUBLIC
 										${VORBISFILE_INCLUDE_DIRS}
 										${OPENAL_INCLUDE_DIR}
 										${LUA_INCLUDE_DIR})
+
+if(UA_GPU_RENDERER)
+    target_compile_definitions(UA_source PRIVATE UA_GPU_RENDERER)
+
+    if(APPLE)
+        # For setting up the window's Metal layer through the Objective-C runtime
+        target_link_libraries(UA_source objc)
+    endif()
+endif()
 
 if(APPLE)
     # Every OpenGL call is marked deprecated on macOS; the warnings bury real ones.

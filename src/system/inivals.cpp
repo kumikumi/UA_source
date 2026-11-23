@@ -27,6 +27,7 @@ Common::Ini::Key IniConf::GfxMaxFps("gfx.maxfps", Common::Ini::KT_DIGIT, (int32_
 Common::Ini::Key IniConf::GfxNewSky("gfx.newsky", Common::Ini::KT_BOOL, false);
 Common::Ini::Key IniConf::GfxSkyDistance("gfx.skydistance", Common::Ini::KT_DIGIT, (int32_t)3000);
 Common::Ini::Key IniConf::GfxSkyLength("gfx.skylength", Common::Ini::KT_DIGIT, (int32_t)500);
+Common::Ini::Key IniConf::GfxRenderer("gfx.renderer", Common::Ini::KT_WORD, std::string("gpu"));
 
 // Gfx Engine
 Common::Ini::Key IniConf::GfxMode("gfx.mode", Common::Ini::KT_DIGIT);
@@ -224,6 +225,7 @@ void IniConf::Init()
         , &GfxNewSky
         , &GfxSkyDistance
         , &GfxSkyLength
+        , &GfxRenderer
 
         , &GfxMode
         , &GfxXRes

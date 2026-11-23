@@ -2,6 +2,9 @@
 
 #include "gfx.h"
 #include "gl_backend.h"
+#ifdef UA_GPU_RENDERER
+#include "gpu_backend.h"
+#endif
 #include "../utils.h"
 #include "common/common.h"
 #include "../ini.h"
@@ -1749,7 +1752,23 @@ void GFXEngine::Init()
 
     // It lives until the program ends: objects destroyed at exit still free
     // their textures and buffers through it.
-    _backend = new GLBackend();
+    _backend = NULL;
+
+#ifdef UA_GPU_RENDERER
+    // gfx.renderer, or -renderer on the command line: "gpu" or "gl"
+    std::string renderer = System::IniConf::GfxRenderer.Get<std::string>();
+    std::vector<std::string> &cmdLine = System::GetCmdLineArray();
+    int32_t arg = System::FindCmdLineArg("-renderer");
+
+    if (arg >= 0 && arg + 1 < (int32_t)cmdLine.size())
+        renderer = cmdLine[arg + 1];
+
+    if (renderer != "gl")
+        _backend = GPUBackend::Create();
+#endif
+
+    if (!_backend)
+        _backend = new GLBackend();
 
     SDL_PropertiesID windowProps = SDL_CreateProperties();
     _backend->PrepareWindow(windowProps);
