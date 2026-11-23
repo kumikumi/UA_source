@@ -490,11 +490,11 @@ bool GFXEngine::SetResVariables(Common::Point res)
     
     _clip = _resolution - Common::Point(1, 1);
 
-    _field_54c = _resolution.x / 2;
-    _field_550 = _resolution.y / 2;
+    _centerX = _resolution.x / 2;
+    _centerY = _resolution.y / 2;
 
-    _field_554 = _resolution.x / 2;
-    _field_558 = _resolution.y / 2;
+    _normScaleX = _resolution.x / 2;
+    _normScaleY = _resolution.y / 2;
     
     return true;
 }
@@ -544,8 +544,8 @@ void GFXEngine::ApplyResolution()
 
 size_t GFXEngine::DrawLineNormalized(const Common::FLine &arg)
 {
-    float tX = _field_554 - 1.0;
-    float tY = _field_558 - 1.0;
+    float tX = _normScaleX - 1.0;
+    float tY = _normScaleY - 1.0;
 
     int y1 = (arg.y1 + 1.0) * tY;
     int y2 = (arg.y2 + 1.0) * tY;
@@ -554,9 +554,9 @@ size_t GFXEngine::DrawLineNormalized(const Common::FLine &arg)
 
     DrawLine(Screen(),
                       Common::Line(x1, y1, x2, y2),
-                      _field_4.r,
-                      _field_4.g,
-                      _field_4.b);
+                      _penColor.r,
+                      _penColor.g,
+                      _penColor.b);
     return 1;
 }
 
@@ -564,11 +564,11 @@ size_t GFXEngine::DrawLineNormalized(const Common::FLine &arg)
 size_t GFXEngine::DrawLineCentered(const Common::Line &arg)
 {
     DrawLine(Screen(),
-                      Common::Line(_field_54c + arg.x1, _field_550 + arg.y1,
-                                   _field_54c + arg.x2, _field_550 + arg.y2),
-                      _field_4.r,
-                      _field_4.g,
-                      _field_4.b );
+                      Common::Line(_centerX + arg.x1, _centerY + arg.y1,
+                                   _centerX + arg.x2, _centerY + arg.y2),
+                      _penColor.r,
+                      _penColor.g,
+                      _penColor.b );
 
     return 1;
 }
@@ -607,29 +607,29 @@ void GFXEngine::DrawClippedLine(Common::Line line, uint8_t r, uint8_t g, uint8_t
 
 size_t GFXEngine::DrawClippedLineNormalized(const Common::FLine &arg)
 {
-    float tX = _field_554 - 1.0;
-    float tY = _field_558 - 1.0;
+    float tX = _normScaleX - 1.0;
+    float tY = _normScaleY - 1.0;
 
     DrawClippedLine (Common::Line( (arg.x1 + 1.0) * tX
                             , (arg.y1 + 1.0) * tY
                             , (arg.x2 + 1.0) * tX
                             , (arg.y2 + 1.0) * tY),
-                        _field_4.r,
-                        _field_4.g,
-                        _field_4.b);
+                        _penColor.r,
+                        _penColor.g,
+                        _penColor.b);
 
     return 1;
 }
 
 size_t GFXEngine::DrawClippedLineCentered(const Common::Line &l)
 {
-    DrawClippedLine( Common::Line( _field_54c + l.x1
-                            , _field_550 + l.y1
-                            , _field_54c + l.x2
-                            , _field_550 + l.y2),
-                        _field_4.r,
-                        _field_4.g,
-                        _field_4.b );
+    DrawClippedLine( Common::Line( _centerX + l.x1
+                            , _centerY + l.y1
+                            , _centerX + l.x2
+                            , _centerY + l.y2),
+                        _penColor.r,
+                        _penColor.g,
+                        _penColor.b );
 
     return 1;
 }
@@ -643,10 +643,10 @@ size_t GFXEngine::DrawBitmapNormalized(TBitmapBlitParams *arg)
     r1.bottom = (arg->srcRect.bottom + 1.0) * (arg->pbitm->height / 2);
 
     Common::Rect r2;
-    r2.left   = _field_554 * (arg->dstRect.left   + 1.0);
-    r2.top    = _field_558 * (arg->dstRect.top    + 1.0);
-    r2.right  = _field_554 * (arg->dstRect.right  + 1.0);
-    r2.bottom = _field_558 * (arg->dstRect.bottom + 1.0);
+    r2.left   = _normScaleX * (arg->dstRect.left   + 1.0);
+    r2.top    = _normScaleY * (arg->dstRect.top    + 1.0);
+    r2.right  = _normScaleX * (arg->dstRect.right  + 1.0);
+    r2.bottom = _normScaleY * (arg->dstRect.bottom + 1.0);
     
     SDL_Rect src = r1;
     SDL_Rect dst = r2;
@@ -665,10 +665,10 @@ size_t GFXEngine::DrawClippedBitmapNormalized(TBitmapBlitParams *arg)
     r1.bottom = (arg->srcRect.bottom + 1.0) * (arg->pbitm->height / 2);
 
     Common::Rect r2;
-    r2.left   = _field_554 * (arg->dstRect.left   + 1.0);
-    r2.top    = _field_558 * (arg->dstRect.top    + 1.0);
-    r2.right  = _field_554 * (arg->dstRect.right  + 1.0);
-    r2.bottom = _field_558 * (arg->dstRect.bottom + 1.0);
+    r2.left   = _normScaleX * (arg->dstRect.left   + 1.0);
+    r2.top    = _normScaleY * (arg->dstRect.top    + 1.0);
+    r2.right  = _normScaleX * (arg->dstRect.right  + 1.0);
+    r2.bottom = _normScaleY * (arg->dstRect.bottom + 1.0);
     
     if ( _clip.IsIntersects(r2) )
     {
@@ -1474,8 +1474,8 @@ void GFXEngine::ProcessDrawSeq(const CmdStream &drawSeq, const CmdIncludes *incl
     int line_width = 0;
     int line_height = 0;
 
-    //if v11 = 0 - clone first column of tile  (count = line_width)
-    //if v11 = 1 - normal copy of tile
+    //if normalCopy = 0 - clone first column of tile  (count = line_width)
+    //if normalCopy = 1 - normal copy of tile
     normalCopy = 1;
 
 
@@ -1522,7 +1522,7 @@ void GFXEngine::ProcessDrawSeq(const CmdStream &drawSeq, const CmdIncludes *incl
                     
             /*srcR.h = cpy_height;
             
-            if (v11)
+            if (normalCopy)
                 srcR.w = cpy_width;
             else
                 srcR.w = 1;
@@ -1727,18 +1727,18 @@ void GFXEngine::ProcessDrawSeq(const CmdStream &drawSeq, const CmdIncludes *incl
 
 void GFXEngine::SetClipNormalized(const Common::FRect &arg)
 {
-    _clip = Common::Rect(   (arg.left + 1.0) * (_field_554 + -1.0),
-                            (arg.top + 1.0) * (_field_558 + -1.0),
-                            (arg.right + 1.0) * (_field_554 + -1.0),
-                            (arg.bottom + 1.0) * (_field_558 + -1.0) );
+    _clip = Common::Rect(   (arg.left + 1.0) * (_normScaleX + -1.0),
+                            (arg.top + 1.0) * (_normScaleY + -1.0),
+                            (arg.right + 1.0) * (_normScaleX + -1.0),
+                            (arg.bottom + 1.0) * (_normScaleY + -1.0) );
     }
 
 void GFXEngine::SetClipCentered(const Common::Rect &arg)
 {
-    _clip = Common::Rect(   _field_54c + arg.left,
-                            _field_550 + arg.top,
-                            _field_54c + arg.right,
-                            _field_550 + arg.bottom );
+    _clip = Common::Rect(   _centerX + arg.left,
+                            _centerY + arg.top,
+                            _centerX + arg.right,
+                            _centerY + arg.bottom );
 }
 
 
@@ -1772,20 +1772,20 @@ void GFXEngine::DrawMaskedBitmapNormalized(TMaskedBlitParams *arg)
                         (arg->srcRect.right + 1.0) * (arg->bitmap->width / 2),
                         (arg->srcRect.bottom + 1.0) * (arg->bitmap->height / 2) );
 
-    Common::Rect dRect( (arg->dstRect.left + 1.0) * _field_554,
-                        (arg->dstRect.top + 1.0) * _field_558,
-                        (arg->dstRect.right + 1.0) * _field_554,
-                        (arg->dstRect.bottom + 1.0) * _field_558 );
+    Common::Rect dRect( (arg->dstRect.left + 1.0) * _normScaleX,
+                        (arg->dstRect.top + 1.0) * _normScaleY,
+                        (arg->dstRect.right + 1.0) * _normScaleX,
+                        (arg->dstRect.bottom + 1.0) * _normScaleY );
 
     BlitScaleMasked(arg->bitmap->swTex, sRect, arg->mask->swTex, arg->maskIndex, Screen(), dRect);
 }
 
 void GFXEngine::SetInverseClipCentered(const Common::Rect &arg)
 {
-    _inverseClip.left = _field_54c + arg.left;
-    _inverseClip.top = _field_550 + arg.top;
-    _inverseClip.right = _field_54c + arg.right;
-    _inverseClip.bottom = _field_550 + arg.bottom;
+    _inverseClip.left = _centerX + arg.left;
+    _inverseClip.top = _centerY + arg.top;
+    _inverseClip.right = _centerX + arg.right;
+    _inverseClip.bottom = _centerY + arg.bottom;
 }
 
 void GFXEngine::BeginFrame()
@@ -2111,7 +2111,7 @@ void GFXEngine::SetPalette(UA_PALETTE &newPal)
 
 void GFXEngine::SetPen(SDL_Color pen)
 {
-    _field_4 = pen;
+    _penColor = pen;
 }
 
 UA_PALETTE *GFXEngine::GetPalette()

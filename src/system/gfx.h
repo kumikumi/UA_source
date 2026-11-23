@@ -746,14 +746,14 @@ public:
     int _fpsMaxSetting = 0; // gfx.maxfps
     
     // Display class
-    SDL_Color _field_4 = {0}; // Color?
+    SDL_Color _penColor = {0}; // For the lines, set with SetPen
     Common::Rect _clip;
     Common::Rect _inverseClip;
     std::array<TileMap *, 256> _tiles;
-    int _field_54c   = 0;
-    int _field_550   = 0;
-    float _field_554 = 0;
-    float _field_558 = 0;
+    int _centerX = 0; // Where the centred 2D coordinates have their origin
+    int _centerY = 0;
+    float _normScaleX = 0; // Pixels per unit of the normalized 2D coordinates, which run from -1 to 1
+    float _normScaleY = 0;
     
     UA_PALETTE _palette;
     
