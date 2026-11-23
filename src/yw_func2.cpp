@@ -124,6 +124,11 @@ void RenderBriefingObject(NC_STACK_ypaworld *yw, TBriefengScreen *brf, TInputSta
     brf->ObjRenderParams.frameTime = struc->Period;
     brf->ObjRenderParams.globTime = brf->CurrTime;
 
+    // The camera lives only for this call, so the view point is put back
+    // after drawing. Left set, the mission's first simulation step would read
+    // it once it is gone.
+    TF::TForm3D *prevView = TF::Engine.GetViewPoint();
+
     TF::TForm3D camera;
     camera.Scale = vec3d(1.0, 1.0, 1.0);
     camera.SclRot = mat3x3::Ident();
@@ -180,6 +185,8 @@ void RenderBriefingObject(NC_STACK_ypaworld *yw, TBriefengScreen *brf, TInputSta
             RenderBriefingVehicle(yw, true, rot, &pos, &brf->ObjRenderParams);
         }
     }
+
+    TF::Engine.SetViewPoint(prevView);
 }
 
 void ypaworld_func158__DrawVehicle(NC_STACK_ypaworld *yw, TBriefengScreen *brf, TInputState *struc)

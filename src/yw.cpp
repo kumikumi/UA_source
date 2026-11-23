@@ -2091,6 +2091,11 @@ void NC_STACK_ypaworld::DeleteLevel()
     while ( !_deadCacheList.empty() )
         _deadCacheList.front()->Delete();
 
+    // A replay's camera was one of the units. The next level's units set the
+    // view point again in its first step, after SaveUnitTransforms.
+    TF::Engine.SetViewPoint(NULL);
+    _prevView = NULL;
+
     ProtosFreeSounds();
 
     FreeSetData(this);
