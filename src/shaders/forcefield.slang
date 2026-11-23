@@ -10,12 +10,13 @@
 // and narrow, so that on the walls they are about the size and shape of the
 // patch's, and they shimmer in the distance about as much, as neither has
 // mipmaps. Nothing moves: as in the original, from one moment to the next
-// some patches are there and others gone. Every shard holds its shape and
-// color for a second or so, then flares up or dies down to a new one within
-// a fraction of a second, each at its own time, and the shards' frayed edges
-// crackle the same way. The texture tiles seamlessly, and the animation
-// repeats every LOOP seconds without a jump: everything changes a whole
-// number of times per loop. See world.slang for the binding rules.
+// some patches are there and others gone. Every couple of seconds, each at
+// its own time, a shard flares up in a tenth of a second to a new shape and
+// color, then fades on its own down through the colors, crumbling, until it
+// is dim or clear; and the shards' frayed edges crackle. The texture tiles
+// seamlessly, and the animation repeats every LOOP seconds without a jump:
+// everything flares a whole number of times per loop. See world.slang for the
+// binding rules.
 
 struct ForceFieldUniforms
 {
@@ -113,19 +114,33 @@ float Noise(float2 uv, int2 n, uint seed, float s, float steps)
     return 0.5 + 0.5 * lerp(lerp(v[0], v[1], f.x), lerp(v[2], v[3], f.x), f.y);
 }
 
-// A shard's value at offset from its cell's point: a level, and a ramp across
-// the cell in a random direction
-float Shard(uint state, float2 offset, float slope)
+// A shard's value at offset from its cell's point, `age` seconds after it
+// flared up: a level, which fades from a random peak down to the lowest, and
+// a ramp across the cell in a random direction. The fade's time constant is
+// from a third to nearly twice `fade` seconds, varying in splinters across
+// the shard, so that it crumbles as it fades.
+float Shard(uint state, float2 uv, float2 offset, float slope, float age, float fade)
 {
+    float peak = float(state & 0xFFFFu) / 65535.0;
+    float level = peak;
+
+    if (age > 0.0)
+    {
+        // Still noise, shifted by the state so that each crumbles differently
+        float2 shift = Rand4(state).zw;
+        float crumble = Noise(uv + shift, int2(96, 24), state, 0.0, 1.0);
+        level = lerp(-1.0, peak, exp(-age / (fade * (0.3 + 1.4 * crumble))));
+    }
+
     float dir = TAU * float(state >> 16) / 65535.0;
-    return 0.5 + 0.3 * Level(state) + slope * dot(offset, float2(cos(dir), sin(dir)));
+    return 0.5 + 0.3 * level + slope * dot(offset, float2(cos(dir), sin(dir)));
 }
 
 // Shards: the cells nearest to n.x by n.y points per tile. Each cell's value
 // ramps across it, so that thresholds cut it along straight lines. Every so
-// often a cell quickly changes to a new level and ramp: a patch appears,
-// changes its shape and color or vanishes.
-float Shards(float2 uv, int2 n, uint seed, float s, float steps, float slope)
+// often a cell quickly flares up to a new level and ramp, then fades: a patch
+// appears, changes its shape and color, dims and vanishes.
+float Shards(float2 uv, int2 n, uint seed, float s, float steps, float slope, float fade)
 {
     float2 p = uv * float2(n);
     int2 cell = int2(floor(p));
@@ -152,10 +167,11 @@ float Shards(float2 uv, int2 n, uint seed, float s, float steps, float slope)
         }
     }
 
-    // A patch flares up quickly and dies down a little more slowly
+    // The flare up to the next state takes the last 0.1 seconds of the step
     Step step = Steps(Key(nearestCell, n, seed + 1u), s, steps);
-    float t = Change(step, Level(step.b) > Level(step.a) ? 0.1 : 0.25);
-    return lerp(Shard(step.a, offset, slope), Shard(step.b, offset, slope), t);
+    float now = Shard(step.a, uv, offset, slope, step.f * step.seconds, fade);
+    float next = Shard(step.b, uv, offset, slope, 0.0, fade);
+    return lerp(now, next, Change(step, 0.1));
 }
 
 // Splinters, to fray the shards' edges: noise in thin streaks
@@ -169,10 +185,10 @@ float Splinters(float2 uv, uint seed, float s)
 float2 Fields(float2 uv, float s)
 {
     // Cells of about 5 by 43 texels and 6 by 51, so 12 by 100 units and 15
-    // by 120 on the walls. The veil's change about every 1.5 seconds, the
-    // glow's, quicker to flicker, about every 0.6.
-    float veil = Shards(uv, int2(48, 6), 10u, s, 48.0, 0.6) + Splinters(uv, 11u, s);
-    float glow = Shards(uv, int2(40, 5), 20u, s, 112.0, 0.6) + Splinters(uv, 21u, s);
+    // by 120 on the walls. Both flare about every 2 seconds; the veil fades
+    // over a couple of seconds, the glow's quicker flashes in under one.
+    float veil = Shards(uv, int2(48, 6), 10u, s, 32.0, 0.6, 2.0) + Splinters(uv, 11u, s);
+    float glow = Shards(uv, int2(40, 5), 20u, s, 32.0, 0.6, 0.8) + Splinters(uv, 21u, s);
     return float2(veil, glow);
 }
 
@@ -187,11 +203,11 @@ float4 fsForceField(float4 pos : SV_Position, float2 uv : TEXCOORD0) : SV_Target
     // blue, 37% azure and 23% cyan.
     float4 color;
 
-    if (field.y > 0.707)
+    if (field.y > 0.545)
         color = float4(130.0, 236.0, 255.0, 41.0) / 255.0;
-    else if (field.x > 0.518)
+    else if (field.x > 0.479)
         color = float4(66.0, 112.0, 255.0, 50.0) / 255.0;
-    else if (field.x > 0.197)
+    else if (field.x > 0.228)
         color = float4(0.0, 0.0, 255.0, 26.0) / 255.0;
     else
         color = float4(0.0, 0.0, 0.0, 0.0);
