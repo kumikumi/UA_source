@@ -626,6 +626,8 @@ int ProcessNextFrame()
         System::SetReleativeMouse(true);
     else
         System::SetReleativeMouse(false);
+
+    System::SetTextInput( GameScreenMode == GAME_SCREEN_MODE_MENU && userdata.IsTypingText() );
     
     if ( GameScreenMode == GAME_SCREEN_MODE_MENU )
     {

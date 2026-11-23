@@ -809,6 +809,14 @@ public:
         return (GFXFlags & World::GFX_FLAG_WINDOWED) != 0;
     }
 
+    // The player name on the load/save screen, or the name, address or chat
+    // line on the network screens, takes typed characters.
+    bool IsTypingText() const
+    {
+        return (EnvMode == ENVMODE_SELPLAYER && diskScreenMode) ||
+               (EnvMode == ENVMODE_NETPLAY && nInputMode);
+    }
+
     bool IsVsyncFlag()
     {
         return (GFXFlags & World::GFX_FLAG_VSYNC) != 0;

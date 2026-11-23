@@ -265,9 +265,6 @@ void Init(bool oldGL)
     SDL_GetWindowSizeInPixels(window, &drawW, &drawH);
     winRes = ResRatio(drawW, drawH);
 
-    // SDL2 delivered text input events from the start; SDL3 only once asked.
-    SDL_StartTextInput(window);
-
     cont = SDL_GL_CreateContext(window);
 
     if (!cont && !oldGL)
@@ -414,6 +411,17 @@ void SetReleativeMouse(bool mode)
 
         curRelMouse = mode;
     }
+}
+
+void SetTextInput(bool on)
+{
+    if (!window || on == SDL_TextInputActive(window))
+        return;
+
+    if (on)
+        SDL_StartTextInput(window);
+    else
+        SDL_StopTextInput(window);
 }
 
 void EventsAddHandler(SDL_EventFilter func, bool first)

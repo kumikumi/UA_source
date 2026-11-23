@@ -51,6 +51,10 @@ namespace System
     
     
     void SetReleativeMouse(bool mode);
+
+    // Typed characters only arrive while text input is on. Off, letters are
+    // just keys: macOS, for one, opens its accent menu when one is held down.
+    void SetTextInput(bool on);
     
     TTF_Font *LoadFont(const std::string &fontname, int height);
     
