@@ -205,11 +205,6 @@ int yw_write_video(FSMgr::FileHandle *fil, UserData *usr)
     else
         fil->printf("    heaven = no\n");
 
-    if ( usr->GFXFlags & World::GFX_FLAG_SOFTMOUSE )
-        fil->printf("    softmouse = yes\n");
-    else
-        fil->printf("    softmouse = no\n");
-
     if ( usr->enemyIndicator )
         fil->printf("    enemyindicator = yes\n");
     else

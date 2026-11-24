@@ -312,13 +312,6 @@ struct ColorFx
     ColorFx(int id, float pwr) : Id(id), Pwr(pwr) {};
 };
 
-// TODO(cleanup): bitm is written but never read; SetCursor only takes the id.
-struct TCursorParams
-{
-    ResBitmap *bitm = NULL;
-    int pointer_id = 0;
-};
-
 struct windd_dlgBox
 {
     const char *title;
@@ -532,7 +525,6 @@ public:
     void MeshFreeVBO(TMesh *);
     
 
-    virtual void setWDD_cursor(int arg);
     virtual void setWDD_disLowRes(int arg);
     virtual void setWDD_16bitTex(int arg);
     virtual void setWDD_drawPrim(int arg);
@@ -650,7 +642,6 @@ private:
     RenderBackend *_backend = NULL;
 
 public:
-    int _forcesoftcursor;
     int _txt16bit;
     int _use_simple_d3d;
     int _disable_lowres;

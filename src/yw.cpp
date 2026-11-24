@@ -265,7 +265,7 @@ size_t NC_STACK_ypaworld::Init(IDVList &stak)
 
 size_t NC_STACK_ypaworld::Deinit()
 {
-    FreeGameDataCursors();
+    GFX::Engine.SetCursor(0, 0);
     dprintf("MAKE ME %s\n","NC_STACK_ypaworld::Deinit");
     return NC_STACK_nucleus::Deinit();
 }
@@ -3448,82 +3448,82 @@ bool NC_STACK_ypaworld::CreateVideoControls()
 
                                                 if ( _GameShell->video_button->Add(&btn_64arg) )
                                                 {
+                                                    btn_64arg.width = checkBoxWidth;
                                                     btn_64arg.tileset_down = 19;
                                                     btn_64arg.tileset_up = 18;
                                                     btn_64arg.button_type = NC_STACK_button::TYPE_CHECKBX;
-                                                    btn_64arg.xpos = 0;
                                                     btn_64arg.tileset_disabled = 30;
-                                                    btn_64arg.width = checkBoxWidth;
+                                                    btn_64arg.downCode = 1130;
+                                                    btn_64arg.pressedCode = 0;
+                                                    btn_64arg.flags = 0;
                                                     btn_64arg.caption = "g";
                                                     btn_64arg.caption2 = "g";
-                                                    btn_64arg.pressedCode = 0;
+                                                    btn_64arg.upCode = 1131;
+                                                    btn_64arg.button_id = 1166;
+                                                    btn_64arg.xpos = 3 * buttonsSpace + checkBoxWidth + captionWidth;
                                                     btn_64arg.ypos = 8 * (_fontH + vertMenuSpace);
-                                                    btn_64arg.downCode = 1132;
-                                                    btn_64arg.upCode = 1133;
-                                                    btn_64arg.button_id = 1165;
-                                                    btn_64arg.flags = 0;
 
                                                     if ( _GameShell->video_button->Add(&btn_64arg) )
                                                     {
                                                         btn_64arg.tileset_down = 16;
                                                         btn_64arg.tileset_up = 16;
                                                         btn_64arg.tileset_disabled = 16;
-                                                        btn_64arg.width = captionWidth;
-                                                        btn_64arg.xpos = checkBoxWidth + buttonsSpace;
                                                         btn_64arg.button_type = NC_STACK_button::TYPE_CAPTION;
-                                                        btn_64arg.caption = Locale::Text::Dialogs(Locale::DLG_S_SWMOUSE);
+                                                        btn_64arg.xpos = 4 * buttonsSpace + captionWidth + 2 * checkBoxWidth;
+                                                        btn_64arg.width = captionWidth;
+                                                        btn_64arg.caption = Locale::Text::Advanced(Locale::ADV_WINDOWEDMODE);
+                                                        btn_64arg.flags = NC_STACK_button::FLAG_TEXT;
                                                         btn_64arg.caption2.clear();
                                                         btn_64arg.downCode = 0;
                                                         btn_64arg.upCode = 0;
                                                         btn_64arg.pressedCode = 0;
                                                         btn_64arg.button_id = 2;
-                                                        btn_64arg.flags = NC_STACK_button::FLAG_TEXT;
 
                                                         if ( _GameShell->video_button->Add(&btn_64arg) )
                                                         {
-                                                            btn_64arg.width = checkBoxWidth;
-                                                            btn_64arg.tileset_down = 19;
-                                                            btn_64arg.tileset_up = 18;
-                                                            btn_64arg.button_type = NC_STACK_button::TYPE_CHECKBX;
-                                                            btn_64arg.tileset_disabled = 30;
-                                                            btn_64arg.downCode = 1130;
+                                                            btn_64arg.button_type = NC_STACK_button::TYPE_CAPTION;
+                                                            btn_64arg.xpos = checkBoxWidth + buttonsSpace;
+                                                            btn_64arg.ypos = 9 * (vertMenuSpace + _fontH);
+                                                            btn_64arg.width = captionWidth;
+                                                            btn_64arg.caption = Locale::Text::Advanced(Locale::ADV_USE16BIT);
+                                                            btn_64arg.flags = NC_STACK_button::FLAG_TEXT;
+                                                            btn_64arg.caption2.clear();
+                                                            btn_64arg.downCode = 0;
+                                                            btn_64arg.upCode = 0;
                                                             btn_64arg.pressedCode = 0;
-                                                            btn_64arg.flags = 0;
-                                                            btn_64arg.caption = "g";
-                                                            btn_64arg.caption2 = "g";
-                                                            btn_64arg.upCode = 1131;
-                                                            btn_64arg.button_id = 1166;
-                                                            btn_64arg.xpos = 3 * buttonsSpace + checkBoxWidth + captionWidth;
+                                                            btn_64arg.button_id = 0;
 
                                                             if ( _GameShell->video_button->Add(&btn_64arg) )
                                                             {
-                                                                btn_64arg.tileset_down = 16;
-                                                                btn_64arg.tileset_up = 16;
-                                                                btn_64arg.tileset_disabled = 16;
-                                                                btn_64arg.button_type = NC_STACK_button::TYPE_CAPTION;
-                                                                btn_64arg.xpos = 4 * buttonsSpace + captionWidth + 2 * checkBoxWidth;
-                                                                btn_64arg.width = captionWidth;
-                                                                btn_64arg.caption = Locale::Text::Advanced(Locale::ADV_WINDOWEDMODE);
-                                                                btn_64arg.flags = NC_STACK_button::FLAG_TEXT;
-                                                                btn_64arg.caption2.clear();
-                                                                btn_64arg.downCode = 0;
-                                                                btn_64arg.upCode = 0;
+                                                                btn_64arg.width = checkBoxWidth;
+                                                                btn_64arg.tileset_down = 19;
+                                                                btn_64arg.tileset_up = 18;
+                                                                btn_64arg.button_type = NC_STACK_button::TYPE_CHECKBX;
                                                                 btn_64arg.pressedCode = 0;
-                                                                btn_64arg.button_id = 2;
+                                                                btn_64arg.flags = 0;
+                                                                btn_64arg.tileset_disabled = 30;
+                                                                btn_64arg.xpos = 0;
+                                                                btn_64arg.button_id = 1150;
+                                                                btn_64arg.caption = "g";
+                                                                btn_64arg.caption2 = "g";
+                                                                btn_64arg.downCode = 1113;
+                                                                btn_64arg.upCode = 1114;
 
                                                                 if ( _GameShell->video_button->Add(&btn_64arg) )
                                                                 {
+                                                                    btn_64arg.tileset_down = 16;
+                                                                    btn_64arg.tileset_up = 16;
+                                                                    btn_64arg.tileset_disabled = 16;
                                                                     btn_64arg.button_type = NC_STACK_button::TYPE_CAPTION;
-                                                                    btn_64arg.xpos = checkBoxWidth + buttonsSpace;
-                                                                    btn_64arg.ypos = 9 * (vertMenuSpace + _fontH);
+                                                                    btn_64arg.xpos = captionWidth + 2 * checkBoxWidth + 4 * buttonsSpace;
                                                                     btn_64arg.width = captionWidth;
-                                                                    btn_64arg.caption = Locale::Text::Advanced(Locale::ADV_USE16BIT);
-                                                                    btn_64arg.flags = NC_STACK_button::FLAG_TEXT;
+                                                                    btn_64arg.caption = Locale::Text::Dialogs(Locale::DLG_S_ENCDAUD);
                                                                     btn_64arg.caption2.clear();
                                                                     btn_64arg.downCode = 0;
                                                                     btn_64arg.upCode = 0;
                                                                     btn_64arg.pressedCode = 0;
                                                                     btn_64arg.button_id = 0;
+                                                                    btn_64arg.flags = NC_STACK_button::FLAG_TEXT;
 
                                                                     if ( _GameShell->video_button->Add(&btn_64arg) )
                                                                     {
@@ -3531,80 +3531,80 @@ bool NC_STACK_ypaworld::CreateVideoControls()
                                                                         btn_64arg.tileset_down = 19;
                                                                         btn_64arg.tileset_up = 18;
                                                                         btn_64arg.button_type = NC_STACK_button::TYPE_CHECKBX;
+                                                                        btn_64arg.tileset_disabled = 30;
+                                                                        btn_64arg.downCode = 1128;
                                                                         btn_64arg.pressedCode = 0;
                                                                         btn_64arg.flags = 0;
-                                                                        btn_64arg.tileset_disabled = 30;
-                                                                        btn_64arg.xpos = 0;
-                                                                        btn_64arg.button_id = 1150;
                                                                         btn_64arg.caption = "g";
                                                                         btn_64arg.caption2 = "g";
-                                                                        btn_64arg.downCode = 1113;
-                                                                        btn_64arg.upCode = 1114;
+                                                                        btn_64arg.upCode = 1129;
+                                                                        btn_64arg.button_id = 1164;
+                                                                        btn_64arg.xpos = 3 * buttonsSpace + checkBoxWidth + captionWidth;
 
                                                                         if ( _GameShell->video_button->Add(&btn_64arg) )
                                                                         {
-                                                                            btn_64arg.tileset_down = 16;
-                                                                            btn_64arg.tileset_up = 16;
-                                                                            btn_64arg.tileset_disabled = 16;
-                                                                            btn_64arg.button_type = NC_STACK_button::TYPE_CAPTION;
-                                                                            btn_64arg.xpos = captionWidth + 2 * checkBoxWidth + 4 * buttonsSpace;
-                                                                            btn_64arg.width = captionWidth;
-                                                                            btn_64arg.caption = Locale::Text::Dialogs(Locale::DLG_S_ENCDAUD);
-                                                                            btn_64arg.caption2.clear();
-                                                                            btn_64arg.downCode = 0;
-                                                                            btn_64arg.upCode = 0;
+                                                                            btn_64arg.tileset_down = 19;
+                                                                            btn_64arg.tileset_disabled = 30;
+                                                                            btn_64arg.tileset_up = 18;
+                                                                            btn_64arg.xpos = 0;
+                                                                            btn_64arg.button_type = NC_STACK_button::TYPE_CHECKBX;
+                                                                            btn_64arg.width = checkBoxWidth;
+                                                                            btn_64arg.caption = "g";
+                                                                            btn_64arg.caption2 = "g";
+                                                                            btn_64arg.ypos = 10 * (vertMenuSpace + _fontH);
+                                                                            btn_64arg.downCode = 1126;
                                                                             btn_64arg.pressedCode = 0;
-                                                                            btn_64arg.button_id = 0;
-                                                                            btn_64arg.flags = NC_STACK_button::FLAG_TEXT;
+                                                                            btn_64arg.button_id = 1163;
+                                                                            btn_64arg.upCode = 1127;
+                                                                            btn_64arg.flags = 0;
 
                                                                             if ( _GameShell->video_button->Add(&btn_64arg) )
                                                                             {
-                                                                                btn_64arg.width = checkBoxWidth;
-                                                                                btn_64arg.tileset_down = 19;
-                                                                                btn_64arg.tileset_up = 18;
-                                                                                btn_64arg.button_type = NC_STACK_button::TYPE_CHECKBX;
-                                                                                btn_64arg.tileset_disabled = 30;
-                                                                                btn_64arg.downCode = 1128;
+                                                                                btn_64arg.tileset_down = 16;
+                                                                                btn_64arg.tileset_up = 16;
+                                                                                btn_64arg.tileset_disabled = 16;
+                                                                                btn_64arg.button_type = NC_STACK_button::TYPE_CAPTION;
+                                                                                btn_64arg.xpos = checkBoxWidth + buttonsSpace;
+                                                                                btn_64arg.width = captionWidth - checkBoxWidth;
+                                                                                btn_64arg.caption = Locale::Text::Dialogs(Locale::DLG_S_ENMYINDIC);
+                                                                                btn_64arg.caption2.clear();
+                                                                                btn_64arg.downCode = 0;
+                                                                                btn_64arg.upCode = 0;
                                                                                 btn_64arg.pressedCode = 0;
-                                                                                btn_64arg.flags = 0;
-                                                                                btn_64arg.caption = "g";
-                                                                                btn_64arg.caption2 = "g";
-                                                                                btn_64arg.upCode = 1129;
-                                                                                btn_64arg.button_id = 1164;
-                                                                                btn_64arg.xpos = 3 * buttonsSpace + checkBoxWidth + captionWidth;
+                                                                                btn_64arg.button_id = 0;
+                                                                                btn_64arg.flags = NC_STACK_button::FLAG_TEXT;
 
                                                                                 if ( _GameShell->video_button->Add(&btn_64arg) )
                                                                                 {
-                                                                                    btn_64arg.tileset_down = 19;
-                                                                                    btn_64arg.tileset_disabled = 30;
-                                                                                    btn_64arg.tileset_up = 18;
-                                                                                    btn_64arg.xpos = 0;
-                                                                                    btn_64arg.button_type = NC_STACK_button::TYPE_CHECKBX;
-                                                                                    btn_64arg.width = checkBoxWidth;
-                                                                                    btn_64arg.caption = "g";
-                                                                                    btn_64arg.caption2 = "g";
-                                                                                    btn_64arg.ypos = 10 * (vertMenuSpace + _fontH);
-                                                                                    btn_64arg.downCode = 1126;
+                                                                                    btn_64arg.tileset_down = 16;
+                                                                                    btn_64arg.tileset_up = 16;
+                                                                                    btn_64arg.tileset_disabled = 16;
+                                                                                    btn_64arg.button_type = NC_STACK_button::TYPE_CAPTION;
+                                                                                    btn_64arg.xpos = captionWidth + 2 * checkBoxWidth + 4 * buttonsSpace;
+                                                                                    btn_64arg.width = captionWidth;
+                                                                                    btn_64arg.caption = Locale::Text::Dialogs(Locale::DLG_S_INVERT);
+                                                                                    btn_64arg.caption2.clear();
+                                                                                    btn_64arg.downCode = 0;
+                                                                                    btn_64arg.upCode = 0;
                                                                                     btn_64arg.pressedCode = 0;
-                                                                                    btn_64arg.button_id = 1163;
-                                                                                    btn_64arg.upCode = 1127;
-                                                                                    btn_64arg.flags = 0;
+                                                                                    btn_64arg.button_id = 0;
+                                                                                    btn_64arg.flags = NC_STACK_button::FLAG_TEXT;
 
                                                                                     if ( _GameShell->video_button->Add(&btn_64arg) )
                                                                                     {
-                                                                                        btn_64arg.tileset_down = 16;
-                                                                                        btn_64arg.tileset_up = 16;
-                                                                                        btn_64arg.tileset_disabled = 16;
-                                                                                        btn_64arg.button_type = NC_STACK_button::TYPE_CAPTION;
-                                                                                        btn_64arg.xpos = checkBoxWidth + buttonsSpace;
-                                                                                        btn_64arg.width = captionWidth - checkBoxWidth;
-                                                                                        btn_64arg.caption = Locale::Text::Dialogs(Locale::DLG_S_ENMYINDIC);
-                                                                                        btn_64arg.caption2.clear();
-                                                                                        btn_64arg.downCode = 0;
-                                                                                        btn_64arg.upCode = 0;
+                                                                                        btn_64arg.width = checkBoxWidth;
+                                                                                        btn_64arg.tileset_down = 19;
+                                                                                        btn_64arg.tileset_up = 18;
                                                                                         btn_64arg.pressedCode = 0;
-                                                                                        btn_64arg.button_id = 0;
-                                                                                        btn_64arg.flags = NC_STACK_button::FLAG_TEXT;
+                                                                                        btn_64arg.flags = 0;
+                                                                                        btn_64arg.caption = "g";
+                                                                                        btn_64arg.caption2 = "g";
+                                                                                        btn_64arg.tileset_disabled = 30;
+                                                                                        btn_64arg.button_id = 1151;
+                                                                                        btn_64arg.xpos = 3 * buttonsSpace + checkBoxWidth + captionWidth;
+                                                                                        btn_64arg.downCode = 1112;
+                                                                                        btn_64arg.button_type = NC_STACK_button::TYPE_CHECKBX;
+                                                                                        btn_64arg.upCode = 1111;
 
                                                                                         if ( _GameShell->video_button->Add(&btn_64arg) )
                                                                                         {
@@ -3612,31 +3612,39 @@ bool NC_STACK_ypaworld::CreateVideoControls()
                                                                                             btn_64arg.tileset_up = 16;
                                                                                             btn_64arg.tileset_disabled = 16;
                                                                                             btn_64arg.button_type = NC_STACK_button::TYPE_CAPTION;
-                                                                                            btn_64arg.xpos = captionWidth + 2 * checkBoxWidth + 4 * buttonsSpace;
-                                                                                            btn_64arg.width = captionWidth;
-                                                                                            btn_64arg.caption = Locale::Text::Dialogs(Locale::DLG_S_INVERT);
+                                                                                            btn_64arg.xpos = 0;
+                                                                                            btn_64arg.ypos = 11 * (_fontH + vertMenuSpace);
+                                                                                            btn_64arg.width = (videoMenuRowWidth - 5 * buttonsSpace) * 0.3;
+                                                                                            btn_64arg.caption = Locale::Text::Dialogs(Locale::DLG_S_DESTRFX);
                                                                                             btn_64arg.caption2.clear();
                                                                                             btn_64arg.downCode = 0;
                                                                                             btn_64arg.upCode = 0;
                                                                                             btn_64arg.pressedCode = 0;
-                                                                                            btn_64arg.button_id = 0;
+                                                                                            btn_64arg.button_id = 2;
                                                                                             btn_64arg.flags = NC_STACK_button::FLAG_TEXT;
 
                                                                                             if ( _GameShell->video_button->Add(&btn_64arg) )
                                                                                             {
-                                                                                                btn_64arg.width = checkBoxWidth;
-                                                                                                btn_64arg.tileset_down = 19;
+                                                                                                NC_STACK_button::Slider slider;
+
+                                                                                                slider.value = 8;
+                                                                                                slider.max = 16;
+                                                                                                slider.min = 0;
+
+                                                                                                btn_64arg.caption2.clear();
+                                                                                                btn_64arg.tileset_down = 18;
                                                                                                 btn_64arg.tileset_up = 18;
-                                                                                                btn_64arg.pressedCode = 0;
-                                                                                                btn_64arg.flags = 0;
-                                                                                                btn_64arg.caption = "g";
-                                                                                                btn_64arg.caption2 = "g";
                                                                                                 btn_64arg.tileset_disabled = 30;
-                                                                                                btn_64arg.button_id = 1151;
-                                                                                                btn_64arg.xpos = 3 * buttonsSpace + checkBoxWidth + captionWidth;
-                                                                                                btn_64arg.downCode = 1112;
-                                                                                                btn_64arg.button_type = NC_STACK_button::TYPE_CHECKBX;
-                                                                                                btn_64arg.upCode = 1111;
+                                                                                                btn_64arg.button_type = NC_STACK_button::TYPE_SLIDER;
+                                                                                                btn_64arg.pressedCode = 1110;
+                                                                                                btn_64arg.button_id = 1159;
+                                                                                                btn_64arg.xpos = buttonsSpace + (videoMenuRowWidth - 5 * buttonsSpace) * 0.3;
+                                                                                                btn_64arg.caption = " ";
+                                                                                                btn_64arg.downCode = 1108;
+                                                                                                btn_64arg.flags = 0;
+                                                                                                btn_64arg.slider = &slider;
+                                                                                                btn_64arg.upCode = 1109;
+                                                                                                btn_64arg.width = (videoMenuRowWidth - 5 * buttonsSpace) * 0.55;
 
                                                                                                 if ( _GameShell->video_button->Add(&btn_64arg) )
                                                                                                 {
@@ -3644,208 +3652,166 @@ bool NC_STACK_ypaworld::CreateVideoControls()
                                                                                                     btn_64arg.tileset_up = 16;
                                                                                                     btn_64arg.tileset_disabled = 16;
                                                                                                     btn_64arg.button_type = NC_STACK_button::TYPE_CAPTION;
-                                                                                                    btn_64arg.xpos = 0;
-                                                                                                    btn_64arg.ypos = 11 * (_fontH + vertMenuSpace);
-                                                                                                    btn_64arg.width = (videoMenuRowWidth - 5 * buttonsSpace) * 0.3;
-                                                                                                    btn_64arg.caption = Locale::Text::Dialogs(Locale::DLG_S_DESTRFX);
                                                                                                     btn_64arg.caption2.clear();
+                                                                                                    btn_64arg.xpos = buttonsSpace + (videoMenuRowWidth - 5 * buttonsSpace) * 0.85;
                                                                                                     btn_64arg.downCode = 0;
                                                                                                     btn_64arg.upCode = 0;
                                                                                                     btn_64arg.pressedCode = 0;
-                                                                                                    btn_64arg.button_id = 2;
-                                                                                                    btn_64arg.flags = NC_STACK_button::FLAG_TEXT;
+                                                                                                    btn_64arg.width = (videoMenuRowWidth - 5 * buttonsSpace) * 0.15;
+                                                                                                    btn_64arg.button_id = 1158;
+                                                                                                    btn_64arg.caption = " 4";
+                                                                                                    btn_64arg.flags = NC_STACK_button::FLAG_BORDER | NC_STACK_button::FLAG_CENTER | NC_STACK_button::FLAG_TEXT;
 
                                                                                                     if ( _GameShell->video_button->Add(&btn_64arg) )
                                                                                                     {
-                                                                                                        NC_STACK_button::Slider slider;
-
-                                                                                                        slider.value = 8;
-                                                                                                        slider.max = 16;
-                                                                                                        slider.min = 0;
-
+                                                                                                        btn_64arg.button_type = NC_STACK_button::TYPE_CAPTION;
+                                                                                                        btn_64arg.xpos = 0;
+                                                                                                        btn_64arg.ypos = 12 * (vertMenuSpace + _fontH);
+                                                                                                        btn_64arg.width = (videoMenuRowWidth - 5 * buttonsSpace) * 0.3;
+                                                                                                        btn_64arg.caption = Locale::Text::Dialogs(Locale::DLG_S_FXVOL);
                                                                                                         btn_64arg.caption2.clear();
-                                                                                                        btn_64arg.tileset_down = 18;
-                                                                                                        btn_64arg.tileset_up = 18;
-                                                                                                        btn_64arg.tileset_disabled = 30;
-                                                                                                        btn_64arg.button_type = NC_STACK_button::TYPE_SLIDER;
-                                                                                                        btn_64arg.pressedCode = 1110;
-                                                                                                        btn_64arg.button_id = 1159;
-                                                                                                        btn_64arg.xpos = buttonsSpace + (videoMenuRowWidth - 5 * buttonsSpace) * 0.3;
-                                                                                                        btn_64arg.caption = " ";
-                                                                                                        btn_64arg.downCode = 1108;
-                                                                                                        btn_64arg.flags = 0;
-                                                                                                        btn_64arg.slider = &slider;
-                                                                                                        btn_64arg.upCode = 1109;
-                                                                                                        btn_64arg.width = (videoMenuRowWidth - 5 * buttonsSpace) * 0.55;
+                                                                                                        btn_64arg.downCode = 0;
+                                                                                                        btn_64arg.upCode = 0;
+                                                                                                        btn_64arg.pressedCode = 0;
+                                                                                                        btn_64arg.button_id = 2;
+                                                                                                        btn_64arg.flags = NC_STACK_button::FLAG_TEXT;
 
                                                                                                         if ( _GameShell->video_button->Add(&btn_64arg) )
                                                                                                         {
-                                                                                                            btn_64arg.tileset_down = 16;
-                                                                                                            btn_64arg.tileset_up = 16;
-                                                                                                            btn_64arg.tileset_disabled = 16;
-                                                                                                            btn_64arg.button_type = NC_STACK_button::TYPE_CAPTION;
+                                                                                                            btn_64arg.width = (videoMenuRowWidth - 5 * buttonsSpace) * 0.55;
+
+                                                                                                            slider.min = 1;
+                                                                                                            slider.max = 127;
+                                                                                                            slider.value = 100;
+
+                                                                                                            btn_64arg.tileset_disabled = 30;
+                                                                                                            btn_64arg.tileset_down = 18;
+                                                                                                            btn_64arg.tileset_up = 18;
+                                                                                                            btn_64arg.button_type = NC_STACK_button::TYPE_SLIDER;
                                                                                                             btn_64arg.caption2.clear();
-                                                                                                            btn_64arg.xpos = buttonsSpace + (videoMenuRowWidth - 5 * buttonsSpace) * 0.85;
-                                                                                                            btn_64arg.downCode = 0;
-                                                                                                            btn_64arg.upCode = 0;
-                                                                                                            btn_64arg.pressedCode = 0;
-                                                                                                            btn_64arg.width = (videoMenuRowWidth - 5 * buttonsSpace) * 0.15;
-                                                                                                            btn_64arg.button_id = 1158;
-                                                                                                            btn_64arg.caption = " 4";
-                                                                                                            btn_64arg.flags = NC_STACK_button::FLAG_BORDER | NC_STACK_button::FLAG_CENTER | NC_STACK_button::FLAG_TEXT;
+                                                                                                            btn_64arg.button_id = 1152;
+                                                                                                            btn_64arg.xpos = buttonsSpace + (videoMenuRowWidth - 5 * buttonsSpace) * 0.3;
+                                                                                                            btn_64arg.caption = " ";
+                                                                                                            btn_64arg.downCode = 1115;
+                                                                                                            btn_64arg.upCode = 1117;
+                                                                                                            btn_64arg.slider = &slider;
+                                                                                                            btn_64arg.pressedCode = 1116;
+                                                                                                            btn_64arg.flags = 0;
 
                                                                                                             if ( _GameShell->video_button->Add(&btn_64arg) )
                                                                                                             {
                                                                                                                 btn_64arg.button_type = NC_STACK_button::TYPE_CAPTION;
-                                                                                                                btn_64arg.xpos = 0;
-                                                                                                                btn_64arg.ypos = 12 * (vertMenuSpace + _fontH);
-                                                                                                                btn_64arg.width = (videoMenuRowWidth - 5 * buttonsSpace) * 0.3;
-                                                                                                                btn_64arg.caption = Locale::Text::Dialogs(Locale::DLG_S_FXVOL);
+                                                                                                                btn_64arg.tileset_down = 16;
+                                                                                                                btn_64arg.tileset_up = 16;
+                                                                                                                btn_64arg.tileset_disabled = 16;
+                                                                                                                btn_64arg.caption = "4";
+                                                                                                                btn_64arg.button_id = 1153;
                                                                                                                 btn_64arg.caption2.clear();
+                                                                                                                btn_64arg.xpos = (2 * buttonsSpace) + (videoMenuRowWidth - 5 * buttonsSpace) * 0.85;
+                                                                                                                btn_64arg.width = (videoMenuRowWidth - 5 * buttonsSpace) * 0.15;
                                                                                                                 btn_64arg.downCode = 0;
+                                                                                                                btn_64arg.flags = NC_STACK_button::FLAG_CENTER | NC_STACK_button::FLAG_TEXT;
                                                                                                                 btn_64arg.upCode = 0;
                                                                                                                 btn_64arg.pressedCode = 0;
-                                                                                                                btn_64arg.button_id = 2;
-                                                                                                                btn_64arg.flags = NC_STACK_button::FLAG_TEXT;
 
                                                                                                                 if ( _GameShell->video_button->Add(&btn_64arg) )
                                                                                                                 {
-                                                                                                                    btn_64arg.width = (videoMenuRowWidth - 5 * buttonsSpace) * 0.55;
-
-                                                                                                                    slider.min = 1;
-                                                                                                                    slider.max = 127;
-                                                                                                                    slider.value = 100;
-
-                                                                                                                    btn_64arg.tileset_disabled = 30;
-                                                                                                                    btn_64arg.tileset_down = 18;
-                                                                                                                    btn_64arg.tileset_up = 18;
-                                                                                                                    btn_64arg.button_type = NC_STACK_button::TYPE_SLIDER;
+                                                                                                                    btn_64arg.button_type = NC_STACK_button::TYPE_CAPTION;
+                                                                                                                    btn_64arg.xpos = 0;
+                                                                                                                    btn_64arg.width = (videoMenuRowWidth - 5 * buttonsSpace) * 0.3;
+                                                                                                                    btn_64arg.ypos = 13 * (vertMenuSpace + _fontH);
+                                                                                                                    btn_64arg.caption = Locale::Text::Dialogs(Locale::DLG_S_CDVOL);
                                                                                                                     btn_64arg.caption2.clear();
-                                                                                                                    btn_64arg.button_id = 1152;
-                                                                                                                    btn_64arg.xpos = buttonsSpace + (videoMenuRowWidth - 5 * buttonsSpace) * 0.3;
-                                                                                                                    btn_64arg.caption = " ";
-                                                                                                                    btn_64arg.downCode = 1115;
-                                                                                                                    btn_64arg.upCode = 1117;
-                                                                                                                    btn_64arg.slider = &slider;
-                                                                                                                    btn_64arg.pressedCode = 1116;
-                                                                                                                    btn_64arg.flags = 0;
+                                                                                                                    btn_64arg.downCode = 0;
+                                                                                                                    btn_64arg.upCode = 0;
+                                                                                                                    btn_64arg.pressedCode = 0;
+                                                                                                                    btn_64arg.flags = NC_STACK_button::FLAG_TEXT;
+                                                                                                                    btn_64arg.button_id = 2;
 
                                                                                                                     if ( _GameShell->video_button->Add(&btn_64arg) )
                                                                                                                     {
-                                                                                                                        btn_64arg.button_type = NC_STACK_button::TYPE_CAPTION;
-                                                                                                                        btn_64arg.tileset_down = 16;
-                                                                                                                        btn_64arg.tileset_up = 16;
-                                                                                                                        btn_64arg.tileset_disabled = 16;
-                                                                                                                        btn_64arg.caption = "4";
-                                                                                                                        btn_64arg.button_id = 1153;
+                                                                                                                        btn_64arg.width = (videoMenuRowWidth - 5 * buttonsSpace) * 0.55;
+                                                                                                                        slider.min = 1;
+                                                                                                                        slider.max = 127;
+                                                                                                                        slider.value = 100;
+
+                                                                                                                        btn_64arg.tileset_down = 18;
+                                                                                                                        btn_64arg.tileset_up = 18;
+                                                                                                                        btn_64arg.upCode = 1120;
+                                                                                                                        btn_64arg.tileset_disabled = 30;
+                                                                                                                        btn_64arg.button_type = NC_STACK_button::TYPE_SLIDER;
                                                                                                                         btn_64arg.caption2.clear();
-                                                                                                                        btn_64arg.xpos = (2 * buttonsSpace) + (videoMenuRowWidth - 5 * buttonsSpace) * 0.85;
-                                                                                                                        btn_64arg.width = (videoMenuRowWidth - 5 * buttonsSpace) * 0.15;
-                                                                                                                        btn_64arg.downCode = 0;
-                                                                                                                        btn_64arg.flags = NC_STACK_button::FLAG_CENTER | NC_STACK_button::FLAG_TEXT;
-                                                                                                                        btn_64arg.upCode = 0;
-                                                                                                                        btn_64arg.pressedCode = 0;
+                                                                                                                        btn_64arg.downCode = 1118;
+                                                                                                                        btn_64arg.xpos = buttonsSpace + (videoMenuRowWidth - 5 * buttonsSpace) * 0.3;
+                                                                                                                        btn_64arg.caption = " ";
+                                                                                                                        btn_64arg.pressedCode = 1119;
+                                                                                                                        btn_64arg.slider = &slider;
+                                                                                                                        btn_64arg.flags = 0;
+                                                                                                                        btn_64arg.button_id = 1154;
 
                                                                                                                         if ( _GameShell->video_button->Add(&btn_64arg) )
                                                                                                                         {
+                                                                                                                            btn_64arg.tileset_down = 16;
+                                                                                                                            btn_64arg.tileset_up = 16;
+                                                                                                                            btn_64arg.tileset_disabled = 16;
                                                                                                                             btn_64arg.button_type = NC_STACK_button::TYPE_CAPTION;
-                                                                                                                            btn_64arg.xpos = 0;
-                                                                                                                            btn_64arg.width = (videoMenuRowWidth - 5 * buttonsSpace) * 0.3;
-                                                                                                                            btn_64arg.ypos = 13 * (vertMenuSpace + _fontH);
-                                                                                                                            btn_64arg.caption = Locale::Text::Dialogs(Locale::DLG_S_CDVOL);
+                                                                                                                            btn_64arg.caption = "4";
                                                                                                                             btn_64arg.caption2.clear();
                                                                                                                             btn_64arg.downCode = 0;
                                                                                                                             btn_64arg.upCode = 0;
                                                                                                                             btn_64arg.pressedCode = 0;
-                                                                                                                            btn_64arg.flags = NC_STACK_button::FLAG_TEXT;
-                                                                                                                            btn_64arg.button_id = 2;
+                                                                                                                            btn_64arg.xpos = (2 * buttonsSpace) + (videoMenuRowWidth - 5 * buttonsSpace) * 0.85;
+                                                                                                                            btn_64arg.width = (videoMenuRowWidth - 5 * buttonsSpace) * 0.15;
+                                                                                                                            btn_64arg.button_id = 1155;
+                                                                                                                            btn_64arg.flags = NC_STACK_button::FLAG_CENTER | NC_STACK_button::FLAG_TEXT;
 
                                                                                                                             if ( _GameShell->video_button->Add(&btn_64arg) )
                                                                                                                             {
-                                                                                                                                btn_64arg.width = (videoMenuRowWidth - 5 * buttonsSpace) * 0.55;
-                                                                                                                                slider.min = 1;
-                                                                                                                                slider.max = 127;
-                                                                                                                                slider.value = 100;
-
-                                                                                                                                btn_64arg.tileset_down = 18;
                                                                                                                                 btn_64arg.tileset_up = 18;
-                                                                                                                                btn_64arg.upCode = 1120;
                                                                                                                                 btn_64arg.tileset_disabled = 30;
-                                                                                                                                btn_64arg.button_type = NC_STACK_button::TYPE_SLIDER;
+                                                                                                                                btn_64arg.button_type = NC_STACK_button::TYPE_BUTTON;
+                                                                                                                                btn_64arg.xpos = 0;
+                                                                                                                                btn_64arg.ypos = bottomButtonsY;
+                                                                                                                                btn_64arg.width = button1LineWidth;
+                                                                                                                                btn_64arg.tileset_down = 19;
+                                                                                                                                btn_64arg.caption = Locale::Text::Common(Locale::CMN_OK);
+                                                                                                                                btn_64arg.upCode = 1124;
                                                                                                                                 btn_64arg.caption2.clear();
-                                                                                                                                btn_64arg.downCode = 1118;
-                                                                                                                                btn_64arg.xpos = buttonsSpace + (videoMenuRowWidth - 5 * buttonsSpace) * 0.3;
-                                                                                                                                btn_64arg.caption = " ";
-                                                                                                                                btn_64arg.pressedCode = 1119;
-                                                                                                                                btn_64arg.slider = &slider;
-                                                                                                                                btn_64arg.flags = 0;
-                                                                                                                                btn_64arg.button_id = 1154;
+                                                                                                                                btn_64arg.downCode = 0;
+                                                                                                                                btn_64arg.pressedCode = 0;
+                                                                                                                                btn_64arg.flags = NC_STACK_button::FLAG_BORDER | NC_STACK_button::FLAG_CENTER | NC_STACK_button::FLAG_TEXT;
+                                                                                                                                btn_64arg.button_id = 1161;
+                                                                                                                                btn_64arg.txt_r = _iniColors[68].r;
+                                                                                                                                btn_64arg.txt_g = _iniColors[68].g;
+                                                                                                                                btn_64arg.txt_b = _iniColors[68].b;
 
                                                                                                                                 if ( _GameShell->video_button->Add(&btn_64arg) )
                                                                                                                                 {
-                                                                                                                                    btn_64arg.tileset_down = 16;
-                                                                                                                                    btn_64arg.tileset_up = 16;
-                                                                                                                                    btn_64arg.tileset_disabled = 16;
-                                                                                                                                    btn_64arg.button_type = NC_STACK_button::TYPE_CAPTION;
-                                                                                                                                    btn_64arg.caption = "4";
+                                                                                                                                    btn_64arg.xpos = bottomThirdBtnPosX;
+                                                                                                                                    btn_64arg.ypos = bottomButtonsY;
+                                                                                                                                    btn_64arg.width = button1LineWidth;
+                                                                                                                                    btn_64arg.caption = Locale::Text::Common(Locale::CMN_HELP);
+                                                                                                                                    btn_64arg.upCode = 1250;
                                                                                                                                     btn_64arg.caption2.clear();
                                                                                                                                     btn_64arg.downCode = 0;
-                                                                                                                                    btn_64arg.upCode = 0;
                                                                                                                                     btn_64arg.pressedCode = 0;
-                                                                                                                                    btn_64arg.xpos = (2 * buttonsSpace) + (videoMenuRowWidth - 5 * buttonsSpace) * 0.85;
-                                                                                                                                    btn_64arg.width = (videoMenuRowWidth - 5 * buttonsSpace) * 0.15;
-                                                                                                                                    btn_64arg.button_id = 1155;
-                                                                                                                                    btn_64arg.flags = NC_STACK_button::FLAG_CENTER | NC_STACK_button::FLAG_TEXT;
+                                                                                                                                    btn_64arg.button_id = 1167;
 
                                                                                                                                     if ( _GameShell->video_button->Add(&btn_64arg) )
                                                                                                                                     {
-                                                                                                                                        btn_64arg.tileset_up = 18;
-                                                                                                                                        btn_64arg.tileset_disabled = 30;
-                                                                                                                                        btn_64arg.button_type = NC_STACK_button::TYPE_BUTTON;
-                                                                                                                                        btn_64arg.xpos = 0;
+                                                                                                                                        btn_64arg.xpos = bottomSecondBtnPosX;
                                                                                                                                         btn_64arg.ypos = bottomButtonsY;
                                                                                                                                         btn_64arg.width = button1LineWidth;
-                                                                                                                                        btn_64arg.tileset_down = 19;
-                                                                                                                                        btn_64arg.caption = Locale::Text::Common(Locale::CMN_OK);
-                                                                                                                                        btn_64arg.upCode = 1124;
+                                                                                                                                        btn_64arg.caption = Locale::Text::Common(Locale::CMN_CANCEL);
+                                                                                                                                        btn_64arg.upCode = 1125;
                                                                                                                                         btn_64arg.caption2.clear();
                                                                                                                                         btn_64arg.downCode = 0;
                                                                                                                                         btn_64arg.pressedCode = 0;
-                                                                                                                                        btn_64arg.flags = NC_STACK_button::FLAG_BORDER | NC_STACK_button::FLAG_CENTER | NC_STACK_button::FLAG_TEXT;
-                                                                                                                                        btn_64arg.button_id = 1161;
-                                                                                                                                        btn_64arg.txt_r = _iniColors[68].r;
-                                                                                                                                        btn_64arg.txt_g = _iniColors[68].g;
-                                                                                                                                        btn_64arg.txt_b = _iniColors[68].b;
+                                                                                                                                        btn_64arg.button_id = 1162;
 
                                                                                                                                         if ( _GameShell->video_button->Add(&btn_64arg) )
                                                                                                                                         {
-                                                                                                                                            btn_64arg.xpos = bottomThirdBtnPosX;
-                                                                                                                                            btn_64arg.ypos = bottomButtonsY;
-                                                                                                                                            btn_64arg.width = button1LineWidth;
-                                                                                                                                            btn_64arg.caption = Locale::Text::Common(Locale::CMN_HELP);
-                                                                                                                                            btn_64arg.upCode = 1250;
-                                                                                                                                            btn_64arg.caption2.clear();
-                                                                                                                                            btn_64arg.downCode = 0;
-                                                                                                                                            btn_64arg.pressedCode = 0;
-                                                                                                                                            btn_64arg.button_id = 1167;
-
-                                                                                                                                            if ( _GameShell->video_button->Add(&btn_64arg) )
-                                                                                                                                            {
-                                                                                                                                                btn_64arg.xpos = bottomSecondBtnPosX;
-                                                                                                                                                btn_64arg.ypos = bottomButtonsY;
-                                                                                                                                                btn_64arg.width = button1LineWidth;
-                                                                                                                                                btn_64arg.caption = Locale::Text::Common(Locale::CMN_CANCEL);
-                                                                                                                                                btn_64arg.upCode = 1125;
-                                                                                                                                                btn_64arg.caption2.clear();
-                                                                                                                                                btn_64arg.downCode = 0;
-                                                                                                                                                btn_64arg.pressedCode = 0;
-                                                                                                                                                btn_64arg.button_id = 1162;
-
-                                                                                                                                                if ( _GameShell->video_button->Add(&btn_64arg) )
-                                                                                                                                                {
-                                                                                                                                                    allAdded = 1;
-                                                                                                                                                }
-                                                                                                                                            }
+                                                                                                                                            allAdded = 1;
                                                                                                                                         }
                                                                                                                                     }
                                                                                                                                 }
@@ -3878,7 +3844,8 @@ bool NC_STACK_ypaworld::CreateVideoControls()
             }
         }
     }
-    // Vertical sync, a row the port adds below the original options
+    // Vertical sync, which the port adds where the original had a software
+    // cursor option, left of windowed mode
     if ( allAdded )
     {
         allAdded = 0;
@@ -3889,7 +3856,7 @@ bool NC_STACK_ypaworld::CreateVideoControls()
         btn_64arg.button_type = NC_STACK_button::TYPE_CHECKBX;
         btn_64arg.tileset_disabled = 30;
         btn_64arg.xpos = 0;
-        btn_64arg.ypos = 14 * (vertMenuSpace + _fontH);
+        btn_64arg.ypos = 8 * (vertMenuSpace + _fontH);
         btn_64arg.caption = "g";
         btn_64arg.caption2 = "g";
         btn_64arg.downCode = 1136;
@@ -3913,6 +3880,10 @@ bool NC_STACK_ypaworld::CreateVideoControls()
             btn_64arg.pressedCode = 0;
             btn_64arg.flags = NC_STACK_button::FLAG_TEXT;
             btn_64arg.button_id = 2;
+            // The other options' caption color, not the OK button's set last
+            btn_64arg.txt_r = _iniColors[60].r;
+            btn_64arg.txt_g = _iniColors[60].g;
+            btn_64arg.txt_b = _iniColors[60].b;
 
             if ( _GameShell->video_button->Add(&btn_64arg) )
                 allAdded = 1;
@@ -4960,24 +4931,7 @@ bool NC_STACK_ypaworld::OpenGameShell()
         return false;
     }
 
-    GFX::TCursorParams cursor;
-
-    if (_mousePointers[0])
-        cursor.bitm = _mousePointers[0]->GetBitmap();
-    cursor.pointer_id = 1;
-
-    GFX::Engine.SetCursor(cursor.pointer_id, 0);
-
-    
-
-    if ( _GameShell->GFXFlags & World::GFX_FLAG_SOFTMOUSE )
-    {
-        GFX::Engine.setWDD_cursor(1);
-    }
-    else
-    {
-        GFX::Engine.setWDD_cursor(0);
-    }
+    GFX::Engine.SetCursor(1, 0);
 
     LoadKeyNames();
 
@@ -5968,10 +5922,6 @@ void NC_STACK_ypaworld::UpdateGameShell()
 
     videoBtnState.state = ((_GameShell->GFXFlags & World::GFX_FLAG_SKYRENDER) == 0) + 1;
     videoBtnState.butID = 1160;
-    _GameShell->video_button->SetState(&videoBtnState);
-
-    videoBtnState.butID = 1165;
-    videoBtnState.state = ((_GameShell->GFXFlags & World::GFX_FLAG_SOFTMOUSE) == 0) + 1;
     _GameShell->video_button->SetState(&videoBtnState);
 
     videoBtnState.butID = 1166;

@@ -173,7 +173,6 @@ enum DIALOGS
     DLG_S_DESTRFX   = 43,
     DLG_S_FARVIEW   = 44,
     DLG_S_SKY       = 45,
-    DLG_S_SWMOUSE   = 50,
     DLG_S_RENDERER  = 53, // Was the Direct3D device, 52
     
     DLG_P_LOAD      = 60,
@@ -474,7 +473,6 @@ enum TIP
     TIP_CONF_SKY            = 185,
     TIP_CONF_FILTERING      = 186,
     TIP_CONF_MUSIC          = 187,
-    TIP_CONF_HWSWMOUSE      = 188,
     TIP_CONF_ENEMYSIGNS     = 189,
     TIP_CONF_FXVOLUME       = 190,
     TIP_CONF_MUSICVOLUME    = 191,

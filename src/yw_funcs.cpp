@@ -937,56 +937,6 @@ int SetupFillerModels(NC_STACK_ypaworld *yw, NC_STACK_base *base)
     return 1;
 }
 
-int yw_InitMouseStuff(NC_STACK_ypaworld *yw)
-{
-    const std::array<std::string, 11> pointerFiles
-    {
-        "pointers/pointer.ilbm",
-        "pointers/cancel.ilbm",
-        "pointers/select.ilbm",
-        "pointers/attack.ilbm",
-        "pointers/goto.ilbm",
-        "pointers/disk.ilbm",
-        "pointers/new.ilbm",
-        "pointers/add.ilbm",
-        "pointers/control.ilbm",
-        "pointers/beam.ilbm",
-        "pointers/build.ilbm"
-    };
-    
-    std::string oldRsrc = Common::Env.SetPrefix("rsrc", "data:mc2res");
-
-    for (int i = 0; i < 11; i++)
-    {
-        if (yw->_mousePointers[i])
-            yw->_mousePointers[i]->Delete();
-        
-        yw->_mousePointers[i] = Utils::ProxyLoadImage({
-            {NC_STACK_rsrc::RSRC_ATT_NAME, pointerFiles.at(i)},
-            {NC_STACK_bitmap::BMD_ATT_CONVCOLOR, (int32_t)1}});
-        if ( !yw->_mousePointers[i] )
-        {
-            ypa_log_out("yw_select.c/yw_InitMouseStuff()\n");
-            Common::Env.SetPrefix("rsrc", oldRsrc);
-            return 0;
-        }
-    }
-
-    GFX::TCursorParams cursor;
-
-    cursor.bitm = 0;
-    cursor.pointer_id = 0;
-    GFX::Engine.SetCursor(cursor.pointer_id, 0);
-
-    if (yw->_mousePointers[0])
-        cursor.bitm = yw->_mousePointers[0]->GetBitmap();
-    cursor.pointer_id = 1;
-    GFX::Engine.SetCursor(cursor.pointer_id, 0);
-
-    Common::Env.SetPrefix("rsrc", oldRsrc);
-    return 1;
-}
-
 int NC_STACK_ypaworld::yw_LoadSet(int setID)
 {
     _mouseGrabbed = false;
@@ -1128,7 +1078,9 @@ int NC_STACK_ypaworld::yw_LoadSet(int setID)
             return 0;
     }
 
-    yw_InitMouseStuff(this);
+    // Hide and show the cursor again, as the pointer
+    GFX::Engine.SetCursor(0, 0);
+    GFX::Engine.SetCursor(1, 0);
     return 1;
 }
 
@@ -2715,24 +2667,6 @@ void yw_freeTileSets(NC_STACK_ypaworld *yw)
     {
         delete x;
         x = NULL;
-    }
-}
-
-void NC_STACK_ypaworld::FreeGameDataCursors()
-{
-    GFX::TCursorParams cursor;
-    cursor.bitm = NULL;
-    cursor.pointer_id = 0;
-
-    GFX::Engine.SetCursor(cursor.pointer_id, 0);
-
-    for (NC_STACK_bitmap* &point : _mousePointers)
-    {
-        if ( point )
-        {
-            point->Delete();
-            point = NULL;
-        }
     }
 }
 

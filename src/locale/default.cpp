@@ -137,7 +137,6 @@ std::array<std::string, DLG_MAX> DefaultStrings::Dialogs = Common::ArrayInit<std
     {DLG_S_DESTRFX   , "DESTRUCTION FX"},
     {DLG_S_FARVIEW   , "FAR VIEW"},
     {DLG_S_SKY       , "HEAVEN"},
-    {DLG_S_SWMOUSE   , "SW MOUSEPOINTER"},
     {DLG_S_RENDERER  , "Renderer:"},
             
     {DLG_P_LOAD      , "LOAD"},
@@ -445,7 +444,6 @@ std::array<std::string, TIP_MAX> DefaultStrings::Tooltips = Common::ArrayInit<st
     {TIP_CONF_SKY, "SWITCH ON/OFF SKY"},
     {TIP_CONF_FILTERING, "SWITCH ON/OFF FILTERING"},
     {TIP_CONF_MUSIC, "ENABLE/DISABLE CD SOUND"},
-    {TIP_CONF_HWSWMOUSE, "USE SOFTWARE OR HARDWARE MOUSEPOINTER"},
     {TIP_CONF_ENEMYSIGNS, "ALLOW/FORBID ENEMYINDICATORS"},
     {TIP_CONF_FXVOLUME, "CHANGE FX VOLUME"},
     {TIP_CONF_MUSICVOLUME, "CHANGE CD VOLUME"},

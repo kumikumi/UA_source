@@ -13,7 +13,6 @@ Common::Ini::Key IniConf::GfxAlpha("gfx.alpha", Common::Ini::KT_DIGIT, (int32_t)
 Common::Ini::Key IniConf::GfxZbufWhenTracy("gfx.zbuf_when_tracy", Common::Ini::KT_BOOL);
 Common::Ini::Key IniConf::GfxColorkey("gfx.colorkey", Common::Ini::KT_BOOL);
 Common::Ini::Key IniConf::GfxForceEmul("gfx.force_emul", Common::Ini::KT_BOOL);
-Common::Ini::Key IniConf::GfxForceSoftCursor("gfx.force_soft_cursor", Common::Ini::KT_BOOL);
 Common::Ini::Key IniConf::GfxAllModes("gfx.all_modes", Common::Ini::KT_BOOL);
 Common::Ini::Key IniConf::GfxMoviePlayer("gfx.movie_player", Common::Ini::KT_BOOL, true);
 Common::Ini::Key IniConf::GfxForceAlphaTex("gfx.force_alpha_textures", Common::Ini::KT_BOOL);
@@ -211,7 +210,6 @@ void IniConf::Init()
         , &GfxZbufWhenTracy
         , &GfxColorkey
         , &GfxForceEmul
-        , &GfxForceSoftCursor
         , &GfxAllModes
         , &GfxMoviePlayer
         , &GfxForceAlphaTex

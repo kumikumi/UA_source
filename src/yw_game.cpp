@@ -52,12 +52,7 @@ void draw_splashScreen(NC_STACK_ypaworld *yw, NC_STACK_bitmap *splashScreen)
         blit.srcRect  = Common::FRect(-1.0, -1.0, 1.0, 1.0);
         blit.dstRect = Common::FRect(-1.0, -1.0, 1.0, 1.0);
 
-        GFX::TCursorParams cursor;
-        if (yw->_mousePointers[5])
-            cursor.bitm = yw->_mousePointers[5]->GetBitmap();
-        cursor.pointer_id = 6;
-
-        GFX::Engine.SetCursor(cursor.pointer_id, 0);
+        GFX::Engine.SetCursor(6, 0);
 
         GFX::Engine.BeginFrame();
         GFX::Engine.DrawBitmapNormalized(&blit);
@@ -80,12 +75,7 @@ void drawSplashScreenWithTOD(NC_STACK_ypaworld *yw, NC_STACK_bitmap *splashScree
         blit.srcRect  = Common::FRect(-1.0, -1.0, 1.0, 1.0);
         blit.dstRect = Common::FRect(-1.0, -1.0, 1.0, 1.0);
 
-        GFX::TCursorParams cursor;
-        if (yw->_mousePointers[5])
-            cursor.bitm = yw->_mousePointers[5]->GetBitmap();
-        cursor.pointer_id = 6;
-
-        GFX::Engine.SetCursor(cursor.pointer_id, 0);
+        GFX::Engine.SetCursor(6, 0);
 
         GFX::Engine.BeginFrame();
         GFX::Engine.DrawBitmapNormalized(&blit);

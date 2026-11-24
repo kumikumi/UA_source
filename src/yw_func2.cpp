@@ -1042,23 +1042,6 @@ void UserData::ApplyOptions()
 
     }
 
-    if ( _settingsChangeOptions & 0x800 )
-    {
-        if ( confGFXFlags & World::GFX_FLAG_SOFTMOUSE )
-        {
-            GFXFlags |= World::GFX_FLAG_SOFTMOUSE;
-            yw->_preferences |= World::PREF_SOFTMOUSE;
-            GFX::Engine.setWDD_cursor(1);
-        }
-        else
-        {
-            GFXFlags &= ~World::GFX_FLAG_SOFTMOUSE;
-            yw->_preferences &= ~World::PREF_SOFTMOUSE;
-            GFX::Engine.setWDD_cursor(0);
-        }
-
-    }
-
     if ( _settingsChangeOptions & 0x20 )
     {
         enemyIndicator = confEnemyIndicator;
@@ -1401,10 +1384,6 @@ void UserData::ShowToolTip(int id)
 
     case 1164:
         p_YW->SetShowingTooltip(Locale::TIP_CONF_MUSIC);
-        break;
-
-    case 1165:
-        p_YW->SetShowingTooltip(Locale::TIP_CONF_HWSWMOUSE);
         break;
 
     case 1166:
@@ -1857,10 +1836,6 @@ void UserData::CancelOptions()
 
     btnState.butID = 1173;
     btnState.state = (!IsVsyncFlag()) + 1;
-    video_button->SetState(&btnState);
-
-    btnState.butID = 1165;
-    btnState.state = ((GFXFlags & World::GFX_FLAG_SOFTMOUSE) == 0) + 1;
     video_button->SetState(&btnState);
 
     btnState.state = (enemyIndicator == 0) + 1;
@@ -2864,16 +2839,6 @@ void UserData::GameShellUiHandleInput()
         {
             confGFXFlags &= ~World::GFX_FLAG_VSYNC;
             _settingsChangeOptions |= 0x2000;
-        }
-        else if ( r.code == 1132 )
-        {
-            _settingsChangeOptions |= 0x800;
-            confGFXFlags |= World::GFX_FLAG_SOFTMOUSE;
-        }
-        else if ( r.code == 1133 )
-        {
-            confGFXFlags &= ~World::GFX_FLAG_SOFTMOUSE;
-            _settingsChangeOptions |= 0x800;
         }
         else if ( r.code == 1134 )
         {

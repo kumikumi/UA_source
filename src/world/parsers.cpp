@@ -3315,23 +3315,6 @@ int VideoParser::Handle(ScriptParser::Parser &parser, const std::string &p1, con
         else
             _o._GameShell->GFXFlags &= ~World::GFX_FLAG_16BITTEXTURE;
     }
-    else if ( !StriCmp(p1, "softmouse") )
-    {
-        if ( StrGetBool(p2) )
-        {
-            _o._GameShell->GFXFlags |= World::GFX_FLAG_SOFTMOUSE;
-            _o._preferences |= World::PREF_SOFTMOUSE;
-
-            GFX::Engine.setWDD_cursor(1);
-        }
-        else
-        {
-            _o._GameShell->GFXFlags &= ~World::GFX_FLAG_SOFTMOUSE;
-            _o._preferences &= ~World::PREF_SOFTMOUSE;
-
-            GFX::Engine.setWDD_cursor(0);
-        }
-    }
     else if ( !StriCmp(p1, "heaven") )
     {
         if ( StrGetBool(p2) )

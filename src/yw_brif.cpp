@@ -67,12 +67,7 @@ void BriefUpdateMapScaling(NC_STACK_ypaworld *yw, TInputState *inpt, TBriefengSc
         brf->MapBlitParams.dstRect = brf->MapBlitEnd;
         brf->Stage = TBriefengScreen::STAGE_SCALEEND;
 
-        GFX::TCursorParams cursor;
-        if (yw->_mousePointers[5])
-            cursor.bitm = yw->_mousePointers[5]->GetBitmap();
-        cursor.pointer_id = 6;
-
-        GFX::Engine.SetCursor(cursor.pointer_id, 0);
+        GFX::Engine.SetCursor(6, 0);
     }
     else
     {
@@ -185,12 +180,7 @@ void BriefLoadLevelSet(NC_STACK_ypaworld *yw, TInputState *inpt, TBriefengScreen
     {
         brf->Stage = TBriefengScreen::STAGE_PLAYER_ST;
 
-        GFX::TCursorParams cursor;
-        if (yw->_mousePointers[0])
-            cursor.bitm = yw->_mousePointers[0]->GetBitmap();
-        cursor.pointer_id = 1;
-
-        GFX::Engine.SetCursor(cursor.pointer_id, 0);
+        GFX::Engine.SetCursor(1, 0);
     }
     else
     {

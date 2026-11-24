@@ -11011,68 +11011,16 @@ void NC_STACK_ypaworld::HandleWorldMouse(TInputState *arg)
         if ( _mouseCursorHidden )
             mousePointer = -1;
 
-        GFX::TCursorParams cursor;
+        // Cursor ids are the mouse pointer numbers plus one; 0 hides it
+        int cursorId = 0;
 
-        if ( mousePointer == -1 )
-            cursor.bitm = NULL;
-        else if (_mousePointers[mousePointer])
-            cursor.bitm = _mousePointers[mousePointer]->GetBitmap();
-
-        switch ( mousePointer )
-        {
-        case 0:
-            cursor.pointer_id = 1;
-            break;
-
-        case 1:
-            cursor.pointer_id = 2;
-            break;
-
-        case 2:
-            cursor.pointer_id = 3;
-            break;
-
-        case 3:
-            cursor.pointer_id = 4;
-            break;
-
-        case 4:
-            cursor.pointer_id = 5;
-            break;
-
-        case 5:
-            cursor.pointer_id = 6;
-            break;
-
-        case 6:
-            cursor.pointer_id = 7;
-            break;
-
-        case 7:
-            cursor.pointer_id = 8;
-            break;
-
-        case 8:
-            cursor.pointer_id = 9;
-            break;
-
-        case 9:
-            cursor.pointer_id = 10;
-            break;
-
-        case 10:
-            cursor.pointer_id = 11;
-            break;
-
-        default:
-            cursor.pointer_id = 0;
-            break;
-        }
+        if ( mousePointer >= 0 && mousePointer <= 10 )
+            cursorId = mousePointer + 1;
 
         if ( squadron_manager.dragFlags & 1 )
-            cursor.pointer_id = 1;
+            cursorId = 1;
 
-        GFX::Engine.SetCursor(cursor.pointer_id, 0);
+        GFX::Engine.SetCursor(cursorId, 0);
 
         if ( tooltip )
             SetShowingTooltip(tooltip);

@@ -106,7 +106,6 @@ GFXEngine::GFXEngine()
     for(SDL_Color &c : _palette)
         c = {0, 0, 0, 0};
     
-    _forcesoftcursor = 0;
     _txt16bit = 0;
     _use_simple_d3d = 0;
     _disable_lowres = 0;
@@ -435,7 +434,6 @@ size_t GFXEngine::ReadIniDisplaySettings()
 
     SetResVariables( System::GetResolution() );
 
-    _forcesoftcursor = 0;
     _disable_lowres = System::IniConf::GfxDisableLowres.Get<bool>();
     _txt16bit = txt16bit_def;
     _use_simple_d3d = drawprim_def;
@@ -1242,10 +1240,6 @@ void GFXEngine::SetDeviceByGUID(const std::string &guid, bool writefile)
 }
 
 
-
-void GFXEngine::setWDD_cursor(int mode)
-{
-}
 
 void GFXEngine::setWDD_disLowRes(int arg)
 {

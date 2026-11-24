@@ -22,7 +22,6 @@ public:
     static Common::Ini::Key GfxZbufWhenTracy;
     static Common::Ini::Key GfxColorkey;
     static Common::Ini::Key GfxForceEmul;
-    static Common::Ini::Key GfxForceSoftCursor;
     static Common::Ini::Key GfxAllModes;
     static Common::Ini::Key GfxMoviePlayer;
     static Common::Ini::Key GfxForceAlphaTex;

@@ -206,7 +206,6 @@ enum PREFERENCES_FLAGS
     PREF_JOYDISABLE     =  (1 << 0), //    4,
     PREF_FFDISABLE      =  (1 << 1), //    8,
     PREF_ENEMYINDICATOR =  (1 << 2), // 0x20,
-    PREF_SOFTMOUSE      =  (1 << 3), // 0x40,
     PREF_CDMUSICDISABLE =  (1 << 4), // 0x100,
     PREF_ALTJOYSTICK    =  (1 << 5), // 0x200,
 };
@@ -300,7 +299,6 @@ enum GFX_FLAG
 {
     GFX_FLAG_FARVIEW            = (1 << 0),
     GFX_FLAG_SKYRENDER          = (1 << 1),
-    GFX_FLAG_SOFTMOUSE          = (1 << 2),
     GFX_FLAG_DRAWPRIMITIVES     = (1 << 3),
     GFX_FLAG_16BITTEXTURE       = (1 << 4),
     GFX_FLAG_WINDOWED           = (1 << 5),
@@ -2358,7 +2356,6 @@ public:
     bool ProtosInit();
     void ProtosFreeSounds();
     
-    void FreeGameDataCursors();
     
     void SetCmdrIdToSelect(int32_t id) { _cmdrIdToSelect = id; };
         
@@ -2591,8 +2588,6 @@ public:
     int32_t _waypointCount = 0;
     vec3d _firstWaypointPosition;
 
-    std::array<NC_STACK_bitmap *, 11> _mousePointers = Common::ArrayInit<NC_STACK_bitmap *, 11>(NULL);
- 
     bool _mouseCursorHidden = false;
     Common::Point _mouseCursorHidePos;
     
