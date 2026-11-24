@@ -507,7 +507,7 @@ void NC_STACK_ypaworld::listSaveDir(const std::string &saveDir)
                     };
                     std::string buf = fmt::sprintf("%s/%s/user.txt\n", saveDir, dirNode->getName());
 
-                    if ( !ScriptParser::ParseFile(buf, hndls,0) )
+                    if ( !ScriptParser::ParseFile(buf, hndls, ScriptParser::FLAG_SKIP_UNKNOWN) )
                         ypa_log_out("Warning, cannot parse %s for time scanning\n", buf.c_str());
                     profile.fraction = 1;
                     profile.totalElapsedTime = _playersStats[1].ElapsedTime;

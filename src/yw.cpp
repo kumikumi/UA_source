@@ -6082,7 +6082,7 @@ int NC_STACK_ypaworld::LoadingParseSaveFile(const std::string &filename)
     if (World::IsModsAllow(false))
         parsers.push_back( new World::Parsers::SaveLuaScriptParser(this) );
 
-    return ScriptParser::ParseFile(filename, parsers, ScriptParser::FLAG_NO_SCOPE_SKIP);
+    return ScriptParser::ParseFile(filename, parsers, ScriptParser::FLAG_SKIP_UNKNOWN);
 }
 
 void NC_STACK_ypaworld::LoadingUnitsRefresh()
@@ -6132,7 +6132,7 @@ size_t NC_STACK_ypaworld::LoadGame(const std::string &saveFile)
         new World::Parsers::SaveLevelNumParser(this, &lvlnum),
     };
 
-    ScriptParser::ParseFile(saveFile, parsers, 0);
+    ScriptParser::ParseFile(saveFile, parsers, ScriptParser::FLAG_SKIP_UNKNOWN);
 
     _extraViewNumber = -1;
     _extraViewEnable = false;
@@ -6435,7 +6435,7 @@ int NC_STACK_ypaworld::ParseSettingsFile(const std::string &fname, uint32_t sdfM
         parsers += new World::Parsers::BuildProtoParser(this);
     }
 
-    return ScriptParser::ParseFile(fname, parsers, 0);
+    return ScriptParser::ParseFile(fname, parsers, ScriptParser::FLAG_SKIP_UNKNOWN);
 }
 
 // Load user settings (Global save)

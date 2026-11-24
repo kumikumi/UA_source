@@ -78,6 +78,10 @@ int Parser::ParseRoutine(const std::string &filename, HandlersList &callbacks, i
             {
                 selectedHandler = -1;
             }
+            else if ( res == RESULT_UNKNOWN && (flags & FLAG_SKIP_UNKNOWN) )
+            {
+                ypa_log_out("script %s line #%d: skipped unknown keyword %s.\n", filename.c_str(), _line, p1.c_str());
+            }
             else if ( res )
             {
                 if ( res == RESULT_UNKNOWN )

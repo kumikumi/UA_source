@@ -76,9 +76,6 @@ bool SaveRoboParser::RoboParser(ScriptParser::Parser &parser, const std::string 
     {
         _r->_roboFillMode = parser.stoi(p2);
     }
-    else if ( !StriCmp(p1, "battbuilding") )
-    {
-    }
     else if ( !StriCmp(p1, "battvehicle") )
     {
         _r->_roboEnergyLife = parser.stoi(p2);
@@ -404,13 +401,14 @@ bool SaveRoboParser::IsScope(ScriptParser::Parser &parser, const std::string &wo
     spawn.vehicle_id = parser.stoi(opt);
 
     _r = dynamic_cast<NC_STACK_yparobo *> ( _o.CreateVehicle(&spawn) );
-
-    if ( !_r )
-        return false;
-
     _lastRobo = _r;
 
-    _o.AddToUnitsList(_r);
+    // Claim the scope even if the unit can't be made, so that Handle() fails
+    // the load instead of the parser skipping the unit as an unknown scope.
+    if ( _r )
+        _o.AddToUnitsList(_r);
+    else
+        ypa_log_out("Can't create host station %s from save file.\n", opt.c_str());
 
     return true;
 }
@@ -418,6 +416,9 @@ bool SaveRoboParser::IsScope(ScriptParser::Parser &parser, const std::string &wo
 
 int SaveRoboParser::Handle(ScriptParser::Parser &parser, const std::string &p1, const std::string &p2)
 {
+    if ( !_r )
+        return ScriptParser::RESULT_BAD_DATA;
+
     if ( !StriCmp(p1, "end") )
     {
         if ( !_r->_reload_const )
@@ -442,13 +443,11 @@ bool SaveSquadParser::IsScope(ScriptParser::Parser &parser, const std::string &w
         spawn.pos.y = 0;
         spawn.vehicle_id = parser.stoi(opt);
 
-        _c = _o.CreateVehicle(&spawn);
-
-        if ( !_c )
-            return false;
-
+        _c = _lastRobo ? _o.CreateVehicle(&spawn) : NULL;
         _lastCommander = _c;
-        _lastRobo->AddSubject(_c);
+
+        if ( _c )
+            _lastRobo->AddSubject(_c);
     }
     else if ( !StriCmp(word, "begin_slave") )
     {
@@ -458,21 +457,26 @@ bool SaveSquadParser::IsScope(ScriptParser::Parser &parser, const std::string &w
         spawn.pos.y = 0;
         spawn.vehicle_id = parser.stoi(opt);
 
-        _c = _o.CreateVehicle(&spawn);
+        _c = _lastCommander ? _o.CreateVehicle(&spawn) : NULL;
 
-        if ( !_c )
-            return false;
-
-        _lastCommander->AddSubject(_c);
+        if ( _c )
+            _lastCommander->AddSubject(_c);
     }
     else
         return false;
+
+    // As with host stations, a unit that can't be made fails the load.
+    if ( !_c )
+        ypa_log_out("Can't create unit %s from save file.\n", opt.c_str());
 
     return true;
 }
 
 int SaveSquadParser::Handle(ScriptParser::Parser &parser, const std::string &p1, const std::string &p2)
 {
+    if ( !_c )
+        return ScriptParser::RESULT_BAD_DATA;
+
     if ( !StriCmp(p1, "end") )
         return ScriptParser::RESULT_SCOPE_END;
 

@@ -51,13 +51,7 @@ int UserParser::Handle(ScriptParser::Parser &parser, const std::string &p1, cons
     if ( !StriCmp(p1, "end") )
         return ScriptParser::RESULT_SCOPE_END;
 
-    if ( !StriCmp(p1, "username") )
-    {
-    }
-    else if ( !StriCmp(p1, "netname") )
-    {
-    }
-    else if ( !StriCmp(p1, "maxroboenergy") )
+    if ( !StriCmp(p1, "maxroboenergy") )
     {
         _o._maxRoboEnergy = parser.stol(p2, NULL, 0);
     }
@@ -3294,11 +3288,7 @@ int VideoParser::Handle(ScriptParser::Parser &parser, const std::string &p1, con
 
     _o._GameShell->savedDataFlags |= World::SDF_VIDEO;
 
-    if ( !StriCmp(p1, "videomode") )
-    {
-        // Resolution of older profiles; the game renders at the window size.
-    }
-    else if ( !StriCmp(p1, "farview") )
+    if ( !StriCmp(p1, "farview") )
     {
         if ( StrGetBool(p2) )
         {
@@ -3310,9 +3300,6 @@ int VideoParser::Handle(ScriptParser::Parser &parser, const std::string &p1, con
             _o._GameShell->GFXFlags &= ~World::GFX_FLAG_FARVIEW;
             _o.SetFarView(false);
         }
-    }
-    else if ( !StriCmp(p1, "filtering") )
-    {
     }
     else if ( !StriCmp(p1, "drawprimitive") )
     {
@@ -3344,9 +3331,6 @@ int VideoParser::Handle(ScriptParser::Parser &parser, const std::string &p1, con
 
             GFX::Engine.setWDD_cursor(0);
         }
-    }
-    else if ( !StriCmp(p1, "palettefx") )
-    {
     }
     else if ( !StriCmp(p1, "heaven") )
     {
@@ -3412,10 +3396,7 @@ int SoundParser::Handle(ScriptParser::Parser &parser, const std::string &p1, con
 
     _o._GameShell->savedDataFlags |= World::SDF_SOUND;
 
-    if ( !StriCmp(p1, "channels") )
-    {
-    }
-    else if ( !StriCmp(p1, "volume") )
+    if ( !StriCmp(p1, "volume") )
     {
         _o._GameShell->soundVolume = parser.stoi(p2);
         SFXEngine::SFXe.setMasterVolume(_o._GameShell->soundVolume);
@@ -3437,9 +3418,6 @@ int SoundParser::Handle(ScriptParser::Parser &parser, const std::string &p1, con
             _o._GameShell->soundFlags &= ~World::SF_INVERTLR;
             SFXEngine::SFXe.setReverseStereo(false);
         }
-    }
-    else if ( !StriCmp(p1, "sound") )
-    {
     }
     else if ( !StriCmp(p1, "cdsound") )
     {

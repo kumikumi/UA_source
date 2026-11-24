@@ -21,7 +21,8 @@ protected:
 class SaveRoboParser : public ScriptParser::DataHandler, public SaveBact
 {
 public:
-    SaveRoboParser(NC_STACK_ypaworld *o) : _o(*o), _r(NULL) {} ;
+    // A new parse starts without units from an earlier one to attach to
+    SaveRoboParser(NC_STACK_ypaworld *o) : _o(*o), _r(NULL) { _lastRobo = NULL; _lastCommander = NULL; } ;
     virtual int Handle(ScriptParser::Parser &parser, const std::string &p1, const std::string &p2);
     virtual bool IsScope(ScriptParser::Parser &parser, const std::string &word, const std::string &opt);
 protected:

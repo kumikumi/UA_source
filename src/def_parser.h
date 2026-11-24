@@ -15,7 +15,11 @@ class Parser;
 enum FLAGS
 {
     FLAG_NO_SCOPE_SKIP  = 1,
-    FLAG_NO_INCLUDE	    = 2
+    FLAG_NO_INCLUDE	    = 2,
+    // Log and skip keys that a scope's handler doesn't know instead of
+    // failing; for save files, which keep keys older versions wrote.
+    // Unknown scopes are skipped anyway unless FLAG_NO_SCOPE_SKIP is set.
+    FLAG_SKIP_UNKNOWN   = 4
 };
 
 enum RESULTS

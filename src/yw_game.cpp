@@ -3397,7 +3397,7 @@ int NC_STACK_ypaworld::yw_RestoreVehicleData()
         new World::Parsers::BuildProtoParser(this)
     };
 
-    return ScriptParser::ParseFile(buf, parsers, 0);
+    return ScriptParser::ParseFile(buf, parsers, ScriptParser::FLAG_SKIP_UNKNOWN);
 }
 
 void NC_STACK_ypaworld::EnableLevelPasses()
