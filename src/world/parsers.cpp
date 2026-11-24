@@ -2132,7 +2132,6 @@ bool LevelDataParser::IsScope(ScriptParser::Parser &parser, const std::string &w
     _o._allowMultiBuildLevel = _o._allowMultiBuildWorld;
     _o._levelUnitLimitType = _o._defaultUnitLimitType;
     _o._levelUnitLimitArg = _o._defaultUnitLimitArg;
-    _o._luaScriptName = "";
     return true;
 }
 
@@ -2280,11 +2279,6 @@ int LevelDataParser::Handle(ScriptParser::Parser &parser, const std::string &p1,
     else if ( !StriCmp(p1, "unit_limit_arg") )
     {
         _o._levelUnitLimitArg = parser.stol(p2, NULL, 0);
-    }
-    else if ( !StriCmp(p1, "lua_script") )
-    {
-        if (IsModsAllow(true))
-            _o._luaScriptName = p2;
     }
     else if ( !StriCmp(p1, "multi_building") )
     {

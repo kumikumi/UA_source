@@ -523,9 +523,6 @@ bool NC_STACK_ypaworld::SimulationStep(TUpdateArgs *arg)
 
     _tutorialHints.Update(this);
 
-    if (_script)
-        _script->CallUpdate(_timeStamp, arg->DTime);
-                
     VoiceMessageUpdate(); // update sound messages
 
     const mat3x3 &shake = SFXEngine::SFXe.EndSoundFrame();
@@ -6072,9 +6069,6 @@ int NC_STACK_ypaworld::LoadingParseSaveFile(const std::string &filename)
         new World::Parsers::SaveMasksParser(this),
         new World::Parsers::SaveSuperBombParser(this),
     };
-    
-    if (World::IsModsAllow(false))
-        parsers.push_back( new World::Parsers::SaveLuaScriptParser(this) );
 
     return ScriptParser::ParseFile(filename, parsers, ScriptParser::FLAG_SKIP_UNKNOWN);
 }
@@ -6301,19 +6295,6 @@ size_t NC_STACK_ypaworld::SaveGame(const std::string &saveFile)
         {
             yw_write_history(this, fil);
             yw_write_masks(this, fil);
-        }
-    }
-    
-    if (_script)
-    {
-        std::string buf = _script->GetSaveString();
-        
-        if (!buf.empty())
-        {
-            fil->printf("\nbegin_luascript\n");
-            fil->printf("%s\n", buf.c_str());
-            fil->printf("EOF\n");
-            fil->printf("end\n");
         }
     }
 

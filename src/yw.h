@@ -35,7 +35,6 @@
 #include "world/nparticle.h"
 
 
-#include "world/luaevents.h"
 #include "world/tutorialhints.h"
 #include "locale/locale.h"
 
@@ -1892,7 +1891,6 @@ friend class World::Parsers::LevelStatusParser;
 friend class World::Parsers::SaveHistoryParser;
 friend class World::Parsers::SaveMasksParser;
 friend class World::Parsers::SaveSuperBombParser;
-friend class World::Parsers::SaveLuaScriptParser;
 
 public:
     enum
@@ -2822,8 +2820,6 @@ public:
         
     std::string _initScriptFilePath;
 
-    std::string _luaScriptName;
-    
     /* Allow to build multiple buildings at the same time 
        Can be set in
        world: misc scope  - "multi_building" 
@@ -2847,7 +2843,6 @@ protected:
     World::ParticleSystem _particles;
 
     World::TutorialHints _tutorialHints;
-    World::LuaEvents *_script = NULL;
 };
 
 #endif

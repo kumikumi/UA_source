@@ -251,19 +251,7 @@ int NC_STACK_ypaworld::LevelCommonLoader(TLevelDescription *mapp, int levelID, i
 
     if ( ParseLevelDescription(mapp, _globalMapRegions.MapRegions[_levelInfo.LevelID].MapDirectory) && mapp->IsOk() )
     {       
-        Common::DeleteAndNull(&_script);
-        _tutorialHints.Stop();
-
-        if (mapp->EventLoopID >= 1 && mapp->EventLoopID <= 3)
-        {
-            _tutorialHints.Start(mapp->EventLoopID);
-        }
-        else if (!_luaScriptName.empty())
-        {
-            _script = new World::LuaEvents(this);
-            _script->LoadFile(_luaScriptName);
-            _script->CallInit(_timeStamp);
-        }
+        _tutorialHints.Start(mapp->EventLoopID);
 
         _energyAccumMap.Clear();
         _nextPSForUpdate = 0;

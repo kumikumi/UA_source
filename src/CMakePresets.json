@@ -4,12 +4,12 @@
         {
             "name": "macos",
             "displayName": "macOS (Homebrew)",
-            "description": "Homebrew installs OpenAL Soft and Lua 5.4 keg-only, so point CMake at them explicitly.",
+            "description": "Homebrew installs OpenAL Soft keg-only, so point CMake at it explicitly.",
             "generator": "Ninja",
             "binaryDir": "${sourceDir}/../build/macos",
             "cacheVariables": {
                 "CMAKE_BUILD_TYPE": "RelWithDebInfo",
-                "CMAKE_PREFIX_PATH": "/opt/homebrew/opt/openal-soft;/opt/homebrew/opt/lua@5.4",
+                "CMAKE_PREFIX_PATH": "/opt/homebrew/opt/openal-soft",
                 "CMAKE_EXPORT_COMPILE_COMMANDS": "ON"
             },
             "condition": {

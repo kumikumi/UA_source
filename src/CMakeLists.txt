@@ -57,7 +57,6 @@ set(SOURCES
 	system/glfuncs.cpp
 	system/inivals.cpp
 	system/inpt.cpp
-	system/luascript.cpp
 	system/movie.cpp
 	system/perf.cpp
 	system/sound.cpp
@@ -70,7 +69,6 @@ set(SOURCES
 	winp.cpp
 	wintimer.cpp
 	world/analyzer.cpp
-	world/luaevents.cpp
 	world/parsers.cpp
 	world/nparticle.cpp
 	world/protos.cpp
@@ -127,8 +125,6 @@ if(APPLE)
 else()
     find_package(OpenAL REQUIRED)
 endif()
-
-find_package(Lua REQUIRED)
 
 # The SDL_GPU renderer's shaders are written in Slang (src/shaders) and
 # compiled when the game is built: to Metal Shading Language for macOS and to
@@ -234,7 +230,6 @@ target_link_libraries(UA_source SDL3::SDL3
 							 ${OPENGL_LIBRARIES}
 							 ${VORBISFILE_LIBRARIES}
 							 ${OPENAL_LIBRARY}
-							 ${LUA_LIBRARIES}
 							 FFmpeg::avcodec
 							 FFmpeg::avformat
 							 FFmpeg::avutil
@@ -245,8 +240,7 @@ target_include_directories(UA_source PUBLIC
 										${PROJECT_SOURCE_DIR} 
 										${OpenGL_INCLUDE_DIR}
 										${VORBISFILE_INCLUDE_DIRS}
-										${OPENAL_INCLUDE_DIR}
-										${LUA_INCLUDE_DIR})
+										${OPENAL_INCLUDE_DIR})
 
 if(UA_GPU_RENDERER)
     target_compile_definitions(UA_source PRIVATE UA_GPU_RENDERER)
