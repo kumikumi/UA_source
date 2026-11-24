@@ -62,9 +62,7 @@ protected:
         bool Reached = false;
         int32_t ReachedTime = 0; // When reached, or last repeated
         bool Played = false; // Has had its one turn, or its first
-
-        // Which message played last, counting from 1; 0 before the first
-        size_t MessageNumber = 0;
+        size_t NextMessage = 0;
     };
 
     Result Consider(NC_STACK_ypaworld *world, Hint &hint);

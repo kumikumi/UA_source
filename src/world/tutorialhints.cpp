@@ -233,19 +233,16 @@ void TutorialHints::Play(NC_STACK_ypaworld *world, size_t hintId)
     _lastPlayedHint = hintId;
     _lastPlayTime = world->_timeStamp;
 
-    // After the last message comes a turn without one, then the first again
-    if ( hint.MessageNumber == 0 || hint.MessageNumber > hint.Messages.size() )
-        hint.MessageNumber = 1;
-    else
-        hint.MessageNumber++;
-
-    if ( hint.MessageNumber > hint.Messages.size() )
+    if ( hint.Messages.empty() )
         return;
 
     TInfoMessage msg;
     msg.Priority = 100;
     msg.unit = NULL;
-    msg.MsgID = hint.Messages[hint.MessageNumber - 1];
+    msg.MsgID = hint.Messages[hint.NextMessage];
+
+    // The messages take turns, the first again after the last
+    hint.NextMessage = (hint.NextMessage + 1) % hint.Messages.size();
 
     world->ShowMessage(&msg);
 }

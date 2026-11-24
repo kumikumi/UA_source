@@ -6780,6 +6780,9 @@ size_t NC_STACK_ypaworld::AdvancedCreateLevel(TLevelLoadRequest *arg)
             ypa_log_out("Warning: in YWM_ADVANCEDCREATELEVEL: YWM_LOADGAME of %s failed!\n", savename.c_str());
 
         _userRobo->_energy = _userRobo->_energy_max;
+
+        // A won training mission played again has nothing left to teach
+        _tutorialHints.Stop();
     }
     else
     {
