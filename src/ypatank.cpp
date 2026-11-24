@@ -733,7 +733,10 @@ void NC_STACK_ypatank::AI_layer3(update_msg *arg)
 
                 if ( _tankFlags & FLAG_TANK_ROTWAIT )
                 {
-                    switch( ((size_t)this + _clock) % 7 ) //WAT!?
+                    // Now and then a turn on the spot, picked by the unit's
+                    // id: its address, as the original took, differs from
+                    // run to run
+                    switch( (_gid + _clock) % 7 )
                     {
                         case 0:
                             _status_flg |= BACT_STFLAG_DODGE_LEFT;
