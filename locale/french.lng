@@ -286,7 +286,7 @@
 334  = Filtrage des textures
 335  = Auto
 336  = Aucune
-337  = <>
+337  = min
 338  = <>
 339  = >>> Display Dialog <<<
 340  = Résolution de l'écran :
@@ -304,7 +304,7 @@
 352  = Technologie Direct3D:
 353  = Moteur de rendu:
 354  = Films
-355  = Nouvelle IA
+355  = <>
 356  = Limite d'images :
 357  = Canaux audio :
 358  = Pauses de l'IA :
@@ -761,10 +761,10 @@
 848  = Aide (non disponible en mode Multijoueur)
 849  = Activer/Désactiver le filtrage des textures (désactivé : pixels nets)
 850  = Activer/Désactiver les films d'introduction et de mission
-851  = Les vaisseaux mères ennemis font une pause entre leurs décisions (nouvelle IA)
+851  = <>
 852  = Limiter la vitesse de trame (Auto suit l'écran)
 853  = Modifier le nombre de sons joués en même temps
-854  = Modifier la durée des pauses des vaisseaux mères ennemis (nouvelle IA)
+854  = Modifier l'attente des vaisseaux mères ennemis entre leurs décisions
 855  = <>
 856  = <>
 857  = <>

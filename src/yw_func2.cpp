@@ -1119,9 +1119,9 @@ void UserData::ApplyOptions()
     if ( _settingsChangeOptions & OPT_CHG_CHANNELS )
         SFXEngine::SFXe.SetChannels(confSoundChannels);
 
-    // Host stations take these when they are made, so from the next level
-    if ( _settingsChangeOptions & (OPT_CHG_NEWAI | OPT_CHG_AITIMELINE) )
-        yw->SetEnemyAI(confNewAI, confAITimeline);
+    // Host stations take it when they are made, so from the next level
+    if ( _settingsChangeOptions & OPT_CHG_AITIMELINE )
+        yw->SetAITimeline(confAITimeline);
 
     if ( forceChange )
     {
@@ -1392,10 +1392,6 @@ void UserData::ShowToolTip(int id)
 
     case 1175:
         p_YW->SetShowingTooltip(Locale::TIP_CONF_MOVIES);
-        break;
-
-    case 1176:
-        p_YW->SetShowingTooltip(Locale::TIP_CONF_NEWAI);
         break;
 
     case 1177:
@@ -1851,14 +1847,18 @@ std::string UserData::FpsLimitText(int fps)
 
 std::string UserData::AITimelineText(int32_t ms)
 {
-    return fmt::sprintf("%d:%02d", ms / 60000, (ms / 1000) % 60);
+    const std::string &min = Locale::Text::Dialogs(Locale::DLG_S_MINUTES);
+
+    if ( ms % 60000 == 0 )
+        return fmt::sprintf("%d %s", ms / 60000, min);
+
+    return fmt::sprintf("%d:%02d %s", ms / 60000, (ms / 1000) % 60, min);
 }
 
 void UserData::SetEngineOptionWidgets()
 {
     confFiltering = GFX::Engine.GetTextureFiltering();
     confMovies = p_YW->IsMoviesEnabled();
-    confNewAI = p_YW->IsNewAI();
     confMaxFps = GFX::Engine.GetFpsLimitSetting();
     confSoundChannels = SFXEngine::SFXe.GetChannels();
     confAITimeline = p_YW->GetAITimeline();
@@ -1870,10 +1870,6 @@ void UserData::SetEngineOptionWidgets()
 
     btnState.butID = 1175;
     btnState.state = (!confMovies) + 1;
-    video_button->SetState(&btnState);
-
-    btnState.butID = 1176;
-    btnState.state = (!confNewAI) + 1;
     video_button->SetState(&btnState);
 
     NC_STACK_button::Slider *slider = video_button->GetSliderData(1177);
@@ -2928,11 +2924,6 @@ void UserData::GameShellUiHandleInput()
         {
             confMovies = (r.code == 1140);
             _settingsChangeOptions |= OPT_CHG_MOVIES;
-        }
-        else if ( r.code == 1142 || r.code == 1143 )
-        {
-            confNewAI = (r.code == 1142);
-            _settingsChangeOptions |= OPT_CHG_NEWAI;
         }
         else if ( r.code == 1144 )
         {

@@ -184,7 +184,6 @@ public:
     
     static Common::Ini::Key GameDebug;
     
-    static Common::Ini::Key GameNewAI;
     static Common::Ini::Key GameTimeLine;
     
     static Common::Ini::Key NetGameExclusiveGem;

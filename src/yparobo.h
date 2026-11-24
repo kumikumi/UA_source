@@ -308,7 +308,6 @@ public:
 
     uint8_t _roboWFlags;
     int32_t _roboState;
-    int _roboNewAI;
     int _roboTimeScale;
 
     uint8_t _roboEpConquer;

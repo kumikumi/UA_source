@@ -3440,10 +3440,8 @@ int GameParser::Handle(ScriptParser::Parser &parser, const std::string &p1, cons
     if ( !StriCmp(p1, "end") )
         return ScriptParser::RESULT_SCOPE_END;
 
-    if ( !StriCmp(p1, "newai") )
-        _o.SetEnemyAI( StrGetBool(p2), _o.GetAITimeline() );
-    else if ( !StriCmp(p1, "timeline") )
-        _o.SetEnemyAI( _o.IsNewAI(), parser.stoi(p2) );
+    if ( !StriCmp(p1, "timeline") )
+        _o.SetAITimeline( parser.stoi(p2) );
     else
         return ScriptParser::RESULT_UNKNOWN;
 

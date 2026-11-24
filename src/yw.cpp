@@ -2153,7 +2153,7 @@ bool NC_STACK_ypaworld::InitGameShell(UserData *usr)
     _netExclusiveGem = System::IniConf::NetGameExclusiveGem.Get<bool>();
 
     // Defaults for profiles that don't set these
-    SetEnemyAI(System::IniConf::GameNewAI.Get<bool>(), System::IniConf::GameTimeLine.Get<int>());
+    SetAITimeline(System::IniConf::GameTimeLine.Get<int>());
     SetMoviesEnabled(System::IniConf::GfxMoviePlayer.Get<bool>());
 
     usr->profiles.clear();
@@ -3972,7 +3972,6 @@ bool NC_STACK_ypaworld::CreateVideoControls()
         allAdded = allAdded
             && addCheckBox(10, true, 1174, 1138, 1139, Locale::Text::Dialogs(Locale::DLG_S_FILTERING))
             && addCheckBox(11, false, 1175, 1140, 1141, Locale::Text::Dialogs(Locale::DLG_S_MOVIES))
-            && addCheckBox(11, true, 1176, 1142, 1143, Locale::Text::Dialogs(Locale::DLG_S_NEWAI))
             && addSlider(13, 1177, 1178, 1144, 0, UserData::FpsLimits.size() - 1, Locale::Text::Dialogs(Locale::DLG_S_MAXFPS))
             && addSlider(16, 1179, 1180, 1145, 1, AUDIO_CHANNELS, Locale::Text::Dialogs(Locale::DLG_S_CHANNELS))
             && addSlider(17, 1181, 1182, 1146, 1, 30, Locale::Text::Dialogs(Locale::DLG_S_AITIMELINE)); // Minutes
@@ -6480,7 +6479,7 @@ int NC_STACK_ypaworld::ParseSettingsFile(const std::string &fname, uint32_t sdfM
     if ( sdfMask & World::SDF_GAME )
     {
         // Profiles without the section follow nucleus.ini
-        SetEnemyAI(System::IniConf::GameNewAI.Get<bool>(), System::IniConf::GameTimeLine.Get<int>());
+        SetAITimeline(System::IniConf::GameTimeLine.Get<int>());
         parsers += new World::Parsers::GameParser(this);
     }
 

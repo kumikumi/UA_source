@@ -2768,7 +2768,6 @@ void UserData::clear()
     confEnemyIndicator = false;
     confFiltering = false;
     confMovies = false;
-    confNewAI = false;
     confMaxFps = 0;
     confSoundChannels = 0;
     confAITimeline = 0;

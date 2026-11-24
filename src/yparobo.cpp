@@ -1882,8 +1882,7 @@ void NC_STACK_yparobo::buildRadar(update_msg *arg)
 
                         _roboBuildingDuty = 0;
 
-                        if ( _roboNewAI )
-                            _roboRadarDelay = _roboTimeScale * (100 - _roboEpRadar) / 100;
+                        _roboRadarDelay = _roboTimeScale * (100 - _roboEpRadar) / 100;
                     }
                     else
                     {
@@ -2043,8 +2042,7 @@ void NC_STACK_yparobo::buildPower(update_msg *arg)
 
                             _roboBuildingDuty = 0;
 
-                            if ( _roboNewAI )
-                                _roboPowerDelay = _roboTimeScale * (100 - _roboEpPower) / 100;
+                            _roboPowerDelay = _roboTimeScale * (100 - _roboEpPower) / 100;
                         }
                         else
                         {
@@ -2208,8 +2206,7 @@ void NC_STACK_yparobo::buildSafe(update_msg *arg)
 
                         _roboBuildingDuty = 0;
 
-                        if ( _roboNewAI )
-                            _roboSafetyDelay = _roboTimeScale * (100 - _roboEpSafety) / 100;
+                        _roboSafetyDelay = _roboTimeScale * (100 - _roboEpSafety) / 100;
                     }
                     else
                     {
@@ -2280,8 +2277,7 @@ void NC_STACK_yparobo::changePlace()
             targetMsg.priority = 0;
             SetTarget(&targetMsg);
 
-            if ( _roboNewAI )
-                _roboPositionDelay = _roboTimeScale * (100 - _roboEpChangePlace) / 100;
+            _roboPositionDelay = _roboTimeScale * (100 - _roboEpChangePlace) / 100;
         }
     }
     else
@@ -2690,8 +2686,7 @@ void NC_STACK_yparobo::buildConquer()
 
         AllocForce(&loct);
 
-        if ( _roboNewAI )
-            _roboConqDelay = _roboTimeScale * (100 - _roboEpConquer) / 100;
+        _roboConqDelay = _roboTimeScale * (100 - _roboEpConquer) / 100;
 
         _roboVehicleDuty = 0;
     }
@@ -2805,8 +2800,7 @@ void NC_STACK_yparobo::buildDefense()
 
             AllocForce(&loct);
 
-            if ( _roboNewAI )
-                _roboEnemyDelay = _roboTimeScale * (100 - _roboEpDefense) / 100;
+            _roboEnemyDelay = _roboTimeScale * (100 - _roboEpDefense) / 100;
 
             _roboVehicleDuty = 0;
         }
@@ -2874,8 +2868,7 @@ void NC_STACK_yparobo::buildRobo()
                 }
             }
 
-            if ( _roboNewAI )
-                _roboDangerDelay = _roboTimeScale * (100 - _roboEpRobo) / 100;
+            _roboDangerDelay = _roboTimeScale * (100 - _roboEpRobo) / 100;
 
             _roboVehicleDuty = 0;
         }
@@ -2926,8 +2919,7 @@ void NC_STACK_yparobo::buildReconnoitre()
         if ( force )
             force->_aggr = 25;
 
-        if ( _roboNewAI )
-            _roboExploreDelay = _roboTimeScale * (100 - _roboEpRecon) / 100;
+        _roboExploreDelay = _roboTimeScale * (100 - _roboEpRecon) / 100;
 
         _roboVehicleDuty = 0;
     }
@@ -4180,12 +4172,9 @@ int NC_STACK_yparobo::RateSectorForRelocation()
 void NC_STACK_yparobo::AI_checkWorld(update_msg *arg)
 {
     int doSearch = 1;
-    if ( _roboNewAI )
-    {
-        _roboConqDelay -= arg->frameTime;
-        if ( _roboConqDelay > 0 )
-            doSearch = 0;
-    }
+    _roboConqDelay -= arg->frameTime;
+    if ( _roboConqDelay > 0 )
+        doSearch = 0;
 
     TCommanderSearch commanderSearch;
 
@@ -4236,13 +4225,10 @@ void NC_STACK_yparobo::AI_checkWorld(update_msg *arg)
     }
 
     doSearch = 1;
-    if ( _roboNewAI )
-    {
-        _roboEnemyDelay -= arg->frameTime;
+    _roboEnemyDelay -= arg->frameTime;
 
-        if ( _roboEnemyDelay > 0 )
-            doSearch = 0;
-    }
+    if ( _roboEnemyDelay > 0 )
+        doSearch = 0;
 
     if ( IsEnemyUnitNear() )
         doSearch = 1;
@@ -4280,12 +4266,9 @@ void NC_STACK_yparobo::AI_checkWorld(update_msg *arg)
     }
 
     doSearch = 1;
-    if ( _roboNewAI )
-    {
-        _roboDangerDelay -= arg->frameTime;
-        if ( _roboDangerDelay > 0 )
-            doSearch = 0;
-    }
+    _roboDangerDelay -= arg->frameTime;
+    if ( _roboDangerDelay > 0 )
+        doSearch = 0;
 
     if ( IsEnemyRoboNear() )
         doSearch = 1;
@@ -4325,12 +4308,9 @@ void NC_STACK_yparobo::AI_checkWorld(update_msg *arg)
     }
 
     doSearch = 1;
-    if ( _roboNewAI )
-    {
-        _roboPositionDelay -= arg->frameTime;
-        if ( _roboPositionDelay > 0 )
-            doSearch = 0;
-    }
+    _roboPositionDelay -= arg->frameTime;
+    if ( _roboPositionDelay > 0 )
+        doSearch = 0;
 
     if ( _roboEpChangePlace && doSearch )
     {
@@ -4370,12 +4350,9 @@ void NC_STACK_yparobo::AI_checkWorld(update_msg *arg)
     _world->GetReloadRatios(&reloadRatios);
 
     doSearch = 1;
-    if ( _roboNewAI )
-    {
-        _roboPowerDelay -= arg->frameTime;
-        if ( _roboPowerDelay > 0 )
-            doSearch = 0;
-    }
+    _roboPowerDelay -= arg->frameTime;
+    if ( _roboPowerDelay > 0 )
+        doSearch = 0;
 
     if ( reloadRatios.ratioClamped == 0.0 )
     {
@@ -4425,12 +4402,9 @@ void NC_STACK_yparobo::AI_checkWorld(update_msg *arg)
     }
 
     doSearch = 1;
-    if ( _roboNewAI )
-    {
-        _roboRadarDelay -= arg->frameTime;
-        if ( _roboRadarDelay > 0 )
-            doSearch = 0;
-    }
+    _roboRadarDelay -= arg->frameTime;
+    if ( _roboRadarDelay > 0 )
+        doSearch = 0;
 
     if ( _roboEpRadar && (CountUnseenSectors() / 64 > CountOwnRadarSectors()) && doSearch )
     {
@@ -4471,12 +4445,9 @@ void NC_STACK_yparobo::AI_checkWorld(update_msg *arg)
 
 
     doSearch = 1;
-    if ( _roboNewAI )
-    {
-        _roboSafetyDelay -= arg->frameTime;
-        if ( _roboSafetyDelay > 0 )
-            doSearch = 0;
-    }
+    _roboSafetyDelay -= arg->frameTime;
+    if ( _roboSafetyDelay > 0 )
+        doSearch = 0;
 
     int sectorsPerFlak;
     if ( _roboEpSafety )
@@ -4523,12 +4494,9 @@ void NC_STACK_yparobo::AI_checkWorld(update_msg *arg)
 
 
     doSearch = 1;
-    if ( _roboNewAI )
-    {
-        _roboExploreDelay -= arg->frameTime;
-        if ( _roboExploreDelay > 0 )
-            doSearch = 0;
-    }
+    _roboExploreDelay -= arg->frameTime;
+    if ( _roboExploreDelay > 0 )
+        doSearch = 0;
 
     if ( _roboEpRecon && doSearch )
     {
@@ -5247,7 +5215,6 @@ void NC_STACK_yparobo::Renew()
 
     setBACT_yourLastSeconds(3000);
 
-    _roboNewAI = _world->IsNewAI();
     _roboTimeScale = _world->GetAITimeline();
 }
 
@@ -6209,7 +6176,6 @@ NC_STACK_yparobo::NC_STACK_yparobo()
 
     _roboWFlags = 0;
     _roboState = 0;
-    _roboNewAI = 0;
     _roboTimeScale = 0;
 
     _roboEpConquer = 0;

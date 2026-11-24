@@ -286,7 +286,7 @@
 334  = Texturfilterung
 335  = Auto
 336  = Aus
-337  = <>
+337  = Min.
 338  = <>
 339  = >>> Display Dialog <<<
 340  = Grafikauflösung:
@@ -304,7 +304,7 @@
 352  = Direct3D-Gerät:
 353  = Renderer:
 354  = Filme
-355  = Neue KI
+355  = <>
 356  = Bildratenlimit:
 357  = Soundkanäle:
 358  = KI-Pausen:
@@ -761,10 +761,10 @@
 848  = Hilfe (im Multiplayer-Spiel nicht verfügbar)
 849  = Texturfilterung ein/aus ('aus' zeigt scharfe Pixel)
 850  = Intro- und Missionsfilme ein/aus
-851  = Feindliche Basisstationen pausieren zwischen Entscheidungen (Neue KI)
+851  = <>
 852  = Bildwiederholrate begrenzen ('Auto' folgt dem Bildschirm)
 853  = Anzahl gleichzeitig abspielbarer Klänge einstellen
-854  = Pausen der feindlichen Basisstationen einstellen (Neue KI)
+854  = Wartezeit der feindlichen Basisstationen zwischen Entscheidungen einstellen
 855  = <>
 856  = <>
 857  = <>

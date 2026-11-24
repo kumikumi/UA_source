@@ -184,7 +184,6 @@ Common::Ini::Key IniConf::NetVersionCheck("net.versioncheck", Common::Ini::KT_BO
 Common::Ini::Key IniConf::GameDebug("game.debug", Common::Ini::KT_BOOL);
 
 // Yparobo keys
-Common::Ini::Key IniConf::GameNewAI("game.newai",    Common::Ini::KT_BOOL, true);
 Common::Ini::Key IniConf::GameTimeLine("game.timeline", Common::Ini::KT_DIGIT, (int32_t)600000);
 
 // Ypaworld keys
@@ -362,7 +361,6 @@ void IniConf::Init()
 
         , &GameDebug
 
-        , &GameNewAI
         , &GameTimeLine
 
         , &NetGameExclusiveGem

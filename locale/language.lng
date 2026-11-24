@@ -286,7 +286,7 @@
 334  = Texture Filtering
 335  = Auto
 336  = Off
-337  = <>
+337  = min
 338  = <>
 339  = >>> Display Dialog <<<
 340  = Display Resolution:
@@ -304,7 +304,7 @@
 352  = Direct3D Device:
 353  = Renderer:
 354  = Movies
-355  = New AI
+355  = <>
 356  = Frame Rate Limit:
 357  = Sound Channels:
 358  = AI Timeline:
@@ -761,10 +761,10 @@
 848  = Help (Not Available in Multiplayer)
 849  = Turn Texture Filtering On/Off (Off Shows Sharp Pixels)
 850  = Turn the Intro and Mission Movies On/Off
-851  = Let Enemy Host Stations Pause Between Decisions (New AI)
+851  = <>
 852  = Limit the Frame Rate (Auto Follows the Display)
 853  = Change How Many Sounds Can Play at Once
-854  = Change How Long Enemy Host Stations Pause (New AI)
+854  = Change How Long Enemy Host Stations Wait Between Decisions
 855  = <>
 856  = <>
 857  = <>

@@ -233,12 +233,6 @@ int yw_write_video(FSMgr::FileHandle *fil, UserData *usr)
 int yw_write_game(FSMgr::FileHandle *fil, UserData *usr)
 {
     fil->printf("new_game\n");
-
-    if ( usr->p_YW->IsNewAI() )
-        fil->printf("    newai = yes\n");
-    else
-        fil->printf("    newai = no\n");
-
     fil->printf("    timeline = %d\n", usr->p_YW->GetAITimeline());
     fil->printf("end\n\n");
 
