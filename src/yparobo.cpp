@@ -5111,8 +5111,16 @@ void NC_STACK_yparobo::EnergyInteract(update_msg *arg)
             }
         }
 
-        if ( _energy < 0 )
+        if ( _energy <= 0 )
+        {
             _energy = 0;
+
+            // Drained dry on another faction's sector: the next update kills
+            // this host station, and the sector's owner gets the kill, and
+            // with it this host station's sectors
+            if ( _pSector->owner != _owner )
+                _killer_owner = _pSector->owner;
+        }
 
         if ( _roboEnergyLife < 0 )
             _roboEnergyLife = 0;
