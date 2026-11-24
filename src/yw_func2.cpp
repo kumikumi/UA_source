@@ -1087,22 +1087,6 @@ void UserData::ApplyOptions()
         }
     }
 
-    if ( _settingsChangeOptions & 4 )
-    {
-        if ( confGFXFlags & World::GFX_FLAG_16BITTEXTURE )
-        {
-            GFXFlags |= World::GFX_FLAG_16BITTEXTURE;
-            GFX::Engine.setWDD_16bitTex(1);
-        }
-        else
-        {
-            GFXFlags &= ~World::GFX_FLAG_16BITTEXTURE;
-            GFX::Engine.setWDD_16bitTex(0);
-        }
-
-        forceChange = true;
-    }
-
     if ( _settingsChangeOptions & 0x400 )
     {
         if ( confGFXFlags & World::GFX_FLAG_WINDOWED )
@@ -1342,10 +1326,6 @@ void UserData::ShowToolTip(int id)
             break;
         }
         break;
-    case 1150:
-        p_YW->SetShowingTooltip(Locale::TIP_MENU_16BITTEX);
-        break;
-
     case 1151:
         p_YW->SetShowingTooltip(Locale::TIP_CONF_CHANNELS);
         break;
@@ -1824,10 +1804,6 @@ void UserData::CancelOptions()
 
     btnState.state = ((GFXFlags & World::GFX_FLAG_SKYRENDER) == 0) + 1;
     btnState.butID = 1160;
-    video_button->SetState(&btnState);
-
-    btnState.butID = 1150;
-    btnState.state = ((GFXFlags & World::GFX_FLAG_16BITTEXTURE) == 0) + 1;
     video_button->SetState(&btnState);
 
     btnState.butID = 1166;
@@ -2768,16 +2744,6 @@ void UserData::GameShellUiHandleInput()
         {
             confSoundFlags |= World::SF_INVERTLR;
             _settingsChangeOptions |= 2;
-        }
-        else if ( r.code == 1113 )
-        {
-            confGFXFlags |= World::GFX_FLAG_16BITTEXTURE;
-            _settingsChangeOptions |= 4;
-        }
-        else if ( r.code == 1114 )
-        {
-            confGFXFlags &= ~World::GFX_FLAG_16BITTEXTURE;
-            _settingsChangeOptions |= 4;
         }
         else if ( r.code == 1115 )
         {

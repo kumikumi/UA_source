@@ -526,11 +526,7 @@ public:
     
 
     virtual void setWDD_disLowRes(int arg);
-    virtual void setWDD_16bitTex(int arg);
-    virtual void setWDD_drawPrim(int arg);
 
-    virtual int getWDD_16bitTex();
-    virtual int getWDD_drawPrim();
     
     
     
@@ -642,8 +638,6 @@ private:
     RenderBackend *_backend = NULL;
 
 public:
-    int _txt16bit;
-    int _use_simple_d3d;
     int _disable_lowres;
     int _export_window_mode;
     int _flags;

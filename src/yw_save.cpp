@@ -190,16 +190,6 @@ int yw_write_video(FSMgr::FileHandle *fil, UserData *usr)
     else
         fil->printf("    farview = no\n");
 
-    if ( usr->GFXFlags & World::GFX_FLAG_16BITTEXTURE )
-        fil->printf("    16bittexture = yes\n");
-    else
-        fil->printf("    16bittexture = no\n");
-
-    if ( usr->GFXFlags & World::GFX_FLAG_DRAWPRIMITIVES )
-        fil->printf("    drawprimitive = yes\n");
-    else
-        fil->printf("    drawprimitive = no\n");
-
     if ( usr->GFXFlags & World::GFX_FLAG_SKYRENDER )
         fil->printf("    heaven = yes\n");
     else

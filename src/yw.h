@@ -299,8 +299,6 @@ enum GFX_FLAG
 {
     GFX_FLAG_FARVIEW            = (1 << 0),
     GFX_FLAG_SKYRENDER          = (1 << 1),
-    GFX_FLAG_DRAWPRIMITIVES     = (1 << 3),
-    GFX_FLAG_16BITTEXTURE       = (1 << 4),
     GFX_FLAG_WINDOWED           = (1 << 5),
     GFX_FLAG_VSYNC              = (1 << 6),
 };

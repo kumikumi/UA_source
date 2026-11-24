@@ -106,8 +106,6 @@ GFXEngine::GFXEngine()
     for(SDL_Color &c : _palette)
         c = {0, 0, 0, 0};
     
-    _txt16bit = 0;
-    _use_simple_d3d = 0;
     _disable_lowres = 0;
     _export_window_mode = 0;
     _flags = 0;
@@ -151,19 +149,6 @@ bool out_guid_to_file(const std::string &filename, const std::string &name)
     fil->puts(name);
     delete fil;
     return true;
-}
-
-void out_yes_no_status(const char *filename, int val)
-{
-    FSMgr::FileHandle *fil = uaOpenFileAlloc(filename, "w");
-    if ( fil )
-    {
-        if ( val )
-            fil->puts("yes");
-        else
-            fil->puts("no");
-        delete fil;
-    }
 }
 
 void GFXEngine::DrawTextEntry(const ScreenText *txt)
@@ -400,8 +385,6 @@ int GFXEngine::LoadFontByDescr(const std::string &fontname)
 
 size_t GFXEngine::ReadIniDisplaySettings()
 {
-    int txt16bit_def = read_yes_no_status("env/txt16bit.def", 1);
-    int drawprim_def = read_yes_no_status("env/drawprim.def", 0);
     _export_window_mode = System::IniConf::GfxExportWindowMode.Get<bool>();     // gfx.export_window_mode
 
     switch(System::IniConf::GfxBlending.Get<int>())
@@ -435,8 +418,6 @@ size_t GFXEngine::ReadIniDisplaySettings()
     SetResVariables( System::GetResolution() );
 
     _disable_lowres = System::IniConf::GfxDisableLowres.Get<bool>();
-    _txt16bit = txt16bit_def;
-    _use_simple_d3d = drawprim_def;
 
     _solidFont = System::IniConf::GfxSolidFont.Get<bool>();
 
@@ -1245,27 +1226,6 @@ void GFXEngine::setWDD_disLowRes(int arg)
 {
 }
 
-void GFXEngine::setWDD_16bitTex(int arg)
-{
-    out_yes_no_status("env/txt16bit.def", arg);
-}
-
-void GFXEngine::setWDD_drawPrim(int arg)
-{
-    out_yes_no_status("env/drawprim.def", arg);
-}
-
-
-
-int GFXEngine::getWDD_16bitTex()
-{
-    return _txt16bit;
-}
-
-int GFXEngine::getWDD_drawPrim()
-{
-    return _use_simple_d3d;
-}
 
 void GFXEngine::setW3D_texFilt(int arg)
 {

@@ -16,7 +16,6 @@ Common::Ini::Key IniConf::GfxForceEmul("gfx.force_emul", Common::Ini::KT_BOOL);
 Common::Ini::Key IniConf::GfxAllModes("gfx.all_modes", Common::Ini::KT_BOOL);
 Common::Ini::Key IniConf::GfxMoviePlayer("gfx.movie_player", Common::Ini::KT_BOOL, true);
 Common::Ini::Key IniConf::GfxForceAlphaTex("gfx.force_alpha_textures", Common::Ini::KT_BOOL);
-Common::Ini::Key IniConf::GfxUseDrawPrimitive("gfx.use_draw_primitive", Common::Ini::KT_BOOL);
 Common::Ini::Key IniConf::GfxDisableLowres("gfx.disable_lowres", Common::Ini::KT_BOOL);
 Common::Ini::Key IniConf::GfxExportWindowMode("gfx.export_window_mode", Common::Ini::KT_BOOL);
 Common::Ini::Key IniConf::GfxBlending("gfx.blending", Common::Ini::KT_DIGIT, (int32_t) 0);
@@ -213,7 +212,6 @@ void IniConf::Init()
         , &GfxAllModes
         , &GfxMoviePlayer
         , &GfxForceAlphaTex
-        , &GfxUseDrawPrimitive
         , &GfxDisableLowres
         , &GfxExportWindowMode
         , &GfxBlending

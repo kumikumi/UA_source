@@ -3272,17 +3272,6 @@ int VideoParser::Handle(ScriptParser::Parser &parser, const std::string &p1, con
     if ( !StriCmp(p1, "end") )
     {
         GFX::Engine.SetVsync( _o._GameShell->IsVsyncFlag() );
-
-        if ( GFX::Engine.getWDD_drawPrim() )
-            _o._GameShell->GFXFlags |= World::GFX_FLAG_DRAWPRIMITIVES;
-        else
-            _o._GameShell->GFXFlags &= ~World::GFX_FLAG_DRAWPRIMITIVES;
-
-        if ( GFX::Engine.getWDD_16bitTex() )
-            _o._GameShell->GFXFlags |= World::GFX_FLAG_16BITTEXTURE;
-        else
-            _o._GameShell->GFXFlags &= ~World::GFX_FLAG_16BITTEXTURE;
-        
         return ScriptParser::RESULT_SCOPE_END;
     }
 
@@ -3300,20 +3289,6 @@ int VideoParser::Handle(ScriptParser::Parser &parser, const std::string &p1, con
             _o._GameShell->GFXFlags &= ~World::GFX_FLAG_FARVIEW;
             _o.SetFarView(false);
         }
-    }
-    else if ( !StriCmp(p1, "drawprimitive") )
-    {
-        if ( StrGetBool(p2) )
-            _o._GameShell->GFXFlags |= World::GFX_FLAG_DRAWPRIMITIVES;
-        else
-            _o._GameShell->GFXFlags &= ~World::GFX_FLAG_DRAWPRIMITIVES;
-    }
-    else if ( !StriCmp(p1, "16bittexture") )
-    {
-        if ( StrGetBool(p2) )
-            _o._GameShell->GFXFlags |= World::GFX_FLAG_16BITTEXTURE;
-        else
-            _o._GameShell->GFXFlags &= ~World::GFX_FLAG_16BITTEXTURE;
     }
     else if ( !StriCmp(p1, "heaven") )
     {

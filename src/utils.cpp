@@ -8,25 +8,6 @@
 #include <SDL3/SDL_timer.h>
 
 
-int read_yes_no_status(const std::string &file, int result)
-{
-    FSMgr::FileHandle *fil = uaOpenFileAlloc(file, "r");
-    if ( fil )
-    {
-        std::string line;
-        if ( fil->ReadLine(&line) )
-        {
-            size_t en = line.find_first_of("; \n\r");
-            if (en != std::string::npos)
-                line.erase(en);
-            
-            result = StrGetBool(line);
-        }
-        delete fil;
-    }
-    return result;
-}
-
 float SWAP32F(float f)
 {
     uint32_t tmp = *(uint32_t *)&f;

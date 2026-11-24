@@ -25,7 +25,6 @@ public:
     static Common::Ini::Key GfxAllModes;
     static Common::Ini::Key GfxMoviePlayer;
     static Common::Ini::Key GfxForceAlphaTex;
-    static Common::Ini::Key GfxUseDrawPrimitive;
     static Common::Ini::Key GfxDisableLowres;
     static Common::Ini::Key GfxExportWindowMode;
     static Common::Ini::Key GfxBlending;
