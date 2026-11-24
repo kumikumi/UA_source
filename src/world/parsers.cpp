@@ -3264,6 +3264,11 @@ bool VideoParser::IsScope(ScriptParser::Parser &parser, const std::string &word,
     else
         _o._GameShell->GFXFlags &= ~World::GFX_FLAG_VSYNC;
 
+    // And those saved before these options, nucleus.ini
+    GFX::Engine.SetTextureFiltering( System::IniConf::GfxFilter.Get<bool>() );
+    GFX::Engine.fpsLimitter( System::IniConf::GfxMaxFps.Get<int>() );
+    _o.SetMoviesEnabled( System::IniConf::GfxMoviePlayer.Get<bool>() );
+
     return true;
 }
 
@@ -3328,6 +3333,18 @@ int VideoParser::Handle(ScriptParser::Parser &parser, const std::string &p1, con
         else
             _o._GameShell->GFXFlags &= ~World::GFX_FLAG_VSYNC;
     }
+    else if ( !StriCmp(p1, "filtering") )
+    {
+        GFX::Engine.SetTextureFiltering( StrGetBool(p2) );
+    }
+    else if ( !StriCmp(p1, "maxfps") )
+    {
+        GFX::Engine.fpsLimitter( parser.stoi(p2) );
+    }
+    else if ( !StriCmp(p1, "movies") )
+    {
+        _o.SetMoviesEnabled( StrGetBool(p2) );
+    }
     else if ( !StriCmp(p1, "gfxmode") )
     {
         // WIDTH_HEIGHT_WINDOWED; only the windowed flag is used now.
@@ -3347,10 +3364,23 @@ int VideoParser::Handle(ScriptParser::Parser &parser, const std::string &p1, con
     return ScriptParser::RESULT_OK;
 }
 
+bool SoundParser::IsScope(ScriptParser::Parser &parser, const std::string &word, const std::string &opt)
+{
+    if ( StriCmp(word, "new_sound") )
+        return false;
+
+    // Profiles saved before the sound channels option follow nucleus.ini
+    _channels = System::IniConf::AudioChannels.Get<int>();
+    return true;
+}
+
 int SoundParser::Handle(ScriptParser::Parser &parser, const std::string &p1, const std::string &p2)
 {
     if ( !StriCmp(p1, "end") )
+    {
+        SFXEngine::SFXe.SetChannels(_channels);
         return ScriptParser::RESULT_SCOPE_END;
+    }
 
     _o._GameShell->savedDataFlags |= World::SDF_SOUND;
 
@@ -3358,6 +3388,10 @@ int SoundParser::Handle(ScriptParser::Parser &parser, const std::string &p1, con
     {
         _o._GameShell->soundVolume = parser.stoi(p2);
         SFXEngine::SFXe.setMasterVolume(_o._GameShell->soundVolume);
+    }
+    else if ( !StriCmp(p1, "channels") )
+    {
+        _channels = parser.stoi(p2);
     }
     else if ( !StriCmp(p1, "cdvolume") )
     {
@@ -3394,6 +3428,22 @@ int SoundParser::Handle(ScriptParser::Parser &parser, const std::string &p1, con
             SFXEngine::SFXe.SetMusicIgnoreCommandsFlag(false);
         }
     }
+    else
+        return ScriptParser::RESULT_UNKNOWN;
+
+    return ScriptParser::RESULT_OK;
+}
+
+
+int GameParser::Handle(ScriptParser::Parser &parser, const std::string &p1, const std::string &p2)
+{
+    if ( !StriCmp(p1, "end") )
+        return ScriptParser::RESULT_SCOPE_END;
+
+    if ( !StriCmp(p1, "newai") )
+        _o.SetEnemyAI( StrGetBool(p2), _o.GetAITimeline() );
+    else if ( !StriCmp(p1, "timeline") )
+        _o.SetEnemyAI( _o.IsNewAI(), parser.stoi(p2) );
     else
         return ScriptParser::RESULT_UNKNOWN;
 

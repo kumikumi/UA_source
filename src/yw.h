@@ -313,8 +313,9 @@ enum SAVE_DATA_FLAG
     SDF_SHELL    = (1 << 5),
     SDF_PROTO    = (1 << 6),
     SDF_BUDDY    = (1 << 7),
+    SDF_GAME     = (1 << 8), // The AI settings
     
-    SDF_ALL      = (SDF_USER | SDF_INPUT | SDF_VIDEO | SDF_SOUND | SDF_SCORE | SDF_SHELL | SDF_PROTO | SDF_BUDDY),
+    SDF_ALL      = (SDF_USER | SDF_INPUT | SDF_VIDEO | SDF_SOUND | SDF_SCORE | SDF_SHELL | SDF_PROTO | SDF_BUDDY | SDF_GAME),
 };
 
 enum SOUND_FLAGS
@@ -558,7 +559,31 @@ public:
     
     bool enemyIndicator;
     bool confEnemyIndicator;
-    
+
+    // The options the port adds: the engines and the world hold these
+    // settings; these are the settings screen's choices until OK.
+    bool confFiltering;
+    bool confMovies;
+    bool confNewAI;
+    int confMaxFps;
+    int confSoundChannels;
+    int32_t confAITimeline;
+
+    // _settingsChangeOptions bits of the port's options
+    enum
+    {
+        OPT_CHG_FILTERING  = 0x4000,
+        OPT_CHG_MOVIES     = 0x8000,
+        OPT_CHG_NEWAI      = 0x10000,
+        OPT_CHG_MAXFPS     = 0x20000,
+        OPT_CHG_CHANNELS   = 0x40000,
+        OPT_CHG_AITIMELINE = 0x80000,
+    };
+
+    // The frame rate limit slider's steps, as gfx.maxfps: 0 follows the
+    // display and -1 sets no limit
+    static constexpr std::array<int, 7> FpsLimits {{0, 30, 60, 90, 120, 240, -1}};
+
     int _settingsChangeOptions;
     
     NC_STACK_button *disk_button;
@@ -759,6 +784,11 @@ public:
     void InputPageCancel();
     void InputConfCancel();
     void CancelOptions();
+    // Show the port's options as they are set, and take them as choices
+    void SetEngineOptionWidgets();
+    static int FpsLimitStep(int fps); // The slider step nearest to it
+    static std::string FpsLimitText(int fps);
+    static std::string AITimelineText(int32_t ms);
     void LoadProfile();
     void DeleteProfile();
     void ApplySelectedLanguage();
@@ -2092,6 +2122,17 @@ public:
     bool IsViewDistanceSet() const { return _viewDistanceSet; }
     int32_t GetMapSectorRadius() const; // Enough sectors to draw the whole map from anywhere on it
     float GetMapDiagonal() const;       // Nothing on the map is further away
+
+    // The new AI makes enemy host stations wait after each decision before
+    // making another of its kind, the longer the less effort they put in
+    // it: up to the timeline, in milliseconds. Host stations take these
+    // when they are made.
+    void SetEnemyAI(bool newAI, int32_t timeline) { _newAI = newAI; _aiTimeline = timeline; }
+    bool IsNewAI() const { return _newAI; }
+    int32_t GetAITimeline() const { return _aiTimeline; }
+
+    void SetMoviesEnabled(bool enabled) { _moviesEnabled = enabled; }
+    bool IsMoviesEnabled() const { return _moviesEnabled; }
     
     int TestVehicle(int protoID, int job);
 
@@ -2711,6 +2752,10 @@ public:
     std::string _netTcpAddress; // your tcp address string (for printing)
 
     bool _netExclusiveGem = false;
+
+    bool _newAI = true;            // game.newai until the profile sets it
+    int32_t _aiTimeline = 600000;  // game.timeline until the profile sets it
+    bool _moviesEnabled = true;    // gfx.movie_player until the profile sets it
     
     bool _netChatSystem = false;
 

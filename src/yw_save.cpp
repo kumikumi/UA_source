@@ -176,6 +176,8 @@ int yw_write_sound(FSMgr::FileHandle *fil, UserData *usr)
     else
         fil->printf("    cdsound = no\n");
 
+    fil->printf("    channels = %d\n", SFXEngine::SFXe.GetChannels());
+
     fil->printf("end\n\n");
 
     return 1;
@@ -206,11 +208,38 @@ int yw_write_video(FSMgr::FileHandle *fil, UserData *usr)
         fil->printf("    vsync = no\n");
 
     fil->printf("    fxnumber = %d\n", usr->fxnumber);
+
+    if ( GFX::Engine.GetTextureFiltering() )
+        fil->printf("    filtering = yes\n");
+    else
+        fil->printf("    filtering = no\n");
+
+    fil->printf("    maxfps = %d\n", GFX::Engine.GetFpsLimitSetting());
+
+    if ( usr->p_YW->IsMoviesEnabled() )
+        fil->printf("    movies = yes\n");
+    else
+        fil->printf("    movies = no\n");
     
     // The size is informational: the game renders at the window size.
     fil->printf("    ;#!gfxmode = %d_%d_%d\n", usr->p_YW->_screenSize.x, usr->p_YW->_screenSize.y,
                 usr->IsWindowedFlag() ? 1 : 0);
     
+    fil->printf("end\n\n");
+
+    return 1;
+}
+
+int yw_write_game(FSMgr::FileHandle *fil, UserData *usr)
+{
+    fil->printf("new_game\n");
+
+    if ( usr->p_YW->IsNewAI() )
+        fil->printf("    newai = yes\n");
+    else
+        fil->printf("    newai = no\n");
+
+    fil->printf("    timeline = %d\n", usr->p_YW->GetAITimeline());
     fil->printf("end\n\n");
 
     return 1;

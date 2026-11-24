@@ -132,6 +132,45 @@ void SFXEngine::setMasterVolume(int vol)
 //    wrapper_setVolume(digDriver, vol);
 }
 
+void SFXEngine::SetChannels(int count)
+{
+    count = std::max(1, std::min(count, AUDIO_CHANNELS));
+
+    if ( !digDriver || !digDriver->inited() )
+        return;
+
+    // New channels get their samples before they are counted. The audio
+    // thread's end-of-sound callback looks channels up by their samples.
+    for (int i = audio_channels; i < count; i++)
+    {
+        snd_channels[i].hSample = digDriver->newSample();
+        snd_channels[i].hSample->setMasterVolume(audio_volume);
+        snd_channels[i].sndSouce = NULL;
+        soundSources[i] = NULL;
+    }
+
+    int oldCount = audio_channels;
+    audio_channels = count;
+
+    // Dropped channels stop their sounds and free their samples. Their
+    // sounds stay enabled, as ones that lose their channel to sounds of
+    // higher priority do, and play again when a channel is free.
+    for (int i = count; i < oldCount; i++)
+    {
+        if ( snd_channels[i].sndSouce )
+        {
+            snd_channels[i].sndSouce->SetPlay(false);
+            snd_channels[i].sndSouce = NULL;
+        }
+
+        soundSources[i] = NULL; // Refilled by priority each frame
+
+        snd_channels[i].hSample->stop();
+        digDriver->deleteSample(snd_channels[i].hSample);
+        snd_channels[i].hSample = NULL;
+    }
+}
+
 void SFXEngine::setReverseStereo(bool rev)
 {
     audio_rev_stereo = rev;

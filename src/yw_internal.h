@@ -77,6 +77,7 @@ int yw_write_user(FSMgr::FileHandle *fil, UserData *usr);
 int yw_write_input(FSMgr::FileHandle *fil, UserData *usr);
 int yw_write_sound(FSMgr::FileHandle *fil, UserData *usr);
 int yw_write_video(FSMgr::FileHandle *fil, UserData *usr);
+int yw_write_game(FSMgr::FileHandle *fil, UserData *usr);
 int yw_write_level_status(FSMgr::FileHandle *fil, NC_STACK_ypaworld *yw, int lvlid);
 int yw_write_levels_statuses(FSMgr::FileHandle *fil, NC_STACK_ypaworld *yw);
 int yw_write_buddies(FSMgr::FileHandle *fil, NC_STACK_ypaworld *yw);

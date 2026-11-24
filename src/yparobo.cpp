@@ -8,7 +8,6 @@
 
 #include "yw_net.h"
 #include "fmtlib/printf.h"
-#include "system/inivals.h"
 
 #include <math.h>
 
@@ -5248,10 +5247,8 @@ void NC_STACK_yparobo::Renew()
 
     setBACT_yourLastSeconds(3000);
 
-    System::IniConf::ReadFromNucleusIni();
-
-    _roboNewAI = System::IniConf::GameNewAI.Get<bool>();
-    _roboTimeScale = System::IniConf::GameTimeLine.Get<int>();
+    _roboNewAI = _world->IsNewAI();
+    _roboTimeScale = _world->GetAITimeline();
 }
 
 void NC_STACK_yparobo::HandBrake(update_msg *)

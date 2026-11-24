@@ -121,9 +121,20 @@ protected:
 class SoundParser : public ScriptParser::DataHandler
 {
 public:
-    SoundParser(NC_STACK_ypaworld *o) : _o(*o) {} ;
+    SoundParser(NC_STACK_ypaworld *o) : _o(*o), _channels(0) {} ;
     virtual int Handle(ScriptParser::Parser &parser, const std::string &p1, const std::string &p2);
-    virtual bool IsScope(ScriptParser::Parser &parser, const std::string &word, const std::string &opt) { return !StriCmp(word, "new_sound"); };
+    virtual bool IsScope(ScriptParser::Parser &parser, const std::string &word, const std::string &opt);
+protected:
+    NC_STACK_ypaworld &_o;
+    int _channels; // Set up once, at the section's end
+};
+
+class GameParser : public ScriptParser::DataHandler
+{
+public:
+    GameParser(NC_STACK_ypaworld *o) : _o(*o) {} ;
+    virtual int Handle(ScriptParser::Parser &parser, const std::string &p1, const std::string &p2);
+    virtual bool IsScope(ScriptParser::Parser &parser, const std::string &word, const std::string &opt) { return !StriCmp(word, "new_game"); };
 protected:
     NC_STACK_ypaworld &_o;
 };

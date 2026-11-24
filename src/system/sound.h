@@ -250,6 +250,10 @@ public:
     void setMasterVolume(int);
     void setReverseStereo(bool);
 
+    // How many sounds play at once, 1 to AUDIO_CHANNELS
+    void SetChannels(int count);
+    int GetChannels() const { return audio_channels; };
+
     int getMasterVolume();
 
 

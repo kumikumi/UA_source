@@ -1142,7 +1142,7 @@ void NC_STACK_ypaworld::PlayGameMovie(const std::string &movie_fname)
 {
     std::string buf = correctSeparatorAndExt( Common::Env.ApplyPrefix( movie_fname ) );
 
-    if ( System::IniConf::GfxMoviePlayer.Get<bool>() )
+    if ( IsMoviesEnabled() )
     {
         GFX::Engine.EndFrame();
         
@@ -2766,6 +2766,12 @@ void UserData::clear()
     confMusicVolume = 0;
     enemyIndicator = false;
     confEnemyIndicator = false;
+    confFiltering = false;
+    confMovies = false;
+    confNewAI = false;
+    confMaxFps = 0;
+    confSoundChannels = 0;
+    confAITimeline = 0;
     _settingsChangeOptions = 0;
     disk_button = NULL;
     //GuiList disk_listvw;

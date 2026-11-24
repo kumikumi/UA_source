@@ -2152,6 +2152,10 @@ bool NC_STACK_ypaworld::InitGameShell(UserData *usr)
 
     _netExclusiveGem = System::IniConf::NetGameExclusiveGem.Get<bool>();
 
+    // Defaults for profiles that don't set these
+    SetEnemyAI(System::IniConf::GameNewAI.Get<bool>(), System::IniConf::GameTimeLine.Get<int>());
+    SetMoviesEnabled(System::IniConf::GfxMoviePlayer.Get<bool>());
+
     usr->profiles.clear();
     usr->lang_dlls.clear();
 
@@ -3584,7 +3588,7 @@ bool NC_STACK_ypaworld::CreateVideoControls()
                                                                                     btn_64arg.tileset_disabled = 16;
                                                                                     btn_64arg.button_type = NC_STACK_button::TYPE_CAPTION;
                                                                                     btn_64arg.xpos = 0;
-                                                                                    btn_64arg.ypos = 11 * (_fontH + vertMenuSpace);
+                                                                                    btn_64arg.ypos = 12 * (_fontH + vertMenuSpace);
                                                                                     btn_64arg.width = (videoMenuRowWidth - 5 * buttonsSpace) * 0.3;
                                                                                     btn_64arg.caption = Locale::Text::Dialogs(Locale::DLG_S_DESTRFX);
                                                                                     btn_64arg.caption2.clear();
@@ -3637,7 +3641,7 @@ bool NC_STACK_ypaworld::CreateVideoControls()
                                                                                             {
                                                                                                 btn_64arg.button_type = NC_STACK_button::TYPE_CAPTION;
                                                                                                 btn_64arg.xpos = 0;
-                                                                                                btn_64arg.ypos = 12 * (vertMenuSpace + _fontH);
+                                                                                                btn_64arg.ypos = 14 * (vertMenuSpace + _fontH);
                                                                                                 btn_64arg.width = (videoMenuRowWidth - 5 * buttonsSpace) * 0.3;
                                                                                                 btn_64arg.caption = Locale::Text::Dialogs(Locale::DLG_S_FXVOL);
                                                                                                 btn_64arg.caption2.clear();
@@ -3690,7 +3694,7 @@ bool NC_STACK_ypaworld::CreateVideoControls()
                                                                                                             btn_64arg.button_type = NC_STACK_button::TYPE_CAPTION;
                                                                                                             btn_64arg.xpos = 0;
                                                                                                             btn_64arg.width = (videoMenuRowWidth - 5 * buttonsSpace) * 0.3;
-                                                                                                            btn_64arg.ypos = 13 * (vertMenuSpace + _fontH);
+                                                                                                            btn_64arg.ypos = 15 * (vertMenuSpace + _fontH);
                                                                                                             btn_64arg.caption = Locale::Text::Dialogs(Locale::DLG_S_CDVOL);
                                                                                                             btn_64arg.caption2.clear();
                                                                                                             btn_64arg.downCode = 0;
@@ -3857,6 +3861,121 @@ bool NC_STACK_ypaworld::CreateVideoControls()
             if ( _GameShell->video_button->Add(&btn_64arg) )
                 allAdded = 1;
         }
+    }
+
+    // Options the port adds from nucleus.ini, which has their defaults: a
+    // row of check boxes below the original ones, and sliders between the
+    // original ones.
+    {
+        int captionWidth = (videoMenuRowWidth - 6 * buttonsSpace - 2 * checkBoxWidth) / 2;
+        int sliderRowWidth = videoMenuRowWidth - 5 * buttonsSpace;
+
+        btn_64arg.txt_r = _iniColors[60].r;
+        btn_64arg.txt_g = _iniColors[60].g;
+        btn_64arg.txt_b = _iniColors[60].b;
+
+        // A check box and its caption, in the left or the right column
+        auto addCheckBox = [&](int row, bool right, int id, int onCode, int offCode, const std::string &caption)
+        {
+            int x = right ? 3 * buttonsSpace + checkBoxWidth + captionWidth : 0;
+
+            btn_64arg.button_type = NC_STACK_button::TYPE_CHECKBX;
+            btn_64arg.tileset_down = 19;
+            btn_64arg.tileset_up = 18;
+            btn_64arg.tileset_disabled = 30;
+            btn_64arg.xpos = x;
+            btn_64arg.ypos = row * (vertMenuSpace + _fontH);
+            btn_64arg.width = checkBoxWidth;
+            btn_64arg.caption = "g";
+            btn_64arg.caption2 = "g";
+            btn_64arg.downCode = onCode;
+            btn_64arg.upCode = offCode;
+            btn_64arg.pressedCode = 0;
+            btn_64arg.flags = 0;
+            btn_64arg.button_id = id;
+
+            if ( !_GameShell->video_button->Add(&btn_64arg) )
+                return false;
+
+            btn_64arg.button_type = NC_STACK_button::TYPE_CAPTION;
+            btn_64arg.tileset_down = 16;
+            btn_64arg.tileset_up = 16;
+            btn_64arg.tileset_disabled = 16;
+            btn_64arg.xpos = x + checkBoxWidth + buttonsSpace;
+            btn_64arg.width = captionWidth;
+            btn_64arg.caption = caption;
+            btn_64arg.caption2.clear();
+            btn_64arg.downCode = 0;
+            btn_64arg.upCode = 0;
+            btn_64arg.flags = NC_STACK_button::FLAG_TEXT;
+            btn_64arg.button_id = 2;
+
+            return _GameShell->video_button->Add(&btn_64arg) != 0;
+        };
+
+        // A caption, a slider and a caption with the slider's value
+        auto addSlider = [&](int row, int id, int valueId, int code, int min, int max, const std::string &caption)
+        {
+            btn_64arg.button_type = NC_STACK_button::TYPE_CAPTION;
+            btn_64arg.tileset_down = 16;
+            btn_64arg.tileset_up = 16;
+            btn_64arg.tileset_disabled = 16;
+            btn_64arg.xpos = 0;
+            btn_64arg.ypos = row * (vertMenuSpace + _fontH);
+            btn_64arg.width = sliderRowWidth * 0.3;
+            btn_64arg.caption = caption;
+            btn_64arg.caption2.clear();
+            btn_64arg.downCode = 0;
+            btn_64arg.upCode = 0;
+            btn_64arg.pressedCode = 0;
+            btn_64arg.flags = NC_STACK_button::FLAG_TEXT;
+            btn_64arg.button_id = 2;
+
+            if ( !_GameShell->video_button->Add(&btn_64arg) )
+                return false;
+
+            NC_STACK_button::Slider slider;
+            slider.min = min;
+            slider.max = max;
+            slider.value = min;
+
+            btn_64arg.button_type = NC_STACK_button::TYPE_SLIDER;
+            btn_64arg.tileset_down = 18;
+            btn_64arg.tileset_up = 18;
+            btn_64arg.tileset_disabled = 30;
+            btn_64arg.xpos = buttonsSpace + sliderRowWidth * 0.3;
+            btn_64arg.width = sliderRowWidth * 0.55;
+            btn_64arg.caption = " ";
+            btn_64arg.downCode = code;
+            btn_64arg.slider = &slider;
+            btn_64arg.flags = 0;
+            btn_64arg.button_id = id;
+
+            if ( !_GameShell->video_button->Add(&btn_64arg) )
+                return false;
+
+            btn_64arg.button_type = NC_STACK_button::TYPE_CAPTION;
+            btn_64arg.tileset_down = 16;
+            btn_64arg.tileset_up = 16;
+            btn_64arg.tileset_disabled = 16;
+            btn_64arg.xpos = 2 * buttonsSpace + sliderRowWidth * 0.85;
+            btn_64arg.width = sliderRowWidth * 0.15;
+            btn_64arg.caption = " ";
+            btn_64arg.downCode = 0;
+            btn_64arg.slider = NULL;
+            btn_64arg.flags = NC_STACK_button::FLAG_CENTER | NC_STACK_button::FLAG_TEXT;
+            btn_64arg.button_id = valueId;
+
+            return _GameShell->video_button->Add(&btn_64arg) != 0;
+        };
+
+        allAdded = allAdded
+            && addCheckBox(10, true, 1174, 1138, 1139, Locale::Text::Dialogs(Locale::DLG_S_FILTERING))
+            && addCheckBox(11, false, 1175, 1140, 1141, Locale::Text::Dialogs(Locale::DLG_S_MOVIES))
+            && addCheckBox(11, true, 1176, 1142, 1143, Locale::Text::Dialogs(Locale::DLG_S_NEWAI))
+            && addSlider(13, 1177, 1178, 1144, 0, UserData::FpsLimits.size() - 1, Locale::Text::Dialogs(Locale::DLG_S_MAXFPS))
+            && addSlider(16, 1179, 1180, 1145, 1, AUDIO_CHANNELS, Locale::Text::Dialogs(Locale::DLG_S_CHANNELS))
+            && addSlider(17, 1181, 1182, 1146, 1, 30, Locale::Text::Dialogs(Locale::DLG_S_AITIMELINE)); // Minutes
     }
 
     if ( !allAdded )
@@ -5896,6 +6015,8 @@ void NC_STACK_ypaworld::UpdateGameShell()
     videoBtnState.state = (!_GameShell->IsVsyncFlag()) + 1;
     _GameShell->video_button->SetState(&videoBtnState);
 
+    _GameShell->SetEngineOptionWidgets();
+
     tmp = _GameShell->video_button->GetSliderData(1159);
     tmp->value = _GameShell->fxnumber;
 
@@ -6298,6 +6419,13 @@ bool NC_STACK_ypaworld::SaveSettings(UserData *usr, const std::string &fileName,
         return false;
     }
 
+    if ( (sdfMask & World::SDF_GAME) && !yw_write_game(sfil, usr) )
+    {
+        ypa_log_out("Unable to write game settings to file\n");
+        delete sfil;
+        return false;
+    }
+
     if ( (sdfMask & World::SDF_SHELL) && !yw_write_shell(sfil, usr) )
     {
         ypa_log_out("Unable to write shell data to file\n");
@@ -6347,6 +6475,13 @@ int NC_STACK_ypaworld::ParseSettingsFile(const std::string &fname, uint32_t sdfM
         parsers += new World::Parsers::VhclProtoParser(this);
         parsers += new World::Parsers::WeaponProtoParser(this);
         parsers += new World::Parsers::BuildProtoParser(this);
+    }
+
+    if ( sdfMask & World::SDF_GAME )
+    {
+        // Profiles without the section follow nucleus.ini
+        SetEnemyAI(System::IniConf::GameNewAI.Get<bool>(), System::IniConf::GameTimeLine.Get<int>());
+        parsers += new World::Parsers::GameParser(this);
     }
 
     return ScriptParser::ParseFile(fname, parsers, ScriptParser::FLAG_SKIP_UNKNOWN);

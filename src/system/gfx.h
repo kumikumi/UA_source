@@ -572,6 +572,11 @@ public:
         
     void fpsLimitter(int value);
     void UpdateFpsLimit();
+    // As gfx.maxfps: 0 follows the display, above 1000 or below 0 no limit
+    int GetFpsLimitSetting() const { return _fpsMaxSetting; };
+
+    void SetTextureFiltering(bool linear) { _filter = linear; };
+    bool GetTextureFiltering() const { return _filter != 0; };
     
     // One line on the renderer in use, for the performance overlay.
     std::string GetRendererInfo();

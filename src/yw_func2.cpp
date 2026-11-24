@@ -613,7 +613,7 @@ void NC_STACK_ypaworld::PlayIntroMovie()
     {
         std::string buf = correctSeparatorAndExt( Common::Env.ApplyPrefix(_movies[World::MOVIE_INTRO]) );
         
-        if ( System::IniConf::GfxMoviePlayer.Get<bool>() )
+        if ( IsMoviesEnabled() )
         {
             GFX::Engine.EndFrame();
             System::Movie.PlayMovie(buf, _GameShell->soundVolume);
@@ -1107,6 +1107,22 @@ void UserData::ApplyOptions()
         GFX::Engine.SetVsync( IsVsyncFlag() );
     }
 
+    if ( _settingsChangeOptions & OPT_CHG_FILTERING )
+        GFX::Engine.SetTextureFiltering(confFiltering);
+
+    if ( _settingsChangeOptions & OPT_CHG_MOVIES )
+        yw->SetMoviesEnabled(confMovies);
+
+    if ( _settingsChangeOptions & OPT_CHG_MAXFPS )
+        GFX::Engine.fpsLimitter(confMaxFps);
+
+    if ( _settingsChangeOptions & OPT_CHG_CHANNELS )
+        SFXEngine::SFXe.SetChannels(confSoundChannels);
+
+    // Host stations take these when they are made, so from the next level
+    if ( _settingsChangeOptions & (OPT_CHG_NEWAI | OPT_CHG_AITIMELINE) )
+        yw->SetEnemyAI(confNewAI, confAITimeline);
+
     if ( forceChange )
     {
         yw->SetWindowed( IsWindowedFlag() );
@@ -1368,6 +1384,30 @@ void UserData::ShowToolTip(int id)
 
     case 1166:
         p_YW->SetShowingTooltip(Locale::TIP_MENU_WINDOWED); // windowed
+        break;
+
+    case 1174:
+        p_YW->SetShowingTooltip(Locale::TIP_CONF_TEXFILTER);
+        break;
+
+    case 1175:
+        p_YW->SetShowingTooltip(Locale::TIP_CONF_MOVIES);
+        break;
+
+    case 1176:
+        p_YW->SetShowingTooltip(Locale::TIP_CONF_NEWAI);
+        break;
+
+    case 1177:
+        p_YW->SetShowingTooltip(Locale::TIP_CONF_MAXFPS);
+        break;
+
+    case 1179:
+        p_YW->SetShowingTooltip(Locale::TIP_CONF_SNDCHANNELS);
+        break;
+
+    case 1181:
+        p_YW->SetShowingTooltip(Locale::TIP_CONF_AITIMELINE);
         break;
 
     case 1172:
@@ -1779,10 +1819,83 @@ void UserData::InputConfigRestoreDefault()
     }
 }
 
+constexpr std::array<int, 7> UserData::FpsLimits;
+
+int UserData::FpsLimitStep(int fps)
+{
+    if ( fps == 0 )
+        return 0;
+
+    if ( fps < 0 || fps > 1000 )
+        return FpsLimits.size() - 1;
+
+    int step = 1;
+    for (size_t i = 2; i < FpsLimits.size() - 1; i++)
+    {
+        if ( std::abs(FpsLimits.at(i) - fps) < std::abs(FpsLimits.at(step) - fps) )
+            step = i;
+    }
+    return step;
+}
+
+std::string UserData::FpsLimitText(int fps)
+{
+    if ( fps == 0 )
+        return Locale::Text::Dialogs(Locale::DLG_S_FPSAUTO);
+
+    if ( fps < 0 || fps > 1000 )
+        return Locale::Text::Dialogs(Locale::DLG_S_FPSOFF);
+
+    return fmt::sprintf("%d", fps);
+}
+
+std::string UserData::AITimelineText(int32_t ms)
+{
+    return fmt::sprintf("%d:%02d", ms / 60000, (ms / 1000) % 60);
+}
+
+void UserData::SetEngineOptionWidgets()
+{
+    confFiltering = GFX::Engine.GetTextureFiltering();
+    confMovies = p_YW->IsMoviesEnabled();
+    confNewAI = p_YW->IsNewAI();
+    confMaxFps = GFX::Engine.GetFpsLimitSetting();
+    confSoundChannels = SFXEngine::SFXe.GetChannels();
+    confAITimeline = p_YW->GetAITimeline();
+
+    NC_STACK_button::WidgetState btnState;
+    btnState.butID = 1174;
+    btnState.state = (!confFiltering) + 1;
+    video_button->SetState(&btnState);
+
+    btnState.butID = 1175;
+    btnState.state = (!confMovies) + 1;
+    video_button->SetState(&btnState);
+
+    btnState.butID = 1176;
+    btnState.state = (!confNewAI) + 1;
+    video_button->SetState(&btnState);
+
+    NC_STACK_button::Slider *slider = video_button->GetSliderData(1177);
+    slider->value = FpsLimitStep(confMaxFps);
+    video_button->Refresh(1177);
+
+    slider = video_button->GetSliderData(1179);
+    slider->value = confSoundChannels;
+    video_button->Refresh(1179);
+
+    // The slider has whole minutes; the setting may lie between them
+    slider = video_button->GetSliderData(1181);
+    slider->value = std::max<int>(slider->min, std::min<int>((confAITimeline + 30000) / 60000, slider->max));
+    video_button->Refresh(1181);
+}
+
 void UserData::CancelOptions()
 {
     _settingsChangeOptions = 0;
     EnvMode = ENVMODE_TITLE;
+
+    SetEngineOptionWidgets();
 
     video_button->SetText(1172, win3d_name);
 
@@ -2806,6 +2919,33 @@ void UserData::GameShellUiHandleInput()
             confGFXFlags &= ~World::GFX_FLAG_VSYNC;
             _settingsChangeOptions |= 0x2000;
         }
+        else if ( r.code == 1138 || r.code == 1139 )
+        {
+            confFiltering = (r.code == 1138);
+            _settingsChangeOptions |= OPT_CHG_FILTERING;
+        }
+        else if ( r.code == 1140 || r.code == 1141 )
+        {
+            confMovies = (r.code == 1140);
+            _settingsChangeOptions |= OPT_CHG_MOVIES;
+        }
+        else if ( r.code == 1142 || r.code == 1143 )
+        {
+            confNewAI = (r.code == 1142);
+            _settingsChangeOptions |= OPT_CHG_NEWAI;
+        }
+        else if ( r.code == 1144 )
+        {
+            _settingsChangeOptions |= OPT_CHG_MAXFPS;
+        }
+        else if ( r.code == 1145 )
+        {
+            _settingsChangeOptions |= OPT_CHG_CHANNELS;
+        }
+        else if ( r.code == 1146 )
+        {
+            _settingsChangeOptions |= OPT_CHG_AITIMELINE;
+        }
         else if ( r.code == 1134 )
         {
             p_YW->GuiWinOpen( &d3d_listvw );
@@ -2862,6 +3002,22 @@ void UserData::GameShellUiHandleInput()
     confMusicVolume = slider->value;
 
     SFXEngine::SFXe.SetMusicVolume(confMusicVolume);
+
+    // The frame rate limit and the AI timeline show their setting, which
+    // may lie between the sliders' steps, until their slider is moved.
+    slider = video_button->GetSliderData(1177);
+    if ( _settingsChangeOptions & OPT_CHG_MAXFPS )
+        confMaxFps = FpsLimits.at(slider->value);
+    video_button->SetText(1178, FpsLimitText(confMaxFps));
+
+    slider = video_button->GetSliderData(1179);
+    confSoundChannels = slider->value;
+    video_button->SetText(1180, fmt::sprintf("%d", confSoundChannels));
+
+    slider = video_button->GetSliderData(1181);
+    if ( _settingsChangeOptions & OPT_CHG_AITIMELINE )
+        confAITimeline = slider->value * 60000;
+    video_button->SetText(1182, AITimelineText(confAITimeline));
 
     if ( EnvMode == ENVMODE_SELPLAYER ) //Load/Save
     {

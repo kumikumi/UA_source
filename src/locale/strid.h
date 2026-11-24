@@ -167,6 +167,9 @@ enum DIALOGS
     DLG_S_RNDTXT2   = 31, // The settings' help text, since there are renderers
     DLG_S_RNDTXT3   = 32, // rather than Direct3D devices (28 to 30 before)
     DLG_S_RNDTXT4   = 33,
+    DLG_S_FILTERING = 34, // The original's 51 is mistranslated in Russian
+    DLG_S_FPSAUTO   = 35,
+    DLG_S_FPSOFF    = 36,
     DLG_S_RES       = 40,
     DLG_S_RESCHANGE = 41,
     DLG_S_RESWARN   = 42,
@@ -174,6 +177,11 @@ enum DIALOGS
     DLG_S_FARVIEW   = 44,
     DLG_S_SKY       = 45,
     DLG_S_RENDERER  = 53, // Was the Direct3D device, 52
+    DLG_S_MOVIES    = 54,
+    DLG_S_NEWAI     = 55,
+    DLG_S_MAXFPS    = 56,
+    DLG_S_CHANNELS  = 57,
+    DLG_S_AITIMELINE = 58,
     
     DLG_P_LOAD      = 60,
     DLG_P_SAVE      = 61,
@@ -350,6 +358,12 @@ enum TIP
     TIP_COUNTINSQUAD        = 46,
     TIP_ANALYZER            = 47,
     TIP_ONLINEHELP          = 48,
+    TIP_CONF_TEXFILTER      = 49, // The original's 186 is about Direct3D
+    TIP_CONF_MOVIES         = 50,
+    TIP_CONF_NEWAI          = 51,
+    TIP_CONF_MAXFPS         = 52,
+    TIP_CONF_SNDCHANNELS    = 53,
+    TIP_CONF_AITIMELINE     = 54,
     
     TIP_DO_SELECT           = 64,
     TIP_DO_MOVE             = 65,
