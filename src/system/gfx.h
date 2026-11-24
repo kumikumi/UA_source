@@ -418,7 +418,9 @@ protected:
     static void StaticInit();
     
 public:
-    void Init();
+    // Headless: a backend that draws nothing, no window and no cursors.
+    // The 2D screen is still drawn into, in memory.
+    void Init(bool headless = false);
     void Deinit();
     
     void RecreateScreenSurface();

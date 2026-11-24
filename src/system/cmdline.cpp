@@ -33,6 +33,12 @@ static const Option Options[] = {
                                 "Load"},
     {"load",         "FILE",    "The same from a saved game, a file in the game's folder such as "
                                 "SAVE/Unnamed2/0.sgm"},
+    {"headless",     NULL,      "Run the level --level or --load starts as fast as the machine can, "
+                                "with nothing shown, heard or read from the controls, until the "
+                                "level ends, the player's host station is destroyed or no enemy "
+                                "host station is left. Needs no display, GPU or sound device. How "
+                                "it ended goes to stdout"},
+    {"time-limit",   "SECONDS", "With --headless, stop after this much game time"},
     {"bench",        NULL,      "Run the benchmark: level 21 drawn over and over from above, the frame "
                                 "times reported"},
     {"bench-level",  "N",       "The benchmark's level instead"},

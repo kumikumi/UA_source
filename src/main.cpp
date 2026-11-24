@@ -69,6 +69,12 @@ UserData userdata;
 
 static Benchmark benchmark; // --bench
 
+// --headless: nothing shown, heard or read from the controls, and the
+// level run as fast as the machine can. --time-limit in timer ticks, 0 for
+// none.
+static bool headless = false;
+static int32_t headlessTimeLimit = 0;
+
 static bool StartDirectLevel();
 
 // The game advances in fixed steps, so how units behave does not depend on
@@ -761,7 +767,7 @@ int InitEngines()
     Common::Env.AddGlobalIniKey("input.button[22] = winp:joyb6");
     Common::Env.AddGlobalIniKey("input.button[23] = winp:joyb7");
 
-    audio_inited = SFXEngine::SFXe.init();
+    audio_inited = SFXEngine::SFXe.init(!headless);
     input_inited = Input::Engine.Init();
     tform_inited = TF::Engine.Init();
 
@@ -1044,6 +1050,35 @@ static bool ReadDirectStart()
     }
 
     userdata.DirectStart = (ways == 1);
+
+    headless = System::CmdLine::Has("headless");
+
+    if ( headless && (!userdata.DirectStart || benchmark.IsActive()) )
+    {
+        System::CmdLine::PrintError("--headless needs --level or --load");
+        return false;
+    }
+
+    if ( System::CmdLine::Get("time-limit", &value) )
+    {
+        char *end = NULL;
+        long seconds = std::strtol(value.c_str(), &end, 10);
+
+        if ( value.empty() || *end || seconds < 1 || seconds > 24 * 3600 )
+        {
+            System::CmdLine::PrintError("--time-limit " + value + ": not a number of seconds");
+            return false;
+        }
+
+        if ( !headless )
+        {
+            System::CmdLine::PrintError("--time-limit needs --headless");
+            return false;
+        }
+
+        headlessTimeLimit = seconds * 1024; // Timer ticks
+    }
+
     return true;
 }
 
@@ -1115,8 +1150,76 @@ static bool StartDirectLevel()
     ypaworld->_lvlPrimevalOwnMap = ypaworld->_lvlOwnMap;
 
     GameScreenMode = GAME_SCREEN_MODE_GAME;
-    Input::Engine.QueryInput(&input_states);
+
+    if ( !headless )
+        Input::Engine.QueryInput(&input_states);
+
     return true;
+}
+
+// How a headless run has ended, or empty while it goes on
+static std::string HeadlessOutcome(int32_t startTime)
+{
+    int state = ypaworld->GetLevelInfo().State;
+
+    if ( state == TLevelInfo::STATE_COMPLETED )
+        return "won";
+
+    if ( state == TLevelInfo::STATE_ABORTED )
+        return "aborted";
+
+    // Nobody is there to leave the level, so these end it
+    if ( ypaworld->_userRobo->_status == BACT_STATUS_DEAD )
+        return "lost, the player's host station destroyed";
+
+    bool enemyLeft = false;
+    for ( NC_STACK_ypabact *unit : ypaworld->_unitsList )
+    {
+        if ( unit != ypaworld->_userRobo && unit->_bact_type == BACT_TYPES_ROBO && unit->_status != BACT_STATUS_DEAD )
+            enemyLeft = true;
+    }
+
+    if ( !enemyLeft )
+        return "won, no enemy host station left";
+
+    if ( headlessTimeLimit && ypaworld->_timeStamp - startTime >= headlessTimeLimit )
+        return "stopped at the time limit";
+
+    return std::string();
+}
+
+// Runs the level in steps, back to back, with an empty input, until it ends
+static void RunHeadless()
+{
+    const int32_t startTime = ypaworld->_timeStamp; // Late for a saved game
+    const uint64_t startTicks = SDL_GetTicksNS();
+    uint32_t steps = 0;
+    std::string outcome;
+
+    while ( outcome.empty() )
+    {
+        input_states = TInputState();
+        input_states.Period = SimStepTicks;
+
+        world_update_arg.Input = &input_states;
+        world_update_arg.DTime = SimStepTicks;
+        world_update_arg.TimeStamp += SimStepTicks;
+
+        ypaworld->SimulationStep(&world_update_arg);
+        steps++;
+
+        outcome = HeadlessOutcome(startTime);
+    }
+
+    double seconds = (SDL_GetTicksNS() - startTicks) / 1e9;
+    int32_t gameTime = (ypaworld->_timeStamp - startTime) / 1024;
+
+    std::string report = fmt::sprintf("Level %d %s after %d:%02d of game time: %d steps in %.1f s, %.0f times real time\n",
+                                      ypaworld->GetLevelInfo().LevelID, outcome, gameTime / 60, gameTime % 60, steps, seconds,
+                                      seconds > 0.0 ? gameTime / seconds : 0.0);
+    fputs(report.c_str(), stdout);
+    fflush(stdout); // Before anything at exit can end the program
+    ypa_log_out("%s", report.c_str());
 }
 
 int main(int argc, char *argv[])
@@ -1148,10 +1251,12 @@ int main(int argc, char *argv[])
     if ( !ReadDirectStart() )
         return 2;
     
-    System::Init();
+    System::Init(headless);
     
-    GFX::Engine.Init();
-    System::Movie.Init();
+    GFX::Engine.Init(headless);
+
+    if ( !headless )
+        System::Movie.Init();
 
     if ( !InitGame() )
         return 0;
@@ -1160,10 +1265,15 @@ int main(int argc, char *argv[])
 
     if ( userdata.DirectStart )
     {
-        // The benchmark runs fullscreen: the display's resolution every
-        // time, and frame times that vary much less than in a window. A
-        // level goes as the profile has it, which the intro would have set.
-        ypaworld->SetWindowed( !benchmark.IsActive() && userdata.IsWindowedFlag() );
+        // Headless, the simulation steps leave out the controls and the
+        // in-game interface. Else the benchmark runs fullscreen: the
+        // display's resolution every time, and frame times that vary much
+        // less than in a window. A level goes as the profile has it, which
+        // the intro would have set.
+        if ( headless )
+            ypaworld->setYW_dontRender(true);
+        else
+            ypaworld->SetWindowed( !benchmark.IsActive() && userdata.IsWindowedFlag() );
 
         if ( !CheckDirectStart() || !StartDirectLevel() )
         {
@@ -1171,6 +1281,16 @@ int main(int argc, char *argv[])
             GFX::Engine.Deinit();
             System::Deinit();
             return 1;
+        }
+
+        if ( headless )
+        {
+            RunHeadless();
+
+            ShutdownGame();
+            GFX::Engine.Deinit();
+            System::Deinit();
+            return 0;
         }
     }
 

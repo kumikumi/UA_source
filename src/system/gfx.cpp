@@ -2,6 +2,7 @@
 
 #include "gfx.h"
 #include "gl_backend.h"
+#include "null_backend.h"
 #ifdef UA_GPU_RENDERER
 #include "gpu_backend.h"
 #endif
@@ -1672,9 +1673,25 @@ SDL_Cursor *GFXEngine::LoadCursor(const std::string &name)
     return cursor;
 }
 
-void GFXEngine::Init()
+void GFXEngine::Init(bool headless)
 {
     StaticInit();
+
+    if (headless)
+    {
+        _backend = new NullBackend();
+        _backend->Init(NULL);
+
+        // The options' renderer list shows the one in use
+        _devices.emplace_back("None", "<none>");
+        _devices.back().isCurrent = true;
+        _devices.back().isChosen = true;
+
+        ReadIniSettings();
+        RecreateScreenSurface();
+        LoadPalette(System::IniConf::GfxPalette.Get<std::string>());
+        return;
+    }
 
     // The renderer chosen in the options, else gfx.renderer, unless
     // --renderer on the command line says otherwise: "gpu" or "gl"

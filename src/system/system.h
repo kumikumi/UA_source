@@ -26,7 +26,9 @@ namespace System
         operator Common::Point() const;
     };
     
-    void Init();
+    // Headless: none of SDL's display, controller or event parts, which
+    // need a graphical session
+    void Init(bool headless = false);
     void Deinit();
 
     // Creates the game's window, with what the graphics API needs already

@@ -51,14 +51,15 @@ set(SOURCES
 	sample.cpp
 	skeleton.cpp
 	sklt.cpp
+	system/cmdline.cpp
 	system/fsmgr.cpp
 	system/gfx.cpp
 	system/gl_backend.cpp
-	system/cmdline.cpp
 	system/glfuncs.cpp
 	system/inivals.cpp
 	system/inpt.cpp
 	system/movie.cpp
+	system/null_backend.cpp
 	system/perf.cpp
 	system/sound.cpp
 	system/stdshdr.cpp
