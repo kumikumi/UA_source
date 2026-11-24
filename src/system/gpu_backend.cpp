@@ -5,6 +5,7 @@
 #include "gpu_backend.h"
 #include "gpu_shaders.h"
 #include "inivals.h"
+#include "cmdline.h"
 #include "perf.h"
 #include "../bitmap.h"
 #include "../utils.h"
@@ -137,7 +138,7 @@ static void KeepPixelsSharp(SDL_Window *window)
 GPUBackend *GPUBackend::Create()
 {
     // Validation finds misuse of the API, but slows the drawing down
-    bool debug = System::FindCmdLineArg("-gpudebug") >= 0;
+    bool debug = System::CmdLine::Has("gpudebug");
 
     SDL_GPUDevice *device = SDL_CreateGPUDevice(SDL_GPU_SHADERFORMAT_MSL | SDL_GPU_SHADERFORMAT_SPIRV, debug, NULL);
     if (!device)

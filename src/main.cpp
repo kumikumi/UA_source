@@ -43,6 +43,7 @@
 
 #include "system/movie.h"
 #include "system/inivals.h"
+#include "system/cmdline.h"
 #include "obj3d.h"
 
 
@@ -65,7 +66,7 @@ enum GAME_SCREEN_MODE {
 GAME_SCREEN_MODE GameScreenMode;
 UserData userdata;
 
-static Benchmark benchmark; // -bench
+static Benchmark benchmark; // --bench
 
 // The game advances in fixed steps, so how units behave does not depend on
 // the frame rate. 60 steps per second is the rate the port ran at while it
@@ -908,12 +909,7 @@ void HandleMods()
 {
     std::string modname;
     
-    std::vector<std::string> &cmdl = System::GetCmdLineArray();
-    int32_t i = System::FindCmdLineArg("-mod");
-    if (i >= 0 && i + 1 < (int32_t)cmdl.size())
-        modname = cmdl[i + 1];
-    
-    if (modname.empty())
+    if (!System::CmdLine::Get("mod", &modname) || modname.empty())
         return;
     
     FSMgr::iNode *node = FSMgr::iDir::findNode("mods");
@@ -960,10 +956,9 @@ int InitGame()
 {
     if ( InitEngines() )
     {
-        std::vector<std::string> &cmdl = System::GetCmdLineArray();
-        int32_t i = System::FindCmdLineArg("-env");
-        if (i >= 0 && i + 1 < (int32_t)cmdl.size())
-            Common::Env.SetPrefix("env", cmdl[i + 1]);
+        std::string envDir;
+        if (System::CmdLine::Get("env", &envDir))
+            Common::Env.SetPrefix("env", envDir);
 
         if ( InitWorldAndShell() )
             return 1;
@@ -1007,8 +1002,17 @@ static bool StartBenchmarkLevel()
 
 int main(int argc, char *argv[])
 {
-    for(int i = 0; i < argc; ++i)
-        System::AddCmdLine( std::string(argv[i]) );
+    switch ( System::CmdLine::Parse(argc, argv) )
+    {
+    case System::CmdLine::PARSE_HELP:
+        return 0;
+
+    case System::CmdLine::PARSE_ERROR:
+        return 2;
+
+    default:
+        break;
+    }
     
     System::IniConf::Init();
     FSMgr::iDir::setBaseDir("");
@@ -1017,7 +1021,7 @@ int main(int argc, char *argv[])
     
     System::IniConf::ReadFromNucleusIni();
     
-    if (System::IniConf::DevMode.Get<bool>() || System::FindCmdLineArg("-devmode") >= 0)
+    if (System::IniConf::DevMode.Get<bool>() || System::CmdLine::Has("devmode"))
         World::AllowMods(true);        
 
     benchmark.ReadCommandLine();

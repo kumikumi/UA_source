@@ -35,6 +35,9 @@ Opensource reimplementation of **UrbanAssault** engine. You needed copy of origi
 - Textar (https://github.com/yamacraft/textar-font) License: IPA-1
 
 
+**Launch options**: start the game in the game's folder; `UA_source --help` lists the options. Options are `--name`, with a value as `--name VALUE` or `--name=VALUE`. The original game's `-env DIR` works as well, so `UA_source -env Ghor_env` and `UA_source --env Taer_env` play the expansions.
+
+
 **Additional keys (nucleus.ini)**:
 - gfx.blending   0(default)/1/2 - blending mode for transparent things. 0 - default multiply, 1 - additive, 2 - sharp edged
 - gfx.solidfont   on/off(default) - enable(on) pointy font rasterizing without of pixel blending

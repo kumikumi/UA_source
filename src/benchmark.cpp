@@ -10,6 +10,7 @@
 #include "yw.h"
 #include "log.h"
 #include "system/system.h"
+#include "system/cmdline.h"
 #include "fmtlib/printf.h"
 
 // How far above the map's highest ground the camera is.
@@ -23,29 +24,16 @@ static const std::array<const char *, System::PerfStats::CNT_MAX> CounterNames =
     "draw calls", "triangles", "texture changes", "particles", "units"
 };
 
-// The value following an option, if the option is given.
-static bool GetOptionValue(const std::string &option, std::string *value)
-{
-    std::vector<std::string> &cmdl = System::GetCmdLineArray();
-    int32_t i = System::FindCmdLineArg(option);
-
-    if (i < 0 || i + 1 >= (int32_t)cmdl.size())
-        return false;
-
-    *value = cmdl[i + 1];
-    return true;
-}
-
 static bool GetOptionNumber(const std::string &option, int minValue, int *value)
 {
     std::string str;
-    if ( !GetOptionValue(option, &str) )
+    if ( !System::CmdLine::Get(option, &str) )
         return false;
 
     int number = std::atoi(str.c_str());
     if (number < minValue)
     {
-        ypa_log_out("Benchmark: %s %s is not a number from %d up, keeping %d\n", option.c_str(), str.c_str(), minValue, *value);
+        ypa_log_out("Benchmark: --%s %s is not a number from %d up, keeping %d\n", option.c_str(), str.c_str(), minValue, *value);
         return false;
     }
 
@@ -55,17 +43,17 @@ static bool GetOptionNumber(const std::string &option, int minValue, int *value)
 
 bool Benchmark::ReadCommandLine()
 {
-    if ( System::FindCmdLineArg("-bench") < 0 )
+    if ( !System::CmdLine::Has("bench") )
         return false;
 
-    GetOptionNumber("-bench-level", 1, &_level);
-    GetOptionNumber("-bench-frames", 1, &_frames);
-    GetOptionValue("-bench-out", &_outFile);
-    GetOptionValue("-bench-csv", &_csvFile);
-    GetOptionValue("-bench-shot", &_shotFile);
+    GetOptionNumber("bench-level", 1, &_level);
+    GetOptionNumber("bench-frames", 1, &_frames);
+    System::CmdLine::Get("bench-out", &_outFile);
+    System::CmdLine::Get("bench-csv", &_csvFile);
+    System::CmdLine::Get("bench-shot", &_shotFile);
 
     std::string view;
-    if ( GetOptionValue("-bench-view", &view) )
+    if ( System::CmdLine::Get("bench-view", &view) )
         _unlimitedView = (StriCmp(view, "default") != 0);
 
     _phase = PHASE_STARTING;

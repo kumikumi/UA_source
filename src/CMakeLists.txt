@@ -54,6 +54,7 @@ set(SOURCES
 	system/fsmgr.cpp
 	system/gfx.cpp
 	system/gl_backend.cpp
+	system/cmdline.cpp
 	system/glfuncs.cpp
 	system/inivals.cpp
 	system/inpt.cpp

@@ -14,6 +14,7 @@
 #include "../font.h"
 #include "inivals.h"
 #include "perf.h"
+#include "cmdline.h"
 
 namespace GFX
 {   
@@ -1676,7 +1677,7 @@ void GFXEngine::Init()
     StaticInit();
 
     // The renderer chosen in the options, else gfx.renderer, unless
-    // -renderer on the command line says otherwise: "gpu" or "gl"
+    // --renderer on the command line says otherwise: "gpu" or "gl"
     std::string chosen = read_guid("env/guid3d.def");
     std::string renderer = System::IniConf::GfxRenderer.Get<std::string>();
 
@@ -1685,11 +1686,7 @@ void GFXEngine::Init()
     else if (chosen == DEVICE_GL)
         renderer = "gl";
 
-    std::vector<std::string> &cmdLine = System::GetCmdLineArray();
-    int32_t arg = System::FindCmdLineArg("-renderer");
-
-    if (arg >= 0 && arg + 1 < (int32_t)cmdLine.size())
-        renderer = cmdLine[arg + 1];
+    System::CmdLine::Get("renderer", &renderer);
 
     // It lives until the program ends: objects destroyed at exit still free
     // their textures and buffers through it.
