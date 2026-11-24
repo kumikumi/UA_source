@@ -101,7 +101,6 @@ enum RFLAGS
     RFLAGS_LUMTRACY  =      (1 << 5),
     RFLAGS_SKY       =      (1 << 6),
     RFLAGS_FALLOFF   =      (1 << 7),
-    RFLAGS_IGNORE_FALLOFF = (1 << 8),
     RFLAGS_COMPUTED_COLOR = (1 << 9),
 };    
 
@@ -257,6 +256,12 @@ struct TRenderNode
     
     float FogStart = 0.0;
     float FogLength = 0.0;
+    
+    // RFLAGS_FALLOFF: fade out between these distances over the ground
+    
+    float FalloffStart = 0.0;
+    
+    float FalloffLength = 0.0;
     
     float Distance = 0.0;
     

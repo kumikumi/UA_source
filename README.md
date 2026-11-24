@@ -41,9 +41,6 @@ Opensource reimplementation of **UrbanAssault** engine. You needed copy of origi
 - gfx.vsync 0/1(default)/2 - vertical sync type. 0 - disable, 1 - default sync, 2 - adaptive(if you've already missed the vertical retrace for a given frame, it swaps buffers immediately). Players turn vsync on and off in the settings screen; this is the default for profiles that have not set it, and 2 makes "on" adaptive
 - gfx.maxfps 0(default) - maximal fps. 0 - a quarter above the refresh rate of the display, so vsync paces the game; above 1000 or below 0 - no limit. Players set it as the frame rate limit in the settings screen; this is the default for profiles that have not set it
 - gfx.filter, gfx.movie_player, audio.channels, game.timeline - texture filtering, the intro and mission movies, how many sounds play at once (1-16), and how long enemy host stations wait after each decision before making another of its kind: up to the timeline in milliseconds (600000 by default), less their effort for it. Players set these in the settings screen; these are the defaults for profiles that have not set them
-- gfx.newsky on/off(default) - enable new fade effect of far grounds
-- gfx.skydistance 3000(default) - start distance of sky fade effect (do not rise it too strong, because of limits of sky sphere)
-- gfx.skylength 500(default) - length of sky fade effect
 - gfx.color_effects 0(default)/1/2 - emulate color effects like in original game in software rendering. 0 - disable, 1 - affects all, 2 - do not affect GUI
 - gfx.color_eff_pwr[1] 0-100(default) - power of red color effect
 - gfx.color_eff_pwr[2] 0-100(default) - power of blue color effect

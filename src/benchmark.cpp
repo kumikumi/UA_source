@@ -133,6 +133,7 @@ void Benchmark::Freeze(NC_STACK_ypaworld *yw)
         view.SectorRadius = TViewDistance::ALL_SECTORS;
         view.ClipDistance = TViewDistance::UNLIMITED;
         view.FogEnd = TViewDistance::UNLIMITED;
+        view.FadeOutEnd = TViewDistance::UNLIMITED;
         yw->SetViewDistance(view);
     }
     else
@@ -243,9 +244,10 @@ static std::string ViewDistanceText(NC_STACK_ypaworld *yw)
     std::string sectors = (view.SectorRadius >= yw->GetMapSectorRadius()) ? "all" : fmt::sprintf("%d around", view.SectorRadius);
     std::string clip = (view.ClipDistance == TViewDistance::UNLIMITED) ? "none" : fmt::sprintf("%.0f", view.ClipDistance);
     std::string fog = (view.FogEnd == TViewDistance::UNLIMITED) ? "none" : fmt::sprintf("%.0f to %.0f", view.FogStart, view.FogEnd);
+    std::string fade = (view.FadeOutEnd == TViewDistance::UNLIMITED) ? "none" : fmt::sprintf("%.0f to %.0f", view.FadeOutStart, view.FadeOutEnd);
 
-    return fmt::sprintf("sectors %s, clip %s, fog %s%s", sectors, clip, fog,
-                        yw->IsViewDistanceSet() ? "" : " (far view option)");
+    return fmt::sprintf("sectors %s, clip %s, fog %s, fade-out %s%s", sectors, clip, fog, fade,
+                        yw->IsViewDistanceSet() ? "" : " (default)");
 }
 
 bool Benchmark::WriteScreenshot()

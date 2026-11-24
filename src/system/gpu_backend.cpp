@@ -1070,8 +1070,8 @@ void GPUBackend::NodeStates(const TRenderNode *nod, const TMeshAlloc &alloc, uin
     // OpenGL's fog with its start at its end fogs all past it
     inst->Fog[0] = nod->FogStart;
     inst->Fog[1] = !fog ? 0.0 : (nod->FogLength > 0.0 ? 1.0 / nod->FogLength : 1e30);
-    inst->Fog[2] = _falloffStart;
-    inst->Fog[3] = _falloffScale;
+    inst->Fog[2] = nod->FalloffStart;
+    inst->Fog[3] = nod->FalloffLength > 0.0 ? 1.0 / nod->FalloffLength : 1e30;
 }
 
 // Sorts the keys by their bits from lowBit up, keeping the order of equal ones
@@ -1200,10 +1200,6 @@ void GPUBackend::QueueNodes(std::list<TRenderNode *> &list, bool keepOrder)
 void GPUBackend::Rasterize(TRenderQueue &queue, uint32_t passes)
 {
     StartFrame();
-
-    _falloffStart = System::IniConf::GfxSkyDistance.Get<int>();
-    float length = System::IniConf::GfxSkyLength.Get<int>();
-    _falloffScale = length > 0.0 ? 1.0 / length : 1e30;
 
     TLayer layer;
     layer.Scene = true;

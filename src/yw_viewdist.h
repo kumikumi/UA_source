@@ -33,6 +33,8 @@ protected:
         ROW_CLIP,
         ROW_FOGSTART,
         ROW_FOGEND,
+        ROW_FADESTART,
+        ROW_FADEEND,
         ROW_MAX
     };
 

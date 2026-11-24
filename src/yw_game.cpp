@@ -1583,16 +1583,19 @@ void NC_STACK_ypaworld::yw_renderSky(baseRender_msg *rndr_params)
     {
         float savedMaxZ = rndr_params->maxZ;
         uint32_t flags = rndr_params->flags;
+        bool fadeOut = rndr_params->fadeOut;
 
         _skyObject->SetPosition( _viewerBact->_position + vec3d::OY(_skyHeight) );
 
         rndr_params->maxZ = 32000.0;
         rndr_params->flags = GFX::RFLAGS_SKY | GFX::RFLAGS_COMPUTED_COLOR;
+        rndr_params->fadeOut = false; // Things fade into the sky, not the sky itself
 
         _skyObject->Render(rndr_params, NULL);
 
         rndr_params->maxZ = savedMaxZ;
         rndr_params->flags = flags;
+        rndr_params->fadeOut = fadeOut;
     }
 }
 
@@ -1881,6 +1884,10 @@ void NC_STACK_ypaworld::RenderGame(TUpdateArgs *bs64, int drawGui)
         rndrs.fogStart = view.FogStart;
         rndrs.fogLength = view.FogEnd - view.FogStart;
     }
+
+    rndrs.fadeOut = (view.FadeOutEnd != TViewDistance::UNLIMITED);
+    rndrs.fadeOutStart = view.FadeOutStart;
+    rndrs.fadeOutLength = view.FadeOutEnd - view.FadeOutStart;
 
     int diameter = 2 * radius + 1;
 

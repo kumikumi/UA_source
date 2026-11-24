@@ -40,7 +40,6 @@
 
 
 
-#define YW_RENDER_SECTORS_DEF   5
 
 class NC_STACK_ypaworld;
 class NC_STACK_button;
@@ -297,7 +296,6 @@ enum SOUND_ID
 
 enum GFX_FLAG
 {
-    GFX_FLAG_FARVIEW            = (1 << 0),
     GFX_FLAG_SKYRENDER          = (1 << 1),
     GFX_FLAG_WINDOWED           = (1 << 5),
     GFX_FLAG_VSYNC              = (1 << 6),
@@ -1861,10 +1859,15 @@ struct TViewDistance
     static constexpr int32_t ALL_SECTORS = INT32_MAX;
     static constexpr float UNLIMITED = std::numeric_limits<float>::infinity();
 
-    int32_t SectorRadius = 2;    // Sectors drawn around the viewer's, in steps along the grid
-    float ClipDistance = 1500.0; // Objects wholly further ahead than this are not drawn
-    float FogStart = 800.0;      // Objects fade to black between the fog distances
-    float FogEnd = 1400.0;       // UNLIMITED: no fog
+    int32_t SectorRadius = 4;    // Sectors drawn around the viewer's, in steps along the grid
+    float ClipDistance = 3500.0; // Objects wholly further ahead than this are not drawn
+    float FogStart = 1200.0;     // Objects fade to black between the fog distances
+    float FogEnd = 2100.0;       // UNLIMITED: no fog
+
+    // Objects fade out between these distances over the ground, showing the
+    // sky behind them, so that the end of the view doesn't cut them off.
+    float FadeOutStart = 3000.0;
+    float FadeOutEnd = 3500.0;   // UNLIMITED: no fading
 };
 
 class NC_STACK_ypaworld: public NC_STACK_nucleus //NC_STACK_base
@@ -2011,14 +2014,11 @@ public:
         YW_ATT_MAPSIZE_Y = 0x80002003,
 //        YW_ATT_SECTORSIZE_X = 0x80002004,
 //        YW_ATT_SECTORSIZE_Y = 0x80002005,
-        YW_ATT_NORMVISLIMIT = 0x80002007,
-        YW_ATT_FADELENGTH = 0x80002008,
         YW_ATT_SKYVISLIMIT = 0x80002009,
         YW_ATT_SKYFADELENGTH = 0x8000200A,
         YW_ATT_SKYHEIGHT = 0x8000200B,
         YW_ATT_SKYRENDER = 0x8000200C,
         YW_ATT_DOENERGYRECALC = 0x8000200D,
-        YW_ATT_VISSECTORS = 0x8000200E,
         YW_ATT_USERHOST = 0x80002010,
         YW_ATT_USERVEHICLE = 0x80002011,
         YW_ATT_WPNPROTOS = 0x80002012,
@@ -2036,14 +2036,11 @@ public:
         YW_ATT_INVULNERABLE = 0x8000201F
     };
 
-    virtual void setYW_normVisLimit(int);
-    virtual void setYW_fadeLength(int);
     virtual void setYW_skyVisLimit(int);
     virtual void setYW_skyFadeLength(int);
     virtual void setYW_skyHeight(int);
     virtual void setYW_skyRender(int);
     virtual void setYW_doEnergyRecalc(int);
-    virtual void setYW_visSectors(int);
     virtual void setYW_userHostStation(NC_STACK_ypabact *);
     virtual void setYW_userVehicle(NC_STACK_ypabact *);
     virtual void setYW_screenW(int);
@@ -2055,12 +2052,9 @@ public:
     
     Common::Point GetMapSize();
     
-    virtual int getYW_normVisLimit();
-    virtual int getYW_fadeLength();
     virtual int getYW_skyHeight();
     virtual int getYW_skyRender();
     virtual int getYW_doEnergyRecalc();
-    virtual int getYW_visSectors();
     virtual NC_STACK_ypabact *getYW_userHostStation();
     virtual NC_STACK_ypabact *getYW_userVehicle();
     virtual std::vector<World::TWeapProto> &GetWeaponsProtos() { return _weaponProtos; };
@@ -2109,12 +2103,11 @@ public:
     bool ParseColorString(int color_id, const std::string &color_string);
 
 
-    void SetFarView(bool farvw);
 
-    // The view distance follows the far view option until it is set here,
-    // and again after ResetViewDistance.
+    // The view distance is the default until it is set here, and again
+    // after ResetViewDistance.
     TViewDistance GetViewDistance() const;
-    TViewDistance GetDefaultViewDistance() const; // The far view option's
+    TViewDistance GetDefaultViewDistance() const; // The original's far view
     void SetViewDistance(const TViewDistance &view);
     void ResetViewDistance();
     bool IsViewDistanceSet() const { return _viewDistanceSet; }
@@ -2500,7 +2493,7 @@ public:
     
     NC_STACK_base *_skyObject  = NULL;
     
-    int32_t _renderSectors = 0; // Render distance in sectors 
+    int32_t _renderSectors = 9; // Render distance in sectors, across the viewer's
     
     NC_STACK_base *_beeBox = NULL;
     NC_STACK_skeleton *_colsubSkeleton  = NULL;
@@ -2516,8 +2509,8 @@ public:
     NC_STACK_skeleton *_fillerSide = NULL;
     NC_STACK_skeleton *_fillerCross = NULL;
     
-    int32_t _normalVizLimit = 0;
-    int32_t _normalFadeLength = 0;
+    int32_t _normalVizLimit = 2100;  // Objects' own fog: black from here
+    int32_t _normalFadeLength = 900; // over this much before it
     bool _viewDistanceSet = false;
     TViewDistance _viewDistance; // Used once _viewDistanceSet
     ViewDistanceWindow _viewDistanceWindow; // Opened with F10, see DrawPerfOverlay

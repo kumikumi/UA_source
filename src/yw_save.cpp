@@ -187,11 +187,6 @@ int yw_write_video(FSMgr::FileHandle *fil, UserData *usr)
 {
     fil->printf("new_video\n");
 
-    if ( usr->GFXFlags & World::GFX_FLAG_FARVIEW )
-        fil->printf("    farview = yes\n");
-    else
-        fil->printf("    farview = no\n");
-
     if ( usr->GFXFlags & World::GFX_FLAG_SKYRENDER )
         fil->printf("    heaven = yes\n");
     else

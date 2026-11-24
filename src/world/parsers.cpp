@@ -3282,20 +3282,7 @@ int VideoParser::Handle(ScriptParser::Parser &parser, const std::string &p1, con
 
     _o._GameShell->savedDataFlags |= World::SDF_VIDEO;
 
-    if ( !StriCmp(p1, "farview") )
-    {
-        if ( StrGetBool(p2) )
-        {
-            _o._GameShell->GFXFlags |= World::GFX_FLAG_FARVIEW;
-            _o.SetFarView(true);
-        }
-        else
-        {
-            _o._GameShell->GFXFlags &= ~World::GFX_FLAG_FARVIEW;
-            _o.SetFarView(false);
-        }
-    }
-    else if ( !StriCmp(p1, "heaven") )
+    if ( !StriCmp(p1, "heaven") )
     {
         if ( StrGetBool(p2) )
         {

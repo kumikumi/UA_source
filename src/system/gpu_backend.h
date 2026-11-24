@@ -289,8 +289,6 @@ protected:
     std::vector<TNodeKey> _nodeKeysTmp;
     std::vector<TRenderNode *> _slotNodes;
     std::vector<TGpuInstance> _slotInstances;
-    float _falloffStart = 0.0; // gfx.skydistance
-    float _falloffScale = 0.0; // 1 / gfx.skylength
     uint32_t _surfaceLayers = 0;
 
     SDL_GPUBuffer *_instanceBuffer = NULL;

@@ -651,8 +651,8 @@ void GLBackend::RenderingMeshOld(TRenderNode *nod)
     }
     else if (flags & RFLAGS_FALLOFF)
     {
-        float transDist = System::IniConf::GfxSkyDistance.Get<int>();
-        float transLen = System::IniConf::GfxSkyLength.Get<int>();
+        float transDist = nod->FalloffStart;
+        float transLen = nod->FalloffLength;
 
         for(TVertex &v : mesh->Vertexes)
         {
@@ -841,8 +841,8 @@ void GLBackend::RenderingMesh(TRenderNode *nod)
         _states.Stipple = false;
         
         _states.AFog = true; 
-        _states.AFogStart = System::IniConf::GfxSkyDistance.Get<int>();
-        _states.AFogLength = System::IniConf::GfxSkyLength.Get<int>();
+        _states.AFogStart = nod->FalloffStart;
+        _states.AFogLength = nod->FalloffLength;
     }
     
     _states.DataBuf = nod->Mesh->HwVertexBuf;

@@ -199,7 +199,7 @@ void ypaworld_func158__DrawVehicle(NC_STACK_ypaworld *yw, TBriefengScreen *brf, 
     brf->ObjRenderParams.adeCount = 0;
     brf->ObjRenderParams.minZ = 17.0;
     brf->ObjRenderParams.maxZ = 32000.0;
-    brf->ObjRenderParams.flags = GFX::RFLAGS_IGNORE_FALLOFF;
+    brf->ObjRenderParams.flags = 0;
 
     if ( brf->ViewingObject ) // Not none
     {
@@ -892,22 +892,6 @@ void UserData::HideConfirmDialog()
     confirmMode = 0;
 }
 
-void NC_STACK_ypaworld::SetFarView(bool farvw)
-{
-    if ( farvw )
-    {
-        setYW_visSectors(9);
-        setYW_normVisLimit(2100);
-        setYW_fadeLength(900);
-    }
-    else
-    {
-        setYW_visSectors(5);
-        setYW_normVisLimit(1400);
-        setYW_fadeLength(600);
-    }
-}
-
 // C++14 needs the definitions, for code that takes them by reference.
 constexpr int32_t TViewDistance::ALL_SECTORS;
 constexpr float TViewDistance::UNLIMITED;
@@ -926,7 +910,6 @@ TViewDistance NC_STACK_ypaworld::GetDefaultViewDistance() const
     // distances when it loads them.
     TViewDistance view;
     view.SectorRadius = (_renderSectors - 1) / 2;
-    view.ClipDistance = (_renderSectors == 5) ? 1500.0 : 3500.0;
     view.FogStart = _normalVizLimit - _normalFadeLength;
     view.FogEnd = _normalVizLimit;
     return view;
@@ -948,6 +931,13 @@ void NC_STACK_ypaworld::SetViewDistance(const TViewDistance &view)
 
     if ( _viewDistance.FogStart > _viewDistance.FogEnd - 1.0 )
         _viewDistance.FogStart = _viewDistance.FogEnd - 1.0;
+
+    // And the fading too, not to divide by zero.
+    if ( _viewDistance.FadeOutEnd < 1.0 )
+        _viewDistance.FadeOutEnd = 1.0;
+
+    if ( _viewDistance.FadeOutStart > _viewDistance.FadeOutEnd - 1.0 )
+        _viewDistance.FadeOutStart = _viewDistance.FadeOutEnd - 1.0;
 
     _viewDistanceSet = true;
 }
@@ -1010,20 +1000,6 @@ void UserData::ApplyOptions()
         {
             soundFlags &= ~World::SF_INVERTLR;
             SFXEngine::SFXe.setReverseStereo(0);
-        }
-    }
-
-    if ( _settingsChangeOptions & 0x10 )
-    {
-        if ( confGFXFlags & World::GFX_FLAG_FARVIEW )
-        {
-            GFXFlags |= World::GFX_FLAG_FARVIEW;
-            p_YW->SetFarView(true);
-        }
-        else
-        {
-            GFXFlags &= ~World::GFX_FLAG_FARVIEW;
-            p_YW->SetFarView(false);
         }
     }
 
@@ -1352,10 +1328,6 @@ void UserData::ShowToolTip(int id)
 
     case 1154:
         p_YW->SetShowingTooltip(Locale::TIP_CONF_MUSICVOLUME);
-        break;
-
-    case 1157:
-        p_YW->SetShowingTooltip(Locale::TIP_CONF_FARDEPTH);
         break;
 
     case 1159:
@@ -1905,10 +1877,6 @@ void UserData::CancelOptions()
 
     btnState.state = ((soundFlags & World::SF_CDSOUND) == 0) + 1;
     btnState.butID = 1164;
-    video_button->SetState(&btnState);
-
-    btnState.butID = 1157;
-    btnState.state = ((GFXFlags & World::GFX_FLAG_FARVIEW) == 0) + 1;
     video_button->SetState(&btnState);
 
     btnState.state = ((GFXFlags & World::GFX_FLAG_SKYRENDER) == 0) + 1;
@@ -2820,17 +2788,7 @@ void UserData::GameShellUiHandleInput()
         if ( r.btn )
             ShowToolTip(r.btn);
 
-        if ( r.code == 1102 )
-        {
-            _settingsChangeOptions |= 0x10;
-            confGFXFlags |= World::GFX_FLAG_FARVIEW;
-        }
-        else if ( r.code == 1103 )
-        {
-            confGFXFlags &= ~World::GFX_FLAG_FARVIEW;
-            _settingsChangeOptions |= 0x10;
-        }
-        else if ( r.code == 1106 )
+        if ( r.code == 1106 )
         {
             _settingsChangeOptions |= 8;
             confGFXFlags |= World::GFX_FLAG_SKYRENDER;

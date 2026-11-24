@@ -99,7 +99,7 @@ float4 Shade(VertexOut i)
     // Linear fog by the distance along the view
     c.rgb *= 1.0 - saturate((i.viewPos.z - i.fog.x) * i.fog.y);
 
-    // gfx.newsky: far objects fade out by their distance over the ground
+    // Far objects fade out by their distance over the ground, into the sky
     if ((i.flags & INST_FALLOFF) != 0)
         c.a *= 1.0 - saturate((length(i.viewPos.xz) - i.fog.z) * i.fog.w);
 

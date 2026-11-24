@@ -16,7 +16,7 @@ class NC_STACK_ypaworld;
 //   -bench               Level 21, seen from above one corner of the map
 //                        towards its middle, with nothing limiting the view
 //   -bench-level N       Another level
-//   -bench-view default  The far view option's view distance instead
+//   -bench-view default  The game's default view distance instead
 //   -bench-frames N      Frames to measure, 600 by default
 //   -bench-out FILE      Where the report goes, benchmark.txt by default
 //   -bench-csv FILE      Every measured frame's times as well

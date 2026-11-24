@@ -14,7 +14,6 @@
 #include "embed.h"
 
 #include "system/gfx.h"
-#include "system/inivals.h"
 #include "particle.h"
 
 
@@ -528,9 +527,6 @@ size_t NC_STACK_base::Render(baseRender_msg *arg, Instance * inst)
         
         float distance = skel132.tform.getTranslate().length();
         
-        bool newsky = System::IniConf::GfxNewSky.Get<bool>();
-        float transDist = System::IniConf::GfxSkyDistance.Get<int>();
-        
         for(GFX::TMesh &msh : Meshes)
         {       
             arg->adeCount += msh.Indixes.size() / 3;
@@ -557,12 +553,14 @@ size_t NC_STACK_base::Render(baseRender_msg *arg, Instance * inst)
             
             rend.Flags |= arg->flags;
             
-            if (newsky && !(rend.Flags & GFX::RFLAGS_IGNORE_FALLOFF))
+            if ( arg->fadeOut &&
+                 ( distance >= arg->fadeOutStart ||
+                   skel132.tform.Transform(msh.BoundBox.Min).XZ().length() >= arg->fadeOutStart ||
+                   skel132.tform.Transform(msh.BoundBox.Max).XZ().length() >= arg->fadeOutStart ) )
             {
-                if ( distance >= transDist ||
-                     skel132.tform.Transform(msh.BoundBox.Min).XZ().length() >= transDist ||
-                     skel132.tform.Transform(msh.BoundBox.Max).XZ().length() >= transDist )
-                    rend.Flags |= GFX::RFLAGS_FALLOFF;
+                rend.Flags |= GFX::RFLAGS_FALLOFF;
+                rend.FalloffStart = arg->fadeOutStart;
+                rend.FalloffLength = arg->fadeOutLength;
             }
 
             rend.Mesh = &msh;
@@ -955,9 +953,6 @@ void TObjectCache::Render(baseRender_msg *arg)
 
     float distance = tf.Transform( Transform.Pos ).length();
 
-    bool newsky = System::IniConf::GfxNewSky.Get<bool>();
-    float transDist = System::IniConf::GfxSkyDistance.Get<int>();
-        
     for(GFX::TMesh &msh : Meshes)
     {
         arg->adeCount += msh.Indixes.size() / 3;
@@ -985,12 +980,14 @@ void TObjectCache::Render(baseRender_msg *arg)
 
         rend.Flags |= arg->flags;
 
-        if (newsky && !(rend.Flags & GFX::RFLAGS_IGNORE_FALLOFF))
+        if ( arg->fadeOut &&
+             ( distance >= arg->fadeOutStart ||
+               tf.Transform(msh.BoundBox.Min).XZ().length() >= arg->fadeOutStart ||
+               tf.Transform(msh.BoundBox.Max).XZ().length() >= arg->fadeOutStart ) )
         {
-            if ( distance >= transDist ||
-                 tf.Transform(msh.BoundBox.Min).XZ().length() >= transDist ||
-                 tf.Transform(msh.BoundBox.Max).XZ().length() >= transDist )
-                rend.Flags |= GFX::RFLAGS_FALLOFF;
+            rend.Flags |= GFX::RFLAGS_FALLOFF;
+            rend.FalloffStart = arg->fadeOutStart;
+            rend.FalloffLength = arg->fadeOutLength;
         }
 
         rend.Mesh = &msh;

@@ -6,8 +6,8 @@
 #include "font.h"
 #include "fmtlib/printf.h"
 
-static const std::array<std::string, 5> RowLabels = {
-    "Distance", "Sectors", "Clip", "Fog start", "Fog end"
+static const std::array<std::string, 7> RowLabels = {
+    "Distance", "Sectors", "Clip", "Fog start", "Fog end", "Fade start", "Fade end"
 };
 
 void ViewDistanceWindow::Create(NC_STACK_ypaworld *yw)
@@ -212,6 +212,8 @@ void ViewDistanceWindow::UpdateSliders(NC_STACK_ypaworld *yw)
     _sliderCount[ROW_CLIP]     = _distances.size();
     _sliderCount[ROW_FOGSTART] = _distances.size() - 1; // A fog can't start at infinity
     _sliderCount[ROW_FOGEND]   = _distances.size();
+    _sliderCount[ROW_FADESTART] = _distances.size() - 1;
+    _sliderCount[ROW_FADEEND]   = _distances.size();
 
     std::array<int, ROW_MAX> pos;
     pos[ROW_VIEW]     = DistancePos(view.FogEnd);
@@ -219,6 +221,8 @@ void ViewDistanceWindow::UpdateSliders(NC_STACK_ypaworld *yw)
     pos[ROW_CLIP]     = DistancePos(view.ClipDistance);
     pos[ROW_FOGSTART] = DistancePos(view.FogStart);
     pos[ROW_FOGEND]   = DistancePos(view.FogEnd);
+    pos[ROW_FADESTART] = DistancePos(view.FadeOutStart);
+    pos[ROW_FADEEND]   = DistancePos(view.FadeOutEnd);
 
     // The slider being dragged stays where the mouse put it.
     for (int row = 0; row < ROW_MAX; row++)
@@ -243,18 +247,21 @@ void ViewDistanceWindow::ApplySlider(NC_STACK_ypaworld *yw, int row, int pos)
             view.SectorRadius = TViewDistance::ALL_SECTORS;
             view.ClipDistance = TViewDistance::UNLIMITED;
             view.FogEnd = TViewDistance::UNLIMITED;
+            view.FadeOutEnd = TViewDistance::UNLIMITED;
         }
         else
         {
-            // Fog over the same share of the distance as the far view
-            // option has. The sectors reach the distance at the corners of
-            // the screen too, where it lies some way to the side.
+            // Fog and fading over the same shares of the distance as by
+            // default. The sectors reach the distance at the corners of the
+            // screen too, where it lies some way to the side.
             TViewDistance def = yw->GetDefaultViewDistance();
 
             view.SectorRadius = static_cast<int32_t>(std::ceil(2.0 * dist / World::CVSectorLength)) + 1;
             view.ClipDistance = dist;
             view.FogStart = (def.FogEnd > 0.0) ? dist * def.FogStart / def.FogEnd : 0.0;
             view.FogEnd = dist;
+            view.FadeOutStart = dist * def.FadeOutStart / def.FadeOutEnd;
+            view.FadeOutEnd = dist;
         }
         break;
 
@@ -280,6 +287,19 @@ void ViewDistanceWindow::ApplySlider(NC_STACK_ypaworld *yw, int row, int pos)
         view.FogEnd = dist;
         if ( view.FogStart >= dist )
             view.FogStart = (pos > 0) ? _distances.at(pos - 1) : 0.0;
+        break;
+
+    // And so does each fading distance.
+    case ROW_FADESTART:
+        view.FadeOutStart = dist;
+        if ( view.FadeOutEnd <= dist )
+            view.FadeOutEnd = _distances.at(pos + 1);
+        break;
+
+    case ROW_FADEEND:
+        view.FadeOutEnd = dist;
+        if ( view.FadeOutStart >= dist )
+            view.FadeOutStart = (pos > 0) ? _distances.at(pos - 1) : 0.0;
         break;
 
     default:
@@ -459,6 +479,7 @@ int ViewDistanceWindow::DistancePos(float distance) const
 std::string ViewDistanceWindow::ValueText(NC_STACK_ypaworld *yw, int row, const TViewDistance &view) const
 {
     bool noFog = (view.FogEnd == TViewDistance::UNLIMITED);
+    bool noFade = (view.FadeOutEnd == TViewDistance::UNLIMITED);
 
     switch ( row )
     {
@@ -480,6 +501,12 @@ std::string ViewDistanceWindow::ValueText(NC_STACK_ypaworld *yw, int row, const 
 
     case ROW_FOGEND:
         return noFog ? "no fog" : fmt::sprintf("%.0f", view.FogEnd);
+
+    case ROW_FADESTART:
+        return noFade ? "-" : fmt::sprintf("%.0f", view.FadeOutStart);
+
+    case ROW_FADEEND:
+        return noFade ? "no fading" : fmt::sprintf("%.0f", view.FadeOutEnd);
 
     default:
         return std::string();

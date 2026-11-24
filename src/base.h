@@ -67,6 +67,13 @@ struct baseRender_msg
     float fogStart = 0.;
     float fogLength = 0.;
 
+    // Objects that reach fadeOutStart over the ground fade out over
+    // fadeOutLength, showing the sky behind them: the world's view
+    // distance. Off unless set, as for the briefing's objects.
+    bool fadeOut = false;
+    float fadeOutStart = 0.;
+    float fadeOutLength = 0.;
+
     // Gives a node the object's own fog, unless it is overridden.
     void SetFog(GFX::TRenderNode *rend, float start, float length) const
     {
