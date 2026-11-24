@@ -244,7 +244,9 @@ struct TSndCarrier
 class SFXEngine
 {
 public:
-    int init();
+    // Without a device, none to open or none asked for, nothing plays:
+    // there are no channels, and digDriver is NULL
+    int init(bool openDevice = true);
     void deinit();
 
     void setMasterVolume(int);

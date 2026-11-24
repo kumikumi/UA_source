@@ -115,6 +115,10 @@ waldev::waldev()
 
 waldev::~waldev()
 {
+    // Without a device nothing was started
+    if ( !_inited )
+        return;
+
     ende = true;
 
     int status;

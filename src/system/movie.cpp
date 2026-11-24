@@ -575,6 +575,8 @@ void TMovie::PlayMovie(const std::string &fname, int volume)
     }
     
     System::EventsDeleteHandler(TMovie::EventsWatcher);
+    // TODO(bug): AudioStream is NULL when no sound device opened, here and
+    // where the movie's sound is fed.
     SFXEngine::SFXe.AudioStream->stop();
     
     Close();

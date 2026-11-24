@@ -33,7 +33,7 @@ void wrapper_playSound(waldev *driver, walsmpl *hSample, void (*funceos)(void *)
 }
 
 
-int SFXEngine::init()
+int SFXEngine::init(bool openDevice)
 {
     digDriver = NULL;
     audio_volume = 0;
@@ -83,9 +83,19 @@ int SFXEngine::init()
     for (int i = 0; i < 64; i++)
         audioRndTable[i] = (float)(16383 - (rand() & 0x7FFF) ) / 16383.0;
 
-    digDriver = new waldev(); //miles_init(audio_channels);
+    if ( openDevice )
+    {
+        digDriver = new waldev(); //miles_init(audio_channels);
 
-    if ( digDriver->inited() )
+        if ( !digDriver->inited() )
+        {
+            ypa_log_out("Couldn't initialize audio!\n");
+            delete digDriver;
+            digDriver = NULL;
+        }
+    }
+
+    if ( digDriver )
     {
         for (int i = 0; i < audio_channels; i++)
         {
@@ -105,7 +115,7 @@ int SFXEngine::init()
     }
     else
     {
-        ypa_log_out("Couldn't initialize audio!\n");
+        audio_channels = 0;
     }
 
     return 1;
@@ -136,7 +146,7 @@ void SFXEngine::SetChannels(int count)
 {
     count = std::max(1, std::min(count, AUDIO_CHANNELS));
 
-    if ( !digDriver || !digDriver->inited() )
+    if ( !digDriver )
         return;
 
     // New channels get their samples before they are counted. The audio
@@ -390,7 +400,7 @@ void SFXEngine::audio_InsertSoundSource(TSoundSource *smpl)
     int min_i = -1;
     int minPriority = 1000000;
 
-    if ( digDriver->inited() )
+    if ( digDriver )
     {
         for (int i = 0; i < audio_channels; i++)
         {
@@ -643,7 +653,7 @@ void SFXEngine::UpdateSoundCarrier(TSndCarrier *smpls)
 
     if ( distance < 6000.0 )
     {
-        if ( digDriver->inited() )
+        if ( digDriver )
             SoundCarrierProcessSounds(smpls, distance);
 
         if ( distance < 2400.0 )
@@ -1036,7 +1046,7 @@ void SFXEngine::UpdateMusic()
 
 const mat3x3 &SFXEngine::EndSoundFrame()
 {
-    if ( digDriver->inited() )
+    if ( digDriver )
     {
         FreeEndedChannels();
         AssignFreeChannels();
