@@ -3659,7 +3659,7 @@ void NC_STACK_ypabact::ModifyEnergy(TEnergyChange *arg)
             if ( arg->unit )
                 _killer_owner = arg->unit->_owner;
             else
-                _killer_owner = 0;
+                _killer_owner = arg->killerOwner;
 
             _killer = arg->unit;
             _status_flg &= ~BACT_STFLAG_LAND;

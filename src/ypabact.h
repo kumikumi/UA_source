@@ -215,6 +215,7 @@ struct TEnergyChange
 {
     int energy;
     NC_STACK_ypabact *unit;
+    uint8_t killerOwner = 0; // Credited with a kill when there is no unit, e.g. the Stoudson bomb's owner
 };
 
 struct TCollisionNormal

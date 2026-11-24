@@ -3184,6 +3184,8 @@ void NC_STACK_ypaworld::KillUnitsInSuperBombRadius(uint8_t activate, float cente
                     TEnergyChange energyChange;
                     energyChange.energy = -22000000;
                     energyChange.unit = NULL;
+                    // The bomb's owner gets the kill, and with it the sectors of a host station
+                    energyChange.killerOwner = activate;
 
                     bct->ModifyEnergy(&energyChange);
                 }
