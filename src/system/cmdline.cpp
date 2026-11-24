@@ -27,6 +27,12 @@ static const Option Options[] = {
                                 "as devmode = on in nucleus.ini does"},
     {"renderer",     "gl|gpu",  "Draw with OpenGL or SDL_GPU, whatever the settings say"},
     {"gpudebug",     NULL,      "Check how SDL_GPU is used, which slows the drawing down"},
+    {"level",        "N",       "Start level N as new, without the menus or the intro. After a "
+                                "win comes the debriefing, and then the game quits. Nothing is "
+                                "written to the player's profile, and the exit menu has no Save or "
+                                "Load"},
+    {"load",         "FILE",    "The same from a saved game, a file in the game's folder such as "
+                                "SAVE/Unnamed2/0.sgm"},
     {"bench",        NULL,      "Run the benchmark: level 21 drawn over and over from above, the frame "
                                 "times reported"},
     {"bench-level",  "N",       "The benchmark's level instead"},
@@ -39,6 +45,7 @@ static const Option Options[] = {
 };
 
 static std::map<std::string, std::string> Given; // Name, value
+static std::string Program = "UA_source";
 
 static const Option *FindOption(const std::string &name)
 {
@@ -103,7 +110,8 @@ static void PrintUsage(FILE *out, const std::string &program)
 
 static ParseResult Fail(const std::string &program, const std::string &problem)
 {
-    fprintf(stderr, "%s: %s\n\n", program.c_str(), problem.c_str());
+    PrintError(problem);
+    fprintf(stderr, "\n");
     PrintUsage(stderr, program);
     return PARSE_ERROR;
 }
@@ -114,6 +122,8 @@ ParseResult Parse(int argc, char *argv[])
     size_t slash = program.find_last_of("/\\");
     if (slash != std::string::npos)
         program = program.substr(slash + 1);
+
+    Program = program;
 
     Given.clear();
 
@@ -172,6 +182,11 @@ ParseResult Parse(int argc, char *argv[])
     }
 
     return PARSE_OK;
+}
+
+void PrintError(const std::string &problem)
+{
+    fprintf(stderr, "%s: %s\n", Program.c_str(), problem.c_str());
 }
 
 bool Has(const std::string &name)

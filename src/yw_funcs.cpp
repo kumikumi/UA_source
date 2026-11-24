@@ -1112,7 +1112,7 @@ int loadTOD(NC_STACK_ypaworld *yw, const char *fname)
 int writeTOD(NC_STACK_ypaworld *yw, const char *fname, int tod)
 {
     int written = 0;
-    if ( yw->_GameShell )
+    if ( yw->_GameShell && !yw->_GameShell->DirectStart )
     {
         FSMgr::FileHandle *fil = uaOpenFileAlloc( fmt::sprintf("save:%s/%s", yw->_GameShell->UserName, fname), "w");
 

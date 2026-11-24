@@ -23,6 +23,10 @@ namespace CmdLine
     // Names without the dashes
     bool Has(const std::string &name);
     bool Get(const std::string &name, std::string *value);
+
+    // A problem with what the options ask for, to stderr as
+    // "UA_source: problem"
+    void PrintError(const std::string &problem);
 }
 
 }

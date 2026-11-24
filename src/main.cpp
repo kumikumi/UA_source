@@ -1,6 +1,7 @@
 #define GLOBAL
 // Gives Windows GUI programs their WinMain entry point, as SDL2main did.
 #include <SDL3/SDL_main.h>
+#include <cstdlib>
 #include "system/fsmgr.h"
 #include "system/system.h"
 #include "env.h"
@@ -67,6 +68,8 @@ GAME_SCREEN_MODE GameScreenMode;
 UserData userdata;
 
 static Benchmark benchmark; // --bench
+
+static bool StartDirectLevel();
 
 // The game advances in fixed steps, so how units behave does not depend on
 // the frame rate. 60 steps per second is the rate the port ran at while it
@@ -237,7 +240,7 @@ int ProcessGameplayFrame(int32_t frameTicks, bool timeFrozen)
     {
         ypaworld->DeleteLevel();
 
-        if ( tmpSettingsSaved || levelInfo.State == TLevelInfo::STATE_ABORTED )
+        if ( (tmpSettingsSaved || levelInfo.State == TLevelInfo::STATE_ABORTED) && !userdata.DirectStart )
         {
             if ( !ypaworld->LoadSettings("settings.tmp", 
                                          userdata.UserName,
@@ -269,6 +272,11 @@ int ProcessGameplayFrame(int32_t frameTicks, bool timeFrozen)
         userdata.lastInputEvent = 0;
         userdata.GameIsOver = true;
 
+        // Started from the command line: the campaign screen, for the
+        // debriefing, after which the game quits
+        if ( userdata.DirectStart )
+            userdata.EnvMode = ENVMODE_SINGLEPLAY;
+
         if ( ypaworld->OpenGameShell() )
         {
             GameScreenMode = GAME_SCREEN_MODE_MENU;
@@ -290,7 +298,12 @@ int ProcessGameplayFrame(int32_t frameTicks, bool timeFrozen)
     {
         ypaworld->DeleteLevel();
 
-        if ( !ypaworld->LoadGame( fmt::sprintf("save:%s/%d.rst", userdata.UserName, levelInfo.LevelID) ) )
+        if ( userdata.DirectStart )
+        {
+            if ( !StartDirectLevel() )
+                return 0;
+        }
+        else if ( !ypaworld->LoadGame( fmt::sprintf("save:%s/%d.rst", userdata.UserName, levelInfo.LevelID) ) )
             ypa_log_out("Warning, load error\n");
 
         Input::Engine.QueryInput(&input_states);
@@ -466,6 +479,11 @@ int ProcessMenuFrame()
     userdata.Input = &input_states;
 
     ypaworld->ProcessGameShell();
+
+    // Started from the command line, the shell only comes after the level:
+    // the game quits where it would go back to the level map
+    if ( userdata.DirectStart && ypaworld->GetLevelInfo().State == TLevelInfo::STATE_MENU )
+        return 0;
     
     if ( userdata.envAction.action == EnvAction::ACTION_QUIT )
         return 0;
@@ -822,11 +840,11 @@ int yw_initGameWithSettings()
         profileIndex++;
     }
 
-    // The benchmark goes straight to its level
+    // Straight into a level from the command line: no intro
     return ypaworld->LoadSettings(settingsFileName,
                                   userdata.UserName,
                                   World::SDF_ALL,
-                                  true, !benchmark.IsActive()) != 0;
+                                  true, !userdata.DirectStart) != 0;
 }
 
 void ReadSnapsDir()
@@ -970,30 +988,131 @@ int InitGame()
 
 uint32_t maxTicks = 1000/60; // init on 60FPS
 
-// Leaves the menus for the benchmark's level, started as new. A level that
-// is not completed saves nothing to the player's profile; only the loading
-// screen's tip of the day moves on, as with any level started.
-static bool StartBenchmarkLevel()
+// The level the command line starts the game in: --level, --load or the
+// benchmark's. Nothing of it is written to the player's profile.
+struct DirectStart
 {
-    // Fullscreen: the display's resolution every time, and frame times that
-    // vary much less than in a window
-    ypaworld->SetWindowed(false);
+    int Level = 0;        // Started as new
+    std::string SaveFile; // Or from this saved game
+};
 
+static DirectStart directStart;
+
+// False, after saying why, when the command line starts a level in more
+// than one way, or names no level
+static bool ReadDirectStart()
+{
+    std::string value;
+    int ways = 0;
+
+    if ( System::CmdLine::Get("level", &value) )
+    {
+        char *end = NULL;
+        long level = std::strtol(value.c_str(), &end, 10);
+
+        if ( value.empty() || *end || level < 1 || level > 255 )
+        {
+            System::CmdLine::PrintError("--level " + value + ": not a level number");
+            return false;
+        }
+
+        directStart.Level = level;
+        ways++;
+    }
+
+    if ( System::CmdLine::Get("load", &directStart.SaveFile) )
+    {
+        if ( directStart.SaveFile.empty() )
+        {
+            System::CmdLine::PrintError("--load needs FILE");
+            return false;
+        }
+
+        ways++;
+    }
+
+    if ( benchmark.IsActive() )
+    {
+        directStart.Level = benchmark.GetLevel();
+        ways++;
+    }
+
+    if ( ways > 1 )
+    {
+        System::CmdLine::PrintError("--level, --load and --bench each start a level; give one");
+        return false;
+    }
+
+    userdata.DirectStart = (ways == 1);
+    return true;
+}
+
+// Whether the level or saved game the command line names is there
+static bool CheckDirectStart()
+{
+    if ( !directStart.SaveFile.empty() )
+    {
+        if ( !uaFileExist(directStart.SaveFile) )
+        {
+            System::CmdLine::PrintError("no saved game " + directStart.SaveFile + " in the game's folder");
+            return false;
+        }
+
+        return true;
+    }
+
+    const auto &regions = ypaworld->_globalMapRegions.MapRegions;
+
+    if ( directStart.Level < 1 || directStart.Level >= (int)regions.size() || regions[directStart.Level].Status == TMapRegionInfo::STATUS_NONE )
+    {
+        System::CmdLine::PrintError(fmt::sprintf("there is no level %d", directStart.Level));
+        return false;
+    }
+
+    if ( regions[directStart.Level].Status == TMapRegionInfo::STATUS_NETWORK )
+    {
+        System::CmdLine::PrintError(fmt::sprintf("level %d is for network games", directStart.Level));
+        return false;
+    }
+
+    return true;
+}
+
+// Leaves the menus for the level the command line names, and starts it again
+// for Restart
+static bool StartDirectLevel()
+{
     ypaworld->CloseGameShell();
     GameScreenMode = GAME_SCREEN_MODE_UNKNOWN;
 
-    // The same level whoever's profile it is
-    ypaworld->_levelInfo.Buddies.clear();
+    bool started;
 
-    TLevelLoadRequest loadRequest;
-    loadRequest.lvlID = benchmark.GetLevel();
-    loadRequest.mode = 0;
-
-    if ( !ypaworld->CreateLevel(&loadRequest) )
+    if ( !directStart.SaveFile.empty() )
     {
-        ypa_log_out("Benchmark: could not start level %d\n", loadRequest.lvlID);
+        started = ypaworld->LoadGame(directStart.SaveFile) != 0;
+    }
+    else
+    {
+        // The same level whoever's profile it is
+        ypaworld->_levelInfo.Buddies.clear();
+
+        TLevelLoadRequest loadRequest;
+        loadRequest.lvlID = directStart.Level;
+        loadRequest.mode = 0;
+
+        started = ypaworld->CreateLevel(&loadRequest) != 0;
+    }
+
+    if ( !started )
+    {
+        ypa_log_out("Could not start the level the command line names\n");
         return false;
     }
+
+    // What the debriefing compares the end of the level with, as when the
+    // level map starts a level
+    ypaworld->_lvlPrimevalTypeMap = ypaworld->_lvlTypeMap;
+    ypaworld->_lvlPrimevalOwnMap = ypaworld->_lvlOwnMap;
 
     GameScreenMode = GAME_SCREEN_MODE_GAME;
     Input::Engine.QueryInput(&input_states);
@@ -1025,6 +1144,9 @@ int main(int argc, char *argv[])
         World::AllowMods(true);        
 
     benchmark.ReadCommandLine();
+
+    if ( !ReadDirectStart() )
+        return 2;
     
     System::Init();
     
@@ -1036,12 +1158,20 @@ int main(int argc, char *argv[])
 
     System::IniConf::ReadFromNucleusIni();
 
-    if ( benchmark.IsActive() && !StartBenchmarkLevel() )
+    if ( userdata.DirectStart )
     {
-        ShutdownGame();
-        GFX::Engine.Deinit();
-        System::Deinit();
-        return 1;
+        // The benchmark runs fullscreen: the display's resolution every
+        // time, and frame times that vary much less than in a window. A
+        // level goes as the profile has it, which the intro would have set.
+        ypaworld->SetWindowed( !benchmark.IsActive() && userdata.IsWindowedFlag() );
+
+        if ( !CheckDirectStart() || !StartDirectLevel() )
+        {
+            ShutdownGame();
+            GFX::Engine.Deinit();
+            System::Deinit();
+            return 1;
+        }
     }
 
     uint32_t ticks = 0;

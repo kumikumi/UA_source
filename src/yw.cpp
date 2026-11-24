@@ -1983,7 +1983,7 @@ void NC_STACK_ypaworld::DeleteLevel()
 
     if ( _levelInfo.State == TLevelInfo::STATE_COMPLETED )
     {
-        if ( _GameShell )
+        if ( _GameShell && !_GameShell->DirectStart )
         {
             FSMgr::FileHandle *fil = uaOpenFileAlloc(fmt::sprintf("save:%s/sgisold.txt", _GameShell->UserName), "w");
 
@@ -6199,6 +6199,9 @@ size_t NC_STACK_ypaworld::LoadGame(const std::string &saveFile)
 
 size_t NC_STACK_ypaworld::SaveGame(const std::string &saveFile)
 {
+    if ( _GameShell && _GameShell->DirectStart )
+        return 1;
+
     bool write_ok = true;
 
     if ( saveFile.find(".sgm") != std::string::npos || saveFile.find(".SGM") != std::string::npos )
@@ -6306,6 +6309,9 @@ size_t NC_STACK_ypaworld::SaveGame(const std::string &saveFile)
 // Saving game
 bool NC_STACK_ypaworld::SaveSettings(UserData *usr, const std::string &fileName, uint32_t sdfMask)
 {
+    if ( usr->DirectStart )
+        return true;
+
     if ( fileName.empty() )
     {
         ypa_log_out("No names for save action\n");

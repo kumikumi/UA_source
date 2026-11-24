@@ -6543,6 +6543,14 @@ void NC_STACK_ypaworld::ExitMenuHandleInput(TInputState *inpt)
                     _hasRSTSave = true;
                 else
                     _hasRSTSave = false;
+
+                // Started from the command line: nothing to load, and
+                // Restart starts the level the same way again
+                if ( _GameShell->DirectStart )
+                {
+                    _hasSGMSave = false;
+                    _hasRSTSave = true;
+                }
             }
         }
     }
@@ -6609,7 +6617,7 @@ void NC_STACK_ypaworld::ExitMenuHandleInput(TInputState *inpt)
         if ( !_hasRSTSave )
             disabledFlags |= 0x800;
 
-        if ( _userUnit->_status == BACT_STATUS_DEAD )
+        if ( _userUnit->_status == BACT_STATUS_DEAD || (_GameShell && _GameShell->DirectStart) )
             disabledFlags |= 0x200;
 
         if ( _isNetGame )

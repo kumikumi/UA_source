@@ -501,6 +501,12 @@ public:
     bool HasInited = false;
     bool IgnoreScoreSaving = false;
     bool GameIsOver = false; // If it's opened after complete game
+
+    // Started straight into a level from the command line (--level, --load,
+    // --bench): nothing is written to the player's profile, the exit menu
+    // has no Save or Load, and the game quits after the level
+    bool DirectStart = false;
+
     bool ResetInputPeriod = false;
     std::string UserName;
 
