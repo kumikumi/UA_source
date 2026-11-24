@@ -338,6 +338,7 @@ void yw_RenderVector2D(NC_STACK_ypaworld *yw, UAskeleton::Data *wire, float posX
 void yw_debriefUpdate(NC_STACK_ypaworld *yw, TInputState *inpt);
 
 int ConfirmDialogGetState();
+void OpenExitTrainingDialog(NC_STACK_ypaworld *yw);
 void TakeScreenshot(NC_STACK_ypaworld *yw);
 
 int recorder_create_camera(NC_STACK_ypaworld *yw);

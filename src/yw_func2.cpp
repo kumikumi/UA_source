@@ -840,6 +840,7 @@ void UserData::CreateNewProfile()
     ClearProtos(p_YW);
     
     Common::DeleteAndNull(&p_YW->_script);
+    p_YW->_tutorialHints.Stop();
 
     if ( p_YW->ProtosInit() )
     {

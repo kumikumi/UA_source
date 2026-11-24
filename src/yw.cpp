@@ -521,8 +521,8 @@ bool NC_STACK_ypaworld::SimulationStep(TUpdateArgs *arg)
         }
     }
 
-    //ypaworld_func64__sub22(this); // scene events
-    
+    _tutorialHints.Update(this);
+
     if (_script)
         _script->CallUpdate(_timeStamp, arg->DTime);
                 

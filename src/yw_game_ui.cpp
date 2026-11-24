@@ -4144,6 +4144,17 @@ void CloseExitMenu(NC_STACK_ypaworld *yw)
         yw->GuiWinClose( &exit_menu );
 }
 
+// Asks whether to leave the training mission; yes acts as the exit menu's
+// leave button
+void OpenExitTrainingDialog(NC_STACK_ypaworld *yw)
+{
+    if ( ConfirmDialogGetState() != 3 )
+    {
+        exitMenuPendingAction = 8;
+        yw->OpenConfirmDialog( Locale::Text::Advanced(Locale::ADV_EXITRAINING) , &exit_menu);
+    }
+}
+
 void NC_STACK_ypaworld::SituationAnalyzer()
 {
     TInfoMessage msg;

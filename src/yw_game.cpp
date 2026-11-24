@@ -252,12 +252,11 @@ int NC_STACK_ypaworld::LevelCommonLoader(TLevelDescription *mapp, int levelID, i
     if ( ParseLevelDescription(mapp, _globalMapRegions.MapRegions[_levelInfo.LevelID].MapDirectory) && mapp->IsOk() )
     {       
         Common::DeleteAndNull(&_script);
-        
+        _tutorialHints.Stop();
+
         if (mapp->EventLoopID >= 1 && mapp->EventLoopID <= 3)
         {
-            _script = new World::LuaEvents(this);
-            _script->LoadFile(fmt::sprintf("lesson%d.lua", mapp->EventLoopID));
-            _script->CallInit(_timeStamp);
+            _tutorialHints.Start(mapp->EventLoopID);
         }
         else if (!_luaScriptName.empty())
         {

@@ -36,6 +36,7 @@
 
 
 #include "world/luaevents.h"
+#include "world/tutorialhints.h"
 #include "locale/locale.h"
 
 
@@ -2845,6 +2846,7 @@ protected:
     
     World::ParticleSystem _particles;
 
+    World::TutorialHints _tutorialHints;
     World::LuaEvents *_script = NULL;
 };
 

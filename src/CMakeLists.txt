@@ -76,6 +76,7 @@ set(SOURCES
 	world/protos.cpp
 	world/saveparsers.cpp
 	world/tools.cpp
+	world/tutorialhints.cpp
 	wrapal.cpp
 	yw.cpp
 	yw_brif.cpp
