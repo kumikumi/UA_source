@@ -732,12 +732,18 @@ void NC_STACK_ypamissile::Renew()
     setBACT_yourLastSeconds(3000);
 }
 
-void NC_STACK_ypamissile::VisitState(World::State::Visitor &v)
+void NC_STACK_ypamissile::VisitView(World::State::Visitor &v)
 {
-    NC_STACK_ypabact::VisitState(v);
+    NC_STACK_ypabact::VisitView(v);
+
+    v.Unit("emitter", _mislEmitter, World::State::VIEW);
+}
+
+void NC_STACK_ypamissile::VisitInternal(World::State::Visitor &v)
+{
+    NC_STACK_ypabact::VisitInternal(v);
 
     v.Field("missileType", _mislType);
-    v.Unit("emitter", _mislEmitter, World::State::VIEW);
     v.Field("lifeTime", _mislLifeTime);
     v.Field("driveTime", _mislDriveTime);
     v.Field("delayTime", _mislDelayTime);

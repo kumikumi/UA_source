@@ -15,7 +15,7 @@ public:
     virtual void Move(move_msg *arg);
     virtual size_t SetPosition(TUnitPlacement *arg);
     virtual void Renew();
-    virtual void VisitState(World::State::Visitor &v) override;
+    virtual void VisitInternal(World::State::Visitor &v) override;
 
     NC_STACK_ypaufo() 
     {

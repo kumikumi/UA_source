@@ -408,8 +408,11 @@ public:
     virtual void GetFormationPosition(TFormationSlot *arg);
     virtual void Renew();
 
-    // Its state, field by field: see World::State
-    virtual void VisitState(World::State::Visitor &v);
+    // Its state, field by field (see World::State): the view's fields, then
+    // the rest, each listed once. The view goes through only its own.
+    void VisitState(World::State::Visitor &v);
+    virtual void VisitView(World::State::Visitor &v);
+    virtual void VisitInternal(World::State::Visitor &v);
 
     // Which of its models an instance draws: 0 none, 1 normal, 2 firing,
     // 3 waiting, 4 dead, 5 exploding, 6 beaming in, 7 another, 8 and on its

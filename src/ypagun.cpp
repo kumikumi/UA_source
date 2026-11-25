@@ -635,9 +635,9 @@ void NC_STACK_ypagun::Renew()
     _viewer_rotation = _rotation;
 }
 
-void NC_STACK_ypagun::VisitState(World::State::Visitor &v)
+void NC_STACK_ypagun::VisitInternal(World::State::Visitor &v)
 {
-    NC_STACK_ypabact::VisitState(v);
+    NC_STACK_ypabact::VisitInternal(v);
 
     v.Field("gunMaxUp", _gunMaxUp);
     v.Field("gunMaxDown", _gunMaxDown);

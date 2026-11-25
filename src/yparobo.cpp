@@ -5214,9 +5214,9 @@ void NC_STACK_yparobo::Renew()
     _roboTimeScale = _world->GetAITimeline();
 }
 
-void NC_STACK_yparobo::VisitState(World::State::Visitor &v)
+void NC_STACK_yparobo::VisitInternal(World::State::Visitor &v)
 {
-    NC_STACK_ypabact::VisitState(v);
+    NC_STACK_ypabact::VisitInternal(v);
 
     v.Field("flotage", _roboFlotage);
     v.Field("collTurnAngle", _roboColls.lastTurnAngle);

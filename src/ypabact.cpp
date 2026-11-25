@@ -4965,35 +4965,79 @@ NC_STACK_base *NC_STACK_ypabact::ModelByIndex(uint8_t index) const
 
 void NC_STACK_ypabact::VisitState(World::State::Visitor &v)
 {
+    VisitView(v);
+
+    if ( v.Visits(World::State::INTERNAL) )
+        VisitInternal(v);
+}
+
+void NC_STACK_ypabact::VisitView(World::State::Visitor &v)
+{
     // First, so that reading can give it its prototype's models and sounds
     v.Field("vehicle", _vehicleID, World::State::VIEW);
 
     if ( v.Reads(World::State::VIEW) )
         _world->GiveUnitAssets(this);
 
+    v.Field("owner", _owner, World::State::VIEW);
+    v.Field("status", _status, World::State::VIEW);
+    v.Field("statusFlags", _status_flg, World::State::VIEW);
+    v.Field("energy", _energy, World::State::VIEW);
+    v.Field("energyMax", _energy_max, World::State::VIEW);
+    v.Field("aggression", _aggr, World::State::VIEW);
+    v.Unit("parent", _parent, World::State::VIEW);
+    v.Unit("killer", _killer, World::State::VIEW);
+    v.Field("primaryType", _primTtype, World::State::VIEW);
+    v.Target("primary", _primTtype, _primT, World::State::VIEW);
+    v.Field("secondaryType", _secndTtype, World::State::VIEW);
+    v.Target("secondary", _secndTtype, _secndT, World::State::VIEW);
+
+    v.Field("position", _position, World::State::VIEW_ROUNDED);
+    v.Field("rotation", _rotation, World::State::VIEW_ROUNDED);
+    v.Field("scale", _scale, World::State::VIEW_ROUNDED);
+
+    uint8_t look = ModelIndex(_current_vp);
+    v.Field("look", look, World::State::VIEW);
+
+    if ( v.Reads(World::State::VIEW) )
+        SetVP(ModelByIndex(look));
+
+    static const char *const extraNames[3][5] = {
+        {"extra0Scale", "extra0Pos", "extra0Rotation", "extra0Flags", "extra0Model"},
+        {"extra1Scale", "extra1Pos", "extra1Rotation", "extra1Flags", "extra1Model"},
+        {"extra2Scale", "extra2Pos", "extra2Rotation", "extra2Flags", "extra2Model"},
+    };
+
+    for (int i = 0; i < 3; i++)
+    {
+        extra_vproto &ex = _vp_extra[i];
+        uint8_t model = ModelIndex(ex.vp);
+
+        v.Field(extraNames[i][0], ex.scale, World::State::VIEW);
+        v.Field(extraNames[i][1], ex.pos, World::State::VIEW_ROUNDED);
+        v.Field(extraNames[i][2], ex.rotate, World::State::VIEW_ROUNDED);
+        v.Field(extraNames[i][3], ex.flags, World::State::VIEW);
+        v.Field(extraNames[i][4], model, World::State::VIEW);
+
+        if ( v.Reads(World::State::VIEW) )
+            ex.SetVP(ModelByIndex(model));
+    }
+}
+
+void NC_STACK_ypabact::VisitInternal(World::State::Visitor &v)
+{
     v.Field("bflags", _bflags);
     v.Field("command", _commandID);
     v.Unit("hostStation", _host_station);
-    v.Unit("parent", _parent, World::State::VIEW);
     v.Kids("kids", _kidList);
     v.Field("soundFlags", _soundFlags);
-    v.Field("energy", _energy, World::State::VIEW);
-    v.Field("energyMax", _energy_max, World::State::VIEW);
     v.Field("reloadConst", _reload_const);
     v.Field("shield", _shield);
     v.Field("radar", _radar);
-    v.Field("owner", _owner, World::State::VIEW);
-    v.Field("aggression", _aggr, World::State::VIEW);
-    v.Field("status", _status, World::State::VIEW);
-    v.Field("statusFlags", _status_flg, World::State::VIEW);
 
-    v.Field("primaryType", _primTtype, World::State::VIEW);
-    v.Field("secondaryType", _secndTtype, World::State::VIEW);
     v.Field("primaryCommand", _primT_cmdID);
     v.Field("secondaryCommand", _secndT_cmdID);
-    v.Target("primary", _primTtype, _primT, World::State::VIEW);
     v.Field("primaryPos", _primTpos);
-    v.Target("secondary", _secndTtype, _secndT, World::State::VIEW);
     v.Field("secondaryPos", _sencdTpos);
 
     v.Field("adistSector", _adist_sector);
@@ -5025,42 +5069,13 @@ void NC_STACK_ypabact::VisitState(World::State::Visitor &v)
     v.Field("thraction", _thraction);
     v.Field("flyDir", _fly_dir);
     v.Field("flyDirLength", _fly_dir_length);
-    v.Field("position", _position, World::State::VIEW_ROUNDED);
     v.Field("oldPosition", _old_pos);
     v.Field("targetVec", _target_vec);
     v.Field("targetDir", _target_dir);
-    v.Field("rotation", _rotation, World::State::VIEW_ROUNDED);
     v.Field("height", _height);
     v.Field("heightMaxUser", _height_max_user);
-    v.Field("scale", _scale, World::State::VIEW_ROUNDED);
 
-    uint8_t look = ModelIndex(_current_vp);
-    v.Field("look", look, World::State::VIEW);
     v.Field("modelActive", _vp_active);
-
-    if ( v.Reads(World::State::VIEW) )
-        SetVP(ModelByIndex(look));
-
-    static const char *const extraNames[3][5] = {
-        {"extra0Scale", "extra0Pos", "extra0Rotation", "extra0Flags", "extra0Model"},
-        {"extra1Scale", "extra1Pos", "extra1Rotation", "extra1Flags", "extra1Model"},
-        {"extra2Scale", "extra2Pos", "extra2Rotation", "extra2Flags", "extra2Model"},
-    };
-
-    for (int i = 0; i < 3; i++)
-    {
-        extra_vproto &ex = _vp_extra[i];
-        uint8_t model = ModelIndex(ex.vp);
-
-        v.Field(extraNames[i][0], ex.scale, World::State::VIEW);
-        v.Field(extraNames[i][1], ex.pos, World::State::VIEW_ROUNDED);
-        v.Field(extraNames[i][2], ex.rotate, World::State::VIEW_ROUNDED);
-        v.Field(extraNames[i][3], ex.flags, World::State::VIEW);
-        v.Field(extraNames[i][4], model, World::State::VIEW);
-
-        if ( v.Reads(World::State::VIEW) )
-            ex.SetVP(ModelByIndex(model));
-    }
 
     v.Field("extraMode", _vp_extra_mode);
     v.Field("radius", _radius);
@@ -5102,7 +5117,6 @@ void NC_STACK_ypabact::VisitState(World::State::Visitor &v)
     v.Field("killAfterShot", _kill_after_shot);
     v.Field("headingSpeed", _heading_speed);
 
-    v.Unit("killer", _killer, World::State::VIEW);
     v.Field("killerOwner", _killer_owner);
     v.Field("rebCount", _reb_count);
     v.Field("atkRet", _atk_ret);

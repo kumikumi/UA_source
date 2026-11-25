@@ -939,9 +939,9 @@ void NC_STACK_ypaufo::Renew()
     setBACT_landingOnWait(0);
 }
 
-void NC_STACK_ypaufo::VisitState(World::State::Visitor &v)
+void NC_STACK_ypaufo::VisitInternal(World::State::Visitor &v)
 {
-    NC_STACK_ypabact::VisitState(v);
+    NC_STACK_ypabact::VisitInternal(v);
 
     v.Field("ufoTogo", _ufoTogo);
     v.Field("ufoTogoResidue", _ufoTogoRisidue);

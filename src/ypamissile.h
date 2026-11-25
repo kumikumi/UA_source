@@ -40,7 +40,8 @@ public:
     virtual void Move(move_msg *arg) override;
     virtual void SetState(setState_msg *arg) override;
     virtual void Renew() override;
-    virtual void VisitState(World::State::Visitor &v) override;
+    virtual void VisitView(World::State::Visitor &v) override;
+    virtual void VisitInternal(World::State::Visitor &v) override;
     virtual size_t SetStateInternal(setState_msg *arg) override;
     
     virtual void ResetViewing(); // Detach camera

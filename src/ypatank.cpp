@@ -1622,9 +1622,9 @@ void NC_STACK_ypatank::Renew()
     _tankExpectTgt = false;
 }
 
-void NC_STACK_ypatank::VisitState(World::State::Visitor &v)
+void NC_STACK_ypatank::VisitInternal(World::State::Visitor &v)
 {
-    NC_STACK_ypabact::VisitState(v);
+    NC_STACK_ypabact::VisitInternal(v);
 
     v.Field("tankFlags", _tankFlags);
     v.Field("tankWaitCount", _tankWaitCount);

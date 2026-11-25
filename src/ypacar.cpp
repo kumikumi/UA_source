@@ -64,9 +64,9 @@ void NC_STACK_ypacar::Renew()
     _carBlast = 0;
 }
 
-void NC_STACK_ypacar::VisitState(World::State::Visitor &v)
+void NC_STACK_ypacar::VisitInternal(World::State::Visitor &v)
 {
-    NC_STACK_ypatank::VisitState(v);
+    NC_STACK_ypatank::VisitInternal(v);
 
     v.Field("carKamikaze", _carKamikaze);
     v.Field("carBlast", _carBlast);

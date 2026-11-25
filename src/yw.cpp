@@ -6061,6 +6061,13 @@ bool NC_STACK_ypaworld::WriteSave(FSMgr::FileHandle *fil, bool isfin_save)
 void NC_STACK_ypaworld::VisitState(World::State::Visitor &v)
 {
     v.Field("time", _timeStamp, World::State::VIEW);
+    v.Unit("userRobo", _userRobo, World::State::VIEW);
+    v.Unit("userUnit", _userUnit, World::State::VIEW);
+    v.Unit("viewer", _viewerBact, World::State::VIEW);
+
+    if ( !v.Visits(World::State::INTERNAL) )
+        return;
+
     v.Field("steps", _framesElapsed);
     v.Field("nextUnitId", _nextUnitId);
     v.Field("nextCommandId", _nextCommandId);
@@ -6087,9 +6094,6 @@ void NC_STACK_ypaworld::VisitState(World::State::Visitor &v)
     v.Field("upgradeWeapon", _upgradeWeaponId);
     v.Field("upgradeBuilding", _upgradeBuildId);
 
-    v.Unit("userRobo", _userRobo, World::State::VIEW);
-    v.Unit("userUnit", _userUnit, World::State::VIEW);
-    v.Unit("viewer", _viewerBact, World::State::VIEW);
     v.Field("extraViewEnable", _extraViewEnable);
     v.Field("extraViewNumber", _extraViewNumber);
     v.Field("ownerMask", _levelInfo.OwnerMask);

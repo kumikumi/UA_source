@@ -1114,9 +1114,9 @@ void NC_STACK_ypaflyer::Renew()
     _flyerBoost = 0;
 }
 
-void NC_STACK_ypaflyer::VisitState(World::State::Visitor &v)
+void NC_STACK_ypaflyer::VisitInternal(World::State::Visitor &v)
 {
-    NC_STACK_ypabact::VisitState(v);
+    NC_STACK_ypabact::VisitInternal(v);
 
     v.Field("flyerBoost", _flyerBoost);
     v.Field("flyerType", _flyerType);

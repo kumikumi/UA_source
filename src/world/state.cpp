@@ -1,6 +1,7 @@
 #include <algorithm>
 #include <cstring>
 #include <set>
+#include <unordered_set>
 #include <zlib.h>
 
 #include "state.h"
@@ -482,18 +483,16 @@ static void VisitSector(Visitor &v, NC_STACK_ypaworld *world, cellArea &cell, En
     v.Field("owner", cell.owner, VIEW);
     v.Field("type", cell.type_id, VIEW);
     v.Field("simple", cell.SectorType, VIEW);
-    v.Field("energyPower", cell.energy_power);
     v.Field("health", cell.buildings_health.data(), 9, VIEW);
+
+    if ( !v.Visits(INTERNAL) )
+        return;
+
+    v.Field("energyPower", cell.energy_power);
     v.Field("purpose", cell.PurposeType);
     v.Field("purposeIndex", cell.PurposeIndex);
     v.Field("accumOwner", accum.Owner);
     v.Field("accumEnergy", accum.Energy);
-
-    if ( !v.Visits(INTERNAL) )
-    {
-        v.SectorUnits("units", cell);
-        return;
-    }
 
     // A power station on it, of the world's
     TPowerStationInfo ps;
@@ -680,7 +679,7 @@ static void VisitBuilding(Visitor &v, World::TBuildingProto &p)
 
 // Capture
 
-static void ForEachUnit(Visitor &v, std::set<uint32_t> &added, NC_STACK_ypabact *unit, const ObjectFunc &func)
+static void ForEachUnit(Visitor &v, std::unordered_set<uint32_t> &added, NC_STACK_ypabact *unit, const ObjectFunc &func)
 {
     if ( !added.insert(unit->_gid).second )
         return;
@@ -748,14 +747,18 @@ void ForEachObject(NC_STACK_ypaworld *world, Part part, const ObjectFunc &allFun
         func(KIND_BUILDING, i, v.Out());
     }
 
-    std::set<uint32_t> added;
+    std::unordered_set<uint32_t> added;
 
     for ( NC_STACK_ypabact *unit : world->_unitsList )
         ForEachUnit(v, added, unit, func);
 
-    // Units in no list but a sector's
+    // Units in no list but a sector's, which the internal part would miss.
+    // There shouldn't be any.
     for ( cellArea &cell : world->_cells )
     {
+        if ( part == PART_VIEW )
+            break;
+
         for ( NC_STACK_ypabact *unit : cell.unitsList )
         {
             if ( !unit->_kidRef.IsListType(World::BLIST_CACHE) && !added.count(unit->_gid) )

@@ -39,7 +39,7 @@ public:
     virtual size_t CollisionWithBact(int arg);
     virtual void Recoil(TCollisionNormal *arg);
     virtual void Renew();
-    virtual void VisitState(World::State::Visitor &v) override;
+    virtual void VisitInternal(World::State::Visitor &v) override;
     virtual size_t CheckFireAI(TFireCheck *arg);
     virtual bool TestTargetSector(const NC_STACK_ypabact * cel_unit) const override;
     virtual void CorrectPositionOnLand();
