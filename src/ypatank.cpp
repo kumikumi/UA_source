@@ -27,8 +27,6 @@ size_t NC_STACK_ypatank::Init(IDVList &stak)
 
     _bact_type = BACT_TYPES_TANK;
 
-    _tankFlags = (FLAG_TANK_TIP | FLAG_TANK_ROTWAIT);
-
     for( auto& it : stak )
     {
         IDVPair &val = it.second;
@@ -1614,7 +1612,13 @@ void NC_STACK_ypatank::Renew()
 {
     NC_STACK_ypabact::Renew();
 
+    _tankFlags = (FLAG_TANK_TIP | FLAG_TANK_ROTWAIT);
     _tankWaitCount = 0;
+    _tankCollisionVector = vec3d();
+    _tankCollisionAngle = 0.0;
+    _tankCollisionWay = 0.0;
+    _tankCollisionFlag = 0;
+    _tankExpectTgt = false;
 }
 
 size_t NC_STACK_ypatank::CheckFireAI(TFireCheck *arg)

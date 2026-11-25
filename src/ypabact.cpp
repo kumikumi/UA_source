@@ -140,47 +140,9 @@ size_t NC_STACK_ypabact::Init(IDVList &stak)
     if ( !NC_STACK_nucleus::Init(stak) )
         return 0;
 
-    _attackersList.clear();
-    _kidList.clear();
-    _missiles_list.clear();
-
-    _gid = 0;
+    // What a unit starts its life with Renew sets, which yw_createUnit calls
+    // for every unit, new or reused
     _bact_type = BACT_TYPES_BACT;
-//    ypabact.field_3DA = 0;
-    _host_station = NULL;
-    _viewer_rotation = mat3x3::Ident();
-    _fly_dir = vec3d(0.0, 0.0, 0.0);
-    _fly_dir_length = 0;
-    _target_vec = vec3d(0.0, 0.0, 0.0);
-    
-    //_kidRef.bact = this;
-
-    _rotation = _viewer_rotation;
-
-    _mass = 400.0;
-    _force = 5000.0;
-    _airconst = 500.0;
-    _maxrot = 0.5;
-    _height = 150.0;
-    _radius = 20.0;
-    _viewer_radius = 40.0;
-    _overeof = 10.0;
-    _viewer_overeof = 40.0;
-    _energy = 10000;
-    _shield = 0;
-    _heading_speed = 0.7;
-    _yls_time = 3000;
-    _aggr = 50;
-    _energy_max = 10000;
-//    ypabact.field_3CE = 0;
-    _height_max_user = 1600.0;
-    _gun_radius = 5.0;
-    _gun_power = 4000.0;
-    _adist_sector = 800.0;
-    _adist_bact = 650.0;
-    _sdist_sector = 200.0;
-    _sdist_bact = 100.0;
-    _oflags = BACT_OFLAG_EXACTCOLL;
 
     _world = stak.Get<NC_STACK_ypaworld *>(BACT_ATT_WORLD, NULL);// get ypaworld
 
@@ -291,16 +253,6 @@ size_t NC_STACK_ypabact::Init(IDVList &stak)
             }
         }
     }
-
-    _tForm.Pos = _position;
-
-    _tForm.SclRot = _rotation;
-
-    _status = BACT_STATUS_NORMAL;
-
-    _wrldSectors = _world->GetMapSize();
-
-    _wrldSize = World::SectorIDToPos2( _wrldSectors );
 
     return 1;
 }
@@ -4803,75 +4755,175 @@ void NC_STACK_ypabact::GetFormationPosition(TFormationSlot *arg)
 }
 
 // Reset
+// Starts a unit's life: every field that a life changes gets the value a
+// new unit starts with, so that a unit reused from the dead cache is the same
+// as a new one. Left alone: the class, the id (yw_createUnit gives it), the
+// lists the unit is in (cell, kids and cache), its sound carrier and the
+// world. CreateVehicle and CreateWeapon then set what the prototype says.
 void NC_STACK_ypabact::Renew()
 {
-    _oflags = BACT_OFLAG_EXACTCOLL;
-    _status_flg = 0;
-    _host_station = NULL;
-    _yls_time = 3000;
-    _primTtype = BACT_TGT_TYPE_NONE;
-
-    _secndTtype = BACT_TGT_TYPE_NONE;
-    _primT_cmdID = 0;
-
     _wrldSectors = _world->GetMapSize();
-
     _wrldSize = World::SectorIDToPos2( _wrldSectors );
 
+    _vehicleID = 0;
+    _bflags = 0;
     _commandID = 0;
-//    bact->field_3D1 = 1;
-    _killer = NULL;
-    _brkfr_time = 0;
-    _brkfr_time2 = 0;
-    _mpos.x = 0;
-    _mpos.y = 0;
-    _mpos.z = 0;
-    _gun_leftright = 0.0;
-    _scale_time = 0;
-    _clock = 0;
-    _AI_time1 = 0;
-    _AI_time2 = 0;
-//    bact->field_921 = 0;
-//    bact->field_925 = 0;
-    _search_time1 = 0;
-    _search_time2 = 0;
-    _slider_time = 0;
-//    bact->field_951 = 0;
-    _mgun_time = 0;
-    _weapon_time = 0;
-    _newtarget_time = 0;
-    _assess_time = 0;
-    _scale_pos = 0;
-    _scale_delay = 0;
-    _beam_time = 0;
-    _energy_time = 0;
-    _fe_time = -45000;
-    _salve_counter = 0;
-    _kill_after_shot = 0;
-    
-    Common::DeleteAndNull(&_current_vp);
+    _host_station = NULL;
+    _parent = NULL;
+    _kidList.clear();
+    _soundFlags = 0;
+    _volume = 0;
+    _pitch = 0;
+    _pitch_max = 0.0;
+    _energy = 10000;
+    _energy_max = 10000;
+    _reload_const = 0;
+    _shield = 0;
+    _radar = 0;
+    _owner = 0;
+    _aggr = 50;
+    _status = BACT_STATUS_NORMAL;
+    _status_flg = 0;
 
-    _vp_active = 0;
-    _volume = 0; //_soundcarrier.Sounds[0].Volume;
-    _pitch = 0; //_soundcarrier.Sounds[0].Pitch;
+    _primTtype = BACT_TGT_TYPE_NONE;
+    _secndTtype = BACT_TGT_TYPE_NONE;
+    _primT_cmdID = 0;
+    _secndT_cmdID = 0;
+    _primT.pbact = NULL;
+    _primTpos = vec3d();
+    _secndT.pbact = NULL;
+    _sencdTpos = vec3d();
 
+    _adist_sector = 800.0;
+    _adist_bact = 650.0;
+    _sdist_sector = 200.0;
+    _sdist_bact = 100.0;
+
+    for (vec3d &wp : _waypoints)
+        wp = vec3d();
+
+    _current_waypoint = 0;
+    _waypoints_count = 0;
     _m_cmdID = 0;
-    _gun_angle_user = _gun_angle;
-    _oflags |= BACT_OFLAG_LANDONWAIT;
+    _m_owner = 0;
+    _fe_cmdID = 0;
+    _fe_time = -45000;
 
-    for (World::DestFX &x : _destroyFX)
-        x = World::DestFX();
-    
-    _extDestroyFX.clear();
+    _mass = 400.0;
+    _force = 5000.0;
+    _airconst = 500.0;
+    _airconst_static = 0.0;
+    _maxrot = 0.5;
+
+    _viewer_position = vec3d();
+    _viewer_rotation = mat3x3::Ident();
+    _viewer_horiz_angle = 0.0;
+    _viewer_vert_angle = 0.0;
+    _viewer_max_up = 0.0;
+    _viewer_max_down = 0.0;
+    _viewer_max_side = 0.0;
+
+    _thraction = 0.0;
+    _fly_dir = vec3d();
+    _fly_dir_length = 0.0;
+
+    _position = vec3d();
+    _old_pos = vec3d();
+    _target_vec = vec3d();
+    _target_dir = vec3d();
+    _rotation = mat3x3::Ident();
+
+    _height = 150.0;
+    _height_max_user = 1600.0;
+    _scale = vec3d();
+
+    _vp_normal = NULL;
+    _vp_fire = NULL;
+    _vp_wait = NULL;
+    _vp_dead = NULL;
+    _vp_megadeth = NULL;
+    _vp_genesis = NULL;
+    _vp_active = 0;
 
     for (extra_vproto &vp : _vp_extra)
         vp = extra_vproto();
-    
-    _current_waypoint = 0;
 
-    _attackersList.clear();
-    _kidList.clear();
+    _vp_extra_mode = 0;
+    _destroyFX.clear();
+    _extDestroyFX.clear();
+
+    _radius = 20.0;
+    _viewer_radius = 40.0;
+    _overeof = 10.0;
+    _viewer_overeof = 40.0;
+
+    _tForm = TF::TForm3D();
+    _tForm.Pos = _position;
+    _tForm.SclRot = _rotation;
+    _prevTFormPos = vec3d();
+    _prevTFormSclRot = mat3x3();
+    _prevStep = 0;
+
+    _clock = 0;
+    _AI_time1 = 0;
+    _AI_time2 = 0;
+    _search_time1 = 0;
+    _search_time2 = 0;
+    _scale_time = 0;
+    _brkfr_time = 0;
+    _brkfr_time2 = 0;
+    _newtarget_time = 0;
+    _assess_time = 0;
+    _waitCol_time = 0;
+    _slider_time = 0;
+    _dead_time = 0;
+    _beam_time = 0;
+    _energy_time = 0;
+    _mpos = vec3d();
+
+    _weapon = 0;
+    _weapon_flags = 0;
+    _mgun = 0;
+    _num_weapons = 0;
     _missiles_list.clear();
+    _weapon_time = 0;
+    _fire_pos = vec3d();
+    _gun_angle = 0.0;
+    _gun_angle_user = 0.0;
+    _gun_leftright = 0.0;
+    _gun_radius = 5.0;
+    _gun_power = 4000.0;
+    _mgun_time = 0;
+    _salve_counter = 0;
+    _kill_after_shot = 0;
+    _heading_speed = 0.7;
+
+    _killer = NULL;
+    _killer_owner = 0;
+    _reb_count = 0;
+    _atk_ret = 0;
+
+    _lastFrmStamp = 0;
+    _netDRot = mat3x3();
+    _netRotation = mat3x3();
+    _netDSpeed = vec3d();
+
+    _scale_start = 0.0;
+    _scale_speed = 0.0;
+    _scale_accel = 0.0;
+    _scale_duration = 0;
+    _scale_pos = 0;
+    _scale_delay = 0;
+
+    for (NC_STACK_base *&model : _vp_fx_models)
+        model = NULL;
+
+    _oflags = BACT_OFLAG_EXACTCOLL | BACT_OFLAG_LANDONWAIT;
+    Common::DeleteAndNull(&_current_vp);
+    _attackersList.clear();
+    _yls_time = 3000;
+    _hidden = false;
+    _unhideRadar = 0;
 }
 
 void NC_STACK_ypabact::HandBrake(update_msg *arg)

@@ -31,9 +31,6 @@ size_t NC_STACK_ypaflyer::Init(IDVList &stak)
 
     _bact_type = BACT_TYPES_FLYER;
 
-    _flyerBoost = 0;
-    _flyerType = 0;
-
     return 1;
 }
 

@@ -14,9 +14,6 @@ size_t NC_STACK_ypagun::Init(IDVList &stak)
 
     _bact_type = BACT_TYPES_GUN;
 
-    _gunType = GUN_TYPE_REAL;
-    _gunFireTime = 100;
-
     for( auto& it : stak )
     {
         IDVPair &val = it.second;
@@ -619,6 +616,14 @@ void NC_STACK_ypagun::Renew()
 {
     NC_STACK_ypabact::Renew();
 
+    _gunMaxUp = 0.0;
+    _gunMaxDown = 0.0;
+    _gunMaxSide = 0.0;
+    _gunBasis = vec3d();
+    _gunRott = vec3d();
+    _gunType = GUN_TYPE_REAL;
+    _gunFireTime = 100;
+    _gunFireCount = 0;
     _gunFlags = 0;
     _gunDownTime = 0;
 

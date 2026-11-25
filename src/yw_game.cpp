@@ -1414,13 +1414,18 @@ NC_STACK_ypabact *NC_STACK_ypaworld::yw_createUnit( int model_id)
 
     NC_STACK_ypabact *bacto = NULL;
 
-    // Find dead units
-    for ( NC_STACK_ypabact * &unit : _deadCacheList )
+    // Reuse a dead unit of the same class: Renew starts it as a new one.
+    // Except host stations, which Renew doesn't start over in full: they
+    // are few, and new ones come only with the level.
+    if ( model_id != BACT_TYPES_ROBO )
     {
-        if (unit->_bact_type == model_id)
+        for ( NC_STACK_ypabact * &unit : _deadCacheList )
         {
-            bacto = unit;
-            break;
+            if (unit->_bact_type == model_id)
+            {
+                bacto = unit;
+                break;
+            }
         }
     }
 
@@ -1441,13 +1446,9 @@ NC_STACK_ypabact *NC_STACK_ypaworld::yw_createUnit( int model_id)
             return NULL;
     }
 
-    bacto->Renew(); // Reset bact
+    bacto->Renew();
 
     bacto->_gid = _nextUnitId;
-    bacto->_owner = 0;
-
-    bacto->_rotation = mat3x3::Ident();
-
     _nextUnitId++;
 
     return bacto;

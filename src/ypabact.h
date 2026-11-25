@@ -734,8 +734,7 @@ public:
     int _scale_delay;
     NC_STACK_base *_vp_fx_models[32];
 
-    int _oflags;
-    NC_STACK_ypaworld *_yw;
+    int _oflags = 0;
     NC_STACK_base::Instance *_current_vp = NULL;
     std::list<TBactAttacker> _attackersList;
     int _yls_time;  

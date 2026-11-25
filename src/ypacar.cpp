@@ -55,6 +55,14 @@ size_t NC_STACK_ypacar::Deinit()
     return NC_STACK_ypatank::Deinit();
 }
 
+void NC_STACK_ypacar::Renew()
+{
+    NC_STACK_ypatank::Renew();
+
+    _carKamikaze = false;
+    _carBlast = 0;
+}
+
 size_t NC_STACK_ypacar::SetParameters(IDVList &stak)
 {
     NC_STACK_ypatank::SetParameters(stak);

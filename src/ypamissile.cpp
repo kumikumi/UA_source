@@ -18,11 +18,6 @@ size_t NC_STACK_ypamissile::Init(IDVList &stak)
 
     _bact_type = BACT_TYPES_MISSLE;
 
-    _mislEmitter = NULL;
-    _mislLifeTime = 5000;
-    _mislDelayTime = 0;
-    _mislType = MISL_BOMB;
-
     for( auto& it : stak )
     {
         IDVPair &val = it.second;
@@ -717,8 +712,21 @@ void NC_STACK_ypamissile::Renew()
 {
     NC_STACK_ypabact::Renew();
 
-    _mislFlags  = 0;
+    _mislType = MISL_BOMB;
+    _mislEmitter = NULL;
+    _mislLifeTime = 5000;
+    _mislDriveTime = 0;
     _mislDelayTime = 0;
+    _mislFlags = 0;
+    _mislStartHeight = 0.0;
+    _mislEnergyHeli = 0.0;
+    _mislEnergyTank = 0.0;
+    _mislEnergyFlyer = 0.0;
+    _mislEnergyRobo = 0.0;
+    _mislRadiusHeli = 0.0;
+    _mislRadiusTank = 0.0;
+    _mislRadiusFlyer = 0.0;
+    _mislRadiusRobo = 0.0;
 
     setBACT_yourLastSeconds(3000);
 }

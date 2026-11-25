@@ -16,8 +16,6 @@ size_t NC_STACK_ypaufo::Init(IDVList &stak)
 
     _bact_type = BACT_TYPES_UFO;
 
-    _ufoTogo = 200.0;
-
     for( auto& it : stak )
     {
         IDVPair &val = it.second;
@@ -931,7 +929,11 @@ void NC_STACK_ypaufo::Renew()
 {
     NC_STACK_ypabact::Renew();
 
-    _ufoBoost = 0;
+    _ufoTogo = 200.0;
+    _ufoTogoRisidue = 0.0;
+    _ufoBoost = 0.0;
+    _ufoProcAngle = 0.0;
+    _ufoFlags = 0;
 
     setBACT_landingOnWait(0);
 }
