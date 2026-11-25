@@ -1176,6 +1176,7 @@ void DebriefStartHistoryReplay(NC_STACK_ypaworld *yw, TInputState *struc, TBrief
     brf->Stage = TBriefengScreen::STAGE_PLAYER_RN;
     brf->ReplayedTime = 0;
     brf->EventsReplayed = 0;
+    yw->_history.Rewind();
 
     brf->OwnMap = yw->_lvlPrimevalOwnMap;
     brf->TypMap = yw->_lvlPrimevalTypeMap;
@@ -2006,24 +2007,20 @@ void yw_DebriefRunDebrief(NC_STACK_ypaworld *yw, TInputState *struc, TBriefengSc
 
     if ( brf->Stage == TBriefengScreen::STAGE_PLAYER_RN )
     {
-        // The level's history replayed: what happened before the replay's
-        // time, the newly come to counted and heard
-        const std::vector<World::History::Event> &events = yw->_history;
-        size_t reached = brf->EventsReplayed;
+        // The level's history played from its recording up to the replay's
+        // time: the events newly come to counted and heard
+        yw->_history.PlayUntil(dtime);
+        brf->ReplayedTime = yw->_history.Time();
 
-        while ( reached < events.size() && events[reached].Time < dtime )
+        const std::vector<World::History::Event> &events = yw->_history.Events();
+
+        for (size_t i = brf->EventsReplayed; i < events.size(); i++)
+            yw_DebriefEventReached(yw, brf, events[i]);
+
+        brf->EventsReplayed = events.size();
+
+        for ( const World::History::Event &e : events )
         {
-            yw_DebriefEventReached(yw, brf, events[reached]);
-            brf->ReplayedTime = events[reached].Time;
-            reached++;
-        }
-
-        brf->EventsReplayed = reached;
-
-        for (size_t i = 0; i < reached; i++)
-        {
-            const World::History::Event &e = events[i];
-
             switch ( e.What )
             {
             case World::History::Event::CONQUEST:
@@ -2043,7 +2040,7 @@ void yw_DebriefRunDebrief(NC_STACK_ypaworld *yw, TInputState *struc, TBriefengSc
             }
         }
 
-        if ( reached == events.size() )
+        if ( yw->_history.AtEnd() )
         {
             brf->Stage = TBriefengScreen::STAGE_PLAYER_END;
             if ( yw->_gameWasNetGame )

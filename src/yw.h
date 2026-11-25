@@ -1379,7 +1379,7 @@ struct TBriefengScreen
     Common::PlaneBytes TypMap;
     //int _owner;
     uint32_t ReplayedTime = 0;   // The level's game time the replay of its history is at
-    size_t EventsReplayed = 0;  // Of the level's history, counted and drawn
+    size_t EventsReplayed = 0;  // Of the replay's events, those counted and heard
     std::array<World::TPlayerStatus, World::CVFractionsCount> StatsGlobal;
     std::array<World::TPlayerStatus, World::CVFractionsCount> StatsIngame;
     std::string MovieStr;
@@ -2594,10 +2594,9 @@ public:
     
     TBriefengScreen _briefScreen;
     
-    // History
-    // A won level's events, worked out from its recording as it ends, for
-    // the debriefing and the score
-    std::vector<World::History::Event> _history;
+    // The last level's history, played from its recording by the debriefing
+    // and counted by the score
+    World::History::Replay _history;
     
     int32_t _stoudsonWaveVehicleId = 0;
     int32_t _stoudsonCenterVehicleId = 0; // Not used :-/

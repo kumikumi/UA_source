@@ -228,7 +228,7 @@ static void PutChangedFields(std::string &out, const std::vector<State::FieldInf
 // Applies what changed, as the format says, to objects by key. Returns where
 // it ended, or NULL when it doesn't read.
 static const char *ApplyChanges(std::map<uint64_t, ObjectVersions> &objects, const KindLayouts &layouts,
-                                const char *p, const char *end, Recording::ChangedObjects *changed = NULL)
+                                const char *p, const char *end, ChangedObjects *changed = NULL)
 {
     std::vector<size_t> offsets, beforeOffsets;
     std::string scratch;
@@ -993,54 +993,69 @@ static void ToImage(int level, const ObjectsVersions &objects, State::Image &ima
     }
 }
 
-bool Recording::ForEachView(const ViewFunc &func) const
+bool ViewReader::Rewind()
 {
-    State::Image start;
-    if ( !State::Unpack(_startView, start) )
-        return false;
+    _view.clear();
+    _changed.clear();
+    _step = 0;
+    _nextBlock = 0;
+    _block.clear();
+    _at = 0;
 
-    ObjectsVersions view;
-    ChangedObjects changed;
+    State::Image start;
+    if ( !State::Unpack(_recording._startView, start) )
+        return false;
 
     for ( State::Object &obj : start.Objects )
     {
         uint64_t key = ObjectKey(obj.Kind, obj.Id);
-        ObjectVersions &versions = view[key];
+        ObjectVersions &versions = _view[key];
         versions = ObjectVersions{obj.Data, obj.Data};
-        changed.emplace_back(key, &versions);
+        _changed.emplace_back(key, &versions);
     }
 
-    func(0, view, changed);
+    return true;
+}
 
-    uint32_t step = 0;
+bool ViewReader::AtEnd() const
+{
+    return _nextBlock >= _recording._blocks.size() && _at + 4 > _block.size();
+}
 
-    for ( const std::string &packed : _blocks )
+bool ViewReader::Next()
+{
+    while ( _at + 4 > _block.size() )
     {
-        std::string block;
-        if ( !Unpacked(packed, block) )
+        if ( _nextBlock >= _recording._blocks.size() )
             return false;
 
-        for (size_t at = 0; at + 4 <= block.size(); )
+        if ( !Unpacked(_recording._blocks[_nextBlock], _block) )
         {
-            uint32_t stepSize;
-            memcpy(&stepSize, block.data() + at, 4);
-
-            if ( stepSize < 1 || at + 4 + stepSize > block.size() )
-                return false;
-
-            const char *p = block.data() + at + 5;
-            const char *end = block.data() + at + 4 + stepSize;
-
-            changed.clear();
-            if ( !ApplyChanges(view, _viewLayouts, p, end, &changed) )
-                return false;
-
-            step++;
-            func(step, view, changed);
-            at += 4 + stepSize;
+            _block.clear();
+            _at = 0;
+            return false;
         }
+
+        _nextBlock++;
+        _at = 0;
     }
 
+    uint32_t stepSize;
+    memcpy(&stepSize, _block.data() + _at, 4);
+
+    if ( stepSize < 1 || _at + 4 + stepSize > _block.size() )
+        return false;
+
+    // After its size and whether it can be gone on from
+    const char *p = _block.data() + _at + 5;
+    const char *end = _block.data() + _at + 4 + stepSize;
+
+    _changed.clear();
+    if ( !ApplyChanges(_view, _recording._viewLayouts, p, end, &_changed) )
+        return false;
+
+    _at += 4 + stepSize;
+    _step++;
     return true;
 }
 

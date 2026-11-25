@@ -2,6 +2,8 @@
 #define WORLD_HISTORY_H_INCLUDED
 
 #include <array>
+#include <memory>
+#include <string>
 #include <vector>
 #include "../types.h"
 #include "consts.h"
@@ -11,8 +13,6 @@ class NC_STACK_ypaworld;
 
 namespace World
 {
-class Recording;
-
 namespace History
 {
 
@@ -57,10 +57,41 @@ struct Event
 // What it scores: a kill for the killer's owner, anything else for its owner
 void AddScore(const Event &event, std::array<TPlayerStatus, CVFractionsCount> &stats);
 
-// The events of a level, worked out from its recording's view, in the
-// order they happened. False when the recording's view lacks what they're
-// worked out from.
-bool Derive(NC_STACK_ypaworld *world, const Recording &recording, std::vector<Event> &out);
+// A level's history, played from its recording's view up to a time: the
+// events found so far, in the order they happened. The debriefing plays it
+// as it goes, and the score counts the whole of it.
+class Replay
+{
+public:
+    Replay();
+    ~Replay();
+
+    // Reads the level's recording, as the level ends, with what of the level
+    // it needs, and rewinds. False, after logging why, when it can't.
+    bool Open(NC_STACK_ypaworld *world, const std::string &path);
+    void Close();
+    bool IsOpen() const { return _player != nullptr; }
+
+    // Back to the level's start, no events found
+    void Rewind();
+
+    // Plays on the steps before that game time, finding their events
+    void PlayUntil(uint32_t time);
+
+    // Whether it has played the whole recording
+    bool AtEnd() const;
+
+    // The game time of the last step played
+    uint32_t Time() const { return _time; }
+
+    const std::vector<Event> &Events() const { return _events; }
+
+protected:
+    struct Player;
+    std::unique_ptr<Player> _player;
+    std::vector<Event> _events;
+    uint32_t _time = 0;
+};
 
 }
 }

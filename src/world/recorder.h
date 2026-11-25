@@ -2,7 +2,6 @@
 #define WORLD_RECORDER_H_INCLUDED
 
 #include <cstdint>
-#include <functional>
 #include <map>
 #include <memory>
 #include <string>
@@ -29,6 +28,10 @@ struct ObjectVersions
 };
 
 typedef std::map<uint64_t, ObjectVersions> ObjectsVersions; // By kind << 32 | id
+
+// The objects a step changed or added, with their versions, or took away
+// (NULL)
+typedef std::vector<std::pair<uint64_t, const ObjectVersions *>> ChangedObjects;
 
 // A kind's fields, and where they start when they're all of a fixed size,
 // as all of the view's are
@@ -213,16 +216,11 @@ public:
     // internal part too, which only steps the level can go on from have.
     bool Read(uint32_t step, RecordedPoint &point, bool resume) const;
 
-    // Goes through its views, the start's (step 0) and after each step's,
-    // with the objects that the step changed or added (with their versions)
-    // or took away (NULL)
-    typedef std::vector<std::pair<uint64_t, const ObjectVersions *>> ChangedObjects;
-    typedef std::function<void(uint32_t step, const ObjectsVersions &view, const ChangedObjects &changed)> ViewFunc;
-    bool ForEachView(const ViewFunc &func) const;
-
     const State::Schema &ViewSchema() const { return _viewSchema; }
 
 protected:
+    friend class ViewReader;
+
     int _level = 0;
     std::string _startedFrom;
     State::Schema _viewSchema, _internalSchema;
@@ -230,6 +228,38 @@ protected:
     std::string _startView, _startInternal; // Packed
     std::vector<std::string> _blocks;        // Packed
     std::vector<bool> _resumable;            // Of each step
+};
+
+// Goes through a recording's views a step at a time: its start's (step 0),
+// then after each step's
+class ViewReader
+{
+public:
+    // The recording stays as long as this does
+    explicit ViewReader(const Recording &recording) : _recording(recording) {}
+
+    // Back to the start. False when the recording can't be read.
+    bool Rewind();
+
+    // On to the next step. False at the end, or where the recording can't
+    // be read on (and then not AtEnd).
+    bool Next();
+    bool AtEnd() const;
+
+    uint32_t Step() const { return _step; }
+    const ObjectsVersions &View() const { return _view; }
+
+    // What the step changed; at the start, every object
+    const ChangedObjects &Changed() const { return _changed; }
+
+protected:
+    const Recording &_recording;
+    ObjectsVersions _view;
+    ChangedObjects _changed;
+    uint32_t _step = 0;
+    size_t _nextBlock = 0;
+    std::string _block; // Unpacked
+    size_t _at = 0;     // Where its next step starts
 };
 
 }

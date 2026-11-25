@@ -42,7 +42,6 @@ GuiList briefingTextList;
 NC_STACK_ypaworld::NC_STACK_ypaworld()
 : _unitsList(this, NC_STACK_ypabact::GetKidRefNode, World::BLIST_UNITS)
 , _deadCacheList(this, NC_STACK_ypabact::GetKidRefNode, World::BLIST_CACHE)
-, _history(4096)
 {
 }
 
@@ -1962,18 +1961,6 @@ void NC_STACK_ypaworld::DeleteLevel()
     // With the end's state, before anything of the level goes
     std::string recorded = _recorder.Stop(this);
 
-    // A won level's debriefing and score come from its events, worked out
-    // from its recording while the level is still there
-    _history.clear();
-
-    if ( _levelInfo.State == TLevelInfo::STATE_COMPLETED && !recorded.empty() )
-    {
-        World::Recording recording;
-
-        if ( !recording.Open(recorded) || !World::History::Derive(this, recording, _history) )
-            ypa_log_out("Could not work out the level's events from %s\n", recorded.c_str());
-    }
-
     EnableLevelPasses();
 
     if ( _levelInfo.State == TLevelInfo::STATE_COMPLETED )
@@ -2027,6 +2014,13 @@ void NC_STACK_ypaworld::DeleteLevel()
         _userOwnerIdWasInNetGame = 0;
         _gameWasNetGame = false;
     }
+
+    // The debriefing plays the level's history from its recording, which
+    // takes what it needs of the level while the level is still there
+    _history.Close();
+
+    if ( _prepareDebrief && !recorded.empty() )
+        _history.Open(this, recorded);
 
     _screenShotSeq = false;
 
@@ -6538,7 +6532,7 @@ size_t NC_STACK_ypaworld::AdvancedCreateLevel(TLevelLoadRequest *arg)
 
 // What a network game's score table, which the players see as they play,
 // counts of an event. Single-player levels have their events and scores
-// worked out from their recordings at the end (World::History::Derive).
+// found in their recordings at the end (World::History::Replay).
 void NC_STACK_ypaworld::ScoreEvent(const World::History::Event &event)
 {
     if ( _GameShell && _GameShell->isHost )

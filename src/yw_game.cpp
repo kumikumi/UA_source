@@ -243,7 +243,7 @@ int NC_STACK_ypaworld::LevelCommonLoader(TLevelDescription *mapp, int levelID)
         _profileTotal[i] = 0;
     }
 
-    _history.clear();
+    _history.Close();
 
     audio_volume = SFXEngine::SFXe.getMasterVolume();
 

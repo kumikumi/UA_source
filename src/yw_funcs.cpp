@@ -1747,24 +1747,22 @@ ON_ERR:
 }
 
 
-// Adds the last level's score to the campaign's, once
+// Adds the last level's score to the campaign's, once: the whole of its
+// history, what the debriefing hasn't played yet too, and its time
 void yw_calcPlayerScore(NC_STACK_ypaworld *yw)
 {
-    if ( !yw->_gameWasNetGame )
+    if ( !yw->_gameWasNetGame && yw->_history.IsOpen() )
     {
-        uint32_t lastTime = 0;
+        yw->_history.PlayUntil(UINT32_MAX);
 
-        for ( const World::History::Event &e : yw->_history )
-        {
+        for ( const World::History::Event &e : yw->_history.Events() )
             World::History::AddScore(e, yw->_playersStats);
-            lastTime = e.Time;
-        }
 
         for (int i = 0; i < 8; i++)
-            yw->_playersStats[i].ElapsedTime += lastTime;
+            yw->_playersStats[i].ElapsedTime += yw->_history.Time();
     }
 
-    yw->_history.clear();
+    yw->_history.Close();
 }
 
 void NC_STACK_ypaworld::UpdateCampaignScreen()
