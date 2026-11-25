@@ -2307,6 +2307,7 @@ public:
     
     int32_t GetLegoBld(const cellArea *cell, int bldX, int bldY);
     int32_t GetLegoBld(const Common::Point &cell, int bldX, int bldY);
+    int32_t DrawnSectorType(const cellArea &cell) const;
     
     void ClearOverrideModels();
     void LoadOverrideModels();

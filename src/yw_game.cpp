@@ -1514,6 +1514,7 @@ void NC_STACK_ypaworld::RenderSector(TRenderingSector *sct, baseRender_msg *rndr
         cellArea *pcell = sct->Cell;
 
         int constructing = 0;
+        int32_t typeId = DrawnSectorType(*pcell);
 
         vec3d scel;
         if ( pcell->PurposeType == cellArea::PT_CONSTRUCTING )
@@ -1525,16 +1526,13 @@ void NC_STACK_ypaworld::RenderSector(TRenderingSector *sct, baseRender_msg *rndr
 
                 scel = vec3d::OY((float)bldProc.Time / (float)bldProc.EndTime);
 
-                pcell->type_id = _buildProtos[ bldProc.BuildID ].SecType;
-                pcell->SectorType = _secTypeArray[ pcell->type_id ].SectorType;
-
                 constructing = 1;
             }
         }
 
         int subOffset, subCount;
 
-        if ( pcell->SectorType == 1 )
+        if ( _secTypeArray[ typeId ].SectorType == 1 )
         {
             subOffset = 0;
             subCount = 1;
@@ -1553,7 +1551,7 @@ void NC_STACK_ypaworld::RenderSector(TRenderingSector *sct, baseRender_msg *rndr
 
                 if ( constructing )
                 {
-                    NC_STACK_base *bld = _legoArray[ _secTypeArray[ pcell->type_id ].SubSectors.At(xx, zz)->HPModels[0] ].Base;
+                    NC_STACK_base *bld = _legoArray[ _secTypeArray[ typeId ].SubSectors.At(xx, zz)->HPModels[0] ].Base;
 
                     bld->SetStatic(false);
 
@@ -1718,8 +1716,8 @@ void NC_STACK_ypaworld::RenderSuperItems(baseRender_msg *arg)
 
 void NC_STACK_ypaworld::PrepareFiller(cellArea *sct, cellArea *sct2, float startCornerHeight, float endCornerHeight, bool vertical, TCellFillerCh *out, bool force)
 {
-    int x = _secTypeArray[ sct->type_id ].SurfaceType;
-    int y = _secTypeArray[ sct2->type_id ].SurfaceType;
+    int x = _secTypeArray[ DrawnSectorType(*sct) ].SurfaceType;
+    int y = _secTypeArray[ DrawnSectorType(*sct2) ].SurfaceType;
     
     if (!force && (out->Id1 == x && out->Id2 == y && 
         out->Heights[0] == sct->height && out->Heights[1] == sct2->height && 

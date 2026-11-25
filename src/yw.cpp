@@ -6945,6 +6945,20 @@ int32_t NC_STACK_ypaworld::GetLegoBld(const Common::Point &cell, int bldX, int b
     return GetLegoBld(&SectorAt(cell), bldX, bldY);
 }
 
+// The type a sector is drawn as: that of a building being built on it, which
+// it becomes when the building is done
+int32_t NC_STACK_ypaworld::DrawnSectorType(const cellArea &cell) const
+{
+    if ( cell.PurposeType == cellArea::PT_CONSTRUCTING )
+    {
+        auto it = _inBuildProcess.find(cell.Id);
+        if ( it != _inBuildProcess.end() )
+            return _buildProtos.at(it->second.BuildID).SecType;
+    }
+
+    return cell.type_id;
+}
+
 TCellFillerCh::~TCellFillerCh()
 {
     FreeVBO();

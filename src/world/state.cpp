@@ -487,6 +487,39 @@ static void VisitSector(Visitor &v, NC_STACK_ypaworld *world, cellArea &cell, En
     v.Field("health", cell.buildings_health.data(), 9, VIEW);
     v.Field("purpose", cell.PurposeType, VIEW);
 
+    // A building being built on it, drawn growing
+    NC_STACK_ypaworld::TConstructInfo construct;
+    auto cIt = world->_inBuildProcess.find(cell.Id);
+    bool constructing = cIt != world->_inBuildProcess.end();
+    if ( constructing )
+        construct = cIt->second;
+
+    v.Field("constructing", constructing, VIEW);
+    v.Field("constructBuilding", construct.BuildID, VIEW);
+    v.Field("constructTime", construct.Time, VIEW);
+    v.Field("constructEnd", construct.EndTime, VIEW);
+    v.Field("constructOwner", construct.Owner);
+
+    // Reading only the internal part leaves the view's as they are
+    if ( v.Reads(VIEW) )
+    {
+        if ( constructing )
+        {
+            construct.CellID = cell.CellId;
+            world->_inBuildProcess[cell.Id] = construct;
+        }
+        else
+        {
+            world->_inBuildProcess.erase(cell.Id);
+        }
+    }
+    else if ( v.Reads(INTERNAL) )
+    {
+        cIt = world->_inBuildProcess.find(cell.Id);
+        if ( cIt != world->_inBuildProcess.end() )
+            cIt->second.Owner = construct.Owner;
+    }
+
     if ( !v.Visits(INTERNAL) )
         return;
 
@@ -517,32 +550,6 @@ static void VisitSector(Visitor &v, NC_STACK_ypaworld *world, cellArea &cell, En
         else
         {
             world->_powerStations.erase(cell.Id);
-        }
-    }
-
-    // A building being built on it
-    NC_STACK_ypaworld::TConstructInfo construct;
-    auto cIt = world->_inBuildProcess.find(cell.Id);
-    bool constructing = cIt != world->_inBuildProcess.end();
-    if ( constructing )
-        construct = cIt->second;
-
-    v.Field("constructing", constructing);
-    v.Field("constructTime", construct.Time);
-    v.Field("constructEnd", construct.EndTime);
-    v.Field("constructOwner", construct.Owner);
-    v.Field("constructBuilding", construct.BuildID);
-
-    if ( v.Reads(INTERNAL) )
-    {
-        if ( constructing )
-        {
-            construct.CellID = cell.CellId;
-            world->_inBuildProcess[cell.Id] = construct;
-        }
-        else
-        {
-            world->_inBuildProcess.erase(cell.Id);
         }
     }
 
