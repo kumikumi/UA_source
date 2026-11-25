@@ -244,7 +244,6 @@ int NC_STACK_ypaworld::LevelCommonLoader(TLevelDescription *mapp, int levelID)
     }
 
     _history.Clear();
-    _historyLastIsTimeStamp = false;
 
     audio_volume = SFXEngine::SFXe.getMasterVolume();
 
@@ -777,10 +776,10 @@ void NC_STACK_ypaworld::CellSetOwner(cellArea *cell, uint8_t owner)
 {
     if ( cell->owner != owner )
     {
-        HistoryEventAdd( World::History::Conq(cell->CellId.x, cell->CellId.y, owner) );
+        ScoreEvent( World::History::Conq(cell->CellId.x, cell->CellId.y, owner) );
 
         if ( cell->PurposeType == cellArea::PT_POWERSTATION )
-            HistoryEventAdd( World::History::PowerST(cell->CellId.x, cell->CellId.y, owner) );
+            ScoreEvent( World::History::PowerST(cell->CellId.x, cell->CellId.y, owner) );
 
         _countSectorsPerOwner[cell->owner]--;
         _countSectorsPerOwner[owner]++;
@@ -4173,12 +4172,7 @@ void NC_STACK_ypaworld::DrawPerfOverlay(TInputState *inpt)
 
 
 
-void NC_STACK_ypaworld::HistoryAktCreate(NC_STACK_ypabact *bact)
-{
-    HistoryEventAdd( World::History::VhclCreate(bact->_owner, bact->_vehicleID, bact->_position.x * 256.0 / bact->_wrldSize.x, bact->_position.z * 256.0 / bact->_wrldSize.y) );
-}
-
-void NC_STACK_ypaworld::HistoryAktKill(NC_STACK_ypabact *bact)
+void NC_STACK_ypaworld::ScoreKill(NC_STACK_ypabact *bact)
 {
     if ( bact->_killer )
     {
@@ -4195,6 +4189,6 @@ void NC_STACK_ypaworld::HistoryAktKill(NC_STACK_ypabact *bact)
         if ( bact->_bact_type == BACT_TYPES_ROBO )
             vp |= 0x8000;
 
-        HistoryEventAdd( World::History::VhclKill(owners, vp, bact->_position.x * 256.0 / bact->_wrldSize.x, bact->_position.z * 256.0 / bact->_wrldSize.y) );
+        ScoreEvent( World::History::VhclKill(owners, vp, bact->_position.x * 256.0 / bact->_wrldSize.x, bact->_position.z * 256.0 / bact->_wrldSize.y) );
     }
 }

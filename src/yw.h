@@ -1924,7 +1924,7 @@ public:
     virtual bool NetBroadcastMessage(uamessage_base *data, size_t dataSize, bool garantee);
 
     virtual size_t AdvancedCreateLevel(TLevelLoadRequest *arg);
-    virtual void HistoryEventAdd(const World::History::Record &arg);
+    void ScoreEvent(const World::History::Record &arg);
     virtual void OpenHelpURL(const void *arg);
 
     NC_STACK_ypaworld();
@@ -2151,8 +2151,7 @@ public:
     void SendCRC(int lvlid);
     
     
-    void HistoryAktCreate(NC_STACK_ypabact *bact);
-    void HistoryAktKill(NC_STACK_ypabact *bact);
+    void ScoreKill(NC_STACK_ypabact *bact);
     
     
     int IsCheatKeyHit(TInputState *struc, int kkode);
@@ -2595,9 +2594,9 @@ public:
     TBriefengScreen _briefScreen;
     
     // History
+    // A won level's events, worked out from its recording as it ends, for
+    // the debriefing and the score
     Common::BlocksStream _history;
-    World::History::Frame _historyLastFrame;
-    bool      _historyLastIsTimeStamp = false;
     
     int32_t _stoudsonWaveVehicleId = 0;
     int32_t _stoudsonCenterVehicleId = 0; // Not used :-/

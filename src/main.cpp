@@ -965,8 +965,22 @@ static bool ReadDirectStart()
     return true;
 }
 
-// Whether the level or saved game the command line names is there
-// Whether the file is a recording, not a saved game
+// Where a level started from the command line is recorded when --record
+// doesn't say
+static std::string TemporaryRecordingPath()
+{
+    const char *dir = getenv("TMPDIR");
+
+    if ( !dir )
+        dir = getenv("TEMP");
+
+    if ( !dir )
+        dir = getenv("TMP");
+
+    return std::string(dir ? dir : "/tmp") + "/ua_source_level.rec";
+}
+
+// Whether the file is a recording, as saved games are
 static bool IsRecordingFile(const std::string &path)
 {
     FSMgr::FileHandle file(path, "rb");
@@ -975,6 +989,7 @@ static bool IsRecordingFile(const std::string &path)
     return file.OK() && file.read(head, 12) == 12 && !memcmp(head, "FORM", 4) && !memcmp(head + 8, "RPLY", 4);
 }
 
+// Whether the level or saved game the command line names is there
 static bool CheckDirectStart()
 {
     if ( !directStart.SaveFile.empty() )
@@ -1080,6 +1095,12 @@ static bool StartDirectLevel()
         ypaworld->_lvlPrimevalTypeMap = ypaworld->_lvlTypeMap;
         ypaworld->_lvlPrimevalOwnMap = ypaworld->_lvlOwnMap;
     }
+
+    // In a window, the debriefing after a win has the level's events from
+    // its recording: unless --record names one, it goes to a temporary file,
+    // not the profile
+    if ( !headless && recordFile.empty() && !ypaworld->_recorder.Start(ypaworld, TemporaryRecordingPath(), "the command line") )
+        ypa_log_out("The level isn't recorded, so its debriefing has no events\n");
 
     GameScreenMode = GAME_SCREEN_MODE_GAME;
 

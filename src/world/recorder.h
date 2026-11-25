@@ -2,6 +2,7 @@
 #define WORLD_RECORDER_H_INCLUDED
 
 #include <cstdint>
+#include <functional>
 #include <map>
 #include <memory>
 #include <string>
@@ -28,6 +29,18 @@ struct ObjectVersions
 };
 
 typedef std::map<uint64_t, ObjectVersions> ObjectsVersions; // By kind << 32 | id
+
+// A kind's fields, and where they start when they're all of a fixed size,
+// as all of the view's are
+struct KindLayout
+{
+    const std::vector<State::FieldInfo> *Fields = NULL;
+    bool Fixed = false;
+    std::vector<size_t> Offsets;
+};
+
+typedef std::unordered_map<uint8_t, KindLayout> KindLayouts; // Point into the schema
+KindLayouts MakeLayouts(const State::Schema &schema);
 
 // Where a recording stands after a step: its view, and its internal part if
 // the level can go on from it; and what a recording that goes on from there
@@ -76,10 +89,11 @@ struct RecordedPoint
 //   0  gone
 //   1  new: u32 size, then its fields' bytes
 //   2  changed: u16 fields, each its u16 index, then its new bytes: a list
-//      as it is, any other field XORed with a guess of it. A float's guess
-//      is its last value moved on by as much as it moved at the object's
-//      change before (when both are finite), so that most of the XOR is
-//      zeros; any other field's guess is its last value.
+//      or a field of over 256 bytes as it is, any other field XORed with a
+//      guess of it. A float's guess is its last value moved on by as much
+//      as it moved at the object's change before (when both are finite), so
+//      that most of the XOR is zeros; any other field's guess is its last
+//      value.
 //
 // A recording cut short, as by a crash, has every block before the one
 // being recorded, and the FORM RPLY's size unwritten: it goes on from its
@@ -117,8 +131,8 @@ public:
     void Message(const TInfoMessage &msg);
 
     // Makes the last step one the level can go on from, writes it and
-    // closes the file
-    void Stop(NC_STACK_ypaworld *world);
+    // closes the file. The file's path, or empty when nothing was recorded.
+    std::string Stop(NC_STACK_ypaworld *world);
 
     // A saved game: makes the last step one the level can go on from, and
     // copies the recording so far to path, which then holds a whole one.
@@ -141,21 +155,10 @@ protected:
 
     typedef std::unordered_map<uint64_t, LastObject> LastObjects;
 
-    // A kind's fields, and where they start when they're all of a fixed size
-    struct Layout
-    {
-        const std::vector<State::FieldInfo> *Fields = NULL;
-        bool Fixed = false;
-        std::vector<size_t> Offsets;
-    };
-
-    typedef std::unordered_map<uint8_t, Layout> Layouts;
-
-    static Layouts MakeLayouts(const State::Schema &schema);
 
     bool Open(NC_STACK_ypaworld *world, const std::string &path, const std::string &startedFrom,
               const State::Image &startView, const State::Image &startInternal);
-    std::string Changes(NC_STACK_ypaworld *world, State::Part part, const State::Schema &schema, const Layouts &layouts,
+    std::string Changes(NC_STACK_ypaworld *world, State::Part part, const State::Schema &schema, const KindLayouts &layouts,
                         LastObjects &last);
     void Remember(NC_STACK_ypaworld *world, State::Part part, LastObjects &last);
     void MakeResumable(NC_STACK_ypaworld *world);
@@ -169,7 +172,7 @@ protected:
     std::string _path;
     bool _full = false;
     State::Schema _viewSchema, _internalSchema;
-    Layouts _viewLayouts, _internalLayouts; // Point into the schemas
+    KindLayouts _viewLayouts, _internalLayouts;
     LastObjects _lastView, _lastInternal;
     uint32_t _step = 0;
 
@@ -210,10 +213,20 @@ public:
     // internal part too, which only steps the level can go on from have.
     bool Read(uint32_t step, RecordedPoint &point, bool resume) const;
 
+    // Goes through its views, the start's (step 0) and after each step's,
+    // with the objects that the step changed or added (with their versions)
+    // or took away (NULL)
+    typedef std::vector<std::pair<uint64_t, const ObjectVersions *>> ChangedObjects;
+    typedef std::function<void(uint32_t step, const ObjectsVersions &view, const ChangedObjects &changed)> ViewFunc;
+    bool ForEachView(const ViewFunc &func) const;
+
+    const State::Schema &ViewSchema() const { return _viewSchema; }
+
 protected:
     int _level = 0;
     std::string _startedFrom;
     State::Schema _viewSchema, _internalSchema;
+    KindLayouts _viewLayouts, _internalLayouts;
     std::string _startView, _startInternal; // Packed
     std::vector<std::string> _blocks;        // Packed
     std::vector<bool> _resumable;            // Of each step

@@ -106,27 +106,50 @@ static bool Unpacked(const std::string &packed, std::string &data)
 // closer it is, the more of the XOR is zeros. Written so that no compiler
 // fuses it into one rounding, and only with finite values, whose arithmetic
 // every platform does alike.
+// Whether a float or double is finite, by its exponent bits: no function
+// call per element in a build without optimization
+static inline bool Finite(float v)
+{
+    uint32_t bits;
+    memcpy(&bits, &v, 4);
+    return (bits & 0x7F800000) != 0x7F800000;
+}
+
+static inline bool Finite(double v)
+{
+    uint64_t bits;
+    memcpy(&bits, &v, 8);
+    return (bits & 0x7FF0000000000000ULL) != 0x7FF0000000000000ULL;
+}
+
+// The most bytes a field can have to be XORed with a guess; bigger ones are
+// written as they are
+static const size_t MaxGuessed = 256;
+
 template <class T>
 static void PredictElements(const char *last, const char *before, char *guess, size_t count)
 {
+    // Copied whole, as fields needn't be aligned: a copy a field, not one an
+    // element. Fields are at most MaxGuessed bytes.
+    T v1s[MaxGuessed / sizeof(T)], v0s[MaxGuessed / sizeof(T)];
+    memcpy(v1s, last, count * sizeof(T));
+    memcpy(v0s, before, count * sizeof(T));
+
     for (size_t i = 0; i < count; i++)
     {
-        T v1, v0;
-        memcpy(&v1, last + i * sizeof(T), sizeof(T));
-        memcpy(&v0, before + i * sizeof(T), sizeof(T));
+        T v1 = v1s[i], v0 = v0s[i];
 
-        T g = v1;
-        if ( std::isfinite(v1) && std::isfinite(v0) )
+        if ( Finite(v1) && Finite(v0) )
         {
             T moved = v1 - v0;
             T next = v1 + moved;
 
-            if ( std::isfinite(moved) && std::isfinite(next) )
-                g = next;
+            if ( Finite(moved) && Finite(next) )
+                v1s[i] = next;
         }
-
-        memcpy(guess + i * sizeof(T), &g, sizeof(T));
     }
+
+    memcpy(guess, v1s, count * sizeof(T));
 }
 
 // What a field's new bytes are XORed with: the guess for floats, else the
@@ -162,7 +185,7 @@ static void PutChangedFields(std::string &out, const std::vector<State::FieldInf
     uint16_t count = 0;
     Put16(out, 0);
 
-    char guess[256];
+    char guess[MaxGuessed];
 
     for (size_t i = 0; i < fields.size(); i++)
     {
@@ -204,11 +227,12 @@ static void PutChangedFields(std::string &out, const std::vector<State::FieldInf
 
 // Applies what changed, as the format says, to objects by key. Returns where
 // it ended, or NULL when it doesn't read.
-static const char *ApplyChanges(std::map<uint64_t, ObjectVersions> &objects, const State::Schema &schema,
-                                const char *p, const char *end)
+static const char *ApplyChanges(std::map<uint64_t, ObjectVersions> &objects, const KindLayouts &layouts,
+                                const char *p, const char *end, Recording::ChangedObjects *changed = NULL)
 {
     std::vector<size_t> offsets, beforeOffsets;
-    char guess[256];
+    std::string scratch;
+    char guess[MaxGuessed];
 
     if ( p + 4 > end )
         return NULL;
@@ -232,6 +256,9 @@ static const char *ApplyChanges(std::map<uint64_t, ObjectVersions> &objects, con
         if ( what == 0 )
         {
             objects.erase(key);
+
+            if ( changed )
+                changed->emplace_back(key, nullptr);
         }
         else if ( what == 1 )
         {
@@ -249,23 +276,85 @@ static const char *ApplyChanges(std::map<uint64_t, ObjectVersions> &objects, con
             obj.Data.assign(p, size);
             obj.Before = obj.Data;
             p += size;
+
+            if ( changed )
+                changed->emplace_back(key, &obj);
         }
         else
         {
-            auto sit = schema.find(kind);
+            auto lit = layouts.find(kind);
             auto oit = objects.find(key);
 
-            if ( sit == schema.end() || oit == objects.end() || p + 2 > end ||
-                 !State::FieldOffsets(sit->second, oit->second.Data, offsets) )
+            if ( lit == layouts.end() || oit == objects.end() || p + 2 > end )
                 return NULL;
 
-            const std::vector<State::FieldInfo> &fields = sit->second;
-            const std::string &old = oit->second.Data;
-            bool beforeFits = State::FieldOffsets(fields, oit->second.Before, beforeOffsets);
+            const KindLayout &layout = lit->second;
+            const std::vector<State::FieldInfo> &fields = *layout.Fields;
+            ObjectVersions &obj = oit->second;
+
+            if ( changed )
+                changed->emplace_back(key, &obj);
 
             uint16_t n;
             memcpy(&n, p, 2);
             p += 2;
+
+            if ( layout.Fixed )
+            {
+                // In place: the last bytes become the ones before, and the
+                // changed fields are written over them; the guesses need the
+                // bytes before the last too, which go to the scratch buffer
+                size_t size = layout.Offsets.back();
+                if ( obj.Data.size() != size )
+                    return NULL;
+
+                scratch.swap(obj.Before);
+                obj.Before.assign(obj.Data);
+                bool beforeFits = scratch.size() == size;
+
+                for (uint16_t i = 0; i < n; i++)
+                {
+                    uint16_t index;
+                    if ( p + 2 > end )
+                        return NULL;
+
+                    memcpy(&index, p, 2);
+                    p += 2;
+
+                    if ( index >= fields.size() )
+                        return NULL;
+
+                    size_t at = layout.Offsets[index];
+                    size_t fieldSize = layout.Offsets[index + 1] - at;
+
+                    if ( p + fieldSize > end )
+                        return NULL;
+
+                    char *dst = &obj.Data[at];
+
+                    if ( fieldSize > sizeof(guess) )
+                    {
+                        memcpy(dst, p, fieldSize);
+                    }
+                    else
+                    {
+                        Guess(fields[index], obj.Before.data() + at, beforeFits ? scratch.data() + at : NULL, fieldSize, guess);
+
+                        for (size_t b = 0; b < fieldSize; b++)
+                            dst[b] = guess[b] ^ p[b];
+                    }
+
+                    p += fieldSize;
+                }
+
+                continue;
+            }
+
+            if ( !State::FieldOffsets(fields, obj.Data, offsets) )
+                return NULL;
+
+            const std::string &old = obj.Data;
+            bool beforeFits = State::FieldOffsets(fields, obj.Before, beforeOffsets);
 
             std::string updated;
             size_t field = 0;
@@ -298,7 +387,7 @@ static const char *ApplyChanges(std::map<uint64_t, ObjectVersions> &objects, con
                         return NULL;
 
                     Guess(fields[index], old.data() + offsets[index],
-                          BeforeBytes(fields[index], oit->second.Before, beforeOffsets, beforeFits, index, size), size, guess);
+                          BeforeBytes(fields[index], obj.Before, beforeOffsets, beforeFits, index, size), size, guess);
 
                     for (size_t b = 0; b < size; b++)
                         updated.push_back(guess[b] ^ p[b]);
@@ -309,8 +398,8 @@ static const char *ApplyChanges(std::map<uint64_t, ObjectVersions> &objects, con
             }
 
             updated.append(old, offsets[field], old.size() - offsets[field]);
-            oit->second.Before = std::move(oit->second.Data);
-            oit->second.Data = std::move(updated);
+            obj.Before = std::move(obj.Data);
+            obj.Data = std::move(updated);
         }
     }
 
@@ -489,13 +578,13 @@ bool Recorder::StartFrom(NC_STACK_ypaworld *world, const std::string &path, cons
 
 // Where each kind's fields start, when all of them have a fixed size, as
 // in the view: worked out once
-Recorder::Layouts Recorder::MakeLayouts(const State::Schema &schema)
+KindLayouts MakeLayouts(const State::Schema &schema)
 {
-    Layouts layouts;
+    KindLayouts layouts;
 
     for ( const auto &it : schema )
     {
-        Layout &layout = layouts[it.first];
+        KindLayout &layout = layouts[it.first];
         layout.Fields = &it.second;
         layout.Fixed = true;
         layout.Offsets.push_back(0);
@@ -517,7 +606,7 @@ Recorder::Layouts Recorder::MakeLayouts(const State::Schema &schema)
 }
 
 std::string Recorder::Changes(NC_STACK_ypaworld *world, State::Part part, const State::Schema &schema,
-                              const Layouts &layouts, LastObjects &last)
+                              const KindLayouts &layouts, LastObjects &last)
 {
     // The count of changes first, filled in at the end
     std::string changes(4, '\0');
@@ -560,7 +649,7 @@ std::string Recorder::Changes(NC_STACK_ypaworld *world, State::Part part, const 
 
         if ( lit != layouts.end() )
         {
-            const Layout &layout = lit->second;
+            const KindLayout &layout = lit->second;
 
             if ( layout.Fixed )
             {
@@ -735,10 +824,10 @@ void Recorder::Message(const TInfoMessage &msg)
     _messageCount++;
 }
 
-void Recorder::Stop(NC_STACK_ypaworld *world)
+std::string Recorder::Stop(NC_STACK_ypaworld *world)
 {
     if ( !_file )
-        return;
+        return std::string();
 
     MakeResumable(world);
     FlushPending();
@@ -751,6 +840,7 @@ void Recorder::Stop(NC_STACK_ypaworld *world)
     _fileHandle = NULL;
     _lastView.clear();
     _lastInternal.clear();
+    return _path;
 }
 
 void Recorder::WriteBlock()
@@ -873,6 +963,8 @@ bool Recording::Open(const std::string &path)
         return false;
     }
 
+    _viewLayouts = MakeLayouts(_viewSchema);
+    _internalLayouts = MakeLayouts(_internalSchema);
     return true;
 }
 
@@ -899,6 +991,57 @@ static void ToImage(int level, const ObjectsVersions &objects, State::Image &ima
         obj.Data = it.second.Data;
         image.Objects.push_back(std::move(obj));
     }
+}
+
+bool Recording::ForEachView(const ViewFunc &func) const
+{
+    State::Image start;
+    if ( !State::Unpack(_startView, start) )
+        return false;
+
+    ObjectsVersions view;
+    ChangedObjects changed;
+
+    for ( State::Object &obj : start.Objects )
+    {
+        uint64_t key = ObjectKey(obj.Kind, obj.Id);
+        ObjectVersions &versions = view[key];
+        versions = ObjectVersions{obj.Data, obj.Data};
+        changed.emplace_back(key, &versions);
+    }
+
+    func(0, view, changed);
+
+    uint32_t step = 0;
+
+    for ( const std::string &packed : _blocks )
+    {
+        std::string block;
+        if ( !Unpacked(packed, block) )
+            return false;
+
+        for (size_t at = 0; at + 4 <= block.size(); )
+        {
+            uint32_t stepSize;
+            memcpy(&stepSize, block.data() + at, 4);
+
+            if ( stepSize < 1 || at + 4 + stepSize > block.size() )
+                return false;
+
+            const char *p = block.data() + at + 5;
+            const char *end = block.data() + at + 4 + stepSize;
+
+            changed.clear();
+            if ( !ApplyChanges(view, _viewLayouts, p, end, &changed) )
+                return false;
+
+            step++;
+            func(step, view, changed);
+            at += 4 + stepSize;
+        }
+    }
+
+    return true;
 }
 
 bool Recording::Read(uint32_t step, RecordedPoint &point, bool resume) const
@@ -947,7 +1090,7 @@ bool Recording::Read(uint32_t step, RecordedPoint &point, bool resume) const
 
             bool resumable = *p++ != 0;
 
-            p = ApplyChanges(viewObjects, _viewSchema, p, end);
+            p = ApplyChanges(viewObjects, _viewLayouts, p, end);
             if ( !p || p + 2 > end )
                 return false;
 
@@ -968,7 +1111,7 @@ bool Recording::Read(uint32_t step, RecordedPoint &point, bool resume) const
 
             if ( resumable && resume )
             {
-                p = ApplyChanges(internalObjects, _internalSchema, p, end);
+                p = ApplyChanges(internalObjects, _internalLayouts, p, end);
                 if ( !p )
                     return false;
             }

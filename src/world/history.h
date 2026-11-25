@@ -6,8 +6,12 @@
 #include "../types.h"
 
 
+class NC_STACK_ypaworld;
+
 namespace World
 {
+class Recording;
+
 namespace History
 {
     
@@ -459,6 +463,11 @@ inline bool FillDecoderBStrm(Record *d, Common::BlocksStream::Reader *r)
     return d->ReadByteArray( r->Read( d->dataSize ) );
 }
 
+
+// The events of a level, worked out from its recording's view: a Frame
+// with its time before each step's events. False when the recording's view
+// lacks what they're worked out from.
+bool Derive(NC_STACK_ypaworld *world, const Recording &recording, Common::BlocksStream &out);
 
 }
 }

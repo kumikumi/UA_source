@@ -1202,7 +1202,6 @@ size_t yw_handleNormMsg(NC_STACK_ypaworld *yw, windp_recvMsg *msg, std::string *
         bacto->_lastFrmStamp = yw->_timeStamp;
         bacto->_host_station = dynamic_cast<NC_STACK_yparobo *>(host_node);
 
-        yw->HistoryAktCreate( bacto );
         netDebug_AddCreated(host_node->_owner, nvMsg->id);
         break;
     }
@@ -1670,7 +1669,7 @@ size_t yw_handleNormMsg(NC_STACK_ypaworld *yw, windp_recvMsg *msg, std::string *
                 fndBact->_killer = NULL;
         }
 
-        yw->HistoryAktKill(fndBact);
+        yw->ScoreKill(fndBact);
 
         fndBact->_status_flg |= BACT_STFLAG_DEATH1;
     }
@@ -2109,7 +2108,7 @@ size_t yw_handleNormMsg(NC_STACK_ypaworld *yw, windp_recvMsg *msg, std::string *
                 bhost->_killer = NULL;
         }
         
-        yw->HistoryAktKill(bhost);
+        yw->ScoreKill(bhost);
 
         if ( hdMsg->killer && hdMsg->killerOwner == yw->_userRobo->_owner )
         {
@@ -2271,7 +2270,7 @@ size_t yw_handleNormMsg(NC_STACK_ypaworld *yw, windp_recvMsg *msg, std::string *
             break;
         }
 
-        yw->HistoryEventAdd( World::History::Upgrade(gemProt.CellId.x, gemProt.CellId.y, owner, gemProt.Type, lastVhcl, 0, lastBuild) );
+        yw->ScoreEvent( World::History::Upgrade(gemProt.CellId.x, gemProt.CellId.y, owner, gemProt.Type, lastVhcl, 0, lastBuild) );
 
         if ( cl.PurposeType != cellArea::PT_TECHUPGRADE )
         {
@@ -3664,6 +3663,11 @@ size_t NC_STACK_ypaworld::CreateNetLevel(TLevelLoadRequest *arg)
 
     _lvlPrimevalTypeMap = _lvlTypeMap;
     _lvlPrimevalOwnMap = _lvlOwnMap;
+
+    // Recorded as any level, for its debriefing. TODO(multiplayer): not
+    // played since; check that a network game's state records.
+    if ( !_recorder.Start(this, SessionPath(), fmt::sprintf("network level %d", _levelInfo.LevelID)) )
+        log_netlog("The network level isn't recorded, so its debriefing has no events\n");
 
     _GameShell->msgcount = 0;
 

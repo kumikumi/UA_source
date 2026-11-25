@@ -3147,7 +3147,7 @@ void NC_STACK_ypabact::Die()
     if ( _owner )
     {
         if ( !(_status_flg & BACT_STFLAG_CLEAN) )
-            _world->HistoryAktKill(this);
+            _world->ScoreKill(this);
     }
 }
 

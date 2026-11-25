@@ -89,6 +89,9 @@ def unpack_image(packed):
     return level, objects
 
 
+MAX_GUESSED = 256  # Changed fields bigger than this are stored as they are
+
+
 def to_f32(x):
     try:
         return struct.unpack("<f", struct.pack("<f", x))[0]
@@ -156,7 +159,7 @@ def apply_changes(objects, schema, raw, p, tally=None, part=""):
                 f = fields[index]
                 size = f.size(raw, p)
                 out += old[old_at[field]:old_at[index]]
-                if f.list:
+                if f.list or size > MAX_GUESSED:
                     out += raw[p:p + size]
                 else:
                     last = old[old_at[index]:old_at[index + 1]]
@@ -197,9 +200,9 @@ class Recording:
                 texts = [t.decode("latin-1") for t in body[4:].split(b"\0")[:4]]
                 self.started, self.platform, self.compiler, self.built = texts
             elif tag == "SCHV":
-                self.view_schema = read_schema(body)
+                self.view_schema, self.view_schema_bytes = read_schema(body), body
             elif tag == "SCHI":
-                self.internal_schema = read_schema(body)
+                self.internal_schema, self.internal_schema_bytes = read_schema(body), body
             elif tag == "STRV":
                 self.start_view = body
             elif tag == "STRI":
@@ -296,6 +299,9 @@ def compare(a, b):
         print("the same for all %d steps they share" % n)
         return
     print("step %d differs" % n)
+    if a.view_schema_bytes != b.view_schema_bytes or a.internal_schema_bytes != b.internal_schema_bytes:
+        print("they were recorded with different fields, so their values aren't compared")
+        return
     _, va, ia = a.read(n, internal=True)
     _, vb, ib = b.read(n, internal=True)
     parts = [("view", va, vb, a.view_schema), ("internal", ia, ib, a.internal_schema)]

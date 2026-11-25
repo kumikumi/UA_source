@@ -486,8 +486,6 @@ void NC_STACK_yparobo::InitForce(NC_STACK_ypabact *unit)
     newUnit->_scale_time = newUnit->_energy_max * 0.2;
     _roboDockTime = newUnit->_scale_time + 2000;
     _roboDockCnt++;
-
-    _world->HistoryAktCreate(newUnit);
 }
 
 
@@ -1442,8 +1440,6 @@ void NC_STACK_yparobo::doUserCommands(update_msg *arg)
                 _roboEnergyLife -= arg->energy;
                 
                 _world->SetCmdrIdToSelect(newbact->_commandID); // Select it for add next units
-
-                _world->HistoryAktCreate(newbact);
             }
         }
         break;
@@ -1493,7 +1489,6 @@ void NC_STACK_yparobo::doUserCommands(update_msg *arg)
                 newbact2->_host_station = this;
                 _roboEnergyLife -= arg->energy;
 
-                _world->HistoryAktCreate(newbact2);
                 newbact2->CopyTargetOf(arg->selectBact);
             }
         }
@@ -2543,7 +2538,6 @@ NC_STACK_ypabact *NC_STACK_yparobo::AllocForce(robo_loct1 *arg)
 
         selectedCommander = newUnit;
         useDock = 1;
-        _world->HistoryAktCreate(newUnit);
     }
 
     if ( useDock )

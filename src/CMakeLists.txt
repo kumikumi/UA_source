@@ -71,6 +71,7 @@ set(SOURCES
 	winp.cpp
 	wintimer.cpp
 	world/analyzer.cpp
+	world/history.cpp
 	world/parsers.cpp
 	world/nparticle.cpp
 	world/protos.cpp

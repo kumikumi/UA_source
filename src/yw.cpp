@@ -371,8 +371,6 @@ bool NC_STACK_ypaworld::SimulationStep(TUpdateArgs *arg)
     _updateMessage.units_count = 0;
     _updateMessage.inpt = arg->Input;
 
-    HistoryEventAdd(World::History::Frame(_timeStamp));
-
     uint32_t netStart = profiler_begin();
     
     if ( _isNetGame )
@@ -1045,7 +1043,7 @@ void NC_STACK_ypaworld::DamageSectorBuilding(TSectorDamage *arg)
                     else
                         yw_ActivateWunderstein(&cell, cell.PurposeIndex);                  
 
-                    HistoryEventAdd( World::History::Upgrade(sec.x, sec.y, cell.owner, _techUpgrades[ _upgradeId ].Type, _upgradeVehicleId, _upgradeWeaponId, _upgradeBuildId) );
+                    ScoreEvent( World::History::Upgrade(sec.x, sec.y, cell.owner, _techUpgrades[ _upgradeId ].Type, _upgradeVehicleId, _upgradeWeaponId, _upgradeBuildId) );
                 }
             }
             else if ( cell.PurposeType == cellArea::PT_TECHDEACTIVE )
@@ -1962,7 +1960,19 @@ void NC_STACK_ypaworld::FindUnitOnRay(TUnitRayQuery *arg)
 void NC_STACK_ypaworld::DeleteLevel()
 {
     // With the end's state, before anything of the level goes
-    _recorder.Stop(this);
+    std::string recorded = _recorder.Stop(this);
+
+    // A won level's debriefing and score come from its events, worked out
+    // from its recording while the level is still there
+    _history.Clear();
+
+    if ( _levelInfo.State == TLevelInfo::STATE_COMPLETED && !recorded.empty() )
+    {
+        World::Recording recording;
+
+        if ( !recording.Open(recorded) || !World::History::Derive(this, recording, _history) )
+            ypa_log_out("Could not work out the level's events from %s\n", recorded.c_str());
+    }
 
     EnableLevelPasses();
 
@@ -5891,6 +5901,13 @@ void NC_STACK_ypaworld::VisitState(World::State::Visitor &v)
     v.Unit("userUnit", _userUnit, World::State::VIEW);
     v.Unit("viewer", _viewerBact, World::State::VIEW);
 
+    // The last tech upgrade, as the HUD shows it
+    v.Field("upgrade", _upgradeId, World::State::VIEW);
+    v.Field("upgradeTime", _upgradeTimeStamp, World::State::VIEW);
+    v.Field("upgradeVehicle", _upgradeVehicleId, World::State::VIEW);
+    v.Field("upgradeWeapon", _upgradeWeaponId, World::State::VIEW);
+    v.Field("upgradeBuilding", _upgradeBuildId, World::State::VIEW);
+
     if ( !v.Visits(World::State::INTERNAL) )
         return;
 
@@ -5913,12 +5930,6 @@ void NC_STACK_ypaworld::VisitState(World::State::Visitor &v)
     v.Field("beamEnergy", _beamEnergyCurrent);
     v.Field("beamCapacity", _beamEnergyCapacity);
     v.Field("nextPowerStation", _nextPSForUpdate);
-
-    v.Field("upgrade", _upgradeId);
-    v.Field("upgradeTime", _upgradeTimeStamp);
-    v.Field("upgradeVehicle", _upgradeVehicleId);
-    v.Field("upgradeWeapon", _upgradeWeaponId);
-    v.Field("upgradeBuilding", _upgradeBuildId);
 
     v.Field("extraViewEnable", _extraViewEnable);
     v.Field("extraViewNumber", _extraViewNumber);
@@ -6399,7 +6410,7 @@ void NC_STACK_ypaworld::HandleRoboDestroyed(TRoboDestroyed *arg)
                 else
                     yw_ActivateWunderstein(&cell, cell.PurposeIndex);
                 
-                HistoryEventAdd( World::History::Upgrade(j, i, cell.owner, _techUpgrades[ _upgradeId ].Type, _upgradeVehicleId, _upgradeWeaponId, _upgradeBuildId) );
+                ScoreEvent( World::History::Upgrade(j, i, cell.owner, _techUpgrades[ _upgradeId ].Type, _upgradeVehicleId, _upgradeWeaponId, _upgradeBuildId) );
             }
 
         }
@@ -6525,37 +6536,13 @@ size_t NC_STACK_ypaworld::AdvancedCreateLevel(TLevelLoadRequest *arg)
 }
 
 
-void NC_STACK_ypaworld::HistoryEventAdd(const World::History::Record &arg)
+// What a network game's score table, which the players see as they play,
+// counts of an event. Single-player levels have their events and scores
+// worked out from their recordings at the end (World::History::Derive).
+void NC_STACK_ypaworld::ScoreEvent(const World::History::Record &arg)
 {
-    switch ( arg.type )
-    {
-    case World::History::TYPE_FRAME: // Do not write timestamp every frame, wait for any another data
-        _historyLastIsTimeStamp = true;
-        _historyLastFrame = static_cast<const World::History::Frame&>(arg);
-        break;
-                
-    case World::History::TYPE_CONQ:
-    case World::History::TYPE_VHCLKILL:
-    case World::History::TYPE_VHCLCREATE:
-    case World::History::TYPE_POWERST:
-    case World::History::TYPE_UPGRADE:
-        
-        if (_historyLastIsTimeStamp) // If
-            _history.Write(_historyLastFrame.MakeByteArray());
-            
-        _history.Write(arg.MakeByteArray());
-        
-        _historyLastIsTimeStamp = false;
-        
-        if (_GameShell && _GameShell->isHost )
-            arg.AddScore(&_gameplayStats);
-        break;
-
-    default:
-        break;
-    }
-
-    
+    if ( _GameShell && _GameShell->isHost )
+        arg.AddScore(&_gameplayStats);
 }
 
 

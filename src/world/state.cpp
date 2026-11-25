@@ -485,12 +485,12 @@ static void VisitSector(Visitor &v, NC_STACK_ypaworld *world, cellArea &cell, En
     v.Field("type", cell.type_id, VIEW);
     v.Field("simple", cell.SectorType, VIEW);
     v.Field("health", cell.buildings_health.data(), 9, VIEW);
+    v.Field("purpose", cell.PurposeType, VIEW);
 
     if ( !v.Visits(INTERNAL) )
         return;
 
     v.Field("energyPower", cell.energy_power);
-    v.Field("purpose", cell.PurposeType);
     v.Field("purposeIndex", cell.PurposeIndex);
     v.Field("accumOwner", accum.Owner);
     v.Field("accumEnergy", accum.Energy);
