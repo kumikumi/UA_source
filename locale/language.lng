@@ -212,8 +212,8 @@
 260  = Power Station Lost
 261  = Flak Station Lost
 262  = Radar Station Lost
-263  = <>
-264  = <>
+263  = Mission Rewound
+264  = Can't Rewind Any Further
 265  = <>
 266  = <>
 267  = <>
@@ -473,7 +473,7 @@
 560  = Jump to Last Occupied Unit
 561  = Become Current Squad Leader
 562  = Situation Analyzer
-563  = <>
+563  = Rewind
 564  = <>
 565  = <>
 566  = <>

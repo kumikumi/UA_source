@@ -5,6 +5,7 @@
 #if defined(WIN32) && !defined(__WINE__)
 
 #include <windows.h>
+#include <io.h>
 
 #else
 
@@ -914,6 +915,22 @@ void FileHandle::flush()
 {
     if ( hndl )
         fflush(hndl.get());
+}
+
+bool FileHandle::truncate(size_t size)
+{
+    if ( !hndl || fflush(hndl.get()) != 0 )
+        return false;
+
+#if defined(WIN32) && !defined(__WINE__)
+    if ( _chsize_s(_fileno(hndl.get()), size) != 0 )
+        return false;
+#else
+    if ( ftruncate(fileno(hndl.get()), size) != 0 )
+        return false;
+#endif
+
+    return fseek(hndl.get(), size, SEEK_SET) == 0;
 }
 
 char *FileHandle::gets(char *str, int num)

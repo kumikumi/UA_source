@@ -155,18 +155,65 @@ bool InputParser::IsScope(ScriptParser::Parser &parser, const std::string &word,
             k.PKeyCode = 0;
             k.NKeyCode = 0;
         }
+
+        _newInput = true;
+        _listed.assign(_o._GameShell->InputConfig.size(), false);
         return true;
     }
     else if ( !StriCmp(word, "modify_input") )
+    {
+        _newInput = false;
         return true;
+    }
 
     return false;
+}
+
+// The bindings a whole input section doesn't list, as one written before
+// they were added: their default keys, unless the section gives those keys
+// to others
+void InputParser::GiveUnlistedDefaults()
+{
+    std::array<UserData::TInputConf, World::INPUT_BIND_MAX> &config = _o._GameShell->InputConfig;
+
+    for (size_t i = 1; i < config.size(); i++)
+    {
+        if ( _listed[i] )
+            continue;
+
+        UserData::TInputConf &k = config[i];
+        bool taken = false;
+
+        for (size_t j = 1; j < config.size(); j++)
+        {
+            const UserData::TInputConf &other = config[j];
+
+            if ( _listed[j] && ((k.PKeyCodeDef && (other.PKeyCode == k.PKeyCodeDef || other.NKeyCode == k.PKeyCodeDef)) ||
+                                (k.NKeyCodeDef && (other.PKeyCode == k.NKeyCodeDef || other.NKeyCode == k.NKeyCodeDef))) )
+                taken = true;
+        }
+
+        if ( taken )
+        {
+            ypa_log_out("Input: %s has no key, as its default key is taken\n", _o._GameShell->InputConfigTitle[i].c_str());
+            continue;
+        }
+
+        k.PKeyCode = k.PKeyCodeDef;
+        k.NKeyCode = k.NKeyCodeDef;
+        _o.ReloadInput(i);
+    }
 }
 
 int InputParser::Handle(ScriptParser::Parser &parser, const std::string &p1, const std::string &p2)
 {
     if ( !StriCmp(p1, "end") )
+    {
+        if ( _newInput )
+            GiveUnlistedDefaults();
+
         return ScriptParser::RESULT_SCOPE_END;
+    }
 
     _o._GameShell->savedDataFlags |= World::SDF_INPUT;
 
@@ -240,6 +287,9 @@ int InputParser::Handle(ScriptParser::Parser &parser, const std::string &p1, con
             _o._GameShell->InputConfig[ gsIndex ].Type = World::INPUT_BIND_TYPE_SLIDER;
             _o._GameShell->InputConfig[ gsIndex ].KeyID = cfgIdex;
 
+            if ( (size_t)gsIndex < _listed.size() )
+                _listed[gsIndex] = true;
+
             Stok stok(buf, " :\t\n");
             std::string tmp;
             if ( stok.GetNext(&tmp) && stok.GetNext(&tmp) ) // skip drivername before ':'
@@ -292,6 +342,9 @@ int InputParser::Handle(ScriptParser::Parser &parser, const std::string &p1, con
             _o._GameShell->InputConfig[ gsIndex ].Type = World::INPUT_BIND_TYPE_BUTTON;
             _o._GameShell->InputConfig[ gsIndex ].KeyID = cfgIdex;
 
+            if ( (size_t)gsIndex < _listed.size() )
+                _listed[gsIndex] = true;
+
             Stok stok(buf, " :\t\n");
             std::string tmp;
             if ( stok.GetNext(&tmp) && stok.GetNext(&tmp) ) // skip drivername before ':'
@@ -333,6 +386,9 @@ int InputParser::Handle(ScriptParser::Parser &parser, const std::string &p1, con
 
             _o._GameShell->InputConfig[ gsIndex ].Type = World::INPUT_BIND_TYPE_HOTKEY;
             _o._GameShell->InputConfig[ gsIndex ].KeyID = cfgIdex;
+
+            if ( (size_t)gsIndex < _listed.size() )
+                _listed[gsIndex] = true;
 
             std::string tmp = Stok::Fast(buf, " :\t\n");
             if ( !tmp.empty() )

@@ -2,6 +2,7 @@
 #define WORLD_RECORDER_H_INCLUDED
 
 #include <cstdint>
+#include <deque>
 #include <map>
 #include <memory>
 #include <string>
@@ -13,7 +14,6 @@
 struct z_stream_s;
 
 class NC_STACK_ypaworld;
-class IFFile;
 namespace FSMgr { class FileHandle; }
 struct TInfoMessage;
 
@@ -78,8 +78,9 @@ struct RecordedPoint
 //         size unpacked, then zlib: i32 level, u32 objects, each u8 kind,
 //         u32 id, u32 size and its fields' bytes
 //   STRI  the internal part before it
-//   STEP  once for each block of up to BlockSteps steps: u32 size
-//         unpacked, then zlib (level 6): the steps, each
+//   STEP  once for each block of steps, which ends at every BlockSteps-th
+//         step and where the recording, or a saved game in it, ends or goes
+//         on from: u32 size unpacked, then zlib (level 6): the steps, each
 //           u32  its size in bytes, after this
 //           u8   1 when the level can go on from it, else 0
 //           ...  what changed of the view since the step before
@@ -106,10 +107,16 @@ struct RecordedPoint
 // level's end one without steps. In a campaign, every level is recorded
 // (NC_STACK_ypaworld::SessionPath); a saved game's level goes on recording
 // from where the saved game ends.
+//
+// A recording can go back to its last few steps that end a block (Rewind):
+// the file is cut there, and recording goes on from it. The state at those
+// steps is kept as it was recorded, a cache of what reading the recording
+// from its start would give.
 class Recorder
 {
 public:
     enum { BlockSteps = 600 }; // 10 s of game time at 60 steps a second
+    enum { RewindPoints = 6 }; // How many steps to go back to are kept
 
     Recorder();
     ~Recorder();
@@ -145,6 +152,11 @@ public:
     // A recording of the state now, without steps, as of a won level's end
     static bool WriteState(NC_STACK_ypaworld *world, const std::string &path, const std::string &startedFrom);
 
+    // Goes back to the latest step kept to go back to that is at least
+    // minSteps before the last: the recording ends there and goes on from
+    // it, and view and internal are the state then. False when there's none.
+    bool Rewind(uint32_t minSteps, State::Image &view, State::Image &internal);
+
     bool IsRecording() const { return _file != nullptr; }
     const std::string &Path() const { return _path; }
 
@@ -158,6 +170,14 @@ protected:
 
     typedef std::unordered_map<uint64_t, LastObject> LastObjects;
 
+    // A step to go back to: where the file ends after it, and the objects as
+    // it left them
+    struct RewindPoint
+    {
+        uint32_t Step = 0;
+        size_t FileSize = 0;
+        LastObjects View, Internal;
+    };
 
     bool Open(NC_STACK_ypaworld *world, const std::string &path, const std::string &startedFrom,
               const State::Image &startView, const State::Image &startInternal);
@@ -169,15 +189,21 @@ protected:
     void AddStep(const std::string &step);
     void Deflate(const void *data, size_t size, int flush);
     void WriteBlock();
+    void EndForm();
+    void KeepRewindPoint();
+    static void MakeImage(int level, const LastObjects &objects, State::Image &image);
 
-    std::unique_ptr<IFFile> _file;
-    FSMgr::FileHandle *_fileHandle = NULL; // _file's
+    std::unique_ptr<FSMgr::FileHandle> _file;
     std::string _path;
+    int _level = 0;
     bool _full = false;
     State::Schema _viewSchema, _internalSchema;
     KindLayouts _viewLayouts, _internalLayouts;
     LastObjects _lastView, _lastInternal;
     uint32_t _step = 0;
+    uint32_t _stepsAdded = 0; // To the blocks
+
+    std::deque<RewindPoint> _rewindPoints; // The oldest first
 
     // The block's steps so far, packed as they come
     std::unique_ptr<z_stream_s> _packer;

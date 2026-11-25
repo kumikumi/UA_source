@@ -212,8 +212,8 @@
 260  = Energiestation verloren
 261  = Luftabwehrstellung verloren
 262  = Radarstation verloren
-263  = <>
-264  = <>
+263  = Mission zurückgespult
+264  = Weiter zurück geht es nicht
 265  = <>
 266  = <>
 267  = <>
@@ -473,7 +473,7 @@
 560  = Zur letzten gesteuerten Einheit springen
 561  = Schwadronenführer werden
 562  = Situationsanalyse
-563  = <>
+563  = Zurückspulen
 564  = <>
 565  = <>
 566  = <>

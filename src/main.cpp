@@ -171,8 +171,11 @@ int ProcessGameplayFrame(int32_t frameTicks, bool timeFrozen)
             if ( simPendingTicks > SimMaxStepsPerFrame * SimStepTicks )
                 simPendingTicks = SimMaxStepsPerFrame * SimStepTicks;
 
-            // A level is not drawn before its first step
+            // A level is not drawn before its first step, nor before a step
+            // has set the view point again after it was restored
             if ( ypaworld->_framesElapsed == 0 )
+                simPendingTicks = SimStepTicks;
+            else if ( !TF::Engine.GetViewPoint() && simPendingTicks < SimStepTicks )
                 simPendingTicks = SimStepTicks;
         }
 
@@ -332,6 +335,13 @@ int ProcessGameplayFrame(int32_t frameTicks, bool timeFrozen)
         if ( !ypaworld->LoadGame( UserData::SaveGamePath(userdata.UserName) ) )
             ypa_log_out("Warning, load error\n");
 
+        Input::Engine.QueryInput(&input_states);
+    }
+    break;
+
+    case TLevelInfo::STATE_REWIND:
+    {
+        ypaworld->RewindLevel();
         Input::Engine.QueryInput(&input_states);
     }
     break;

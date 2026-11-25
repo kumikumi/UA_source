@@ -212,8 +212,8 @@
 260  = Centrale électrique perdue
 261  = Station antiaérienne perdue
 262  = Station radar perdue
-263  = <>
-264  = <>
+263  = Mission rembobinée
+264  = Impossible de revenir plus loin
 265  = <>
 266  = <>
 267  = <>
@@ -473,7 +473,7 @@
 560  = Sauter dans la dernière unité occupée
 561  = Devenir le chef d'escouade
 562  = Analyseur de situation
-563  = <>
+563  = Retour en arrière
 564  = <>
 565  = <>
 566  = <>

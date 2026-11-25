@@ -108,7 +108,9 @@ std::array<std::string, FEEDBACK_MAX> DefaultStrings::Feedbacks = Common::ArrayI
     {FEEDBACK_WAVEFROZ   , "Superwave frozen."},
     {FEEDBACK_WAVEDEACT  , "Superwave deactivated."},
     {FEEDBACK_GATEFULL   , "WARNING: BEAM GATE FULL!"},
-    {FEEDBACK_GAMESAVED  , "GAME SAVED OK."}
+    {FEEDBACK_GAMESAVED  , "GAME SAVED OK."},
+    {FEEDBACK_REWOUND    , "GAME REWOUND."},
+    {FEEDBACK_NOREWIND   , "CAN'T REWIND ANY FURTHER."}
 });
 
 
@@ -241,7 +243,8 @@ std::array<std::string, INPUTS_MAX> DefaultStrings::Inputs = Common::ArrayInit<s
     {INPUTS_HELP, "HELP"},
     {INPUTS_TOLASTOCCUP, "GOTO LAST OCCUPIED VEHICLE"},
     {INPUTS_MAKECOMM, "MAKE CURRENT VEHICLE COMMANDER"},
-    {INPUTS_ANALYZER, "SITUATION ANALYZER"}
+    {INPUTS_ANALYZER, "SITUATION ANALYZER"},
+    {INPUTS_REWIND, "REWIND"}
 });
 
 std::array<std::string, GLOBMAP_MAX> DefaultStrings::GlobMaps = Common::ArrayInit<std::string, GLOBMAP_MAX>(

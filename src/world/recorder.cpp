@@ -6,7 +6,6 @@
 
 #include "recorder.h"
 #include "../yw.h"
-#include "../IFFile.h"
 #include "../utils.h"
 #include "../env.h"
 #include "../log.h"
@@ -41,6 +40,30 @@ static void PutText(std::string &out, const std::string &text)
 
 // A file of the game's folder by its name with a prefix (save:...), else a
 // file by its path. NULL when it can't be opened.
+static void PutBigEndian32(std::string &out, uint32_t v)
+{
+    uint8_t bytes[4] = {(uint8_t)(v >> 24), (uint8_t)(v >> 16), (uint8_t)(v >> 8), (uint8_t)v};
+    out.append((const char *)bytes, 4);
+}
+
+// An IFF chunk: its tag and size, then head and data, and a byte more when
+// that is odd
+static bool WriteChunk(FSMgr::FileHandle &file, uint32_t tag, const std::string &head, const std::string &data)
+{
+    std::string header;
+    PutBigEndian32(header, tag);
+    PutBigEndian32(header, head.size() + data.size());
+
+    bool ok = file.write(header.data(), header.size()) == header.size() &&
+              file.write(head.data(), head.size()) == head.size() &&
+              file.write(data.data(), data.size()) == data.size();
+
+    if ( (head.size() + data.size()) & 1 )
+        ok = ok && file.write("", 1) == 1;
+
+    return ok;
+}
+
 static FSMgr::FileHandle *OpenFile(const std::string &path, const std::string &mode)
 {
     if ( Common::Env.ApplyPrefix(path) != path )
@@ -424,9 +447,15 @@ bool Recorder::Open(NC_STACK_ypaworld *world, const std::string &path, const std
     }
 
     _path = path;
-    _fileHandle = file;
-    _file.reset(new IFFile(file, true));
-    _file->pushChunk(TAG_RPLY, TAG_FORM, -1);
+    _file.reset(file);
+    _level = startView.Level;
+
+    // Its size, unknown until it ends
+    std::string form;
+    PutBigEndian32(form, TAG_FORM);
+    PutBigEndian32(form, 0xFFFFFFFF);
+    PutBigEndian32(form, TAG_RPLY);
+    _file->write(form.data(), form.size());
 
     std::string info;
     Put16(info, 2);
@@ -454,11 +483,7 @@ bool Recorder::Open(NC_STACK_ypaworld *world, const std::string &path, const std
                        std::make_pair(TAG_SCHI, State::WriteSchema(_internalSchema)),
                        std::make_pair(TAG_STRV, State::Pack(startView)),
                        std::make_pair(TAG_STRI, State::Pack(startInternal))})
-    {
-        _file->pushChunk(0, chunk.first, -1);
-        _file->write(chunk.second.data(), chunk.second.size());
-        _file->popChunk();
-    }
+        WriteChunk(*_file, chunk.first, std::string(), chunk.second);
 
     if ( _packer )
     {
@@ -474,6 +499,8 @@ bool Recorder::Open(NC_STACK_ypaworld *world, const std::string &path, const std
     _lastView.clear();
     _lastInternal.clear();
     _step = 0;
+    _stepsAdded = 0;
+    _rewindPoints.clear();
     return true;
 }
 
@@ -495,7 +522,7 @@ bool Recorder::WriteState(NC_STACK_ypaworld *world, const std::string &path, con
                         State::Capture(world, State::PART_INTERNAL)) )
         return false;
 
-    recorder._file->popChunk();
+    recorder.EndForm();
     recorder._file.reset();
     return true;
 }
@@ -512,7 +539,8 @@ bool Recorder::SaveTo(NC_STACK_ypaworld *world, const std::string &path)
     if ( _blockSteps > 0 )
         WriteBlock();
 
-    _fileHandle->flush();
+    KeepRewindPoint();
+    _file->flush();
 
     std::unique_ptr<FSMgr::FileHandle> in(OpenFile(_path, "rb"));
     if ( !in )
@@ -549,6 +577,7 @@ bool Recorder::Start(NC_STACK_ypaworld *world, const std::string &path, const st
 
     Remember(world, State::PART_VIEW, _lastView);
     Remember(world, State::PART_INTERNAL, _lastInternal);
+    KeepRewindPoint();
     return true;
 }
 
@@ -573,6 +602,11 @@ bool Recorder::StartFrom(NC_STACK_ypaworld *world, const std::string &path, cons
     for ( const auto &it : point.InternalVersions )
         _lastInternal[it.first] = LastObject{it.second, _step};
 
+    // The steps so far written, to go back to where it went on from
+    if ( _blockSteps > 0 )
+        WriteBlock();
+
+    KeepRewindPoint();
     return true;
 }
 
@@ -764,6 +798,10 @@ void Recorder::FlushPending()
 
     _hasPending = false;
     AddStep(step);
+
+    // One the level can go on from that ended its block: to go back to
+    if ( _pendingResumable && _blockSteps == 0 )
+        KeepRewindPoint();
 }
 
 // Packs what comes into the block's zlib stream, a step at a time, so that
@@ -807,8 +845,9 @@ void Recorder::AddStep(const std::string &step)
     Deflate(&size, 4, Z_NO_FLUSH);
     Deflate(step.data(), step.size(), Z_NO_FLUSH);
     _blockSteps++;
+    _stepsAdded++;
 
-    if ( _blockSteps >= BlockSteps )
+    if ( _stepsAdded % BlockSteps == 0 )
         WriteBlock();
 }
 
@@ -835,11 +874,11 @@ std::string Recorder::Stop(NC_STACK_ypaworld *world)
     if ( _blockSteps > 0 )
         WriteBlock();
 
-    _file->popChunk();
+    EndForm();
     _file.reset();
-    _fileHandle = NULL;
     _lastView.clear();
     _lastInternal.clear();
+    _rewindPoints.clear();
     return _path;
 }
 
@@ -849,13 +888,111 @@ void Recorder::WriteBlock()
     deflateEnd(_packer.get());
     _packer.reset();
 
-    _file->pushChunk(0, TAG_STEP, -1);
-    _file->writeU32L(_unpackedSize);
-    _file->write(_packed.data(), _packed.size());
-    _file->popChunk();
+    std::string head;
+    Put32(head, _unpackedSize);
+    WriteChunk(*_file, TAG_STEP, head, _packed);
 
     _packed.clear();
     _blockSteps = 0;
+}
+
+// The FORM's size, as the recording ends
+void Recorder::EndForm()
+{
+    std::string size;
+    PutBigEndian32(size, _file->tell() - 8);
+
+    _file->seek(4, SEEK_SET);
+    _file->write(size.data(), size.size());
+    _file->seek(0, SEEK_END);
+}
+
+// The recording as it stands, its last step one the level can go on from
+// that ends its block, kept to go back to
+void Recorder::KeepRewindPoint()
+{
+    if ( !_rewindPoints.empty() && _rewindPoints.back().Step == _step )
+        return;
+
+    _rewindPoints.emplace_back();
+    RewindPoint &point = _rewindPoints.back();
+    point.Step = _step;
+    point.FileSize = _file->tell();
+    point.View = _lastView;
+    point.Internal = _lastInternal;
+
+    while ( _rewindPoints.size() > RewindPoints )
+        _rewindPoints.pop_front();
+}
+
+bool Recorder::Rewind(uint32_t minSteps, State::Image &view, State::Image &internal)
+{
+    if ( !_file )
+        return false;
+
+    size_t n = _rewindPoints.size();
+    while ( n > 0 && _rewindPoints[n - 1].Step + minSteps > _step )
+        n--;
+
+    if ( n == 0 )
+        return false;
+
+    const RewindPoint &point = _rewindPoints[n - 1];
+
+    if ( !_file->truncate(point.FileSize) )
+    {
+        ypa_log_out("Recording: could not cut %s back to step %d\n", _path.c_str(), point.Step);
+        return false;
+    }
+
+    // What came after it goes: the block being packed, the step not yet
+    // written and its messages
+    if ( _packer )
+    {
+        deflateEnd(_packer.get());
+        _packer.reset();
+    }
+
+    _packed.clear();
+    _blockSteps = 0;
+    _hasPending = false;
+    _messages.clear();
+    _messageCount = 0;
+
+    _step = point.Step;
+    _stepsAdded = point.Step;
+    _lastView = point.View;
+    _lastInternal = point.Internal;
+    _rewindPoints.resize(n);
+
+    MakeImage(_level, _lastView, view);
+    MakeImage(_level, _lastInternal, internal);
+    return true;
+}
+
+// The objects as a state, in the order of their keys, as a recording read
+// back gives them
+void Recorder::MakeImage(int level, const LastObjects &objects, State::Image &image)
+{
+    std::vector<uint64_t> keys;
+    keys.reserve(objects.size());
+
+    for ( const auto &it : objects )
+        keys.push_back(it.first);
+
+    std::sort(keys.begin(), keys.end());
+
+    image = State::Image();
+    image.Level = level;
+
+    for ( uint64_t key : keys )
+    {
+        State::Object obj;
+        obj.Kind = key >> 32;
+        obj.Id = key & 0xFFFFFFFF;
+        obj.Data = objects.at(key).Versions.Data;
+        image.Objects.push_back(std::move(obj));
+    }
 }
 
 

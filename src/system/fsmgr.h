@@ -205,6 +205,9 @@ public:
 
     // What was written so far, to the file
     void flush();
+
+    // Cuts the file to that size, to go on writing at its end
+    bool truncate(size_t size);
     
     virtual char *gets(char *str, int num);
     virtual int puts(const std::string &str);

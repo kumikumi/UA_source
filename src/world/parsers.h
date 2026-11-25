@@ -2,6 +2,7 @@
 #define WORLD_PARSERS_H_INCLUDED
 
 #include <string>
+#include <vector>
 #include "../types.h"
 #include "../utils.h"
 #include "common/common.h"
@@ -51,7 +52,11 @@ public:
     virtual int Handle(ScriptParser::Parser &parser, const std::string &p1, const std::string &p2);
     virtual bool IsScope(ScriptParser::Parser &parser, const std::string &word, const std::string &opt);
 protected:
+    void GiveUnlistedDefaults();
+
     NC_STACK_ypaworld &_o;
+    bool _newInput = false;    // The section sets every binding it lists...
+    std::vector<bool> _listed; // ...and these are those
 };
 
 

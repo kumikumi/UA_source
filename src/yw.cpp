@@ -300,6 +300,15 @@ bool NC_STACK_ypaworld::SimulationStep(TUpdateArgs *arg)
     if ( HandlePause(this, arg) )
         return false;
 
+    // The rewind key, pressed anew: not still held, nor repeating, since it
+    // last went back
+    int16_t rewindKey = Input::Engine.GetHotKey(47);
+
+    if ( rewindKey <= Input::KC_NONE || rewindKey >= Input::KC_MAX || !Input::Engine.KeyMatrix.at(rewindKey).down )
+        _rewindKeyHeld = false;
+
+    bool rewindPressed = arg->Input->HotKeyID == 47 && !_rewindKeyHeld;
+
     SaveUnitTransforms();
 
     uint32_t frameStart = profiler_begin();
@@ -553,6 +562,14 @@ bool NC_STACK_ypaworld::SimulationStep(TUpdateArgs *arg)
         _helpURL.clear();
 
         OpenHelpURL(&help_link); //launch online help
+    }
+
+    // In a recorded single-player level, the main loop goes back after the
+    // step: the step is whole, its units have set the view point
+    if ( rewindPressed && _levelInfo.State == TLevelInfo::STATE_PLAYING && !_isNetGame && _recorder.IsRecording() )
+    {
+        _levelInfo.State = TLevelInfo::STATE_REWIND;
+        _rewindKeyHeld = true;
     }
 
     _recorder.Step(this);
@@ -2022,8 +2039,6 @@ void NC_STACK_ypaworld::DeleteLevel()
     if ( _prepareDebrief && !recorded.empty() )
         _history.Open(this, recorded);
 
-    _screenShotSeq = false;
-
     NC_STACK_bitmap *disk = loadDisk_screen(this);
 
     if ( disk )
@@ -2031,6 +2046,15 @@ void NC_STACK_ypaworld::DeleteLevel()
         draw_splashScreen(this, disk);
         disk->Delete();
     }
+
+    FreeLevel();
+}
+
+// Everything of the level goes: its units, interface, sky, sounds, maps and
+// set. What playing it on led to is DeleteLevel's.
+void NC_STACK_ypaworld::FreeLevel()
+{
+    _screenShotSeq = false;
 
     //ypaworld_func151__sub5(this); Free map events
     _voiceMessage.Reset();
@@ -2120,7 +2144,7 @@ void UserData::ReloadAllInputs()
     for (int i = 0; i <= 48; i++)
         Input::Engine.SetHotKey(i, "nop");
 
-    for (int i = 1; i <= 45; i++)
+    for (int i = 1; i < World::INPUT_BIND_MAX; i++)
     {
         inpListActiveElement = i;
         p_YW->ReloadInput(i);
@@ -2222,6 +2246,7 @@ bool NC_STACK_ypaworld::InitGameShell(UserData *usr)
     usr->InputConfig[World::INPUT_BIND_LAST_SEAT]   = UserData::TInputConf(World::INPUT_BIND_TYPE_HOTKEY, 44, Input::KC_NONE);
     usr->InputConfig[World::INPUT_BIND_SET_COMM]    = UserData::TInputConf(World::INPUT_BIND_TYPE_HOTKEY, 45, Input::KC_NONE);
     usr->InputConfig[World::INPUT_BIND_ANALYZER]    = UserData::TInputConf(World::INPUT_BIND_TYPE_HOTKEY, 46, Input::KC_NONE);
+    usr->InputConfig[World::INPUT_BIND_REWIND]      = UserData::TInputConf(World::INPUT_BIND_TYPE_HOTKEY, 47, Input::KC_R);
 
     usr->ReloadAllInputs();
 
@@ -2931,7 +2956,7 @@ bool NC_STACK_ypaworld::CreateInputControls()
     
     GuiList::tInit args;
     args.resizeable = false;
-    args.numEntries = 45;
+    args.numEntries = World::INPUT_BIND_MAX - 1;
     args.shownEntries = 8;
     args.firstShownEntry = 0;
     args.selectedEntry = 0;
@@ -5024,6 +5049,7 @@ bool NC_STACK_ypaworld::OpenGameShell()
     _GameShell->InputConfigTitle[World::INPUT_BIND_TO_ALL]      = Locale::Text::Inputs(Locale::INPUTS_MSGTOALL);
     _GameShell->InputConfigTitle[World::INPUT_BIND_HELP]        = Locale::Text::Inputs(Locale::INPUTS_HELP);
     _GameShell->InputConfigTitle[World::INPUT_BIND_ANALYZER]    = Locale::Text::Inputs(Locale::INPUTS_ANALYZER);
+    _GameShell->InputConfigTitle[World::INPUT_BIND_REWIND]      = Locale::Text::Inputs(Locale::INPUTS_REWIND);
 
     if ( !CreateGameShellControls() )
         return false;
@@ -5870,6 +5896,43 @@ bool NC_STACK_ypaworld::RestartLevel()
         return false;
 
     return _recorder.StartFrom(this, session, fmt::sprintf("level %d", _levelInfo.LevelID), start, start);
+}
+
+// How far back the rewind key goes at least: the last step to go back to,
+// or the one before when that was just now
+static const uint32_t RewindMinSteps = 3 * 60;
+
+// The rewind key: the level goes back to the latest step its recording keeps
+// to go back to, at least a few seconds back, and goes on recording from
+// there. False when there's none.
+bool NC_STACK_ypaworld::RewindLevel()
+{
+    World::State::Image view, internal;
+    TInfoMessage msg;
+    msg.unit = NULL;
+    msg.Priority = 10;
+    msg.MsgID = 0;
+
+    if ( !_recorder.Rewind(RewindMinSteps, view, internal) )
+    {
+        _levelInfo.State = TLevelInfo::STATE_PLAYING;
+
+        msg.txt = Locale::Text::Feedback(Locale::FEEDBACK_NOREWIND);
+        ShowMessage(&msg);
+        return false;
+    }
+
+    FreeLevel();
+
+    if ( !World::State::Restore(this, view, internal, false) )
+    {
+        ypa_log_out("Could not go back in the level\n");
+        return false;
+    }
+
+    msg.txt = Locale::Text::Feedback(Locale::FEEDBACK_REWOUND);
+    ShowMessage(&msg);
+    return true;
 }
 
 // A won level's end, to play the level again from there; the player's host

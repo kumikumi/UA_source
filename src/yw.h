@@ -260,8 +260,9 @@ enum INPUT_BIND
     INPUT_BIND_TO_ALL     = 43,
     INPUT_BIND_HELP       = 44,
     INPUT_BIND_ANALYZER   = 45,
+    INPUT_BIND_REWIND     = 46,
 
-    INPUT_BIND_MAX        = 46,
+    INPUT_BIND_MAX        = 47,
 };
 
 enum SOUND_ID
@@ -1195,6 +1196,7 @@ struct TLevelInfo
         STATE_LOAD       = 7,
         STATE_MENU       = 8,
         STATE_DEBRIEFING = 9,
+        STATE_REWIND     = 10,
     };
     
     std::string MapName;
@@ -1861,6 +1863,7 @@ public:
     virtual void IntersectLongRay(TRayIntersection *arg);
     virtual void FindUnitOnRay(TUnitRayQuery *arg);
     virtual void DeleteLevel();
+    void FreeLevel();
     virtual void SetHudVisor(THudVisor *arg);
     virtual bool InitGameShell(UserData *usr);
     virtual void DeinitGameShell();
@@ -1888,6 +1891,7 @@ public:
     // starts it again from there; a won level's end is kept to play it again
     std::string SessionPath() const;
     bool RestartLevel();
+    bool RewindLevel();
     void SaveWonState();
 
     // The world's own state, field by field: see World::State
@@ -2579,6 +2583,7 @@ public:
     int32_t _screenShotSeqFrame = 0; //Screenshoting frame
     
     World::Recorder _recorder; // --record
+    bool _rewindKeyHeld = false; // Since it went back: not to go on going back
     
     THudVisor _guiVisor;
     
