@@ -162,22 +162,10 @@ int NC_STACK_ypaworld::LevelCommonLoader(TLevelDescription *mapp, int levelID)
     _levelInfo.OwnerMask = 0;
     _levelInfo.UserMask = 0;
 
-    _cellOnMouse = 0;
-    _bactOnMouse = NULL;
-    _bactPrevClicked = 0;
+    ResetControls();
     _viewerBact = NULL;
     _userRobo = NULL;
     _userUnit = NULL;
-    _makingWaypointsMode = false;
-    _gamePaused = false;
-    _gamePausedTimeStamp = 0;
-    _joyIgnoreX = 1;
-    _joyIgnoreY = 1;
-    _joyIgnoreZ = 0;
-    _helpURL.clear();
-    _prevUnitId = 0;
-    _fireBtnIsDown = false;
-    _fireBtnDownHappen = false;
     _playerHSDestroyed = false;
     _vehicleSectorRatio = 0;
     _beamEnergyCurrent = 0;

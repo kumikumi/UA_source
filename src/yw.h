@@ -1859,6 +1859,9 @@ public:
     virtual void FindUnitOnRay(TUnitRayQuery *arg);
     virtual void DeleteLevel();
     void FreeLevel();
+    void FreeUnits();
+    bool FreeSomeUnits(size_t count);
+    void ResetControls();
     virtual void SetHudVisor(THudVisor *arg);
     virtual bool InitGameShell(UserData *usr);
     virtual void DeinitGameShell();
@@ -1888,7 +1891,7 @@ public:
     bool RestartLevel();
     bool RewindLevel();
     void PlayRewind(double realSteps);
-    void EndRewind();
+    bool EndRewind();
     bool IsRewinding() const { return _rewinding; }
     void DrawRewindNotice();
     void SaveWonState();
@@ -1905,7 +1908,8 @@ public:
     NC_STACK_ypabact *NewUnitObject(int type);
     NC_STACK_ypabact *MakeUnitObject(int type);
     void GiveUnitAssets(NC_STACK_ypabact *unit);
-    void FinishRestore();
+    void FinishRestore(bool inPlace);
+    void ClearForRestore();
     virtual bool SaveSettings(UserData *usr, const std::string &fileName, uint32_t sdfMask);
     virtual size_t LoadSettings(const std::string &fileName, const std::string &userName, uint32_t sdfMask, bool updateGameShell, bool playIntro = false);
     virtual bool ReloadInput(size_t id);
@@ -2607,11 +2611,12 @@ public:
     bool _rewindKeyHeld = false; // Since it went back: not to go on going back
 
     // Going back through the frames of the steps the level was rewound over,
-    // drawing the step at _rewindPosition, down to _rewindTarget: the level
-    // is already back there
+    // drawing the step at _rewindPosition, down to _rewindTarget, where the
+    // level is then restored to its state then, as the recording kept it
     bool _rewinding = false;
     double _rewindPosition = 0.0;
     uint32_t _rewindTarget = 0;
+    std::unique_ptr<World::State::InPlaceRestore> _rewindRestore;
 
     double _drawnStep = 0.0; // The step drawn last, or how far between two
 

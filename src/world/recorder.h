@@ -158,6 +158,7 @@ public:
     bool Rewind(uint32_t minSteps, State::Image &view, State::Image &internal);
 
     bool IsRecording() const { return _file != nullptr; }
+    uint32_t Step() const { return _step; } // The last step recorded
     const std::string &Path() const { return _path; }
 
 protected:

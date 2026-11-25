@@ -10,6 +10,7 @@
 #include "../yparobo.h"
 #include "../ypamissile.h"
 #include "../log.h"
+#include "../system/perf.h"
 #include "fmtlib/printf.h"
 
 namespace World
@@ -1313,26 +1314,11 @@ std::string Diff(const Schema &schema, const Image &a, const Image &b, size_t ma
 
 // Restore
 
-// Reads the objects of the images, each of a part, in that order
-static bool RestoreParts(NC_STACK_ypaworld *world, const std::vector<std::pair<Part, const Image *>> &parts, bool campaign)
+// Makes every unit of the images, so that the fields can refer to any of
+// them. False, after logging why, when it can't.
+static bool MakeUnits(NC_STACK_ypaworld *world, const std::vector<std::pair<Part, const Image *>> &parts,
+                      std::map<uint32_t, NC_STACK_ypabact *> &units)
 {
-    const Image &first = *parts.front().second;
-
-    if ( first.Objects.empty() || first.Objects[0].Kind != KIND_WORLD )
-    {
-        ypa_log_out("State: no world in the image\n");
-        return false;
-    }
-
-    if ( !world->LoadLevelData(first.Level) )
-    {
-        ypa_log_out("State: can't load level %d\n", first.Level);
-        return false;
-    }
-
-    // Every unit first, so that the fields can refer to any of them
-    std::map<uint32_t, NC_STACK_ypabact *> units;
-
     for ( const auto &part : parts )
     {
         for ( const Object &obj : part.second->Objects )
@@ -1344,7 +1330,6 @@ static bool RestoreParts(NC_STACK_ypaworld *world, const std::vector<std::pair<P
             if ( !unit )
             {
                 ypa_log_out("State: can't make a unit of type %d\n", obj.Kind - KIND_UNIT);
-                world->DeleteLevel();
                 return false;
             }
 
@@ -1353,75 +1338,125 @@ static bool RestoreParts(NC_STACK_ypaworld *world, const std::vector<std::pair<P
         }
     }
 
+    return true;
+}
+
+// Reads an object of an image of a part into the level. False, after
+// logging why, when it doesn't read back.
+static bool ReadObject(NC_STACK_ypaworld *world, const std::map<uint32_t, NC_STACK_ypabact *> &units, Part part,
+                       const Object &obj, bool campaign)
+{
+    Visitor v(Visitor::READ, world, part);
+    v.SetUnits(&units);
+    v.SetData(&obj.Data);
+
+    if ( obj.Kind == KIND_WORLD )
+    {
+        world->VisitState(v);
+    }
+    else if ( obj.Kind == KIND_CAMPAIGN )
+    {
+        if ( !campaign )
+            return true;
+
+        VisitCampaign(v, world);
+    }
+    else if ( obj.Kind == KIND_SECTOR )
+    {
+        if ( obj.Id >= world->_cells.size() )
+            return true;
+
+        VisitSector(v, world, world->_cells.At(obj.Id), world->_energyAccumMap.At(obj.Id));
+    }
+    else if ( obj.Kind == KIND_SUPERITEM )
+    {
+        if ( obj.Id >= world->_levelInfo.SuperItems.size() )
+            return true;
+
+        VisitSuperItem(v, world->_levelInfo.SuperItems[obj.Id]);
+    }
+    else if ( obj.Kind == KIND_VEHICLE )
+    {
+        if ( obj.Id >= world->_vhclProtos.size() )
+            return true;
+
+        VisitVehicle(v, world->_vhclProtos[obj.Id]);
+    }
+    else if ( obj.Kind == KIND_WEAPON )
+    {
+        if ( obj.Id >= world->_weaponProtos.size() )
+            return true;
+
+        VisitWeapon(v, world->_weaponProtos[obj.Id]);
+    }
+    else if ( obj.Kind == KIND_BUILDING )
+    {
+        if ( obj.Id >= world->_buildProtos.size() )
+            return true;
+
+        VisitBuilding(v, world->_buildProtos[obj.Id]);
+    }
+    else
+    {
+        units.at(obj.Id)->VisitState(v);
+    }
+
+    if ( !v.ReadAll() )
+    {
+        ypa_log_out("State: %s doesn't read back\n", ObjectName(obj).c_str());
+        return false;
+    }
+
+    return true;
+}
+
+static bool HasWorld(const Image &image)
+{
+    if ( image.Objects.empty() || image.Objects[0].Kind != KIND_WORLD )
+    {
+        ypa_log_out("State: no world in the image\n");
+        return false;
+    }
+
+    return true;
+}
+
+// Reads the objects of the images, each of a part, in that order, into the
+// level loaded anew
+static bool RestoreParts(NC_STACK_ypaworld *world, const std::vector<std::pair<Part, const Image *>> &parts, bool campaign)
+{
+    const Image &first = *parts.front().second;
+
+    if ( !HasWorld(first) )
+        return false;
+
+    if ( !world->LoadLevelData(first.Level) )
+    {
+        ypa_log_out("State: can't load level %d\n", first.Level);
+        return false;
+    }
+
+    std::map<uint32_t, NC_STACK_ypabact *> units;
+
+    if ( !MakeUnits(world, parts, units) )
+    {
+        world->DeleteLevel();
+        return false;
+    }
+
     for ( const auto &part : parts )
     {
         for ( const Object &obj : part.second->Objects )
         {
-            Visitor v(Visitor::READ, world, part.first);
-            v.SetUnits(&units);
-            v.SetData(&obj.Data);
-
-            if ( obj.Kind == KIND_WORLD )
+            if ( !ReadObject(world, units, part.first, obj, campaign) )
             {
-                world->VisitState(v);
-            }
-            else if ( obj.Kind == KIND_CAMPAIGN )
-            {
-                if ( !campaign )
-                    continue;
-
-                VisitCampaign(v, world);
-            }
-            else if ( obj.Kind == KIND_SECTOR )
-            {
-                if ( obj.Id >= world->_cells.size() )
-                    continue;
-
-                VisitSector(v, world, world->_cells.At(obj.Id), world->_energyAccumMap.At(obj.Id));
-            }
-            else if ( obj.Kind == KIND_SUPERITEM )
-            {
-                if ( obj.Id >= world->_levelInfo.SuperItems.size() )
-                    continue;
-
-                VisitSuperItem(v, world->_levelInfo.SuperItems[obj.Id]);
-            }
-            else if ( obj.Kind == KIND_VEHICLE )
-            {
-                if ( obj.Id >= world->_vhclProtos.size() )
-                    continue;
-
-                VisitVehicle(v, world->_vhclProtos[obj.Id]);
-            }
-            else if ( obj.Kind == KIND_WEAPON )
-            {
-                if ( obj.Id >= world->_weaponProtos.size() )
-                    continue;
-
-                VisitWeapon(v, world->_weaponProtos[obj.Id]);
-            }
-            else if ( obj.Kind == KIND_BUILDING )
-            {
-                if ( obj.Id >= world->_buildProtos.size() )
-                    continue;
-
-                VisitBuilding(v, world->_buildProtos[obj.Id]);
-            }
-            else
-            {
-                units[obj.Id]->VisitState(v);
-            }
-
-            if ( !v.ReadAll() )
-            {
-                ypa_log_out("State: %s doesn't read back\n", ObjectName(obj).c_str());
                 world->DeleteLevel();
                 return false;
             }
         }
     }
 
-    world->FinishRestore();
+    world->FinishRestore(false);
     return true;
 }
 
@@ -1436,6 +1471,94 @@ bool Restore(NC_STACK_ypaworld *world, const Image &view, const Image &internal,
 {
     return RestoreParts(world, {{PART_VIEW, &view}, {PART_INTERNAL, &internal}}, campaign);
 }
+
+InPlaceRestore::InPlaceRestore(NC_STACK_ypaworld *world, Image &&view, Image &&internal)
+: _world(world), _view(std::move(view)), _internal(std::move(internal))
+{
+}
+
+std::vector<std::pair<Part, const Image *>> InPlaceRestore::Parts() const
+{
+    return {{PART_VIEW, &_view}, {PART_INTERNAL, &_internal}};
+}
+
+bool InPlaceRestore::Work(double ms)
+{
+    uint64_t start = System::PerfStats::Now();
+
+    while ( _phase != DONE )
+    {
+        switch ( _phase )
+        {
+        case CLEAR:
+            if ( !HasWorld(_view) || _view.Level != _world->_levelInfo.LevelID )
+            {
+                ypa_log_out("State: can't go back to level %d in level %d\n", _view.Level, _world->_levelInfo.LevelID);
+                _failed = true;
+                _phase = DONE;
+                break;
+            }
+
+            _world->ClearForRestore();
+            _phase = FREE_UNITS;
+            break;
+
+        case FREE_UNITS:
+            if ( _world->FreeSomeUnits(16) )
+                _phase = MAKE_UNITS;
+            break;
+
+        case MAKE_UNITS:
+            _failed = !MakeUnits(_world, Parts(), _units);
+            _phase = _failed ? DONE : READ;
+            break;
+
+        case READ:
+        {
+            std::vector<std::pair<Part, const Image *>> parts = Parts();
+
+            for (int n = 0; n < 256 && _part < parts.size(); n++)
+            {
+                const std::vector<Object> &objects = parts[_part].second->Objects;
+
+                if ( _object >= objects.size() )
+                {
+                    _part++;
+                    _object = 0;
+                    continue;
+                }
+
+                if ( !ReadObject(_world, _units, parts[_part].first, objects[_object], false) )
+                {
+                    _failed = true;
+                    _phase = DONE;
+                    break;
+                }
+
+                _object++;
+            }
+
+            if ( _phase == READ && _part >= parts.size() )
+                _phase = FINISH;
+        }
+            break;
+
+        case FINISH:
+            _world->FinishRestore(true);
+            _phase = DONE;
+            break;
+
+        case DONE:
+            break;
+        }
+
+        if ( System::PerfStats::TicksToMs(System::PerfStats::Now() - start) >= ms )
+            break;
+    }
+
+    return _phase == DONE;
+}
+
 
 }
 }

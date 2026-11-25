@@ -355,11 +355,9 @@ int ProcessGameplayFrame(int32_t frameTicks, bool timeFrozen)
     break;
 
     case TLevelInfo::STATE_REWIND:
-    {
+        // Going back starts with the next frame
         ypaworld->RewindLevel();
-        Input::Engine.QueryInput(&input_states);
-    }
-    break;
+        break;
 
     default:
         break;

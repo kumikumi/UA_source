@@ -254,6 +254,42 @@ Schema MakeSchema(NC_STACK_ypaworld *world, Part part = PART_ALL);
 bool Restore(NC_STACK_ypaworld *world, const Image &image);
 bool Restore(NC_STACK_ypaworld *world, const Image &view, const Image &internal, bool campaign);
 
+// The same for the level being played, in place, a slice at a time while
+// the game shows something else, as going back does: what the level is made
+// of (its set, sky, maps, fillers and interface's art) stays, and only what
+// the state holds is read back, not the campaign's. Until it's done the
+// level is neither whole nor to be stepped, drawn from or saved.
+class InPlaceRestore
+{
+public:
+    InPlaceRestore(NC_STACK_ypaworld *world, Image &&view, Image &&internal);
+
+    // Goes on for about that many milliseconds. True once done, then failed
+    // or not (after logging why; the level is then not whole).
+    bool Work(double ms);
+    bool Failed() const { return _failed; }
+
+protected:
+    enum Phase
+    {
+        CLEAR,      // What isn't kept goes, but the units
+        FREE_UNITS, // A few at a time
+        MAKE_UNITS, // Every unit of the images
+        READ,       // Objects a few hundred at a time
+        FINISH,     // What's worked out from the state
+        DONE,
+    };
+
+    std::vector<std::pair<Part, const Image *>> Parts() const;
+
+    NC_STACK_ypaworld *_world;
+    Image _view, _internal;
+    Phase _phase = CLEAR;
+    std::map<uint32_t, NC_STACK_ypabact *> _units;
+    size_t _part = 0, _object = 0;
+    bool _failed = false;
+};
+
 // A hash of the whole state
 uint64_t Hash(const Image &image);
 

@@ -587,6 +587,10 @@ static const size_t RewindFrames = 2 * World::Recorder::BlockSteps + RewindMinSt
 // How many times as fast as the game goes on the rewind goes back
 static const double RewindSpeed = 4.0;
 
+// How long restoring the level goes on in each frame while going back, in
+// milliseconds
+static const double RestoreSliceMs = 2.0;
+
 // What the step left to draw
 void NC_STACK_ypaworld::AddFrame()
 {
@@ -724,7 +728,11 @@ void NC_STACK_ypaworld::RenderFrame(TUpdateArgs *arg, float stepFraction)
                 yw_NetDrawStats(this);
         }
 
-        debug_info_draw(arg->Input);
+        // The debug page reads the level, which isn't whole while it goes
+        // back
+        if ( !_rewinding )
+            debug_info_draw(arg->Input);
+
         DrawPerfOverlay(arg->Input);
 
         GFX::Engine.EndFrame();
@@ -2001,6 +2009,10 @@ void NC_STACK_ypaworld::FindUnitOnRay(TUnitRayQuery *arg)
 
 void NC_STACK_ypaworld::DeleteLevel()
 {
+    // The recording already went back: so does the level
+    if ( _rewinding )
+        EndRewind();
+
     // With the end's state, before anything of the level goes
     std::string recorded = _recorder.Stop(this);
 
@@ -2095,6 +2107,43 @@ void NC_STACK_ypaworld::FreeLevel()
         _skyObject = NULL;
     }
 
+    FreeUnits();
+
+    // The next level is drawn once its first step has left a frame
+    TF::Engine.SetViewPoint(NULL);
+    _stepped = false;
+    _rewinding = false;
+    _rewindRestore.reset();
+    _frames.Clear();
+    _frameMaker.reset();
+    _cameraOverridden = false;
+    FreeDrawings();
+
+    ProtosFreeSounds();
+
+    FreeSetData(this);
+
+    _powerStations.clear();
+    _energyAccumMap.Clear();
+
+    _lvlTypeMap.Clear();
+    _lvlOwnMap.Clear();
+    _lvlBuildingsMap.Clear();
+    _lvlHeightMap.Clear();
+
+    if ( _GameShell )
+        _GameShell->samples1_info.Position = vec3d();
+
+    if ( _gameWasNetGame )
+    {
+        LoadProtosScript(_initScriptFilePath);
+    }
+}
+
+
+// Every unit of the level goes, those waiting in the dead cache too
+void NC_STACK_ypaworld::FreeUnits()
+{
     int plowner;
     if ( _userRobo )
         plowner = _userRobo->_owner;
@@ -2130,37 +2179,60 @@ void NC_STACK_ypaworld::FreeLevel()
     // NetRemove can fill deadcache, so clean it again
     while ( !_deadCacheList.empty() )
         _deadCacheList.front()->Delete();
-
-    // The next level is drawn once its first step has left a frame
-    TF::Engine.SetViewPoint(NULL);
-    _stepped = false;
-    _rewinding = false;
-    _frames.Clear();
-    _frameMaker.reset();
-    _cameraOverridden = false;
-    FreeDrawings();
-
-    ProtosFreeSounds();
-
-    FreeSetData(this);
-
-    _powerStations.clear();
-    _energyAccumMap.Clear();
-
-    _lvlTypeMap.Clear();
-    _lvlOwnMap.Clear();
-    _lvlBuildingsMap.Clear();
-    _lvlHeightMap.Clear();
-
-    if ( _GameShell )
-        _GameShell->samples1_info.Position = vec3d();
-
-    if ( _gameWasNetGame )
-    {
-        LoadProtosScript(_initScriptFilePath);
-    }
 }
 
+// The same, up to count of them at a time, in a single-player level only.
+// True when none are left.
+bool NC_STACK_ypaworld::FreeSomeUnits(size_t count)
+{
+    for (size_t i = 0; i < count; i++)
+    {
+        World::RefBactList &list = _deadCacheList.empty() ? _unitsList : _deadCacheList;
+
+        if ( list.empty() )
+            return true;
+
+        list.front()->Delete();
+    }
+
+    return _deadCacheList.empty() && _unitsList.empty();
+}
+
+// What the player pointed at and was doing with the controls goes, as the
+// units it may refer to do
+void NC_STACK_ypaworld::ResetControls()
+{
+    _cellOnMouse = 0;
+    _bactOnMouse = NULL;
+    _bactPrevClicked = 0;
+    _makingWaypointsMode = false;
+    _gamePaused = false;
+    _gamePausedTimeStamp = 0;
+    _joyIgnoreX = 1;
+    _joyIgnoreY = 1;
+    _joyIgnoreZ = 0;
+    _helpURL.clear();
+    _prevUnitId = 0;
+    _fireBtnIsDown = false;
+    _fireBtnDownHappen = false;
+    _lastMsgSender = NULL;
+    _cmdrsRemap.clear();
+    _activeCmdrRemapIndex = -1;
+    _guiVisor.target = NULL;
+}
+
+// Before the level's state is read back in place (State::InPlaceRestore),
+// which then frees the units: what refers to them goes, but not what the
+// level is made of (its set, sky, maps and fillers), as when it is loaded
+// anew
+void NC_STACK_ypaworld::ClearForRestore()
+{
+    GUI_Close();
+    _voiceMessage.Reset();
+    ResetControls();
+    _particles.Clear();
+    _stepped = false;
+}
 
 void NC_STACK_ypaworld::SetHudVisor(THudVisor *arg)
 {
@@ -5933,49 +6005,38 @@ bool NC_STACK_ypaworld::RestartLevel()
 // there. False when there's none.
 bool NC_STACK_ypaworld::RewindLevel()
 {
+    _levelInfo.State = TLevelInfo::STATE_PLAYING;
+
     World::State::Image view, internal;
-    TInfoMessage msg;
-    msg.unit = NULL;
-    msg.Priority = 10;
-    msg.MsgID = 0;
 
     if ( !_recorder.Rewind(RewindMinSteps, view, internal) )
     {
-        _levelInfo.State = TLevelInfo::STATE_PLAYING;
-
+        TInfoMessage msg;
+        msg.unit = NULL;
+        msg.Priority = 10;
+        msg.MsgID = 0;
         msg.txt = Locale::Text::Feedback(Locale::FEEDBACK_NOREWIND);
         ShowMessage(&msg);
         return false;
     }
 
-    // The frames of the steps gone back over, to go back through as they
-    // were drawn
-    World::Frames gone = std::move(_frames);
+    _rewindTarget = _recorder.Step();
 
-    FreeLevel();
+    // Going back is drawn from the frames kept: meanwhile, the level is
+    // restored as it was then, a slice at a time. What moves only as it's
+    // drawn goes, and the sound's shaking stops.
+    _rewindRestore.reset(new World::State::InPlaceRestore(this, std::move(view), std::move(internal)));
+    _particles.Clear();
+    _cameraShake = mat3x3::Ident();
 
-    if ( !World::State::Restore(this, view, internal, false) )
+    if ( !_frames.Empty() && _frames.Last().Step > _rewindTarget )
     {
-        ypa_log_out("Could not go back in the level\n");
-        return false;
-    }
-
-    _rewindTarget = _framesElapsed;
-
-    if ( !gone.Empty() && gone.Last().Step > _rewindTarget )
-    {
-        _frames = std::move(gone);
         _rewindPosition = std::min(_drawnStep, (double)_frames.Last().Step);
         _rewinding = true;
-    }
-    else
-    {
-        EndRewind();
+        return true;
     }
 
-    // Shaking is the sound's, which stands still meanwhile
-    _cameraShake = mat3x3::Ident();
-    return true;
+    return EndRewind();
 }
 
 // Goes on back through the frames of the steps the level was rewound over,
@@ -5988,19 +6049,38 @@ void NC_STACK_ypaworld::PlayRewind(double realSteps)
 
     _rewindPosition -= realSteps * RewindSpeed;
 
+    _rewindRestore->Work(RestoreSliceMs);
+
     // Going back over steps without frames, it ends where they do
     if ( _rewindPosition <= _rewindTarget || _rewindPosition <= _frames.First().Step )
         EndRewind();
 }
 
-// Back at the step the level was rewound to, where it goes on. It's drawn
-// there without the interface until it steps on.
-void NC_STACK_ypaworld::EndRewind()
+// Back at the step the level was rewound to: the level is restored there,
+// in place, and goes on. It's drawn there without the interface until it
+// steps on.
+bool NC_STACK_ypaworld::EndRewind()
 {
     _rewinding = false;
     _rewindPosition = _rewindTarget;
 
-    // The frames kept end with the step's, the level as it was restored
+    // What's left of restoring the level
+    _rewindRestore->Work(std::numeric_limits<double>::infinity());
+    bool restored = !_rewindRestore->Failed();
+    _rewindRestore.reset();
+
+    if ( !restored )
+    {
+        ypa_log_out("Could not go back in the level\n");
+        _levelInfo.State = TLevelInfo::STATE_ABORTED;
+        return false;
+    }
+
+    // Drawing starts over with the restored level's units: their particles'
+    // emitters as when new
+    FreeDrawings();
+
+    // The frames kept end with the step's
     _frames.DropAfter(_rewindTarget);
 
     if ( _frames.Empty() || _frames.Last().Step != _rewindTarget )
@@ -6015,6 +6095,7 @@ void NC_STACK_ypaworld::EndRewind()
     msg.MsgID = 0;
     msg.txt = Locale::Text::Feedback(Locale::FEEDBACK_REWOUND);
     ShowMessage(&msg);
+    return true;
 }
 
 // A won level's end, to play the level again from there; the player's host
@@ -6155,7 +6236,7 @@ void NC_STACK_ypaworld::GiveUnitAssets(NC_STACK_ypabact *unit)
     }
 }
 
-void NC_STACK_ypaworld::FinishRestore()
+void NC_STACK_ypaworld::FinishRestore(bool inPlace)
 {
     // As setYW_userHostStation sets it for a level started anew
     _playerOwner = _userRobo ? _userRobo->_owner : 0;
@@ -6172,7 +6253,12 @@ void NC_STACK_ypaworld::FinishRestore()
     }
 
     CountUnitsPerOwner();
-    PrepareAllFillers();
+
+    // Restored in place, the fillers made for the sectors as they were are
+    // made again as they're drawn
+    if ( !inPlace )
+        PrepareAllFillers();
+
     GUI_Open(this);
 }
 
