@@ -14,7 +14,6 @@
 #include "system/inivals.h"
 #include "system/perf.h"
 
-extern uint32_t bact_id;
 
 
 NC_STACK_bitmap * loadDisk_screen(NC_STACK_ypaworld *yw)
@@ -151,7 +150,12 @@ int NC_STACK_ypaworld::LevelCommonLoader(TLevelDescription *mapp, int levelID)
     _msgTimestampEnemySector = 0;
     _msgTimestampGates = 0;
     _msgTimestampPSUnderAtk = 0;
+    _lastRoboMessages.fill(TLastRoboMessage());
+    _lastEnemyHostFoundMsgTime.fill(0);
     _framesElapsed = 0;
+
+    _nextUnitId = World::CVFirstUnitId;
+    _nextCommandId = 1;
 
     _levelInfo.LevelID = levelID;
     _levelInfo.State = TLevelInfo::STATE_PLAYING;
@@ -1439,12 +1443,12 @@ NC_STACK_ypabact *NC_STACK_ypaworld::yw_createUnit( int model_id)
 
     bacto->Renew(); // Reset bact
 
-    bacto->_gid = bact_id;
+    bacto->_gid = _nextUnitId;
     bacto->_owner = 0;
 
     bacto->_rotation = mat3x3::Ident();
 
-    bact_id++;
+    _nextUnitId++;
 
     return bacto;
 }
@@ -2057,11 +2061,10 @@ void NC_STACK_ypaworld::PlaceBuilding(const Common::Point &cellId, int ownerid2,
             {
                 NC_STACK_ypagun *commander = NULL;
 
-                int commandId = robo->getROBO_commCount();
-
-                commandId++;
-
-                robo->setROBO_commCount(commandId);
+                // TODO(bug): The guns take the id after the next one and leave
+                // it as the next, so the next new squad gets the same id
+                _nextCommandId++;
+                int commandId = _nextCommandId;
 
                 for ( size_t i = 0; i < bld->Guns.size(); i++)
                 {

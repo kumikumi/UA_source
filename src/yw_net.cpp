@@ -17,7 +17,6 @@
 #define C_2PI_127       0.04947390005653217698   // (2PI / 127)
 #define C_127_2PI       20.21267777267070764265  // (127 / 2PI)
 
-extern uint32_t bact_id;
 extern char **ypaworld__string_pointers;
 
 
@@ -3615,8 +3614,6 @@ bool NC_STACK_ypaworld::yw_NetSetHostStations(const std::vector<MapRobo> &Robos)
 
 size_t NC_STACK_ypaworld::CreateNetLevel(TLevelLoadRequest *arg)
 {
-    bact_id = 0x10000;
-    
     _particles.Clear();
 
     TLevelDescription proto;

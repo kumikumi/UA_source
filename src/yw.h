@@ -1768,6 +1768,15 @@ struct TUnitRayQuery
 
 struct TRenderingSector;
 
+// The last of a message a host station reported
+struct TLastRoboMessage
+{
+    int param1 = 0;
+    int param2 = 0;
+    int param3 = 0;
+    int lastTime = 0;
+};
+
 // How far the world is drawn around the viewer. Any of the limits can be
 // lifted: SectorRadius with ALL_SECTORS, the distances with UNLIMITED.
 struct TViewDistance
@@ -2373,6 +2382,11 @@ public:
     NC_STACK_base *_setData = NULL;
     World::RefBactList _unitsList;
     World::RefBactList _deadCacheList;
+
+    // The ids the next new unit and the next new squad get, counted from the
+    // level's start
+    uint32_t _nextUnitId = World::CVFirstUnitId;
+    int32_t _nextCommandId = 1;
     std::vector<NC_STACK_base *> _vhclModels;
     std::array<TLego, 256> _legoArray; 
     std::array<TSubSectorDesc, 256> _subSectorArray;
@@ -2479,6 +2493,12 @@ public:
     uint32_t _msgTimestampHSReturn = 0;
     uint32_t _msgTimestampEnemySector = 0;
     uint32_t _msgTimestampPSUnderAtk = 0;
+
+    // What host stations last reported of each message, and when they last
+    // reported finding each owner's host station, to not repeat themselves.
+    // Shared by all host stations, timed by the clock of whichever reports.
+    std::array<TLastRoboMessage, 100> _lastRoboMessages;
+    std::array<int32_t, World::CVFractionsCount> _lastEnemyHostFoundMsgTime;
     
     uint32_t _vehicleTakenControlTimestamp = 0;
     uint32_t _vehicleTakenCommandId = 0;

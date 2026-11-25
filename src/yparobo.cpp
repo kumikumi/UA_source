@@ -12,13 +12,6 @@
 #include <math.h>
 
 
-
-int nextCommandID = 1;
-
-TLastRoboMessage lastRoboMsgByType[100];
-int lastEnemyHostFoundMsgTime[8];
-
-
 const std::array<Common::Point, 8> NearDxy 
 {{
     {-1, -1}, {0, -1}, {1, -1}, {-1, 0},
@@ -194,10 +187,6 @@ size_t NC_STACK_yparobo::SetParameters(IDVList &stak)
 
             case ROBO_ATT_EP_SAFETY:
                 setROBO_epSafety(val.Get<int32_t>());
-                break;
-
-            case ROBO_ATT_COMM_COUNT:
-                setROBO_commCount(val.Get<int32_t>());
                 break;
 
             case ROBO_ATT_BATT_VEHICLE:
@@ -1416,8 +1405,8 @@ void NC_STACK_yparobo::doUserCommands(update_msg *arg)
                 newbact->SetState(&stateMsg);
 
                 newbact->_scale_time = newbact->_energy_max * 0.2;
-                newbact->_commandID = nextCommandID;
-                nextCommandID++;
+                newbact->_commandID = _world->_nextCommandId;
+                _world->_nextCommandId++;
 
                 newbact->_owner = _owner;
                 AddSubject(newbact);
@@ -2474,8 +2463,8 @@ NC_STACK_ypabact *NC_STACK_yparobo::AllocForce(robo_loct1 *arg)
         if ( !newUnit )
             return NULL;
 
-        newUnit->_commandID = nextCommandID;
-        nextCommandID++;
+        newUnit->_commandID = _world->_nextCommandId;
+        _world->_nextCommandId++;
 
         newUnit->_owner = _owner;
         newUnit->_host_station = this;
@@ -5217,9 +5206,9 @@ void NC_STACK_yparobo::Renew()
     
     _roboAttackers.fill( TRoboAttackSlot() );
 
-    _commandID = nextCommandID;
+    _commandID = _world->_nextCommandId;
 
-    nextCommandID++;
+    _world->_nextCommandId++;
 
     setBACT_yourLastSeconds(3000);
 
@@ -5519,7 +5508,7 @@ bool NC_STACK_yparobo::MakeSquad(const std::vector<int> &VhclIDS, vec3d pos, boo
         squad_commander->_status_flg |= BACT_STFLAG_UNUSE;
 
     squad_commander->_owner = _owner;
-    squad_commander->_commandID = nextCommandID;
+    squad_commander->_commandID = _world->_nextCommandId;
     squad_commander->_host_station = this;
     squad_commander->_aggr = 60;
 
@@ -5562,14 +5551,14 @@ bool NC_STACK_yparobo::MakeSquad(const std::vector<int> &VhclIDS, vec3d pos, boo
             next_bact->_status_flg |= BACT_STFLAG_UNUSE;
 
         next_bact->_owner = _owner;
-        next_bact->_commandID = nextCommandID;
+        next_bact->_commandID = _world->_nextCommandId;
         next_bact->_host_station = this;
         next_bact->_aggr = 60;
 
         next_bact->SetState(&stateMsg);
     }
 
-    nextCommandID++;
+    _world->_nextCommandId++;
 
     AddSubject(squad_commander);  //Add squad commander into robo list
 
@@ -5598,15 +5587,15 @@ int NC_STACK_yparobo::ShouldPlaceMessage(TRoboMessage *arg)
     case 2:
     case 3:
     case 4:
-        if ( arg->param1 == lastRoboMsgByType[ arg->msgID ].param1 && arg->param2 == lastRoboMsgByType[ arg->msgID ].param2 )
+        if ( arg->param1 == _world->_lastRoboMessages[ arg->msgID ].param1 && arg->param2 == _world->_lastRoboMessages[ arg->msgID ].param2 )
             shouldPlace = 0;
         else
             shouldPlace = 1;
         break;
 
     case 6:
-        shouldPlace = (_clock - lastEnemyHostFoundMsgTime[ arg->param1 ] > 45000) || lastEnemyHostFoundMsgTime[ arg->param1 ] == 0;
-        lastEnemyHostFoundMsgTime[ arg->param1 ] = _clock;
+        shouldPlace = (_clock - _world->_lastEnemyHostFoundMsgTime[ arg->param1 ] > 45000) || _world->_lastEnemyHostFoundMsgTime[ arg->param1 ] == 0;
+        _world->_lastEnemyHostFoundMsgTime[ arg->param1 ] = _clock;
         break;
 
     case 7:
@@ -5624,7 +5613,7 @@ int NC_STACK_yparobo::ShouldPlaceMessage(TRoboMessage *arg)
     case 9:
     case 10:
     case 13:
-        if ( arg->param1 == lastRoboMsgByType[arg->msgID].param1 )
+        if ( arg->param1 == _world->_lastRoboMessages[arg->msgID].param1 )
             shouldPlace = 0;
         else
             shouldPlace = 1;
@@ -5645,9 +5634,9 @@ int NC_STACK_yparobo::ShouldPlaceMessage(TRoboMessage *arg)
 
     case 18:
     case 40:
-        if ( (_clock - lastRoboMsgByType[ arg->msgID ].lastTime) > arg->param1 )
+        if ( (_clock - _world->_lastRoboMessages[ arg->msgID ].lastTime) > arg->param1 )
         {
-            lastRoboMsgByType[ arg->msgID ].lastTime = _clock;
+            _world->_lastRoboMessages[ arg->msgID ].lastTime = _clock;
             shouldPlace = 1;
         }
         else
@@ -5661,9 +5650,9 @@ int NC_STACK_yparobo::ShouldPlaceMessage(TRoboMessage *arg)
 
     if ( shouldPlace )
     {
-        lastRoboMsgByType[arg->msgID].param1 = arg->param1;
-        lastRoboMsgByType[arg->msgID].param2 = arg->param2;
-        lastRoboMsgByType[arg->msgID].param3 = arg->param3;
+        _world->_lastRoboMessages[arg->msgID].param1 = arg->param1;
+        _world->_lastRoboMessages[arg->msgID].param2 = arg->param2;
+        _world->_lastRoboMessages[arg->msgID].param3 = arg->param3;
     }
 
     return shouldPlace;
@@ -5885,10 +5874,10 @@ void NC_STACK_yparobo::setROBO_proto(World::TRoboProto *proto)
             }
 
             gun_obj->_owner = _owner;
-            gun_obj->_commandID = nextCommandID;
+            gun_obj->_commandID = _world->_nextCommandId;
             gun_obj->_host_station = this;
 
-            nextCommandID++;
+            _world->_nextCommandId++;
 
             if ( _world->_isNetGame )
             {
@@ -5941,11 +5930,6 @@ void NC_STACK_yparobo::setROBO_epPower(int ep)
 void NC_STACK_yparobo::setROBO_epSafety(int ep)
 {
     _roboEpSafety = ep;
-}
-
-void NC_STACK_yparobo::setROBO_commCount(int comm)
-{
-    nextCommandID = comm;
 }
 
 void NC_STACK_yparobo::setROBO_battVehicle(int batt)
@@ -6067,11 +6051,6 @@ int NC_STACK_yparobo::getROBO_epPower()
 int NC_STACK_yparobo::getROBO_epSafety()
 {
     return _roboEpSafety;
-}
-
-int NC_STACK_yparobo::getROBO_commCount()
-{
-    return nextCommandID;
 }
 
 int NC_STACK_yparobo::getROBO_battVehicle()

@@ -12,7 +12,7 @@ namespace Parsers
 class SaveBact
 {
 protected:
-    bool SaveBactParser(ScriptParser::Parser &parser, NC_STACK_ypabact *b, const std::string &p1, const std::string &p2);
+    bool SaveBactParser(ScriptParser::Parser &parser, NC_STACK_ypaworld &world, NC_STACK_ypabact *b, const std::string &p1, const std::string &p2);
 
     static NC_STACK_ypabact *_lastCommander;
     static NC_STACK_yparobo *_lastRobo;

@@ -13,9 +13,6 @@
 #include "log.h"
 
 
-int ypabact_id = 1;
-
-
 NC_STACK_ypabact::NC_STACK_ypabact()
 : _kidList(this, GetKidRefNode, World::BLIST_KIDS)
 {
@@ -147,7 +144,7 @@ size_t NC_STACK_ypabact::Init(IDVList &stak)
     _kidList.clear();
     _missiles_list.clear();
 
-    _gid = ypabact_id;
+    _gid = 0;
     _bact_type = BACT_TYPES_BACT;
 //    ypabact.field_3DA = 0;
     _host_station = NULL;
@@ -157,10 +154,6 @@ size_t NC_STACK_ypabact::Init(IDVList &stak)
     _target_vec = vec3d(0.0, 0.0, 0.0);
     
     //_kidRef.bact = this;
-
-
-
-    ypabact_id++;
 
     _rotation = _viewer_rotation;
 
@@ -6048,11 +6041,8 @@ void NC_STACK_ypabact::ReorganizeGroup(TReorgOrder *arg)
                 {
                     if ( _host_station != _parent && _host_station )
                     {
-                        int nextCommandId = _host_station->getROBO_commCount();
-
-                        _commandID = nextCommandId;
-
-                        _host_station->setROBO_commCount(nextCommandId + 1);
+                        _commandID = _world->_nextCommandId;
+                        _world->_nextCommandId++;
                     }
                     NetBroadcastReorder(this, 2);
                 }
@@ -6080,13 +6070,12 @@ void NC_STACK_ypabact::ReorganizeGroup(TReorgOrder *arg)
                 _host_station->AddSubject(this);
             }
 
-            int nextCommandId = _host_station->getROBO_commCount();
-            _commandID = nextCommandId;
+            _commandID = _world->_nextCommandId;
 
             if (_world->_isNetGame)
                 _commandID |= _owner << 24;
 
-            _host_station->setROBO_commCount(nextCommandId + 1);
+            _world->_nextCommandId++;
             NetBroadcastReorder(this, 3);
         }
         break;

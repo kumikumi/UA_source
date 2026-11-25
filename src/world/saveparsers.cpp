@@ -8,7 +8,6 @@
 
 
 extern uint32_t maxLoadedCommandID;
-extern uint32_t bact_id;
 
 namespace World
 {
@@ -185,7 +184,7 @@ bool SaveRoboParser::RoboParser(ScriptParser::Parser &parser, const std::string 
 }
 
 
-bool SaveBact::SaveBactParser(ScriptParser::Parser &parser, NC_STACK_ypabact *b, const std::string &p1, const std::string &p2)
+bool SaveBact::SaveBactParser(ScriptParser::Parser &parser, NC_STACK_ypaworld &world, NC_STACK_ypabact *b, const std::string &p1, const std::string &p2)
 {
     if ( !StriCmp(p1, "viewer") )
     {
@@ -229,9 +228,9 @@ bool SaveBact::SaveBactParser(ScriptParser::Parser &parser, NC_STACK_ypabact *b,
     {
         b->_gid = parser.stoi(p2);
 
-        if ( bact_id < b->_gid )
+        if ( world._nextUnitId < b->_gid )
         {
-            bact_id = b->_gid;
+            world._nextUnitId = b->_gid;
         }
     }
     else if ( !StriCmp(p1, "primary") )
@@ -427,7 +426,7 @@ int SaveRoboParser::Handle(ScriptParser::Parser &parser, const std::string &p1, 
         return ScriptParser::RESULT_SCOPE_END;
     }
 
-    if ( SaveBactParser(parser, _r, p1, p2) || RoboParser(parser, p1, p2) )
+    if ( SaveBactParser(parser, _o, _r, p1, p2) || RoboParser(parser, p1, p2) )
         return ScriptParser::RESULT_OK;
 
     return ScriptParser::RESULT_UNKNOWN;
@@ -480,7 +479,7 @@ int SaveSquadParser::Handle(ScriptParser::Parser &parser, const std::string &p1,
     if ( !StriCmp(p1, "end") )
         return ScriptParser::RESULT_SCOPE_END;
 
-    if ( SaveBactParser(parser, _c, p1, p2) )
+    if ( SaveBactParser(parser, _o, _c, p1, p2) )
         return ScriptParser::RESULT_OK;
 
     return ScriptParser::RESULT_UNKNOWN;

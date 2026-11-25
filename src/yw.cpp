@@ -37,7 +37,6 @@ int bottomThirdBtnPosX;
 
 GuiList briefingTextList;
 
-uint32_t bact_id = 0x10000;
 
 // method 169
 uint32_t maxLoadedCommandID;
@@ -5895,7 +5894,6 @@ size_t NC_STACK_ypaworld::LoadGame(const std::string &saveFile)
     _levelInfo.OwnerMask = 0;
     _levelInfo.UserMask = 0;
 
-    bact_id = 0x10000;
     maxLoadedCommandID = 0;
 
     InitSuperItems();
@@ -5907,12 +5905,8 @@ size_t NC_STACK_ypaworld::LoadGame(const std::string &saveFile)
         return 0;
 
     maxLoadedCommandID++;
-    bact_id++;
-
-    // TODO(bug): Without a user robo, nextCommandID keeps its value from before
-    // the load.
-    if ( _userRobo )
-        dynamic_cast<NC_STACK_yparobo *>(_userRobo) ->setROBO_commCount(maxLoadedCommandID);
+    _nextUnitId++;
+    _nextCommandId = maxLoadedCommandID;
 
     LoadingUnitsRefresh();
 

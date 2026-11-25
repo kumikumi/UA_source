@@ -36,14 +36,6 @@ struct TRoboMessage
     int priority;
 };
 
-struct TLastRoboMessage
-{
-    int param1;
-    int param2;
-    int param3;
-    int lastTime;
-};
-
 struct robo_loct1
 {
     int energ;
@@ -130,7 +122,6 @@ public:
         ROBO_ATT_EP_RADAR = 0x80002004,
         ROBO_ATT_EP_POWER = 0x80002005,
         ROBO_ATT_EP_SAFETY = 0x80002006,
-        ROBO_ATT_COMM_COUNT = 0x80002007,
         ROBO_ATT_BATT_VEHICLE = 0x80002008,
         ROBO_ATT_BATT_BUILDING = 0x80002009,
         ROBO_ATT_BATT_BEAM = 0x8000200A,
@@ -164,7 +155,6 @@ public:
     virtual void setROBO_epRadar(int);
     virtual void setROBO_epPower(int);
     virtual void setROBO_epSafety(int);
-    virtual void setROBO_commCount(int);
     virtual void setROBO_battVehicle(int);
     virtual void setROBO_battBeam(int);
     virtual void setROBO_fillMode(int);
@@ -191,7 +181,6 @@ public:
     virtual int getROBO_epRadar();
     virtual int getROBO_epPower();
     virtual int getROBO_epSafety();
-    virtual int getROBO_commCount();
     virtual int getROBO_battVehicle();
     virtual int getROBO_battBeam();
     virtual int getROBO_fillMode();

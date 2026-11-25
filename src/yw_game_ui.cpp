@@ -16,7 +16,6 @@
 #include "world/analyzer.h"
 
 
-extern uint32_t bact_id;
 
 
 
