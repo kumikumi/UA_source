@@ -941,6 +941,46 @@ int FileHandle::printf(const char *format, ...)
     return num;
 }
 
+size_t MemFileHandle::write(const void *buf, size_t num)
+{
+    Data.append((const char *)buf, num);
+    return num;
+}
+
+int MemFileHandle::puts(const std::string &str)
+{
+    Data += str;
+    return str.size();
+}
+
+int MemFileHandle::printf(const char *format, ...)
+{
+    va_list args;
+    va_start(args, format);
+
+    int num = vprintf(format, args);
+
+    va_end(args);
+    return num;
+}
+
+int MemFileHandle::vprintf(const std::string &format, va_list args)
+{
+    va_list sizing;
+    va_copy(sizing, args);
+    int num = vsnprintf(NULL, 0, format.c_str(), sizing);
+    va_end(sizing);
+
+    if ( num <= 0 )
+        return num;
+
+    size_t at = Data.size();
+    Data.resize(at + num + 1);
+    vsnprintf(&Data[at], num + 1, format.c_str(), args);
+    Data.resize(at + num);
+    return num;
+}
+
 int FileHandle::vprintf(const std::string &format, va_list args)
 {
     if (!hndl)

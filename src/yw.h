@@ -1976,6 +1976,10 @@ public:
     virtual size_t BeamUnitThroughGate(NC_STACK_ypabact *pbact);
     virtual size_t LoadGame(const std::string &saveFile);
     virtual size_t SaveGame(const std::string &saveFile);
+
+    // What SaveGame writes, into a file or memory. A final save (.fin), the
+    // won level's end, has no settings, level statuses or history.
+    bool WriteSave(FSMgr::FileHandle *fil, bool isfin_save);
     virtual bool SaveSettings(UserData *usr, const std::string &fileName, uint32_t sdfMask);
     virtual size_t LoadSettings(const std::string &fileName, const std::string &userName, uint32_t sdfMask, bool updateGameShell, bool playIntro = false);
     virtual bool ReloadInput(size_t id);

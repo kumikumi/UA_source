@@ -6179,16 +6179,32 @@ size_t NC_STACK_ypaworld::SaveGame(const std::string &saveFile)
     if ( _GameShell && _GameShell->DirectStart )
         return 1;
 
-    bool write_ok = true;
-
     if ( saveFile.find(".sgm") != std::string::npos || saveFile.find(".SGM") != std::string::npos )
         uaDeleteFile( fmt::sprintf("save:%s/sgisold.txt", _GameShell->UserName) );
+
+    bool isfin_save = saveFile.find(".fin") != std::string::npos || saveFile.find(".FIN") != std::string::npos;
+
+    FSMgr::FileHandle *fil = uaOpenFileAlloc( saveFile, "w");
+
+    if ( !fil )
+    {
+        ypa_log_out("Unable to open savegame file\n");
+        return 0;
+    }
+
+    bool write_ok = WriteSave(fil, isfin_save);
+
+    delete fil;
+    return write_ok;
+}
+
+bool NC_STACK_ypaworld::WriteSave(FSMgr::FileHandle *fil, bool isfin_save)
+{
+    bool write_ok = true;
 
     int write_modifers;
     int write_user;
     int write_level_statuses;
-
-    bool isfin_save = saveFile.find(".fin") != std::string::npos || saveFile.find(".FIN") != std::string::npos;
 
     if ( isfin_save )
     {
@@ -6205,18 +6221,6 @@ size_t NC_STACK_ypaworld::SaveGame(const std::string &saveFile)
         write_user = 1;
     }
     
-    // Force to write last frame timestamp into history
-    if (_historyLastIsTimeStamp)
-        _history.Write( _historyLastFrame.MakeByteArray() );
-
-    FSMgr::FileHandle *fil = uaOpenFileAlloc( saveFile, "w");
-
-    if ( !fil )
-    {
-        ypa_log_out("Unable to open savegame file\n");
-        return 0;
-    }
-
     if ( write_modifers )
     {
         if ( !yw_write_item_modifers(this, fil) )
@@ -6278,7 +6282,6 @@ size_t NC_STACK_ypaworld::SaveGame(const std::string &saveFile)
         }
     }
 
-    delete fil;
     return write_ok;
 }
 

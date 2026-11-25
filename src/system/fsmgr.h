@@ -234,6 +234,36 @@ protected:
     
 };
 
+// A file that is only written, into memory: Data collects what is written,
+// for whatever takes a FileHandle
+class MemFileHandle : public FileHandle
+{
+public:
+    MemFileHandle() { _writeMode = true; }
+
+    std::string Data;
+
+    virtual size_t read(void *, size_t) override { return 0; }
+    virtual size_t write(const void *buf, size_t num) override;
+
+    virtual size_t tell() const override { return Data.size(); }
+    virtual int seek(long int, int) override { return -1; }
+
+    virtual void close() override {}
+
+    virtual char *gets(char *, int) override { return NULL; }
+    virtual int puts(const std::string &str) override;
+#if defined(__GNUC__)
+    __attribute__((format(printf, 2, 3)))
+#endif
+    virtual int printf(const char *format, ...) override;
+    virtual int vprintf(const std::string &format, va_list args) override;
+    virtual bool ReadLine(std::string *) override { return false; }
+
+    virtual bool eof() const override { return true; }
+    virtual bool OK() const override { return true; }
+};
+
 void dumpDir();
 
 

@@ -883,6 +883,22 @@ int yw_write_history(NC_STACK_ypaworld *yw, FSMgr::FileHandle *fil)
         }
     }
 
+    // The timestamp waiting for the next event belongs at the end, as the
+    // last time the history knows; it stays waiting
+    if ( run && yw->_historyLastIsTimeStamp )
+    {
+        Common::ByteArray frame = yw->_historyLastFrame.MakeByteArray();
+
+        if ( buf.size() + frame.size() > BuffSize )
+        {
+            Common::Append(&buf, std::vector<uint8_t>(BuffSize - buf.size(), 0));
+            yw_write_histbuffer(buf, fil);
+            buf.clear();
+        }
+
+        Common::Append(&buf, frame);
+    }
+
     if (buf.size())
     {
         if (BuffSize - buf.size() > 0)
