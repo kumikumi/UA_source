@@ -904,8 +904,6 @@ struct TGameRecorder
     uint32_t bacts_count = 0;
     //int32_t field_34 = 0;
     int32_t ainf_size = 0;
-    int32_t do_record = 0;
-    int32_t frame_timer = 0;
     vec3d camera_pos;
     mat3x3 rotation_matrix;
     int32_t frame_count = 0;
@@ -2285,10 +2283,6 @@ public:
     void recorder_updateObject(NC_STACK_ypabact *bact, trec_bct *oinf, TGameRecorder::TSndState *ssnd, float blend, float periodSec);
     void recorder_set_bact_pos(NC_STACK_ypabact *bact, const vec3d &pos);
     int recorder_go_to_frame(TGameRecorder *rcrd, int wanted_frame_id);
-    void recorder_store_bact(TGameRecorder *rcrd, World::RefBactList &bct_lst);
-    void recorder_store_bact( TGameRecorder *rcrd, World::MissileList &bct_lst);
-    void recorder_world_to_frame(TGameRecorder *rcrd);
-    void recorder_write_frame();
     NC_STACK_ypabact *recorder_newObject(trec_bct *oinf);
     void AdvanceReplay(TGameRecorder *rcrd, int dTime);
     
@@ -2661,7 +2655,6 @@ public:
     int32_t _screenShotSeqFrame = 0; //Screenshoting frame
     
     TGameRecorder *_replayPlayer = NULL; // For play replay
-    TGameRecorder *_replayRecorder = NULL; // For record replay
     
     THudVisor _guiVisor;
     

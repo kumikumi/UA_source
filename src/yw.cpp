@@ -114,12 +114,6 @@ bool NC_STACK_ypaworld::ProtosInit()
     return true;
 }
 
-int yw_InitSceneRecorder(NC_STACK_ypaworld *yw)
-{
-    yw->_replayRecorder = new TGameRecorder();
-    return yw->_replayRecorder != NULL;
-}
-
 void yw_setInitScriptLoc(NC_STACK_ypaworld *yw)
 {
     bool ok = false;
@@ -232,13 +226,6 @@ size_t NC_STACK_ypaworld::Init(IDVList &stak)
     }
 
     _cells.Clear();
-    
-    if ( !yw_InitSceneRecorder(this) )
-    {
-        ypa_log_out("yw_main.c/OM_NEW: init scene recorder failed!\n");
-        Deinit();
-        return 0;
-    }
 
     if ( !InitMapRegionsNet() )
     {
@@ -438,9 +425,6 @@ bool NC_STACK_ypaworld::SimulationStep(TUpdateArgs *arg)
     if ( _doEnergyRecalc )
         DoSectorsEnergyRecalc();
 
-    if ( _replayRecorder->do_record )
-        recorder_update_time(this, arg->DTime);
-
     // The user's unit sets these again as it updates; frames drawn until the
     // next step show them as they are.
     _guiVisor.mgunSight = 0;
@@ -529,9 +513,6 @@ bool NC_STACK_ypaworld::SimulationStep(TUpdateArgs *arg)
     TF::TForm3D *viewPoint = TF::Engine.GetViewPoint();
 
     viewPoint->SclRot = shake * viewPoint->SclRot;
-
-    if ( _replayRecorder->do_record )
-        recorder_write_frame();
 
     CheckEnemySectorEntered(this);
 
@@ -713,7 +694,7 @@ void NC_STACK_ypaworld::RenderFrame(TUpdateArgs *arg, float stepFraction)
         _profileVals[PFID_FRAMETIME] += _profileVals[PFID_RENDERTIME];
     }
 
-    HandleSnapshotKeys(this, arg->Input); // Snaps/ start/stop recording
+    HandleSnapshotKeys(this, arg->Input); // Screenshots
 
     _profileVals[PFID_POLYGONS] = _polysDraw;
 
@@ -2022,11 +2003,7 @@ void NC_STACK_ypaworld::DeleteLevel()
         _gameWasNetGame = false;
     }
 
-    if ( _replayRecorder->do_record )
-        recorder_stoprec(this);
-
     _screenShotSeq = false;
-    _replayRecorder->do_record = 0;
 
     NC_STACK_bitmap *disk = loadDisk_screen(this);
 

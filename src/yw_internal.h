@@ -314,8 +314,6 @@ void CheckEnemySectorEntered(NC_STACK_ypaworld *yw);
 
 void FFeedback_Update(NC_STACK_ypaworld *yw);
 void HandleSnapshotKeys(NC_STACK_ypaworld *yw, TInputState *inpt);
-void recorder_update_time(NC_STACK_ypaworld *yw, int dtime);
-void recorder_write_frame(NC_STACK_ypaworld *yw);
 
 int yw_write_levelnum(NC_STACK_ypaworld *yw, FSMgr::FileHandle *fil);
 void yw_write_ownermap(NC_STACK_ypaworld *yw, FSMgr::FileHandle *fil);
@@ -344,7 +342,6 @@ void TakeScreenshot(NC_STACK_ypaworld *yw);
 int recorder_create_camera(NC_STACK_ypaworld *yw);
 int recorder_go_to_frame(NC_STACK_ypaworld *yw, TGameRecorder *rcrd, int wanted_frame_id);
 int recorder_open_replay(TGameRecorder *rcrd);
-void recorder_stoprec(NC_STACK_ypaworld *yw);
 
 
 void AddChatMessage(NC_STACK_ypaworld *yw, const std::string &sender, const std::string &text);
