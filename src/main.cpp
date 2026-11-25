@@ -49,8 +49,6 @@
 
 
 int tmpSettingsSaved = 0;
-int lastReplayIndex = 0;
-int replayStarted = 0;
 std::string buildDate;
 
 int tform_inited = 0;
@@ -60,8 +58,7 @@ int input_inited = 0;
 enum GAME_SCREEN_MODE {
     GAME_SCREEN_MODE_UNKNOWN = 0,
     GAME_SCREEN_MODE_MENU = 1,
-    GAME_SCREEN_MODE_GAME = 2,
-    GAME_SCREEN_MODE_REPLAY = 3
+    GAME_SCREEN_MODE_GAME = 2
 };
 
 GAME_SCREEN_MODE GameScreenMode;
@@ -277,7 +274,6 @@ int ProcessGameplayFrame(int32_t frameTicks, bool timeFrozen)
         GameScreenMode = GAME_SCREEN_MODE_UNKNOWN;
         world_update_arg.TimeStamp = 0;
 
-        userdata.lastInputEvent = 0;
         userdata.GameIsOver = true;
 
         // Started from the command line: the campaign screen, for the
@@ -345,141 +341,6 @@ int ProcessGameplayFrame(int32_t frameTicks, bool timeFrozen)
     return 1;
 }
 
-std::string PickReplayFile(uint32_t seed)
-{
-    if ( userdata.snaps.empty() )
-        return std::string();
-
-    int replayIndex = seed % userdata.snaps.size();
-
-    // TODO(bug): lastReplayIndex starts at 0, so with several replays the first
-    // pick can never be replay 0.
-    if ( lastReplayIndex == replayIndex )
-    {
-        if ( replayIndex )
-        {
-            replayIndex = replayIndex - 1;
-        }
-        else if ( (userdata.snaps.size() - 1) > 0 )
-        {
-            replayIndex = 1;
-        }
-    }
-
-    lastReplayIndex = replayIndex;
-    return userdata.snaps[replayIndex];
-}
-
-int RunReplay(TUpdateArgs *arg)
-{
-    // TODO(cleanup): replayStarted is set before replay mode starts and never
-    // cleared, so it is always true here.
-    if ( (userdata.p_YW->_replayPlayer->frame_count - 3) <= userdata.p_YW->_replayPlayer->frame_id  &&  replayStarted )
-    {
-        ypaworld->StopReplay();
-
-        if ( !ypaworld->StartReplay( PickReplayFile(arg->TimeStamp) ) )
-        {
-            GameScreenMode = GAME_SCREEN_MODE_MENU;
-
-            Input::Engine.QueryInput(&input_states);
-
-            return 0;
-        }
-
-        replayStarted = 1;
-        GameScreenMode = GAME_SCREEN_MODE_REPLAY;
-    }
-
-    ypaworld->PlayReplayFrame(arg);
-
-    TReplayControl replayControl;
-    replayControl.command = 0;
-    replayControl.frame = 0;
-
-    int cont_play = 1;
-
-    if ( arg->Input->KbdLastHit == Input::KC_N )
-    {
-        replayControl.command = 4;
-    }
-    else if ( arg->Input->KbdLastHit == Input::KC_P )
-    {
-        replayControl.command = 2;
-    }
-    else if ( arg->Input->KbdLastHit == Input::KC_R )
-    {
-        replayControl.command = 3;
-    }
-    else if ( arg->Input->KbdLastHit == Input::KC_S )
-    {
-        replayControl.command = 1;
-    }
-    else if ( arg->Input->KbdLastHit == Input::KC_V )
-    {
-        replayControl.frame = -10;
-        replayControl.command = 7;
-    }
-    else if ( arg->Input->KbdLastHit == Input::KC_B )
-    {
-        replayControl.command = 5;
-    }
-    else if ( arg->Input->KbdLastHit == Input::KC_M )
-    {
-        replayControl.frame = 10;
-        replayControl.command = 7;
-    }
-    else if ( arg->Input->KbdLastHit == Input::KC_SPACE || arg->Input->KbdLastHit == Input::KC_ESCAPE )
-    {
-        cont_play = 0;
-    }
-
-    if ( replayControl.command )
-        ypaworld->ControlReplay(&replayControl);
-
-    return cont_play;
-}
-
-int ProcessReplayFrame()
-{
-    if ( !RunReplay(&world_update_arg) )
-    {
-        ypaworld->StopReplay();
-
-        if ( tmpSettingsSaved )
-        {
-            if ( !ypaworld->LoadSettings("settings.tmp",
-                                         userdata.UserName,
-                                         (World::SDF_BUDDY | World::SDF_PROTO | World::SDF_USER),
-                                         false) )
-                return 0;
-
-            tmpSettingsSaved = 0;
-        }
-
-        GameScreenMode = GAME_SCREEN_MODE_UNKNOWN;
-        world_update_arg.TimeStamp = 0;
-        userdata.lastInputEvent = 0;
-
-        if ( !ypaworld->OpenGameShell() )
-        {
-            ypa_log_out("GameShell-Error!!!\n");
-            ypaworld->DeinitGameShell();
-
-            return 0;
-        }
-
-        userdata.p_YW->_levelInfo.State = TLevelInfo::STATE_MENU;
-
-        GameScreenMode = GAME_SCREEN_MODE_MENU;
-
-        input_states = TInputState();
-
-        Input::Engine.QueryInput(&input_states);
-    }
-    return 1;
-}
-
 int ProcessMenuFrame()
 {
     userdata.GlobalTime = world_update_arg.TimeStamp;
@@ -507,7 +368,6 @@ int ProcessMenuFrame()
 
         TLevelLoadRequest loadRequest;
         loadRequest.lvlID = userdata.envAction.params[0];
-        loadRequest.mode = 0;
 
         if ( !ypaworld->AdvancedCreateLevel(&loadRequest) )
         {
@@ -554,7 +414,6 @@ int ProcessMenuFrame()
 
         TLevelLoadRequest loadRequest;
         loadRequest.lvlID = userdata.envAction.params[0];
-        loadRequest.mode = 0;
 
         GameScreenMode = GAME_SCREEN_MODE_UNKNOWN;
 
@@ -567,47 +426,6 @@ int ProcessMenuFrame()
         }
 
         GameScreenMode = GAME_SCREEN_MODE_GAME;
-        Input::Engine.QueryInput(&input_states);
-    }
-    else if ( userdata.envAction.action == EnvAction::ACTION_REPLAY )
-    {
-        std::string repname = PickReplayFile(world_update_arg.TimeStamp);
-        if ( repname.empty() )
-        {
-            userdata.lastInputEvent = world_update_arg.TimeStamp;
-            return 1;
-        }
-
-        if ( !userdata.SaveBuildProtoState() )
-            return 0;
-
-        tmpSettingsSaved = 1;
-
-        ypaworld->CloseGameShell();
-
-        GameScreenMode = GAME_SCREEN_MODE_UNKNOWN;
-
-        if ( ypaworld->StartReplay(repname) )
-        {
-            replayStarted = 1;
-            GameScreenMode = GAME_SCREEN_MODE_REPLAY;
-        }
-        else
-        {
-            ypa_log_out("Sorry, unable to init player!\n");
-            world_update_arg.TimeStamp = 0;
-            userdata.lastInputEvent = 0;
-
-            if ( !ypaworld->OpenGameShell() )
-            {
-                ypa_log_out("GameShell-Error!!!\n");
-                ypaworld->DeinitGameShell();
-                return 0;
-            }
-
-            GameScreenMode = GAME_SCREEN_MODE_MENU;
-        }
-
         Input::Engine.QueryInput(&input_states);
     }
 
@@ -665,10 +483,6 @@ int ProcessNextFrame()
     else if ( GameScreenMode == GAME_SCREEN_MODE_GAME )
     {
         return ProcessGameplayFrame(frameTicks, timeFrozen);
-    }
-    else if ( GameScreenMode == GAME_SCREEN_MODE_REPLAY )
-    {
-        return ProcessReplayFrame();
     }
     return 1;
 }
@@ -855,21 +669,6 @@ int yw_initGameWithSettings()
                                   true, !userdata.DirectStart) != 0;
 }
 
-void ReadSnapsDir()
-{
-    FSMgr::DirIter dir = uaOpenDir("env:snaps/");
-
-    if ( dir )
-    {
-        FSMgr::iNode *entr;
-        while ( dir.getNext(&entr) )
-        {
-            if ( entr->getType() == FSMgr::iNode::NTYPE_FILE && !StriCmp(entr->getName().substr(0, 4), "demo") )
-                userdata.snaps.push_back( fmt::sprintf("env:snaps/%s", entr->getName()) );
-        }
-    }
-}
-
 void ShutdownGame()
 {
     if ( ypaworld )
@@ -926,7 +725,6 @@ int InitWorldAndShell()
     }
 
     GameScreenMode = GAME_SCREEN_MODE_MENU;
-    ReadSnapsDir();
 
     return 1;
 }
@@ -1150,7 +948,6 @@ static bool StartDirectLevel()
 
         TLevelLoadRequest loadRequest;
         loadRequest.lvlID = directStart.Level;
-        loadRequest.mode = 0;
 
         started = ypaworld->CreateLevel(&loadRequest) != 0;
     }

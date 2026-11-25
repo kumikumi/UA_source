@@ -443,8 +443,7 @@ struct EnvAction
         ACTION_QUIT     = 1,
         ACTION_PLAY     = 2,
         ACTION_LOAD     = 3,
-        ACTION_NETPLAY  = 4,
-        ACTION_REPLAY     = 5
+        ACTION_NETPLAY  = 4
     };
 
     int8_t action = ACTION_NONE;
@@ -752,10 +751,6 @@ public:
     TAudioTrackDelays loadingtrack__adv;
     TAudioTrackDelays debriefingtrack__adv;
     
-    std::vector<std::string> snaps;
-
-    uint32_t lastInputEvent = 0;
-    
     uint32_t netsend_count;
     uint32_t netrecv_count;
     uint32_t netrecv_time;
@@ -853,82 +848,6 @@ public:
 
 protected:
     bool LoadSample(int sampleID, const std::string &file);
-};
-
-struct trec_bct
-{
-    uint32_t bact_id;
-    vec3d pos;
-    int8_t rot_x;
-    int8_t rot_y;
-    int8_t rot_z;
-    int vp_id;
-    int objType;
-    int vhcl_id;
-};
-
-struct TGameRecorder
-{
-    enum
-    {
-        RESERVE_SIZE = 1024,
-    };
-    
-    enum OBJ_TYPE
-    {
-        OBJ_TYPE_NONE = 0,
-        OBJ_TYPE_MISSILE = 1,
-        OBJ_TYPE_VEHICLE = 2
-    };
-    
-    struct __attribute__((packed)) TSndState
-    {
-        uint16_t active = 0;
-        int16_t pitch = 0;
-    };
-
-    IFFile mfile;
-    uint16_t seqn = 0;
-    uint16_t level_id = 0;
-    int32_t frame_id = 0;
-    int32_t time = 0;
-    uint32_t ctrl_bact_id = 0;
-
-    std::vector<NC_STACK_ypabact *> bacts;
-    std::vector<trec_bct> oinf;
-    std::vector<TSndState> sound_status;
-    //std::vector<???> field_20;
-    std::vector<uint8_t> ainf;
-
-    const int32_t max_bacts = 1024;
-    //int32_t field_2C = 0;
-    uint32_t bacts_count = 0;
-    //int32_t field_34 = 0;
-    int32_t ainf_size = 0;
-    vec3d camera_pos;
-    mat3x3 rotation_matrix;
-    int32_t frame_count = 0;
-    int32_t frame_flags = 0;
-    int32_t play_state = 0;
-    int32_t camera_mode = 0;
-    uint32_t camera_unit_id = 0;
-    std::string filename;
-    
-    
-    TGameRecorder()
-    {
-        bacts.resize(RESERVE_SIZE);
-        oinf.resize(RESERVE_SIZE);
-        sound_status.resize(RESERVE_SIZE);
-        ainf.resize(RESERVE_SIZE * 2 * sizeof(TSndState));
-    }
-    
-    static bool BactSortCompare(NC_STACK_ypabact * const &a, const NC_STACK_ypabact * const &b)
-    {
-        if (a->_gid < b->_gid)
-            return true;
-        return false;
-    }
 };
 
 enum CELL_PFLAGS
@@ -1280,7 +1199,6 @@ struct TLevelInfo
     std::string MapName;
     int State = STATE_PLAYING;
     int LevelID = 0;
-    int Mode = 0;      // 0 - Normal, 1 - Replay
     int GateCompleteID = 0; // Index of gate through level complete
     int MusicTrack = 0;
     int MusicTrackMinDelay = 0;
@@ -1737,7 +1655,6 @@ struct TSectorDesc
 struct TLevelLoadRequest
 {
     int lvlID;
-    int mode;
 };
 
 struct TUnitSpawn
@@ -1847,12 +1764,6 @@ struct TUnitRayQuery
     vec3d vect;
     NC_STACK_ypabact *hitUnit;
     float distance;
-};
-
-struct TReplayControl
-{
-    int command;
-    int frame;
 };
 
 struct TRenderingSector;
@@ -1968,10 +1879,6 @@ public:
     virtual void ProcessGameShell();
     virtual void ShowMessage(TInfoMessage *arg);
     virtual size_t CreateLevel(TLevelLoadRequest *arg);
-    virtual size_t StartReplay(const std::string &fname);
-    virtual void PlayReplayFrame(TUpdateArgs *arg);
-    virtual void StopReplay();
-    virtual void ControlReplay(TReplayControl *arg);
     virtual size_t LoadLanguage(const std::string &langname);
     virtual void UpdateGameShell();
     virtual size_t BeamUnitThroughGate(NC_STACK_ypabact *pbact);
@@ -2078,7 +1985,7 @@ public:
     virtual int getYW_invulnerable();
 
 protected:
-    int LevelCommonLoader(TLevelDescription *mapp, int levelID, int mode);
+    int LevelCommonLoader(TLevelDescription *mapp, int levelID);
     void FFeedback_Init();
     void FFeedback_StopAll();
     void FFeedback_VehicleChanged();
@@ -2086,8 +1993,6 @@ protected:
 
     void GUI_Close();
 
-    void CameraPrepareRender(TGameRecorder *rcrd, NC_STACK_ypabact *bact, TInputState *inpt);
-    bool IsAnyInput(TInputState *struc);
 
 
     void GameShellUiOpenNetwork(); // On main menu "Multiplayer" press
@@ -2283,13 +2188,6 @@ public:
     void SquadManager_InputHandle(TInputState *inpt);
     NC_STACK_ypabact * SquadManagerPickUnit(int sqid, int btnX);
     
-    bool recorder_create_camera();
-    void recorder_updateObjectList(TGameRecorder *rcrd, float blend, int period);
-    void recorder_updateObject(NC_STACK_ypabact *bact, trec_bct *oinf, TGameRecorder::TSndState *ssnd, float blend, float periodSec);
-    void recorder_set_bact_pos(NC_STACK_ypabact *bact, const vec3d &pos);
-    int recorder_go_to_frame(TGameRecorder *rcrd, int wanted_frame_id);
-    NC_STACK_ypabact *recorder_newObject(trec_bct *oinf);
-    void AdvanceReplay(TGameRecorder *rcrd, int dTime);
     
     void SetShowingTooltip(int32_t id)
     {
@@ -2659,7 +2557,6 @@ public:
     int32_t _screenShotSeqId = 0; //Screenshoting sequence id
     int32_t _screenShotSeqFrame = 0; //Screenshoting frame
     
-    TGameRecorder *_replayPlayer = NULL; // For play replay
     World::Recorder _recorder; // --record
     
     THudVisor _guiVisor;

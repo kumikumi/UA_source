@@ -2067,8 +2067,8 @@ void NC_STACK_ypaworld::DeleteLevel()
     while ( !_deadCacheList.empty() )
         _deadCacheList.front()->Delete();
 
-    // A replay's camera was one of the units. The next level's units set the
-    // view point again in its first step, after SaveUnitTransforms.
+    // The view point was one of the level's units. The next level's units
+    // set it again in its first step, after SaveUnitTransforms.
     TF::Engine.SetViewPoint(NULL);
     _prevView = NULL;
 
@@ -4937,7 +4937,6 @@ bool NC_STACK_ypaworld::OpenGameShell()
 
     _GameShell->sgmSaveExist = 0;
     _GameShell->confFirstKey = true;
-    _GameShell->lastInputEvent = 0;
     _GameShell->p_YW->_upScreenBorder = 0;
     _GameShell->keyCatchMode = false;
     _GameShell->p_YW->_helpURL.clear();
@@ -5382,17 +5381,6 @@ void TakeScreenshot(NC_STACK_ypaworld *yw)
 int PrevMouseX = 0;
 int PrevMouseY = 0;
 
-bool NC_STACK_ypaworld::IsAnyInput(TInputState *struc)
-{
-    bool click = (struc->ClickInf.flag & ~TClickBoxInf::FLAG_OK);
-    bool mousemove = struc->ClickInf.move.ScreenPos.x != PrevMouseX || PrevMouseY != struc->ClickInf.move.ScreenPos.y;
-
-    PrevMouseX = struc->ClickInf.move.ScreenPos.x;
-    PrevMouseY = struc->ClickInf.move.ScreenPos.y;
-
-    return struc->KbdLastDown != Input::KC_NONE || struc->KbdLastHit != Input::KC_NONE || struc->HotKeyID >= 0 || click || mousemove;
-}
-
 void NC_STACK_ypaworld::ProcessGameShell()
 {
     _GameShell->envAction.action = EnvAction::ACTION_NONE;
@@ -5442,12 +5430,6 @@ void NC_STACK_ypaworld::ProcessGameShell()
     {
         yw_CheckCRCs(this);
     }
-
-    if ( IsAnyInput(_GameShell->Input) )
-        _GameShell->lastInputEvent = _GameShell->GlobalTime;
-
-    if ( (_GameShell->GlobalTime - _GameShell->lastInputEvent) > World::CVDemoWait && _GameShell->EnvMode == ENVMODE_TITLE )
-        _GameShell->envAction.action = EnvAction::ACTION_REPLAY;
 
     _GameShell->GameIsOver = false;
 
@@ -5596,7 +5578,7 @@ size_t NC_STACK_ypaworld::CreateLevel(TLevelLoadRequest *arg)
     
     _particles.Clear();
 
-    if ( LevelCommonLoader(&mapp, arg->lvlID, arg->mode) )
+    if ( LevelCommonLoader(&mapp, arg->lvlID) )
     {
         if ( LoadTypeMap(mapp.TypStr) )
         {
@@ -5608,24 +5590,21 @@ size_t NC_STACK_ypaworld::CreateLevel(TLevelLoadRequest *arg)
                     {
                         if ( LoadBlgMap(mapp.BlgStr) )
                         {
-                            if ( _levelInfo.Mode != 1 )
+                            yw_InitSquads(mapp.Squads);
+                            InitBuddies();
+
+                            for (int yy = 0; yy < _mapSize.y; yy++)
                             {
-                                yw_InitSquads(mapp.Squads);
-                                InitBuddies();
-
-                                for (int yy = 0; yy < _mapSize.y; yy++)
+                                for (int xx = 0; xx < _mapSize.x; xx++)
                                 {
-                                    for (int xx = 0; xx < _mapSize.x; xx++)
-                                    {
-                                        CellCheckHealth(&_cells(xx, yy), World::OWNER_RECALC, NULL);
-                                    }
+                                    CellCheckHealth(&_cells(xx, yy), World::OWNER_RECALC, NULL);
                                 }
-
-                                yw_InitTechUpgradeBuildings();
-                                InitGates();
-                                InitSuperItems();
-                                UpdatePowerEnergy();
                             }
+
+                            yw_InitTechUpgradeBuildings();
+                            InitGates();
+                            InitSuperItems();
+                            UpdatePowerEnergy();
                             
                             PrepareAllFillers();
 
@@ -5647,227 +5626,6 @@ size_t NC_STACK_ypaworld::CreateLevel(TLevelLoadRequest *arg)
     return ok;
 }
 
-
-size_t NC_STACK_ypaworld::StartReplay(const std::string &fname)
-{
-    _replayPlayer = new TGameRecorder();
-
-    TGameRecorder *repl = _replayPlayer;
-
-    repl->filename = fname;
-    _timeStamp = 0;
-
-    if ( !recorder_open_replay(repl) )
-    {
-        delete _replayPlayer;
-        _replayPlayer = NULL;
-        return 0;
-    }
-
-    while ( repl->mfile.parse() != IFFile::IFF_ERR_EOC )
-    {
-        const IFFile::Context &chunk = repl->mfile.GetCurrentChunk();
-
-        if ( chunk.Is(TAG_SINF) )
-        {
-            repl->seqn = repl->mfile.readU16L();
-            repl->level_id = repl->mfile.readU16L();
-            repl->mfile.parse();
-        }
-        else if ( chunk.Is(TAG_FORM, TAG_FRAM) )
-        {
-            repl->frame_count++;
-            repl->mfile.skipChunk();
-        }
-        else
-        {
-            repl->mfile.skipChunk();
-        }        
-    }
-
-    
-    repl->mfile.close();
-
-    TLevelLoadRequest loadReq;
-    loadReq.mode = 1;
-    loadReq.lvlID = repl->level_id;
-
-    if ( !CreateLevel(&loadReq) )
-    {
-        delete _replayPlayer;
-        _replayPlayer = NULL;
-        return 0;
-    }
-
-    if ( !recorder_create_camera() )
-    {
-        ypa_log_out("PLAYER ERROR: could not create virtual camera!\n");
-        StopReplay();
-
-        return 0;
-    }
-
-    repl->camera_pos = vec3d(0.0, 0.0, 0.0);
-    repl->rotation_matrix = mat3x3::Ident();
-
-    if ( !recorder_go_to_frame(repl, 0) )
-    {
-        ypa_log_out("PLAYER ERROR: could not position on 1st frame!\n");
-        StopReplay();
-        return 0;
-    }
-
-    TReplayControl ctrl;
-
-    ctrl.command = 2;
-    ctrl.frame = 0;
-    ControlReplay(&ctrl);
-
-    ctrl.command = 20;
-    ctrl.frame = 0;
-    ControlReplay(&ctrl);
-
-    return 1;
-}
-
-
-void NC_STACK_ypaworld::PlayReplayFrame(TUpdateArgs *arg)
-{
-    TGameRecorder *repl = _replayPlayer;
-    uint32_t frameStart = profiler_begin();
-
-    _framesElapsed++;
-    _updateMessage.user_action = World::DOACTION_0;
-    _updateMessage.gTime = arg->TimeStamp;
-    _updateMessage.frameTime = arg->DTime;
-    _updateMessage.units_count = 0;
-    _updateMessage.inpt = arg->Input;
-    _FPS = 1024 / arg->DTime;
-
-    _profileVals[PFID_FPS] = _FPS;
-
-    GFX::Engine.BeginFrame();
-
-    /*_win3d->setRSTR_BGpen(0);
-
-    _win3d->raster_func192(NULL);*/
-
-    UpdateCommanderList();
-
-    _guiVisor.mgunSight = 0;
-    _guiVisor.weaponSight = 0;
-    _guiVisor.target = NULL;
-
-    if ( repl->play_state != 1 )
-        AdvanceReplay(repl, arg->DTime);
-
-    CameraPrepareRender(repl, _userUnit, arg->Input);
-
-    vec3d velocity = _userUnit->_fly_dir * _userUnit->_fly_dir_length;
-
-    SFXEngine::SFXe.BeginSoundFrame(arg->DTime, _userUnit->_position, velocity, _userUnit->_rotation);
-
-    for ( NC_STACK_ypabact* &bct : _userUnit->_kidList )
-    {
-        bct->_tForm.Pos = bct->_position;
-
-        bct->_tForm.SclRot = bct->_rotation.Transpose();
-
-        bct->_soundcarrier.Position = bct->_position;
-
-        bct->_soundcarrier.Vector = bct->_fly_dir * bct->_fly_dir_length;
-
-        SFXEngine::SFXe.UpdateSoundCarrier(&bct->_soundcarrier);
-    }
-
-    const mat3x3 &shake = SFXEngine::SFXe.EndSoundFrame();
-    TF::TForm3D *viewPoint = TF::Engine.GetViewPoint();
-
-    viewPoint->SclRot = shake * viewPoint->SclRot;
-
-    uint32_t renderStart = profiler_begin();
-
-    RenderGame(arg, 0);
-
-    debug_info_draw(arg->Input);
-    DrawPerfOverlay(arg->Input);
-
-    GFX::Engine.EndFrame();
-
-    _profileVals[PFID_RENDERTIME] = profiler_end(renderStart);
-
-    HandleSnapshotKeys(this, arg->Input);
-
-    _profileVals[PFID_FRAMETIME] = profiler_end(frameStart);
-    _profileVals[PFID_POLYGONS] = _polysDraw;
-
-    ProfileCalcValues();
-}
-
-
-
-void NC_STACK_ypaworld::StopReplay()
-{
-    if ( _replayPlayer )
-    {
-        _replayPlayer->mfile.close();
-
-        DeleteLevel();
-
-        delete _replayPlayer;
-        _replayPlayer = NULL;
-    }
-}
-
-
-void NC_STACK_ypaworld::ControlReplay(TReplayControl *arg)
-{
-    TGameRecorder *repl = _replayPlayer;
-
-    if ( (repl->camera_mode == 18 || repl->camera_mode == 19 || repl->camera_mode == 20) && (arg->command == 16 || arg->command == 17) )
-    {
-        repl->camera_pos = _userUnit->_position;
-        repl->rotation_matrix = _userUnit->_rotation;
-    }
-
-    if ( arg->command == 1 || arg->command == 2 )
-    {
-        repl->play_state = arg->command;
-    }
-    else if ( arg->command == 3 )
-    {
-        recorder_go_to_frame(repl, arg->frame);
-    }
-    else if ( arg->command == 4 )
-    {
-        recorder_go_to_frame(repl, repl->frame_id + 1);
-    }
-    else if ( arg->command == 5 )
-    {
-        recorder_go_to_frame(repl, repl->frame_id - 1);
-    }
-    else if ( arg->command == 7 )
-    {
-        recorder_go_to_frame(repl, repl->frame_id + arg->frame);
-    }
-    else if ( arg->command == 16 || arg->command == 17 )
-    {
-        repl->camera_unit_id = 0;
-        repl->camera_mode = arg->command;
-    }
-    else if ( arg->command == 18 || arg->command == 19 || arg->command == 20 )
-    {
-        repl->camera_mode = arg->command;
-        repl->camera_unit_id = arg->frame;
-
-        repl->camera_pos = vec3d(0.0, 0.0, 0.0);
-        repl->rotation_matrix = mat3x3::Ident();
-    }
-    else
-    {
-        repl->play_state = 1;
-    }
-}
 
 size_t NC_STACK_ypaworld::LoadLanguage(const std::string &langname)
 {
@@ -6113,7 +5871,7 @@ size_t NC_STACK_ypaworld::LoadGame(const std::string &saveFile)
     
     _particles.Clear();
 
-    if ( LevelCommonLoader(&mapp, lvlnum, 0) )
+    if ( LevelCommonLoader(&mapp, lvlnum) )
     {
         if ( LoadTypeMap(mapp.TypStr) )
         {

@@ -2869,7 +2869,6 @@ void UserData::clear()
 //     audiotrack_adv loadingtrack__adv;
 //     audiotrack_adv debriefingtrack__adv;
     
-    lastInputEvent = 0;
 
     netsend_count = 0;
     netrecv_count = 0;

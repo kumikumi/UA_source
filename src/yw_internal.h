@@ -339,9 +339,6 @@ int ConfirmDialogGetState();
 void OpenExitTrainingDialog(NC_STACK_ypaworld *yw);
 void TakeScreenshot(NC_STACK_ypaworld *yw);
 
-int recorder_create_camera(NC_STACK_ypaworld *yw);
-int recorder_go_to_frame(NC_STACK_ypaworld *yw, TGameRecorder *rcrd, int wanted_frame_id);
-int recorder_open_replay(TGameRecorder *rcrd);
 
 
 void AddChatMessage(NC_STACK_ypaworld *yw, const std::string &sender, const std::string &text);

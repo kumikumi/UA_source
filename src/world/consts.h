@@ -10,9 +10,6 @@ constexpr size_t CVFractionsCount = 8;
 constexpr size_t CVMaxMap = 256;
 constexpr size_t CVMaxNetPlayers = 4;
 
-/* How long wait(ms) for start demo player*/
-constexpr size_t CVDemoWait = 200 * 1000;
-
 /* How long will construct buildings */
 constexpr size_t CVBuildConstructTime = 3000;
 

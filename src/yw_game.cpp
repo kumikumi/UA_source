@@ -138,7 +138,7 @@ void LoadLevelPalette(NC_STACK_ypaworld *yw, TLevelDescription *mapp)
     }
 }
 
-int NC_STACK_ypaworld::LevelCommonLoader(TLevelDescription *mapp, int levelID, int mode)
+int NC_STACK_ypaworld::LevelCommonLoader(TLevelDescription *mapp, int levelID)
 {
     int ok = 0;
 
@@ -154,7 +154,6 @@ int NC_STACK_ypaworld::LevelCommonLoader(TLevelDescription *mapp, int levelID, i
     _framesElapsed = 0;
 
     _levelInfo.LevelID = levelID;
-    _levelInfo.Mode = mode;
     _levelInfo.State = TLevelInfo::STATE_PLAYING;
     _levelInfo.OwnerMask = 0;
     _levelInfo.UserMask = 0;
@@ -395,103 +394,100 @@ bool NC_STACK_ypaworld::LoadHightMap(const std::string &mapName)
 
 bool NC_STACK_ypaworld::yw_createRobos(const std::vector<MapRobo> &Robos)
 {
-    if ( _levelInfo.Mode != 1 )
+    _levelInfo.OwnerMask = 0;
+    _levelInfo.UserMask = 2;
+    
+    bool first = true;
+
+    for ( const MapRobo &roboInf : Robos)
     {
-        _levelInfo.OwnerMask = 0;
-        _levelInfo.UserMask = 2;
-        
-        bool first = true;
+        TRayIntersection ray;
+        ray.stPos = vec3d::X0Z(roboInf.Pos) - vec3d::OY(30000.0);
+        ray.vect = vec3d::OY(50000.0);
+        ray.flags = 0;
 
-        for ( const MapRobo &roboInf : Robos)
+        TUnitSpawn spawn;
+        spawn.vehicle_id = roboInf.VhclID;
+        spawn.pos = roboInf.Pos;
+
+        IntersectRay(&ray);
+
+        if ( ray.isect )
+            spawn.pos.y += ray.isectPos.y;
+
+        NC_STACK_yparobo *robo = dynamic_cast<NC_STACK_yparobo *>( CreateVehicle(&spawn) );
+
+        if ( robo )
         {
-            TRayIntersection ray;
-            ray.stPos = vec3d::X0Z(roboInf.Pos) - vec3d::OY(30000.0);
-            ray.vect = vec3d::OY(50000.0);
-            ray.flags = 0;
+            int reloadConst = 0;
 
-            TUnitSpawn spawn;
-            spawn.vehicle_id = roboInf.VhclID;
-            spawn.pos = roboInf.Pos;
+            AddToUnitsList(robo);
 
-            IntersectRay(&ray);
+            int energy;
 
-            if ( ray.isect )
-                spawn.pos.y += ray.isectPos.y;
-
-            NC_STACK_yparobo *robo = dynamic_cast<NC_STACK_yparobo *>( CreateVehicle(&spawn) );
-
-            if ( robo )
+            if ( !first )
             {
-                int reloadConst = 0;
-
-                AddToUnitsList(robo);
-
-                int energy;
-
-                if ( !first )
-                {
-                    energy = roboInf.Energy;
-                }
-                else
-                {
-                    energy = roboInf.Energy / 4;
-
-                    if ( energy < _maxRoboEnergy )
-                    {
-                        energy = _maxRoboEnergy;
-                        reloadConst = _maxReloadConst;
-                    }
-
-                }
-
-                robo->_owner = roboInf.Owner;
-                robo->_energy = energy;
-                robo->_energy_max = energy;
-
-                if ( !reloadConst )
-                {
-                    if ( roboInf.ReloadConst )
-                        reloadConst = roboInf.ReloadConst;
-                    else
-                        reloadConst = robo->_energy_max;
-                }
-
-                robo->_reload_const = reloadConst;
-
-                robo->setBACT_bactCollisions(1);
-                robo->setROBO_fillMode(15);
-                robo->setROBO_battVehicle(energy);
-                robo->setROBO_battBeam(energy);
-
-                _levelInfo.OwnerMask |= 1 << roboInf.Owner;
-
-                robo->setROBO_epConquer(roboInf.ConBudget);
-                robo->setROBO_epDefense(roboInf.DefBudget);
-                robo->setROBO_epRadar(roboInf.RadBudget);
-                robo->setROBO_epPower(roboInf.PowBudget);
-                robo->setROBO_epSafety(roboInf.SafBudget);
-                robo->setROBO_epChangeplace(roboInf.CplBudget);
-                robo->setROBO_epRobo(roboInf.RobBudget);
-                robo->setROBO_epReconnoitre(roboInf.RecBudget);
-                robo->setROBO_viewAngle(roboInf.ViewAngle);
-                robo->setROBO_safDelay(roboInf.SafDelay);
-                robo->setROBO_powDelay(roboInf.PowDelay);
-                robo->setROBO_cplDelay(roboInf.CplDelay);
-                robo->setROBO_radDelay(roboInf.RadDelay);
-                robo->setROBO_defDelay(roboInf.DefDelay);
-                robo->setROBO_conDelay(roboInf.ConDelay);
-                robo->setROBO_recDelay(roboInf.RecDelay);
-                robo->setROBO_robDelay(roboInf.RobDelay);
-
-                if ( first )
-                {
-                    robo->setBACT_viewer(true);
-                    robo->setBACT_inputting(true);
-                }
+                energy = roboInf.Energy;
             }
-            
-            first = false;
+            else
+            {
+                energy = roboInf.Energy / 4;
+
+                if ( energy < _maxRoboEnergy )
+                {
+                    energy = _maxRoboEnergy;
+                    reloadConst = _maxReloadConst;
+                }
+
+            }
+
+            robo->_owner = roboInf.Owner;
+            robo->_energy = energy;
+            robo->_energy_max = energy;
+
+            if ( !reloadConst )
+            {
+                if ( roboInf.ReloadConst )
+                    reloadConst = roboInf.ReloadConst;
+                else
+                    reloadConst = robo->_energy_max;
+            }
+
+            robo->_reload_const = reloadConst;
+
+            robo->setBACT_bactCollisions(1);
+            robo->setROBO_fillMode(15);
+            robo->setROBO_battVehicle(energy);
+            robo->setROBO_battBeam(energy);
+
+            _levelInfo.OwnerMask |= 1 << roboInf.Owner;
+
+            robo->setROBO_epConquer(roboInf.ConBudget);
+            robo->setROBO_epDefense(roboInf.DefBudget);
+            robo->setROBO_epRadar(roboInf.RadBudget);
+            robo->setROBO_epPower(roboInf.PowBudget);
+            robo->setROBO_epSafety(roboInf.SafBudget);
+            robo->setROBO_epChangeplace(roboInf.CplBudget);
+            robo->setROBO_epRobo(roboInf.RobBudget);
+            robo->setROBO_epReconnoitre(roboInf.RecBudget);
+            robo->setROBO_viewAngle(roboInf.ViewAngle);
+            robo->setROBO_safDelay(roboInf.SafDelay);
+            robo->setROBO_powDelay(roboInf.PowDelay);
+            robo->setROBO_cplDelay(roboInf.CplDelay);
+            robo->setROBO_radDelay(roboInf.RadDelay);
+            robo->setROBO_defDelay(roboInf.DefDelay);
+            robo->setROBO_conDelay(roboInf.ConDelay);
+            robo->setROBO_recDelay(roboInf.RecDelay);
+            robo->setROBO_robDelay(roboInf.RobDelay);
+
+            if ( first )
+            {
+                robo->setBACT_viewer(true);
+                robo->setBACT_inputting(true);
+            }
         }
+        
+        first = false;
     }
     return true;
 }
@@ -538,62 +534,59 @@ bool NC_STACK_ypaworld::LoadBlgMap(const std::string &mapName)
 
 void NC_STACK_ypaworld::yw_InitSquads(const std::vector<MapSquad> &squads)
 {
-    if ( _levelInfo.Mode != 1 )
+    size_t i = 0;
+    for ( const MapSquad &squad : squads )
     {
-        size_t i = 0;
-        for ( const MapSquad &squad : squads )
+        NC_STACK_yparobo *robo = NULL;
+
+        for( NC_STACK_ypabact *unit : _unitsList )
         {
-            NC_STACK_yparobo *robo = NULL;
-
-            for( NC_STACK_ypabact *unit : _unitsList )
+            if ( unit->_bact_type == BACT_TYPES_ROBO && unit->_owner == squad.Owner)
             {
-                if ( unit->_bact_type == BACT_TYPES_ROBO && unit->_owner == squad.Owner)
-                {
-                    robo = dynamic_cast<NC_STACK_yparobo *>(unit);
-                    break;
-                }
+                robo = dynamic_cast<NC_STACK_yparobo *>(unit);
+                break;
             }
+        }
 
-            if ( !robo )
-            {
-                ypa_log_out("WARNING: yw_InitSquads(): no host robo for squad[%d], owner %d!\n", i, squad.Owner);
-            }
+        if ( !robo )
+        {
+            ypa_log_out("WARNING: yw_InitSquads(): no host robo for squad[%d], owner %d!\n", i, squad.Owner);
+        }
+        else
+        {
+            vec3d squadPos;
+
+            TRayIntersection ray;
+            ray.stPos.x = squad.X;
+            ray.stPos.y = -50000.0;
+            ray.stPos.z = squad.Z;
+            ray.vect = vec3d::OY(100000.0);
+            ray.flags = 0;
+            IntersectRay(&ray);
+
+            if ( ray.isect )
+                squadPos = ray.isectPos - vec3d::OY(50.0);
             else
             {
-                vec3d squadPos;
+                TSectorInfo sect_info;
+                sect_info.pos_x = squad.X;
+                sect_info.pos_z = squad.Z;
 
-                TRayIntersection ray;
-                ray.stPos.x = squad.X;
-                ray.stPos.y = -50000.0;
-                ray.stPos.z = squad.Z;
-                ray.vect = vec3d::OY(100000.0);
-                ray.flags = 0;
-                IntersectRay(&ray);
-
-                if ( ray.isect )
-                    squadPos = ray.isectPos - vec3d::OY(50.0);
-                else
+                if ( !GetSectorInfo(&sect_info) )
                 {
-                    TSectorInfo sect_info;
-                    sect_info.pos_x = squad.X;
-                    sect_info.pos_z = squad.Z;
-
-                    if ( !GetSectorInfo(&sect_info) )
-                    {
-                        ypa_log_out("yw_InitSquads(): no valid position for squad[%d]!\n", i);
-                        return;
-                    }
-
-                    squadPos.x = squad.X;
-                    squadPos.y = sect_info.pcell->height;
-                    squadPos.z = squad.Z;
+                    ypa_log_out("yw_InitSquads(): no valid position for squad[%d]!\n", i);
+                    return;
                 }
-                // Create squad by robo method
-                robo->MakeSquad( std::vector<int>(squad.Count, squad.VhclID), squadPos, squad.Useable); // yparobo_func133
+
+                squadPos.x = squad.X;
+                squadPos.y = sect_info.pcell->height;
+                squadPos.z = squad.Z;
             }
-            
-            i++;
+            // Create squad by robo method
+            robo->MakeSquad( std::vector<int>(squad.Count, squad.VhclID), squadPos, squad.Useable); // yparobo_func133
         }
+        
+        i++;
     }
 }
 
@@ -3629,627 +3622,6 @@ void HandleSnapshotKeys(NC_STACK_ypaworld *yw, TInputState *inpt)
         yw->ShowMessage(&info_msg);
     }
 
-}
-
-void recorder_unpack_soundstates(TGameRecorder *rcrd)
-{
-    uint8_t *out = (uint8_t *)rcrd->sound_status.data();
-    uint8_t *in = (uint8_t *)rcrd->ainf.data();
-    uint8_t *in_end = ((uint8_t *)rcrd->ainf.data()) + rcrd->ainf_size;
-
-    while ( in < in_end )
-    {
-        uint8_t bt = *in;
-        in++;
-
-        if ( bt > 0x80 )
-        {
-            for (int i = 0; i < 0x101 - bt; i++)
-            {
-                *out = *in;
-                out++;
-            }
-
-            in++;
-        }
-        else if ( bt < 0x80 )
-        {
-            bt += 1;
-
-            memcpy(out, in, bt);
-
-            out += bt;
-            in += bt;
-        }
-    }
-}
-
-
-int recorder_open_replay(TGameRecorder *rcrd)
-{
-    rcrd->mfile = IFFile( uaOpenFile(rcrd->filename, "rb") );
-
-    if ( !rcrd->mfile.OK() )
-    {
-        return 0;
-    }
-
-    if ( rcrd->mfile.parse() != IFFile::IFF_ERR_OK )
-    {
-        rcrd->mfile.close();
-        return 0;
-    }
-
-    if ( rcrd->mfile.GetCurrentChunk().Is(TAG_FORM, TAG_SEQN) )
-        return 1;
-
-    return 0;
-}
-
-
-bool NC_STACK_ypaworld::recorder_create_camera()
-{
-    NC_STACK_ypabact *bacto = Nucleus::CInit<NC_STACK_ypabact>( {{NC_STACK_ypabact::BACT_ATT_WORLD, this}} );
-
-    if ( !bacto )
-        return false;
-
-    bacto->Renew();
-
-    bacto->_gid = 0;
-    bacto->_owner = 1;
-
-    bacto->_rotation = mat3x3::Ident();
-
-    bacto->_soundcarrier.Clear();
-
-    AddToUnitsList(bacto);
-
-    bacto->setBACT_viewer(true);
-    bacto->setBACT_inputting(true);
-
-    _userRobo = bacto;
-
-    TF::Engine.SetViewPoint(&bacto->_tForm);
-
-    return true;
-}
-
-
-
-void recorder_read_framedata(TGameRecorder *rcrd)
-{
-    while ( rcrd->mfile.parse() != IFFile::IFF_ERR_EOC )
-    {
-        const IFFile::Context &chunk = rcrd->mfile.GetCurrentChunk();
-
-        switch ( chunk.TAG )
-        {
-        case TAG_FLSH:
-            rcrd->frame_flags |= 1;
-            rcrd->mfile.parse();
-            break;
-
-        case TAG_FINF:
-            rcrd->frame_id = rcrd->mfile.readS32L();
-            rcrd->time = rcrd->mfile.readS32L();
-            rcrd->ctrl_bact_id = rcrd->mfile.readU32L();
-            rcrd->mfile.parse();
-            break;
-
-        case TAG_OINF:
-        {
-            rcrd->bacts_count = chunk.TAG_SIZE / 22;
-
-            for (uint32_t i = 0; i < rcrd->bacts_count; i++)
-            {
-                trec_bct *oinf = &rcrd->oinf[i];
-
-                oinf->bact_id = rcrd->mfile.readU32L();
-                TF::Engine.Vec3dReadIFF(&oinf->pos, &rcrd->mfile, false);
-                oinf->rot_x = rcrd->mfile.readS8();
-                oinf->rot_y = rcrd->mfile.readS8();
-                oinf->rot_z = rcrd->mfile.readS8();
-
-                oinf->vp_id = rcrd->mfile.readU8();
-                oinf->objType = rcrd->mfile.readU8();
-                oinf->vhcl_id = rcrd->mfile.readU8();
-            }
-
-            rcrd->mfile.parse();
-        }
-        break;
-
-        case TAG_AINF:
-            rcrd->mfile.read(rcrd->ainf.data(), chunk.TAG_SIZE);
-            rcrd->ainf_size = chunk.TAG_SIZE;
-
-            recorder_unpack_soundstates(rcrd);
-
-            rcrd->mfile.parse();
-            break;
-
-        case TAG_MODE:
-            //rcrd->mfile.read(rcrd->field_20, v3.TAG_SIZE);
-            //rcrd->field_34 = v3.TAG_SIZE / 16;
-
-            //rcrd->mfile.parse();
-            rcrd->mfile.skipChunk();
-            break;
-
-        default:
-            rcrd->mfile.skipChunk();
-            break;
-        }
-    }
-}
-
-NC_STACK_ypabact *NC_STACK_ypaworld::recorder_newObject(trec_bct *oinf)
-{
-    NC_STACK_ypabact *bacto = NULL;
-
-    if ( oinf->objType == TGameRecorder::OBJ_TYPE_VEHICLE )
-    {
-        if ( oinf->vhcl_id )
-        {
-            TUnitSpawn vhclSpawn;
-            vhclSpawn.vehicle_id = oinf->vhcl_id;
-            vhclSpawn.pos = vec3d(0.0, 0.0, 0.0);
-
-            World::TVhclProto *prot = &_vhclProtos[ oinf->vhcl_id ];
-
-            int savedModelId = prot->model_id;
-
-            prot->model_id = BACT_TYPES_BACT;
-
-            bacto = CreateVehicle(&vhclSpawn);
-
-            _vhclProtos[oinf->vhcl_id].model_id = savedModelId;
-        }
-        else
-        {
-
-            bacto = Nucleus::CInit<NC_STACK_ypabact>( {{NC_STACK_ypabact::BACT_ATT_WORLD, this}} );
-            if ( bacto )
-            {
-                bacto->Renew();
-
-                bacto->_gid = 0;
-                bacto->_owner = 1;
-
-                bacto->_rotation = mat3x3::Ident();
-            }
-        }
-    }
-    else
-    {
-        TUnitSpawn weaponSpawn;
-        weaponSpawn.vehicle_id = oinf->vhcl_id;
-        weaponSpawn.pos = vec3d(0.0, 0.0, 0.0);
-
-        bacto = CreateWeapon(&weaponSpawn);
-    }
-
-    if ( bacto )
-    {
-        bacto->_kidRef.Detach();
-
-        bacto->_gid = oinf->bact_id;
-        bacto->_host_station = (NC_STACK_yparobo *)_userUnit;
-        bacto->_parent = _userUnit;
-    }
-
-    return bacto;
-}
-
-void NC_STACK_ypaworld::recorder_set_bact_pos(NC_STACK_ypabact *bact, const vec3d &pos)
-{
-    TSectorInfo sectInfo;
-    sectInfo.pos_x = pos.x;
-    sectInfo.pos_z = pos.z;
-
-    if ( GetSectorInfo(&sectInfo) )
-    {
-        if ( bact->_pSector )
-            bact->_cellRef.Detach();
-
-        bact->_cellRef = sectInfo.pcell->unitsList.push_back(bact);
-
-        bact->_pSector = sectInfo.pcell;
-        bact->_old_pos = bact->_position;
-        bact->_position = pos;
-        bact->_cellId = sectInfo.CellId;
-    }
-}
-
-void NC_STACK_ypaworld::recorder_updateObject(NC_STACK_ypabact *bact, trec_bct *oinf, TGameRecorder::TSndState *ssnd, float blend, float periodSec)
-{
-    vec3d bct_pos;
-    bct_pos = (oinf->pos - bact->_position) * blend + bact->_position;
-
-    recorder_set_bact_pos(bact, bct_pos);
-
-    bact->_fly_dir = bact->_position - bact->_old_pos;
-
-    float ln = bact->_fly_dir.length();
-    if ( ln > 0.0 )
-    {
-        bact->_fly_dir /= ln;
-
-        if ( periodSec <= 0.0 )
-            bact->_fly_dir_length = 0;
-        else
-            bact->_fly_dir_length = (ln / periodSec) / 6.0;
-    }
-    else
-    {
-        bact->_fly_dir = vec3d::OX(1.0);
-
-        bact->_fly_dir_length = 0;
-    }
-
-    mat3x3 tmp = mat3x3::Euler( vec3d(oinf->rot_x, oinf->rot_y, oinf->rot_z) / 127.0 * C_2PI );
-
-    vec3d axisX = (tmp.AxisX() - bact->_rotation.AxisX()) * blend + bact->_rotation.AxisX();
-
-    if ( axisX.normalise() == 0.0 )
-        axisX = vec3d::OX(1.0);
-
-    vec3d axisY = (tmp.AxisY() - bact->_rotation.AxisY()) * blend + bact->_rotation.AxisY();
-
-    if ( axisY.normalise() == 0.0 )
-        axisY = vec3d::OY(1.0);
-
-    vec3d axisZ = (tmp.AxisZ() - bact->_rotation.AxisZ()) * blend + bact->_rotation.AxisZ();
-
-    if ( axisZ.normalise() == 0.0 )
-        axisZ = vec3d::OZ(1.0);
-
-    bact->_rotation = mat3x3::Basis(axisX, axisY, axisZ);
-
-    switch ( oinf->vp_id )
-    {
-    case 1:
-        bact->SetVP(bact->_vp_normal);
-        break;
-
-    case 2:
-        bact->SetVP(bact->_vp_fire);
-        break;
-
-    case 3:
-        bact->SetVP(bact->_vp_wait);
-        break;
-
-    case 4:
-        bact->SetVP(bact->_vp_dead);
-        break;
-
-    case 5:
-        bact->SetVP(bact->_vp_megadeth);
-        break;
-
-    case 6:
-        bact->SetVP(bact->_vp_genesis);
-        break;
-
-    default:
-        break;
-    }
-
-    bact->_soundcarrier.Sounds[0].Pitch = ssnd->pitch;
-
-    for(int i = 0; i < 16; i++)
-    {
-        int soundBit = 1 << i;
-        if ( soundBit & ssnd->active )
-        {
-            if ( !(bact->_soundFlags & soundBit) )
-            {
-                bact->_soundFlags |= soundBit;
-                SFXEngine::SFXe.startSound(&bact->_soundcarrier, i);
-            }
-        }
-        else
-        {
-            if ( bact->_soundFlags & soundBit )
-            {
-                bact->_soundFlags &= ~soundBit;
-
-                if ( bact->_soundcarrier.Sounds[i].IsLoop() )
-                    SFXEngine::SFXe.stopSound(&bact->_soundcarrier, i);
-            }
-        }
-    }
-}
-
-
-void NC_STACK_ypaworld::recorder_updateObjectList(TGameRecorder *rcrd, float blend, int period)
-{
-    float fperiod = period / 1000.0;
-    World::RefBactList::iterator it = _userUnit->_kidList.begin();
-
-    uint32_t i = 0;
-
-    while ( i < rcrd->bacts_count )
-    {
-        trec_bct *oinf = &rcrd->oinf[i];
-        TGameRecorder::TSndState &ssnd = rcrd->sound_status[i];
-
-        if ( it != _userUnit->_kidList.end() )
-        {
-            NC_STACK_ypabact *bact = *it;
-            
-            if ( oinf->bact_id > bact->_gid )
-            {
-                it++;
-
-                MoveToDeadCache(bact);
-            }
-            else if ( oinf->bact_id < bact->_gid )
-            {
-                NC_STACK_ypabact *newBact = recorder_newObject(oinf);
-
-                if ( newBact )
-                {
-                    recorder_updateObject(newBact, oinf, &ssnd, 1.0, fperiod);
-                    
-                    newBact->_kidRef = _userUnit->_kidList.insert(it, newBact);
-
-                    i++;
-                }
-            }
-            else // ==
-            {
-                recorder_updateObject(bact, oinf, &ssnd, blend, fperiod);
-                it++;
-
-                i++;
-            }
-        }
-        else
-        {
-            NC_STACK_ypabact *newBact = recorder_newObject(oinf);
-
-            if ( newBact )
-            {
-                recorder_updateObject(newBact, oinf, &ssnd, 1.0, fperiod);
-
-                newBact->_kidRef = _userUnit->_kidList.push_back(newBact);
-                it = newBact->_kidRef;
-                it++;
-
-                i++;
-            }
-        }
-    }
-
-    while ( it != _userUnit->_kidList.end() )
-    {
-        NC_STACK_ypabact *bact = *it;
-        it++;
-
-        MoveToDeadCache(bact);
-    }
-}
-
-int NC_STACK_ypaworld::recorder_go_to_frame(TGameRecorder *rcrd, int wanted_frame_id)
-{
-    int frame_id = wanted_frame_id;
-    int cur_frame_id = 0;
-
-    if ( frame_id >= 0 )
-    {
-        if ( frame_id >= rcrd->frame_count )
-            frame_id = rcrd->frame_count - 1;
-    }
-    else
-    {
-        frame_id = 0;
-    }
-
-    rcrd->mfile.close();
-
-    if ( recorder_open_replay(rcrd) )
-    {
-        while ( rcrd->mfile.parse() != IFFile::IFF_ERR_EOC )
-        {
-            if ( rcrd->mfile.GetCurrentChunk().Is(TAG_FORM, TAG_FRAM) )
-            {
-                if ( cur_frame_id == frame_id )
-                {
-                    recorder_read_framedata(rcrd);
-
-                    _timeStamp = rcrd->time;
-
-                    recorder_updateObjectList(rcrd, 1.0, 0);
-                    return 1;
-                }
-
-                cur_frame_id++;
-                rcrd->mfile.skipChunk();
-            }
-            else
-            {
-                rcrd->mfile.skipChunk();
-            }            
-        }
-    }
-    return 0;
-}
-
-
-void NC_STACK_ypaworld::AdvanceReplay(TGameRecorder *rcrd, int dTime)
-{
-    if ( dTime )
-    {
-        rcrd->frame_flags &= 0xFFFFFFFE;
-
-        while ( rcrd->frame_count - 1 != rcrd->frame_id  &&  (int32_t)(dTime + _timeStamp) > rcrd->time )
-        {
-            if ( rcrd->mfile.parse() != IFFile::IFF_ERR_EOF )
-            {
-                if ( rcrd->mfile.GetCurrentChunk().Is(TAG_FORM, TAG_FRAM) )
-                    recorder_read_framedata(rcrd);
-            }
-        }
-
-
-        if ( rcrd->frame_count - 1 == rcrd->frame_id )
-        {
-            recorder_go_to_frame(rcrd, 0);
-        }
-        else
-        {
-            if ( rcrd->frame_flags & 1 )
-            {
-                _timeStamp = rcrd->time;
-                recorder_updateObjectList(rcrd, 1.0, dTime);
-            }
-            else
-            {
-                float blend = (float)dTime / (float)(rcrd->time - _timeStamp);
-
-                _timeStamp += dTime;
-
-                recorder_updateObjectList(rcrd, blend, dTime);
-            }
-        }
-    }
-}
-
-void ReplayCameraMove(NC_STACK_ypaworld *yw, float fperiod, TInputState *inpt)
-{
-    TGameRecorder *rcrd = yw->_replayPlayer;
-
-    float fwdX = rcrd->rotation_matrix.m20;
-    float fwdZ = rcrd->rotation_matrix.m22;
-
-    float strafe = inpt->Sliders[0] * 250.0 * fperiod;
-    float lift = -inpt->Sliders[2] * 250.0 * fperiod;
-    float advance = -inpt->Sliders[1] * 150.0 * fperiod;
-
-    float fwdLen = sqrt( POW2(fwdX) + POW2(fwdZ) );
-    if ( fwdLen > 0.0 )
-    {
-        fwdX /= fwdLen;
-        fwdZ /= fwdLen;
-    }
-
-    rcrd->camera_pos.z += advance * fwdZ;
-    rcrd->camera_pos.x += advance * fwdX;
-
-    float rightX = rcrd->rotation_matrix.m00;
-    float rightZ = rcrd->rotation_matrix.m02;
-
-    float rightLen = sqrt( POW2(rightX) + POW2(rightZ) );
-    if ( rightLen > 0.0 )
-    {
-        rightX /= rightLen;
-        rightZ /= rightLen;
-    }
-
-    rcrd->camera_pos.y += lift;
-    rcrd->camera_pos.z += rightZ * strafe;
-    rcrd->camera_pos.x += rightX * strafe;
-}
-
-void ReplayCameraTurn(NC_STACK_ypaworld *yw, float fperiod, TInputState *inpt)
-{
-    float yaw = inpt->Sliders[10] * 2.5 * fperiod;
-
-    if ( fabs(yaw) > 0.001 )
-        yw->_replayPlayer->rotation_matrix = mat3x3::RotateY(-yaw) * yw->_replayPlayer->rotation_matrix;
-
-    float pitch = inpt->Sliders[11] * 2.5 * fperiod;
-
-    if ( fabs(pitch) > 0.001 )
-    {
-        yw->_replayPlayer->rotation_matrix = mat3x3::RotateX(pitch) * yw->_replayPlayer->rotation_matrix;
-    }
-}
-
-void NC_STACK_ypaworld::CameraPrepareRender(TGameRecorder *rcrd, NC_STACK_ypabact *bact, TInputState *inpt)
-{
-    extern tehMap robo_map;
-    extern squadMan squadron_manager;
-
-    float fperiod = inpt->Period / 1000.0;
-
-    if ( inpt->ClickInf.flag & TClickBoxInf::FLAG_RM_DOWN )
-    {
-        
-        if ( _mouseGrabbed )
-            _mouseGrabbed = false;
-        else if ( inpt->ClickInf.selected_btn != &robo_map  &&  inpt->ClickInf.selected_btn != &squadron_manager )
-            _mouseGrabbed = true;
-    }
-
-    if ( inpt->Buttons.Is(0) )
-        rcrd->rotation_matrix = mat3x3::Ident();
-
-    ReplayCameraMove(this, fperiod, inpt);
-
-    if ( _mouseGrabbed )
-        ReplayCameraTurn(this, fperiod, inpt);
-
-    if ( rcrd->camera_mode == 16 )
-    {
-        recorder_set_bact_pos(bact, rcrd->camera_pos);
-        bact->_rotation = rcrd->rotation_matrix;
-    }
-    else if ( rcrd->camera_mode == 18 )
-    {
-        for ( NC_STACK_ypabact * &unit : _userRobo->GetKidList() )
-        {
-            if ( rcrd->camera_unit_id == unit->_gid )
-            {
-                vec3d camPos = unit->_position + unit->_rotation.Transpose().Transform(rcrd->camera_pos);
-                recorder_set_bact_pos(bact, camPos);
-
-                bact->_rotation = rcrd->rotation_matrix * unit->_rotation;
-                break;
-            }
-        } 
-    }
-    else if ( rcrd->camera_mode == 20 )
-    {
-        for ( NC_STACK_ypabact * &unit : _userRobo->GetKidList() )
-        {
-            if ( rcrd->ctrl_bact_id == unit->_gid )
-            {
-                vec3d camPos = unit->_position + unit->_rotation.Transpose().Transform(rcrd->camera_pos);
-                recorder_set_bact_pos(bact, camPos);
-
-                bact->_rotation = rcrd->rotation_matrix * unit->_rotation;
-                break;
-            }
-        }
-    }
-
-    // TODO(bug): Points from the new position to the old one, the reverse of
-    // recorder_updateObject, so the camera velocity PlayReplayFrame gives
-    // the sound engine is backwards.
-    bact->_fly_dir = bact->_old_pos - bact->_position;
-
-    float moveLen = bact->_fly_dir.length();
-    if ( moveLen <= 0.0 )
-    {
-        bact->_fly_dir = vec3d::OX(1.0);
-        bact->_fly_dir_length = 0;
-    }
-    else
-    {
-        bact->_fly_dir /= moveLen;
-
-        if ( fperiod <= 0.0 )
-            bact->_fly_dir_length = 0;
-        else
-            bact->_fly_dir_length = (moveLen / fperiod) / 6.0;
-    }
-
-    bact->_tForm.Pos = bact->_position;
-    bact->_tForm.SclRot = bact->_rotation;
 }
 
 void DebugInfoPrintf(NC_STACK_ypaworld *yw, CmdStream *in, char *buf, const char *fmt, ...)

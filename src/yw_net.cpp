@@ -3622,7 +3622,7 @@ size_t NC_STACK_ypaworld::CreateNetLevel(TLevelLoadRequest *arg)
     TLevelDescription proto;
     bool loadOK = false;
 
-    if ( LevelCommonLoader(&proto, arg->lvlID, arg->mode) )
+    if ( LevelCommonLoader(&proto, arg->lvlID) )
     {
         if ( LoadTypeMap(proto.TypStr) )
         {
