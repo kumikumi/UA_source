@@ -1356,6 +1356,144 @@ size_t NC_STACK_ypaworld::IsNearViewer(NC_STACK_ypabact *bact)
 }
 
 
+// What a vehicle looks and sounds like, and what it leaves when destroyed:
+// from its prototype, for CreateVehicle and for a unit read from a state
+void NC_STACK_ypaworld::SetVehicleAssets(NC_STACK_ypabact *unit, World::TVhclProto &vhcl)
+{
+    unit->_vp_normal = _vhclModels.at( vhcl.vp_normal );
+    unit->_vp_fire = _vhclModels.at( vhcl.vp_fire );
+    unit->_vp_dead = _vhclModels.at( vhcl.vp_dead );
+    unit->_vp_wait = _vhclModels.at( vhcl.vp_wait );
+    unit->_vp_megadeth = _vhclModels.at( vhcl.vp_megadeth );
+    unit->_vp_genesis = _vhclModels.at( vhcl.vp_genesis );
+
+    unit->_destroyFX = vhcl.dest_fx;
+    unit->_extDestroyFX = vhcl.ExtDestroyFX;
+
+    for (NC_STACK_base *& vp_fx : unit->_vp_fx_models)
+        vp_fx = NULL;
+
+    for (int i = 0; vhcl.scale_fx_pXX[ i ]; i++ )
+        unit->_vp_fx_models[i] = _vhclModels.at( vhcl.scale_fx_pXX[ i ] );
+
+    unit->_soundcarrier.Resize(vhcl.sndFX.size());
+
+    for (World::TVhclSound &sfx : vhcl.sndFX)
+        sfx.LoadSamples();
+
+    for (size_t i = 0; i < vhcl.sndFX.size(); i++)
+    {
+        TSoundSource *smpl_inf = &unit->_soundcarrier.Sounds[ i ];
+
+        smpl_inf->Volume = vhcl.sndFX[i].volume;
+        smpl_inf->Pitch = vhcl.sndFX[i].pitch;
+
+        if ( World::TVhclProto::IsLoopingSnd(i) )
+            smpl_inf->SetLoop(true);
+
+        if ( vhcl.sndFX[i].MainSample.Sample )
+            smpl_inf->PSample = vhcl.sndFX[i].MainSample.Sample->GetSampleData();
+        else
+            smpl_inf->PSample = 0;
+
+        if ( vhcl.sndFX[i].sndPrm.slot )
+        {
+            smpl_inf->PPFx = &vhcl.sndFX[i].sndPrm;
+            smpl_inf->SetPFx(true);
+        }
+        else
+        {
+            smpl_inf->SetPFx(false);
+        }
+
+        if ( vhcl.sndFX[i].sndPrm_shk.slot )
+        {
+            smpl_inf->PShkFx = &vhcl.sndFX[i].sndPrm_shk;
+            smpl_inf->SetShk(true);
+        }
+        else
+        {
+            smpl_inf->SetShk(false);
+        }
+
+        if ( !vhcl.sndFX[i].extS.empty() )
+        {
+            smpl_inf->PFragments = &vhcl.sndFX[i].extS; //CHECK IT
+            smpl_inf->SetFragmented(true);
+        }
+        else
+        {
+            smpl_inf->SetFragmented(false);
+        }
+    }
+}
+
+// The same for a weapon
+void NC_STACK_ypaworld::SetWeaponAssets(NC_STACK_ypamissile *missile, World::TWeapProto &wproto)
+{
+    missile->_vp_normal =   _vhclModels.at(wproto.vp_normal);
+    missile->_vp_fire =     _vhclModels.at(wproto.vp_fire);
+    missile->_vp_dead =     _vhclModels.at(wproto.vp_dead);
+    missile->_vp_wait =     _vhclModels.at(wproto.vp_wait);
+    missile->_vp_megadeth = _vhclModels.at(wproto.vp_megadeth);
+    missile->_vp_genesis =  _vhclModels.at(wproto.vp_genesis);
+
+    missile->_destroyFX = wproto.dfx;
+    missile->_extDestroyFX = wproto.ExtDestroyFX;
+
+    missile->_soundcarrier.Resize(wproto.sndFXes.size());
+
+    for (World::TVhclSound &sfx : wproto.sndFXes)
+        sfx.LoadSamples();
+
+    for (size_t i = 0; i < wproto.sndFXes.size(); i++)
+    {
+        TSoundSource *snd = &missile->_soundcarrier.Sounds[i];
+
+        snd->Volume = wproto.sndFXes[i].volume;
+        snd->Pitch = wproto.sndFXes[i].pitch;
+
+        if ( i == 0 )
+            snd->SetLoop(true);
+
+        if ( wproto.sndFXes[i].MainSample.Sample )
+            snd->PSample = wproto.sndFXes[i].MainSample.Sample->GetSampleData();
+        else
+            snd->PSample = 0;
+
+        if ( wproto.sndFXes[i].sndPrm.slot )
+        {
+            snd->SetPFx(true);
+            snd->PPFx = &wproto.sndFXes[i].sndPrm;
+        }
+        else
+        {
+            snd->SetPFx(false);
+        }
+
+        if ( wproto.sndFXes[i].sndPrm_shk.slot )
+        {
+            snd->SetShk(true);
+            snd->PShkFx = &wproto.sndFXes[i].sndPrm_shk;
+        }
+        else
+        {
+            snd->SetShk(false);
+        }
+
+        if ( !wproto.sndFXes[i].extS.empty() )
+        {
+            snd->SetFragmented(true);
+            snd->PFragments = &wproto.sndFXes[i].extS;
+        }
+        else
+        {
+            snd->SetFragmented(false);
+        }
+    }
+}
+
+
 NC_STACK_ypabact * NC_STACK_ypaworld::CreateVehicle(TUnitSpawn *vhcl_id)
 {
     if ( vhcl_id->vehicle_id >= _vhclProtos.size() )
@@ -1404,18 +1542,7 @@ NC_STACK_ypabact * NC_STACK_ypaworld::CreateVehicle(TUnitSpawn *vhcl_id)
         bacto->_gun_angle_user = vhcl.gun_angle;
         bacto->_num_weapons = vhcl.num_weapons;
         bacto->_kill_after_shot = vhcl.kill_after_shot;
-        bacto->_vp_normal = _vhclModels.at( vhcl.vp_normal );
-        bacto->_vp_fire = _vhclModels.at( vhcl.vp_fire );
-        bacto->_vp_dead = _vhclModels.at( vhcl.vp_dead );
-        bacto->_vp_wait = _vhclModels.at( vhcl.vp_wait );
-        bacto->_vp_megadeth = _vhclModels.at( vhcl.vp_megadeth );
-        bacto->_vp_genesis = _vhclModels.at( vhcl.vp_genesis );
-
-        bacto->_destroyFX = vhcl.dest_fx;
-        bacto->_extDestroyFX = vhcl.ExtDestroyFX;
-
-        for (NC_STACK_base *& vp_fx : bacto->_vp_fx_models)
-            vp_fx = NULL;
+        SetVehicleAssets(bacto, vhcl);
 
         bacto->_scale_start = vhcl.scale_fx_p0;
         bacto->_scale_speed = vhcl.scale_fx_p1;
@@ -1426,63 +1553,8 @@ NC_STACK_ypabact * NC_STACK_ypaworld::CreateVehicle(TUnitSpawn *vhcl_id)
         bacto->_hidden = vhcl.hidden;
         bacto->_unhideRadar = vhcl.unhideRadar;
 
-        for (int i = 0; vhcl.scale_fx_pXX[ i ]; i++ )
-        {
-            bacto->_vp_fx_models[i] = _vhclModels.at( vhcl.scale_fx_pXX[ i ] );
-
+        if ( vhcl.scale_fx_pXX[ 0 ] )
             bacto->_status_flg |= BACT_STFLAG_SEFFECT;
-        }
-
-        bacto->_soundcarrier.Resize(vhcl.sndFX.size());
-
-        for (World::TVhclSound &sfx : vhcl.sndFX)
-            sfx.LoadSamples();
-
-        for (size_t i = 0; i < vhcl.sndFX.size(); i++)
-        {
-            TSoundSource *smpl_inf = &bacto->_soundcarrier.Sounds[ i ];
-
-            smpl_inf->Volume = vhcl.sndFX[i].volume;
-            smpl_inf->Pitch = vhcl.sndFX[i].pitch;
-
-            if ( World::TVhclProto::IsLoopingSnd(i) )
-                smpl_inf->SetLoop(true);
-
-            if ( vhcl.sndFX[i].MainSample.Sample )
-                smpl_inf->PSample = vhcl.sndFX[i].MainSample.Sample->GetSampleData();
-            else
-                smpl_inf->PSample = 0;
-
-            if ( vhcl.sndFX[i].sndPrm.slot )
-            {
-                smpl_inf->PPFx = &vhcl.sndFX[i].sndPrm;
-                smpl_inf->SetPFx(true);
-            }
-            else
-            {
-                smpl_inf->SetPFx(false);
-            }
-
-            if ( vhcl.sndFX[i].sndPrm_shk.slot )
-            {
-                smpl_inf->PShkFx = &vhcl.sndFX[i].sndPrm_shk;
-                smpl_inf->SetShk(true);
-            }
-            else
-            {
-                smpl_inf->SetShk(false);
-            }
-
-            if ( !vhcl.sndFX[i].extS.empty() )
-            {
-                smpl_inf->PFragments = &vhcl.sndFX[i].extS; //CHECK IT
-                smpl_inf->SetFragmented(true);
-            }
-            else
-            {
-                smpl_inf->SetFragmented(false);
-            }
-        }
 
         bacto->_pitch = bacto->_soundcarrier.Sounds[0].Pitch;
         bacto->_volume = bacto->_soundcarrier.Sounds[0].Volume;
@@ -1538,15 +1610,7 @@ NC_STACK_ypamissile * NC_STACK_ypaworld::CreateWeapon(TUnitSpawn *arg)
     wobj->_vehicleID = arg->vehicle_id;
     wobj->_weapon = 0;
 
-    wobj->_vp_normal =   _vhclModels.at(wproto.vp_normal);
-    wobj->_vp_fire =     _vhclModels.at(wproto.vp_fire);
-    wobj->_vp_dead =     _vhclModels.at(wproto.vp_dead);
-    wobj->_vp_wait =     _vhclModels.at(wproto.vp_wait);
-    wobj->_vp_megadeth = _vhclModels.at(wproto.vp_megadeth);
-    wobj->_vp_genesis =  _vhclModels.at(wproto.vp_genesis);
-
-    wobj->_destroyFX = wproto.dfx;
-    wobj->_extDestroyFX = wproto.ExtDestroyFX;
+    SetWeaponAssets(wobj, wproto);
 
     int missileType;
 
@@ -1600,57 +1664,6 @@ NC_STACK_ypamissile * NC_STACK_ypaworld::CreateWeapon(TUnitSpawn *arg)
         wobj->SetRadiusTank(0.0);
         wobj->SetRadiusFlyer(0.0);
         wobj->SetRadiusRobo(0.0);
-    }
-
-    wobj->_soundcarrier.Resize(wproto.sndFXes.size());
-
-    for (World::TVhclSound &sfx : wproto.sndFXes)
-        sfx.LoadSamples();
-
-    for (size_t i = 0; i < wproto.sndFXes.size(); i++)
-    {
-        TSoundSource *snd = &wobj->_soundcarrier.Sounds[i];
-
-        snd->Volume = wproto.sndFXes[i].volume;
-        snd->Pitch = wproto.sndFXes[i].pitch;
-
-        if ( i == 0 )
-            snd->SetLoop(true);
-
-        if ( wproto.sndFXes[i].MainSample.Sample )
-            snd->PSample = wproto.sndFXes[i].MainSample.Sample->GetSampleData();
-        else
-            snd->PSample = 0;
-
-        if ( wproto.sndFXes[i].sndPrm.slot )
-        {
-            snd->SetPFx(true);
-            snd->PPFx = &wproto.sndFXes[i].sndPrm;
-        }
-        else
-        {
-            snd->SetPFx(false);
-        }
-
-        if ( wproto.sndFXes[i].sndPrm_shk.slot )
-        {
-            snd->SetShk(true);
-            snd->PShkFx = &wproto.sndFXes[i].sndPrm_shk;
-        }
-        else
-        {
-            snd->SetShk(false);
-        }
-
-        if ( !wproto.sndFXes[i].extS.empty() )
-        {
-            snd->SetFragmented(true);
-            snd->PFragments = &wproto.sndFXes[i].extS;
-        }
-        else
-        {
-            snd->SetFragmented(false);
-        }
     }
 
     wobj->SetParameters(wproto.initParams);

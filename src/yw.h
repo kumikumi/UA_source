@@ -2129,6 +2129,8 @@ public:
     
     
     NC_STACK_ypabact *yw_createUnit(int model_id);
+    void SetVehicleAssets(NC_STACK_ypabact *unit, World::TVhclProto &vhcl);
+    void SetWeaponAssets(NC_STACK_ypamissile *missile, World::TWeapProto &wproto);
     void PlaceBuilding(const Common::Point &cellId, int ownerid2, int blg_id, int skipGuns);
     void SetupPowerStationInfo(cellArea *cell, int power);
     void ResetAccumMap();
