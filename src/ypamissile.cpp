@@ -737,7 +737,7 @@ void NC_STACK_ypamissile::VisitState(World::State::Visitor &v)
     NC_STACK_ypabact::VisitState(v);
 
     v.Field("missileType", _mislType);
-    v.Unit("emitter", _mislEmitter);
+    v.Unit("emitter", _mislEmitter, World::State::VIEW);
     v.Field("lifeTime", _mislLifeTime);
     v.Field("driveTime", _mislDriveTime);
     v.Field("delayTime", _mislDelayTime);

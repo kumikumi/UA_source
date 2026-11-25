@@ -5229,7 +5229,7 @@ void NC_STACK_yparobo::VisitState(World::State::Visitor &v)
 
     v.Field("collPrevPos", collPrev);
 
-    if ( v.Reading() )
+    if ( v.Reads(World::State::INTERNAL) )
     {
         for (size_t i = 0; i < collPrev.size() && i < _roboColls.roboColls.size(); i++)
             _roboColls.roboColls[i].prev_coll_pos = collPrev[i];
@@ -5246,7 +5246,7 @@ void NC_STACK_yparobo::VisitState(World::State::Visitor &v)
     v.Field("gunDirs", gunDirs);
     v.Units("guns", guns);
 
-    if ( v.Reading() )
+    if ( v.Reads(World::State::INTERNAL) )
     {
         for (size_t i = 0; i < _roboGuns.size(); i++)
         {

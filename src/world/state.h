@@ -2,6 +2,7 @@
 #define WORLD_STATE_H_INCLUDED
 
 #include <cstdint>
+#include <functional>
 #include <list>
 #include <map>
 #include <string>
@@ -32,6 +33,12 @@ namespace State
 // simulation can work out again (the sector a unit is in, counts per owner,
 // the models and sounds of a unit's prototype) is left out and worked out
 // after reading.
+//
+// The state is in two parts. The view is what shows the game as it is drawn:
+// where units are and how they're turned, at the float precision the
+// renderer draws with, what they look like, who owns what. The internal part
+// is the rest, with those positions and turns exact: the view and it hold
+// the whole state. A field's role says which part it belongs to.
 //
 // Values are little-endian, floats by their bits. A list is its u16 length,
 // then its entries, each Count elements.
@@ -93,6 +100,22 @@ struct Image
 // The fields of each kind of object, in the order they are written
 typedef std::map<uint8_t, std::vector<FieldInfo>> Schema;
 
+// Which part of the state a field is in
+enum Role
+{
+    INTERNAL,     // The internal part
+    VIEW,         // The view, exact
+    VIEW_ROUNDED, // The view as 32-bit floats, and the internal part exact
+};
+
+// Which part of the state a visitor goes through
+enum Part
+{
+    PART_ALL,
+    PART_VIEW,
+    PART_INTERNAL,
+};
+
 class Visitor
 {
 public:
@@ -103,10 +126,15 @@ public:
         SCHEMA, // Names and types
     };
 
-    Visitor(Mode mode, NC_STACK_ypaworld *world) : _mode(mode), _world(world) {}
+    Visitor(Mode mode, NC_STACK_ypaworld *world, Part part = PART_ALL) : _mode(mode), _part(part), _world(world) {}
 
     Mode GetMode() const { return _mode; }
     bool Reading() const { return _mode == READ; }
+
+    // Whether this visit goes through fields of that role, and whether it
+    // reads them
+    bool Visits(Role role) const { return Includes(role); }
+    bool Reads(Role role) const { return _mode == READ && Includes(role); }
 
     // Writing: the bytes so far. Reading: the bytes to read from.
     void SetData(const std::string *data) { _in = data; _inPos = 0; }
@@ -116,64 +144,72 @@ public:
     // Reading: the units by id, to turn ids into units
     void SetUnits(const std::map<uint32_t, NC_STACK_ypabact *> *units) { _units = units; }
 
-    void Field(const char *name, bool &v);
-    void Field(const char *name, int8_t &v);
-    void Field(const char *name, uint8_t &v);
-    void Field(const char *name, int16_t &v);
-    void Field(const char *name, uint16_t &v);
-    void Field(const char *name, int32_t &v);
-    void Field(const char *name, uint32_t &v);
-    void Field(const char *name, float &v);
-    void Field(const char *name, double &v);
-    void Field(const char *name, vec2d &v);
-    void Field(const char *name, vec3d &v);
-    void Field(const char *name, mat3x3 &v);
-    void Field(const char *name, Common::Point &v);
-    void Field(const char *name, vec3d *v, size_t count);
-    void Field(const char *name, int32_t *v, size_t count);
-    void Field(const char *name, int16_t *v, size_t count);
-    void Field(const char *name, uint32_t *v, size_t count);
+    void Field(const char *name, bool &v, Role role = INTERNAL);
+    void Field(const char *name, int8_t &v, Role role = INTERNAL);
+    void Field(const char *name, uint8_t &v, Role role = INTERNAL);
+    void Field(const char *name, int16_t &v, Role role = INTERNAL);
+    void Field(const char *name, uint16_t &v, Role role = INTERNAL);
+    void Field(const char *name, int32_t &v, Role role = INTERNAL);
+    void Field(const char *name, uint32_t &v, Role role = INTERNAL);
+    void Field(const char *name, float &v, Role role = INTERNAL);
+    void Field(const char *name, double &v, Role role = INTERNAL);
+    void Field(const char *name, vec2d &v, Role role = INTERNAL);
+    void Field(const char *name, vec3d &v, Role role = INTERNAL);
+    void Field(const char *name, mat3x3 &v, Role role = INTERNAL);
+    void Field(const char *name, Common::Point &v, Role role = INTERNAL);
+    void Field(const char *name, vec3d *v, size_t count, Role role = INTERNAL);
+    void Field(const char *name, int32_t *v, size_t count, Role role = INTERNAL);
+    void Field(const char *name, int16_t *v, size_t count, Role role = INTERNAL);
+    void Field(const char *name, uint32_t *v, size_t count, Role role = INTERNAL);
 
     // Lists
-    void Field(const char *name, std::vector<uint8_t> &v);
-    void Field(const char *name, std::vector<int32_t> &v);
-    void Field(const char *name, std::vector<vec3d> &v);
-    void Units(const char *name, std::vector<NC_STACK_ypabact *> &v);
+    void Field(const char *name, std::vector<uint8_t> &v, Role role = INTERNAL);
+    void Field(const char *name, std::vector<int32_t> &v, Role role = INTERNAL);
+    void Field(const char *name, std::vector<vec3d> &v, Role role = INTERNAL);
+    void Units(const char *name, std::vector<NC_STACK_ypabact *> &v, Role role = INTERNAL);
 
     // A unit it refers to
-    void Unit(const char *name, NC_STACK_ypabact *&unit);
+    void Unit(const char *name, NC_STACK_ypabact *&unit, Role role = INTERNAL);
 
     template <class U>
-    void Unit(const char *name, U *&unit)
+    void Unit(const char *name, U *&unit, Role role = INTERNAL)
     {
         NC_STACK_ypabact *u = unit;
-        Unit(name, u);
+        Unit(name, u, role);
 
-        if ( Reading() )
+        if ( Reads(role) )
             unit = dynamic_cast<U *>(u);
     }
 
     // A sector it refers to
-    void Sector(const char *name, cellArea *&cell);
+    void Sector(const char *name, cellArea *&cell, Role role = INTERNAL);
 
     // A target, by its type: a unit, a sector or nothing
-    void Target(const char *name, uint8_t type, BactTarget &target);
+    void Target(const char *name, uint8_t type, BactTarget &target, Role role = INTERNAL);
 
     // Units in a list, in its order. Reading puts them in the list, as
     // newMaster_msg would (the unit's _kidRef) or in a sector's (_cellRef).
-    void Kids(const char *name, World::RefBactList &list);
-    void SectorUnits(const char *name, cellArea &cell);
-    void Missiles(const char *name, World::MissileList &list);
-    void Attackers(const char *typesName, const char *name, std::list<TBactAttacker> &list);
+    void Kids(const char *name, World::RefBactList &list, Role role = INTERNAL);
+    void SectorUnits(const char *name, cellArea &cell, Role role = INTERNAL);
+    void Missiles(const char *name, World::MissileList &list, Role role = INTERNAL);
+    void Attackers(const char *typesName, const char *name, std::list<TBactAttacker> &list, Role role = INTERNAL);
 
     // Reading: whether all the bytes were read, and none too many
     bool ReadAll() const { return !_failed && _in && _inPos == _in->size(); }
     bool Failed() const { return _failed; }
 
 protected:
+    bool Includes(Role role) const
+    {
+        return _part == PART_ALL || (_part == PART_VIEW ? role != INTERNAL : role != VIEW);
+    }
+
+    bool Rounds(Role role) const { return _part == PART_VIEW && role == VIEW_ROUNDED; }
+
     // Writing and reading a field's raw bytes, little-endian on the
     // platforms that build this
     void Raw(const char *name, Type type, uint16_t count, void *data, size_t size);
+    void Doubles(const char *name, double *v, size_t count, Role role);
     void Info(const char *name, Type type, uint16_t count);
     bool Take(void *data, size_t size);
     void Put(const void *data, size_t size);
@@ -183,6 +219,7 @@ protected:
     NC_STACK_ypabact *UnitById(uint32_t id) const;
 
     Mode _mode;
+    Part _part;
     NC_STACK_ypaworld *_world;
 
     std::string _out;
@@ -194,15 +231,24 @@ protected:
     const std::map<uint32_t, NC_STACK_ypabact *> *_units = NULL;
 };
 
-// The world's state now
-Image Capture(NC_STACK_ypaworld *world);
+// Every object of a part of the state now, in the order of an Image, to a
+// function that gets its kind, id and fields' bytes (valid until it
+// returns). Objects with no fields in the part are left out; with the part's
+// schema, kinds it doesn't have aren't gone through at all.
+typedef std::function<void(uint8_t kind, uint32_t id, const std::string &data)> ObjectFunc;
+void ForEachObject(NC_STACK_ypaworld *world, Part part, const ObjectFunc &func, const Schema *schema = NULL);
 
-// The fields of every kind of object in this build
-Schema MakeSchema(NC_STACK_ypaworld *world);
+// A part of the world's state now
+Image Capture(NC_STACK_ypaworld *world, Part part = PART_ALL);
 
-// Sets up the level the image is of, in the state it holds. False, after
-// logging why, when it can't; the level is then gone.
+// The fields of every kind of object in this build, in a part
+Schema MakeSchema(NC_STACK_ypaworld *world, Part part = PART_ALL);
+
+// Sets up the level the images are of, in the state they hold: the whole
+// state, or its view and internal part. False, after logging why, when it
+// can't; the level is then gone.
 bool Restore(NC_STACK_ypaworld *world, const Image &image);
+bool Restore(NC_STACK_ypaworld *world, const Image &view, const Image &internal);
 
 // A hash of the whole state
 uint64_t Hash(const Image &image);
@@ -210,6 +256,23 @@ uint64_t Hash(const Image &image);
 // An image in one string, zlib-packed, and back
 std::string Pack(const Image &image);
 bool Unpack(const std::string &packed, Image &image);
+
+// The size of an element of a type
+size_t ElemSize(Type type);
+
+// The size of a field at data, which has size bytes left; 0 when it doesn't
+// fit
+size_t FieldSize(const FieldInfo &field, const char *data, size_t size);
+
+// Where each field of an object's bytes starts, and then their end: one more
+// offset than fields. False when the bytes don't fit the fields.
+bool FieldOffsets(const std::vector<FieldInfo> &fields, const std::string &data, std::vector<size_t> &offsets);
+
+// A schema as bytes, as files hold it, and back: u16 kinds, each a u8 kind
+// and u16 fields, each a u8 type, u16 count, u8 1 for a list, u8 name length
+// and the name
+std::string WriteSchema(const Schema &schema);
+bool ReadSchema(const std::string &bytes, Schema &schema);
 
 // Where two images differ, field by field, as lines of text; empty when they
 // are the same. At most maxLines lines.

@@ -156,7 +156,7 @@ void TutorialHints::VisitState(State::Visitor &v)
     v.Field("lastHint", _lastPlayedHint);
     v.Field("lastHintTime", _lastPlayTime);
 
-    if ( v.Reading() )
+    if ( v.Reads(State::INTERNAL) )
     {
         for (size_t i = 0; i < _hints.size(); i++)
         {

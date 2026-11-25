@@ -1,3 +1,4 @@
+#include <algorithm>
 #include <cstring>
 #include <set>
 #include <zlib.h>
@@ -62,65 +63,105 @@ void Visitor::Raw(const char *name, Type type, uint16_t count, void *data, size_
     }
 }
 
-void Visitor::Field(const char *name, bool &v)
+void Visitor::Field(const char *name, bool &v, Role role)
 {
+    if ( !Includes(role) )
+        return;
+
     uint8_t b = v ? 1 : 0;
     Raw(name, T_BOOL, 1, &b, 1);
-    v = b != 0;
+
+    if ( Reading() )
+        v = b != 0;
 }
 
-void Visitor::Field(const char *name, int8_t &v)   { Raw(name, T_I8, 1, &v, 1); }
-void Visitor::Field(const char *name, uint8_t &v)  { Raw(name, T_U8, 1, &v, 1); }
-void Visitor::Field(const char *name, int16_t &v)  { Raw(name, T_I16, 1, &v, 2); }
-void Visitor::Field(const char *name, uint16_t &v) { Raw(name, T_U16, 1, &v, 2); }
-void Visitor::Field(const char *name, int32_t &v)  { Raw(name, T_I32, 1, &v, 4); }
-void Visitor::Field(const char *name, uint32_t &v) { Raw(name, T_U32, 1, &v, 4); }
-void Visitor::Field(const char *name, float &v)    { Raw(name, T_F32, 1, &v, 4); }
-void Visitor::Field(const char *name, double &v)   { Raw(name, T_F64, 1, &v, 8); }
-void Visitor::Field(const char *name, vec2d &v)    { Raw(name, T_F64, 2, &v.x, 16); }
+void Visitor::Field(const char *name, int8_t &v, Role role)   { if ( Includes(role) ) Raw(name, T_I8, 1, &v, 1); }
+void Visitor::Field(const char *name, uint8_t &v, Role role)  { if ( Includes(role) ) Raw(name, T_U8, 1, &v, 1); }
+void Visitor::Field(const char *name, int16_t &v, Role role)  { if ( Includes(role) ) Raw(name, T_I16, 1, &v, 2); }
+void Visitor::Field(const char *name, uint16_t &v, Role role) { if ( Includes(role) ) Raw(name, T_U16, 1, &v, 2); }
+void Visitor::Field(const char *name, int32_t &v, Role role)  { if ( Includes(role) ) Raw(name, T_I32, 1, &v, 4); }
+void Visitor::Field(const char *name, uint32_t &v, Role role) { if ( Includes(role) ) Raw(name, T_U32, 1, &v, 4); }
+void Visitor::Field(const char *name, float &v, Role role)    { if ( Includes(role) ) Raw(name, T_F32, 1, &v, 4); }
 
-void Visitor::Field(const char *name, vec3d &v)
+// Doubles the view rounds to floats, as they're drawn. Reading the view
+// skips them: the internal part has them exact.
+void Visitor::Doubles(const char *name, double *v, size_t count, Role role)
+{
+    if ( !Includes(role) )
+        return;
+
+    if ( !Rounds(role) )
+    {
+        Raw(name, T_F64, count, v, count * 8);
+        return;
+    }
+
+    float f[16];
+    for (size_t i = 0; i < count; i++)
+        f[i] = v[i];
+
+    Raw(name, T_F32, count, f, count * 4);
+}
+
+void Visitor::Field(const char *name, double &v, Role role) { Doubles(name, &v, 1, role); }
+void Visitor::Field(const char *name, vec2d &v, Role role)  { Doubles(name, &v.x, 2, role); }
+
+void Visitor::Field(const char *name, vec3d &v, Role role)
 {
     static_assert(sizeof(vec3d) == 24, "vec3d is three doubles");
-    Raw(name, T_F64, 3, &v.x, 24);
+    Doubles(name, &v.x, 3, role);
 }
 
-void Visitor::Field(const char *name, mat3x3 &v)
+void Visitor::Field(const char *name, mat3x3 &v, Role role)
 {
     static_assert(sizeof(mat3x3) == 72, "mat3x3 is nine doubles");
-    Raw(name, T_F64, 9, &v.m00, 72);
+    Doubles(name, &v.m00, 9, role);
 }
 
-void Visitor::Field(const char *name, Common::Point &v)
+void Visitor::Field(const char *name, Common::Point &v, Role role)
 {
+    if ( !Includes(role) )
+        return;
+
     int32_t xy[2] = {v.x, v.y};
     Raw(name, T_I32, 2, xy, 8);
-    v.x = xy[0];
-    v.y = xy[1];
+
+    if ( Reading() )
+    {
+        v.x = xy[0];
+        v.y = xy[1];
+    }
 }
 
-void Visitor::Field(const char *name, vec3d *v, size_t count)
+void Visitor::Field(const char *name, vec3d *v, size_t count, Role role)
 {
-    Raw(name, T_F64, count * 3, v, count * 24);
+    if ( Includes(role) )
+        Raw(name, T_F64, count * 3, v, count * 24);
 }
 
-void Visitor::Field(const char *name, int32_t *v, size_t count)
+void Visitor::Field(const char *name, int32_t *v, size_t count, Role role)
 {
-    Raw(name, T_I32, count, v, count * 4);
+    if ( Includes(role) )
+        Raw(name, T_I32, count, v, count * 4);
 }
 
-void Visitor::Field(const char *name, int16_t *v, size_t count)
+void Visitor::Field(const char *name, int16_t *v, size_t count, Role role)
 {
-    Raw(name, T_I16, count, v, count * 2);
+    if ( Includes(role) )
+        Raw(name, T_I16, count, v, count * 2);
 }
 
-void Visitor::Field(const char *name, uint32_t *v, size_t count)
+void Visitor::Field(const char *name, uint32_t *v, size_t count, Role role)
 {
-    Raw(name, T_U32, count, v, count * 4);
+    if ( Includes(role) )
+        Raw(name, T_U32, count, v, count * 4);
 }
 
-void Visitor::Field(const char *name, std::vector<uint8_t> &v)
+void Visitor::Field(const char *name, std::vector<uint8_t> &v, Role role)
 {
+    if ( !Includes(role) )
+        return;
+
     uint16_t n = ListLength(name, T_U8, 1, v.size());
 
     if ( _mode == WRITE )
@@ -132,8 +173,11 @@ void Visitor::Field(const char *name, std::vector<uint8_t> &v)
     }
 }
 
-void Visitor::Field(const char *name, std::vector<int32_t> &v)
+void Visitor::Field(const char *name, std::vector<int32_t> &v, Role role)
 {
+    if ( !Includes(role) )
+        return;
+
     uint16_t n = ListLength(name, T_I32, 1, v.size());
 
     if ( _mode == WRITE )
@@ -145,8 +189,11 @@ void Visitor::Field(const char *name, std::vector<int32_t> &v)
     }
 }
 
-void Visitor::Field(const char *name, std::vector<vec3d> &v)
+void Visitor::Field(const char *name, std::vector<vec3d> &v, Role role)
 {
+    if ( !Includes(role) )
+        return;
+
     uint16_t n = ListLength(name, T_F64, 3, v.size());
 
     if ( _mode == WRITE )
@@ -158,8 +205,11 @@ void Visitor::Field(const char *name, std::vector<vec3d> &v)
     }
 }
 
-void Visitor::Units(const char *name, std::vector<NC_STACK_ypabact *> &v)
+void Visitor::Units(const char *name, std::vector<NC_STACK_ypabact *> &v, Role role)
 {
+    if ( !Includes(role) )
+        return;
+
     uint16_t n = ListLength(name, T_UNIT, 1, v.size());
 
     if ( _mode == WRITE )
@@ -200,8 +250,11 @@ NC_STACK_ypabact *Visitor::UnitById(uint32_t id) const
     return it->second;
 }
 
-void Visitor::Unit(const char *name, NC_STACK_ypabact *&unit)
+void Visitor::Unit(const char *name, NC_STACK_ypabact *&unit, Role role)
 {
+    if ( !Includes(role) )
+        return;
+
     uint32_t id = UnitId(unit);
     Raw(name, T_UNIT, 1, &id, 4);
 
@@ -209,8 +262,11 @@ void Visitor::Unit(const char *name, NC_STACK_ypabact *&unit)
         unit = UnitById(id);
 }
 
-void Visitor::Sector(const char *name, cellArea *&cell)
+void Visitor::Sector(const char *name, cellArea *&cell, Role role)
 {
+    if ( !Includes(role) )
+        return;
+
     int32_t index = cell ? cell->CellId.y * _world->_mapSize.x + cell->CellId.x : -1;
     Raw(name, T_SECTOR, 1, &index, 4);
 
@@ -223,12 +279,22 @@ void Visitor::Sector(const char *name, cellArea *&cell)
     }
 }
 
-void Visitor::Target(const char *name, uint8_t type, BactTarget &target)
+void Visitor::Target(const char *name, uint8_t type, BactTarget &target, Role role)
 {
+    if ( !Includes(role) )
+        return;
+
+    // A unit's id or a sector's index, by the type
+    if ( _mode == SCHEMA )
+    {
+        Info(name, T_U32, 1);
+        return;
+    }
+
     switch ( type )
     {
     case BACT_TGT_TYPE_UNIT:
-        Unit(name, target.pbact);
+        Unit(name, target.pbact, role);
         break;
 
     case BACT_TGT_TYPE_CELL:
@@ -249,7 +315,9 @@ void Visitor::Target(const char *name, uint8_t type, BactTarget &target)
     {
         uint32_t none = 0;
         Raw(name, T_U32, 1, &none, 4);
-        target.pbact = NULL;
+
+        if ( Reading() )
+            target.pbact = NULL;
         break;
     }
     }
@@ -278,8 +346,11 @@ uint16_t Visitor::ListLength(const char *name, Type type, uint16_t count, size_t
     return n;
 }
 
-void Visitor::Kids(const char *name, World::RefBactList &list)
+void Visitor::Kids(const char *name, World::RefBactList &list, Role role)
 {
+    if ( !Includes(role) )
+        return;
+
     uint16_t n = ListLength(name, T_UNIT, 1, list.size());
 
     if ( _mode == WRITE )
@@ -304,8 +375,11 @@ void Visitor::Kids(const char *name, World::RefBactList &list)
     }
 }
 
-void Visitor::SectorUnits(const char *name, cellArea &cell)
+void Visitor::SectorUnits(const char *name, cellArea &cell, Role role)
 {
+    if ( !Includes(role) )
+        return;
+
     // Units waiting in the dead cache for another life are parked in a
     // sector too, out of the way; they have no state
     std::vector<uint32_t> ids;
@@ -343,8 +417,11 @@ void Visitor::SectorUnits(const char *name, cellArea &cell)
     }
 }
 
-void Visitor::Missiles(const char *name, World::MissileList &list)
+void Visitor::Missiles(const char *name, World::MissileList &list, Role role)
 {
+    if ( !Includes(role) )
+        return;
+
     uint16_t n = ListLength(name, T_UNIT, 1, list.size());
 
     if ( _mode == WRITE )
@@ -371,8 +448,11 @@ void Visitor::Missiles(const char *name, World::MissileList &list)
     }
 }
 
-void Visitor::Attackers(const char *typesName, const char *name, std::list<TBactAttacker> &list)
+void Visitor::Attackers(const char *typesName, const char *name, std::list<TBactAttacker> &list, Role role)
 {
+    if ( !Includes(role) )
+        return;
+
     std::vector<uint8_t> types;
     std::vector<NC_STACK_ypabact *> units;
 
@@ -382,8 +462,8 @@ void Visitor::Attackers(const char *typesName, const char *name, std::list<TBact
         units.push_back(a.attacker);
     }
 
-    Field(typesName, types);
-    Units(name, units);
+    Field(typesName, types, role);
+    Units(name, units, role);
 
     if ( Reading() )
     {
@@ -399,15 +479,21 @@ void Visitor::Attackers(const char *typesName, const char *name, std::list<TBact
 
 static void VisitSector(Visitor &v, NC_STACK_ypaworld *world, cellArea &cell, EnergyAccum &accum)
 {
-    v.Field("owner", cell.owner);
-    v.Field("type", cell.type_id);
-    v.Field("simple", cell.SectorType);
+    v.Field("owner", cell.owner, VIEW);
+    v.Field("type", cell.type_id, VIEW);
+    v.Field("simple", cell.SectorType, VIEW);
     v.Field("energyPower", cell.energy_power);
-    v.Field("health", cell.buildings_health.data(), 9);
+    v.Field("health", cell.buildings_health.data(), 9, VIEW);
     v.Field("purpose", cell.PurposeType);
     v.Field("purposeIndex", cell.PurposeIndex);
     v.Field("accumOwner", accum.Owner);
     v.Field("accumEnergy", accum.Energy);
+
+    if ( !v.Visits(INTERNAL) )
+    {
+        v.SectorUnits("units", cell);
+        return;
+    }
 
     // A power station on it, of the world's
     TPowerStationInfo ps;
@@ -420,7 +506,7 @@ static void VisitSector(Visitor &v, NC_STACK_ypaworld *world, cellArea &cell, En
     v.Field("power", ps.Power);
     v.Field("effectivePower", ps.EffectivePower);
 
-    if ( v.Reading() )
+    if ( v.Reads(INTERNAL) )
     {
         if ( powerStation )
         {
@@ -447,7 +533,7 @@ static void VisitSector(Visitor &v, NC_STACK_ypaworld *world, cellArea &cell, En
     v.Field("constructOwner", construct.Owner);
     v.Field("constructBuilding", construct.BuildID);
 
-    if ( v.Reading() )
+    if ( v.Reads(INTERNAL) )
     {
         if ( constructing )
         {
@@ -468,14 +554,14 @@ static void VisitSector(Visitor &v, NC_STACK_ypaworld *world, cellArea &cell, En
 
 static void VisitSuperItem(Visitor &v, TMapSuperItem &item)
 {
-    v.Field("state", item.State);
+    v.Field("state", item.State, VIEW);
     v.Field("activeTime", item.ActiveTime);
     v.Field("triggerTime", item.TriggerTime);
     v.Field("activateOwner", item.ActivateOwner);
-    v.Field("countDown", item.CountDown);
+    v.Field("countDown", item.CountDown, VIEW);
     v.Field("lastTenSeconds", item.LastTenSec);
     v.Field("lastSecond", item.LastSec);
-    v.Field("radius", item.CurrentRadius);
+    v.Field("radius", item.CurrentRadius, VIEW);
     v.Field("lastRadius", item.LastRadius);
 }
 
@@ -592,94 +678,80 @@ static void VisitBuilding(Visitor &v, World::TBuildingProto &p)
     v.Field("energy", p.Energy);
 }
 
-// Each of a table, as objects of a kind
-template <class T>
-static void AddEach(NC_STACK_ypaworld *world, Image &image, uint8_t kind, std::vector<T> &table, void (*visit)(Visitor &, T &))
-{
-    for (size_t i = 0; i < table.size(); i++)
-    {
-        Visitor v(Visitor::WRITE, world);
-        visit(v, table[i]);
-
-        Object obj;
-        obj.Kind = kind;
-        obj.Id = i;
-        obj.Data = std::move(v.Out());
-        image.Objects.push_back(std::move(obj));
-    }
-}
-
-
 // Capture
 
-static void AddUnit(NC_STACK_ypaworld *world, Image &image, std::set<uint32_t> &added, NC_STACK_ypabact *unit)
+static void ForEachUnit(Visitor &v, std::set<uint32_t> &added, NC_STACK_ypabact *unit, const ObjectFunc &func)
 {
     if ( !added.insert(unit->_gid).second )
         return;
 
-    Visitor v(Visitor::WRITE, world);
+    v.Out().clear();
     unit->VisitState(v);
-
-    Object obj;
-    obj.Kind = KIND_UNIT + unit->_bact_type;
-    obj.Id = unit->_gid;
-    obj.Data = std::move(v.Out());
-    image.Objects.push_back(std::move(obj));
+    func(KIND_UNIT + unit->_bact_type, unit->_gid, v.Out());
 
     for ( NC_STACK_ypabact *kid : unit->_kidList )
-        AddUnit(world, image, added, kid);
+        ForEachUnit(v, added, kid, func);
 
     for ( NC_STACK_ypamissile *m : unit->_missiles_list )
-        AddUnit(world, image, added, m);
+        ForEachUnit(v, added, m, func);
 }
 
-Image Capture(NC_STACK_ypaworld *world)
+void ForEachObject(NC_STACK_ypaworld *world, Part part, const ObjectFunc &allFunc, const Schema *schema)
 {
-    Image image;
-    image.Level = world->_levelInfo.LevelID;
+    auto has = [schema](uint8_t kind) { return !schema || schema->count(kind); };
 
+    // Objects with nothing in a part are left out of it
+    ObjectFunc func = [part, &allFunc](uint8_t kind, uint32_t id, const std::string &data)
     {
-        Visitor v(Visitor::WRITE, world);
-        world->VisitState(v);
+        if ( part == PART_ALL || !data.empty() )
+            allFunc(kind, id, data);
+    };
 
-        Object obj;
-        obj.Kind = KIND_WORLD;
-        obj.Data = std::move(v.Out());
-        image.Objects.push_back(std::move(obj));
-    }
+    // One visitor for all, its buffer kept
+    Visitor v(Visitor::WRITE, world, part);
 
-    for (size_t i = 0; i < world->_cells.size(); i++)
+    world->VisitState(v);
+    func(KIND_WORLD, 0, v.Out());
+
+    for (size_t i = 0; has(KIND_SECTOR) && i < world->_cells.size(); i++)
     {
-        Visitor v(Visitor::WRITE, world);
+        v.Out().clear();
         VisitSector(v, world, world->_cells.At(i), world->_energyAccumMap.At(i));
-
-        Object obj;
-        obj.Kind = KIND_SECTOR;
-        obj.Id = i;
-        obj.Data = std::move(v.Out());
-        image.Objects.push_back(std::move(obj));
+        func(KIND_SECTOR, i, v.Out());
     }
 
-    for (size_t i = 0; i < world->_levelInfo.SuperItems.size(); i++)
+    for (size_t i = 0; has(KIND_SUPERITEM) && i < world->_levelInfo.SuperItems.size(); i++)
     {
-        Visitor v(Visitor::WRITE, world);
+        v.Out().clear();
         VisitSuperItem(v, world->_levelInfo.SuperItems[i]);
-
-        Object obj;
-        obj.Kind = KIND_SUPERITEM;
-        obj.Id = i;
-        obj.Data = std::move(v.Out());
-        image.Objects.push_back(std::move(obj));
+        func(KIND_SUPERITEM, i, v.Out());
     }
 
-    AddEach(world, image, KIND_VEHICLE, world->_vhclProtos, VisitVehicle);
-    AddEach(world, image, KIND_WEAPON, world->_weaponProtos, VisitWeapon);
-    AddEach(world, image, KIND_BUILDING, world->_buildProtos, VisitBuilding);
+    for (size_t i = 0; has(KIND_VEHICLE) && i < world->_vhclProtos.size(); i++)
+    {
+        v.Out().clear();
+        VisitVehicle(v, world->_vhclProtos[i]);
+        func(KIND_VEHICLE, i, v.Out());
+    }
+
+    for (size_t i = 0; has(KIND_WEAPON) && i < world->_weaponProtos.size(); i++)
+    {
+        v.Out().clear();
+        VisitWeapon(v, world->_weaponProtos[i]);
+        func(KIND_WEAPON, i, v.Out());
+    }
+
+    for (size_t i = 0; has(KIND_BUILDING) && i < world->_buildProtos.size(); i++)
+    {
+        v.Out().clear();
+        VisitBuilding(v, world->_buildProtos[i]);
+        func(KIND_BUILDING, i, v.Out());
+    }
 
     std::set<uint32_t> added;
 
     for ( NC_STACK_ypabact *unit : world->_unitsList )
-        AddUnit(world, image, added, unit);
+        ForEachUnit(v, added, unit, func);
 
     // Units in no list but a sector's
     for ( cellArea &cell : world->_cells )
@@ -689,10 +761,25 @@ Image Capture(NC_STACK_ypaworld *world)
             if ( !unit->_kidRef.IsListType(World::BLIST_CACHE) && !added.count(unit->_gid) )
             {
                 ypa_log_out("State: unit %d (type %d) is only in a sector's list\n", unit->_gid, unit->_bact_type);
-                AddUnit(world, image, added, unit);
+                ForEachUnit(v, added, unit, func);
             }
         }
     }
+}
+
+Image Capture(NC_STACK_ypaworld *world, Part part)
+{
+    Image image;
+    image.Level = world->_levelInfo.LevelID;
+
+    ForEachObject(world, part, [&image](uint8_t kind, uint32_t id, const std::string &data)
+    {
+        Object obj;
+        obj.Kind = kind;
+        obj.Id = id;
+        obj.Data = data;
+        image.Objects.push_back(std::move(obj));
+    });
 
     return image;
 }
@@ -700,47 +787,47 @@ Image Capture(NC_STACK_ypaworld *world)
 
 // Schema
 
-Schema MakeSchema(NC_STACK_ypaworld *world)
+Schema MakeSchema(NC_STACK_ypaworld *world, Part part)
 {
     Schema schema;
 
     {
-        Visitor v(Visitor::SCHEMA, world);
+        Visitor v(Visitor::SCHEMA, world, part);
         world->VisitState(v);
         schema[KIND_WORLD] = v.Fields();
     }
 
     if ( world->_cells.size() )
     {
-        Visitor v(Visitor::SCHEMA, world);
+        Visitor v(Visitor::SCHEMA, world, part);
         VisitSector(v, world, world->_cells.At(0), world->_energyAccumMap.At(0));
         schema[KIND_SECTOR] = v.Fields();
     }
 
     {
         TMapSuperItem item;
-        Visitor v(Visitor::SCHEMA, world);
+        Visitor v(Visitor::SCHEMA, world, part);
         VisitSuperItem(v, item);
         schema[KIND_SUPERITEM] = v.Fields();
     }
 
     {
         World::TVhclProto vhcl;
-        Visitor v(Visitor::SCHEMA, world);
+        Visitor v(Visitor::SCHEMA, world, part);
         VisitVehicle(v, vhcl);
         schema[KIND_VEHICLE] = v.Fields();
     }
 
     {
         World::TWeapProto weapon;
-        Visitor v(Visitor::SCHEMA, world);
+        Visitor v(Visitor::SCHEMA, world, part);
         VisitWeapon(v, weapon);
         schema[KIND_WEAPON] = v.Fields();
     }
 
     {
         World::TBuildingProto building;
-        Visitor v(Visitor::SCHEMA, world);
+        Visitor v(Visitor::SCHEMA, world, part);
         VisitBuilding(v, building);
         schema[KIND_BUILDING] = v.Fields();
     }
@@ -753,13 +840,22 @@ Schema MakeSchema(NC_STACK_ypaworld *world)
         if ( !unit )
             continue;
 
-        Visitor v(Visitor::SCHEMA, world);
+        Visitor v(Visitor::SCHEMA, world, part);
         unit->VisitState(v);
         schema[KIND_UNIT + type] = v.Fields();
 
         // Never alive, so with nothing to do as it goes
         unit->_status_flg = BACT_STFLAG_DEATH1;
         unit->Delete();
+    }
+
+    // Kinds with nothing in the part
+    for (auto it = schema.begin(); it != schema.end(); )
+    {
+        if ( it->second.empty() )
+            it = schema.erase(it);
+        else
+            it++;
     }
 
     return schema;
@@ -870,7 +966,7 @@ bool Unpack(const std::string &packed, Image &image)
     return pos == raw.size();
 }
 
-static size_t ElemSize(Type type)
+size_t ElemSize(Type type)
 {
     switch ( type )
     {
@@ -897,34 +993,138 @@ static size_t ElemSize(Type type)
     return 1;
 }
 
+size_t FieldSize(const FieldInfo &field, const char *data, size_t size)
+{
+    size_t need;
+
+    if ( !field.List )
+    {
+        need = ElemSize(field.ElemType) * field.Count;
+    }
+    else
+    {
+        if ( size < 2 )
+            return 0;
+
+        uint16_t n;
+        memcpy(&n, data, 2);
+        need = 2 + n * field.Count * ElemSize(field.ElemType);
+    }
+
+    return need <= size ? need : 0;
+}
+
+bool FieldOffsets(const std::vector<FieldInfo> &fields, const std::string &data, std::vector<size_t> &offsets)
+{
+    offsets.resize(fields.size() + 1);
+    size_t pos = 0;
+
+    for (size_t i = 0; i < fields.size(); i++)
+    {
+        offsets[i] = pos;
+
+        size_t size = FieldSize(fields[i], data.data() + pos, data.size() - pos);
+        if ( !size )
+            return false;
+
+        pos += size;
+    }
+
+    offsets[fields.size()] = pos;
+    return pos == data.size();
+}
+
+std::string WriteSchema(const Schema &schema)
+{
+    std::string out;
+
+    auto put = [&out](const void *data, size_t size) { out.append((const char *)data, size); };
+
+    uint16_t kinds = schema.size();
+    put(&kinds, 2);
+
+    for ( const auto &it : schema )
+    {
+        uint16_t n = it.second.size();
+        put(&it.first, 1);
+        put(&n, 2);
+
+        for ( const FieldInfo &f : it.second )
+        {
+            uint8_t type = f.ElemType;
+            uint8_t list = f.List ? 1 : 0;
+            uint8_t len = f.Name.size();
+            put(&type, 1);
+            put(&f.Count, 2);
+            put(&list, 1);
+            put(&len, 1);
+            out.append(f.Name, 0, len);
+        }
+    }
+
+    return out;
+}
+
+bool ReadSchema(const std::string &bytes, Schema &schema)
+{
+    size_t pos = 0;
+
+    auto take = [&bytes, &pos](void *data, size_t size)
+    {
+        if ( pos + size > bytes.size() )
+            return false;
+        memcpy(data, bytes.data() + pos, size);
+        pos += size;
+        return true;
+    };
+
+    schema.clear();
+
+    uint16_t kinds;
+    if ( !take(&kinds, 2) )
+        return false;
+
+    for (uint16_t k = 0; k < kinds; k++)
+    {
+        uint8_t kind;
+        uint16_t n;
+        if ( !take(&kind, 1) || !take(&n, 2) )
+            return false;
+
+        std::vector<FieldInfo> &fields = schema[kind];
+
+        for (uint16_t i = 0; i < n; i++)
+        {
+            FieldInfo f;
+            uint8_t type, list, len;
+
+            if ( !take(&type, 1) || !take(&f.Count, 2) || !take(&list, 1) || !take(&len, 1) || pos + len > bytes.size() )
+                return false;
+
+            f.ElemType = (Type)type;
+            f.List = list != 0;
+            f.Name = bytes.substr(pos, len);
+            pos += len;
+            fields.push_back(f);
+        }
+    }
+
+    return pos == bytes.size();
+}
+
 // The bytes of each field of an object
 static std::vector<std::string> SplitFields(const std::vector<FieldInfo> &fields, const std::string &data)
 {
     std::vector<std::string> out;
-    size_t pos = 0;
+    std::vector<size_t> offsets;
 
-    for ( const FieldInfo &f : fields )
+    FieldOffsets(fields, data, offsets);
+
+    for (size_t i = 0; i < fields.size(); i++)
     {
-        size_t size;
-
-        if ( !f.List )
-        {
-            size = ElemSize(f.ElemType) * f.Count;
-        }
-        else
-        {
-            uint16_t n = 0;
-            if ( pos + 2 <= data.size() )
-                memcpy(&n, data.data() + pos, 2);
-
-            size = 2 + n * f.Count * ElemSize(f.ElemType);
-        }
-
-        if ( pos + size > data.size() )
-            size = data.size() - pos;
-
-        out.push_back(data.substr(pos, size));
-        pos += size;
+        size_t start = std::min(offsets[i], data.size());
+        size_t end = std::max(start, std::min(offsets[i + 1], data.size()));
+        out.push_back(data.substr(start, end - start));
     }
 
     return out;
@@ -1055,100 +1255,121 @@ std::string Diff(const Schema &schema, const Image &a, const Image &b, size_t ma
 
 // Restore
 
-bool Restore(NC_STACK_ypaworld *world, const Image &image)
+// Reads the objects of the images, each of a part, in that order
+static bool RestoreParts(NC_STACK_ypaworld *world, const std::vector<std::pair<Part, const Image *>> &parts)
 {
-    if ( image.Objects.empty() || image.Objects[0].Kind != KIND_WORLD )
+    const Image &first = *parts.front().second;
+
+    if ( first.Objects.empty() || first.Objects[0].Kind != KIND_WORLD )
     {
         ypa_log_out("State: no world in the image\n");
         return false;
     }
 
-    if ( !world->LoadLevelData(image.Level) )
+    if ( !world->LoadLevelData(first.Level) )
     {
-        ypa_log_out("State: can't load level %d\n", image.Level);
+        ypa_log_out("State: can't load level %d\n", first.Level);
         return false;
     }
 
     // Every unit first, so that the fields can refer to any of them
     std::map<uint32_t, NC_STACK_ypabact *> units;
 
-    for ( const Object &obj : image.Objects )
+    for ( const auto &part : parts )
     {
-        if ( obj.Kind < KIND_UNIT )
-            continue;
-
-        NC_STACK_ypabact *unit = world->NewUnitObject(obj.Kind - KIND_UNIT);
-        if ( !unit )
+        for ( const Object &obj : part.second->Objects )
         {
-            ypa_log_out("State: can't make a unit of type %d\n", obj.Kind - KIND_UNIT);
-            world->DeleteLevel();
-            return false;
-        }
+            if ( obj.Kind < KIND_UNIT || units.count(obj.Id) )
+                continue;
 
-        unit->_gid = obj.Id;
-        units[obj.Id] = unit;
+            NC_STACK_ypabact *unit = world->NewUnitObject(obj.Kind - KIND_UNIT);
+            if ( !unit )
+            {
+                ypa_log_out("State: can't make a unit of type %d\n", obj.Kind - KIND_UNIT);
+                world->DeleteLevel();
+                return false;
+            }
+
+            unit->_gid = obj.Id;
+            units[obj.Id] = unit;
+        }
     }
 
-    for ( const Object &obj : image.Objects )
+    for ( const auto &part : parts )
     {
-        Visitor v(Visitor::READ, world);
-        v.SetUnits(&units);
-        v.SetData(&obj.Data);
+        for ( const Object &obj : part.second->Objects )
+        {
+            Visitor v(Visitor::READ, world, part.first);
+            v.SetUnits(&units);
+            v.SetData(&obj.Data);
 
-        if ( obj.Kind == KIND_WORLD )
-        {
-            world->VisitState(v);
-        }
-        else if ( obj.Kind == KIND_SECTOR )
-        {
-            if ( obj.Id >= world->_cells.size() )
-                continue;
+            if ( obj.Kind == KIND_WORLD )
+            {
+                world->VisitState(v);
+            }
+            else if ( obj.Kind == KIND_SECTOR )
+            {
+                if ( obj.Id >= world->_cells.size() )
+                    continue;
 
-            VisitSector(v, world, world->_cells.At(obj.Id), world->_energyAccumMap.At(obj.Id));
-        }
-        else if ( obj.Kind == KIND_SUPERITEM )
-        {
-            if ( obj.Id >= world->_levelInfo.SuperItems.size() )
-                continue;
+                VisitSector(v, world, world->_cells.At(obj.Id), world->_energyAccumMap.At(obj.Id));
+            }
+            else if ( obj.Kind == KIND_SUPERITEM )
+            {
+                if ( obj.Id >= world->_levelInfo.SuperItems.size() )
+                    continue;
 
-            VisitSuperItem(v, world->_levelInfo.SuperItems[obj.Id]);
-        }
-        else if ( obj.Kind == KIND_VEHICLE )
-        {
-            if ( obj.Id >= world->_vhclProtos.size() )
-                continue;
+                VisitSuperItem(v, world->_levelInfo.SuperItems[obj.Id]);
+            }
+            else if ( obj.Kind == KIND_VEHICLE )
+            {
+                if ( obj.Id >= world->_vhclProtos.size() )
+                    continue;
 
-            VisitVehicle(v, world->_vhclProtos[obj.Id]);
-        }
-        else if ( obj.Kind == KIND_WEAPON )
-        {
-            if ( obj.Id >= world->_weaponProtos.size() )
-                continue;
+                VisitVehicle(v, world->_vhclProtos[obj.Id]);
+            }
+            else if ( obj.Kind == KIND_WEAPON )
+            {
+                if ( obj.Id >= world->_weaponProtos.size() )
+                    continue;
 
-            VisitWeapon(v, world->_weaponProtos[obj.Id]);
-        }
-        else if ( obj.Kind == KIND_BUILDING )
-        {
-            if ( obj.Id >= world->_buildProtos.size() )
-                continue;
+                VisitWeapon(v, world->_weaponProtos[obj.Id]);
+            }
+            else if ( obj.Kind == KIND_BUILDING )
+            {
+                if ( obj.Id >= world->_buildProtos.size() )
+                    continue;
 
-            VisitBuilding(v, world->_buildProtos[obj.Id]);
-        }
-        else
-        {
-            units[obj.Id]->VisitState(v);
-        }
+                VisitBuilding(v, world->_buildProtos[obj.Id]);
+            }
+            else
+            {
+                units[obj.Id]->VisitState(v);
+            }
 
-        if ( !v.ReadAll() )
-        {
-            ypa_log_out("State: %s doesn't read back\n", ObjectName(obj).c_str());
-            world->DeleteLevel();
-            return false;
+            if ( !v.ReadAll() )
+            {
+                ypa_log_out("State: %s doesn't read back\n", ObjectName(obj).c_str());
+                world->DeleteLevel();
+                return false;
+            }
         }
     }
 
     world->FinishRestore();
     return true;
+}
+
+bool Restore(NC_STACK_ypaworld *world, const Image &image)
+{
+    return RestoreParts(world, {{PART_ALL, &image}});
+}
+
+// The view first: it has each unit's vehicle, which gives the unit its
+// prototype's models and guns that the internal part then fills in
+bool Restore(NC_STACK_ypaworld *world, const Image &view, const Image &internal)
+{
+    return RestoreParts(world, {{PART_VIEW, &view}, {PART_INTERNAL, &internal}});
 }
 
 }
