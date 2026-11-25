@@ -309,7 +309,7 @@ void NC_STACK_yparobo::DispatchDockedForce(NC_STACK_ypabact *unit)
         setTarget_msg targetMsg;
         targetMsg.tgt_type = _roboDockTargetType;
         targetMsg.priority = 0;
-        targetMsg.tgt.pbact = _roboDockTargetBact;
+        targetMsg.tgt.pbact = NULL; // A unit target is found again by its squad's id
         targetMsg.tgt_pos.x = _roboDockTargetPos.x;
         targetMsg.tgt_pos.z = _roboDockTargetPos.z;
 
@@ -2548,7 +2548,6 @@ NC_STACK_ypabact *NC_STACK_yparobo::AllocForce(robo_loct1 *arg)
     if ( useDock )
     {
         _roboState |= (ROBOSTATE_SETDOCKTARGET | ROBOSTATE_DOCKINUSE);
-        _roboDockTargetBact = arg->tgt_bact;
         _roboDockTargetType = arg->tgType;
         _roboDockTargetCommandID = arg->command_id;
 
@@ -5193,7 +5192,6 @@ void NC_STACK_yparobo::Renew()
     _roboDockTargetPos.x = 0;
     _roboDockTargetPos.y = 0;
     _roboDockTargetPos.z = 0;
-    _roboDockTargetBact = NULL;
     _roboTestEnemyTime = 0;
     _roboBeamTimePre = 0;
     _roboAttackersClearTime = 0;
@@ -6179,7 +6177,6 @@ NC_STACK_yparobo::NC_STACK_yparobo()
     _roboDockUser = 0;
     _roboDockTime = 0;
     _roboDockTargetPos = vec3d();
-    _roboDockTargetBact = NULL;
     _roboDockTargetType = 0;
     _roboDockAggr = 0;
     _roboDockTargetCommandID = 0;

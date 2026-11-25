@@ -313,7 +313,6 @@ public:
     uint32_t _roboDockUser;
     int _roboDockTime;
     vec3d _roboDockTargetPos;
-    NC_STACK_ypabact *_roboDockTargetBact;
     uint8_t _roboDockTargetType;
     uint8_t _roboDockAggr;
     uint32_t _roboDockTargetCommandID;
