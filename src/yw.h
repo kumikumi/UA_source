@@ -2254,6 +2254,7 @@ public:
     NC_STACK_ypabact *GetNextSquad() const;
     
     
+    void LinkGatesAndSuperItems();
     void InitGates();
     void UpdatePowerEnergy();
     void PowerStationErase(cellArea *cell);

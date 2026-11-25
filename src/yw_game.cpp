@@ -677,13 +677,39 @@ void NC_STACK_ypaworld::yw_InitTechUpgradeBuildings()
     }
 }
 
+// The sectors of the gates and bombs and of their key sectors
+void NC_STACK_ypaworld::LinkGatesAndSuperItems()
+{
+    for (TMapGate &gate : _levelInfo.Gates)
+    {
+        gate.PCell = &_cells(gate.CellId);
+
+        for (TMapKeySector &ks : gate.KeySectors)
+        {
+            if ( IsGamePlaySector( ks.CellId ) )
+                ks.PCell = &_cells(ks.CellId);
+        }
+    }
+
+    for (TMapSuperItem &sitem : _levelInfo.SuperItems)
+    {
+        sitem.PCell = &_cells(sitem.CellId);
+
+        for ( TMapKeySector &ks : sitem.KeySectors )
+        {
+            if ( IsGamePlaySector( ks.CellId ) )
+                ks.PCell = &_cells(ks.CellId);
+        }
+    }
+}
+
 void NC_STACK_ypaworld::InitGates()
 {
+    LinkGatesAndSuperItems();
+
     for (size_t i = 0; i < _levelInfo.Gates.size(); i++)
     {
         TMapGate &gate = _levelInfo.Gates[i];
-
-        gate.PCell = &_cells(gate.CellId);
 
         TBuildingPlacement placement;
         placement.owner = gate.PCell->owner;
@@ -696,24 +722,16 @@ void NC_STACK_ypaworld::InitGates()
 
         gate.PCell->PurposeType = cellArea::PT_GATECLOSED;
         gate.PCell->PurposeIndex = i;
-
-        for (TMapKeySector &ks : gate.KeySectors)
-        {
-            if ( IsGamePlaySector( ks.CellId ) )
-            {
-                ks.PCell = &_cells(ks.CellId);
-            }
-        }
     }
 }
 
 void NC_STACK_ypaworld::InitSuperItems()
 {
+    LinkGatesAndSuperItems();
+
     for ( size_t i = 0; i < _levelInfo.SuperItems.size(); i++ )
     {
         TMapSuperItem &sitem = _levelInfo.SuperItems[i];
-        
-        sitem.PCell = &_cells(sitem.CellId);
 
         TBuildingPlacement placement;
         placement.owner = sitem.PCell->owner;
@@ -726,12 +744,6 @@ void NC_STACK_ypaworld::InitSuperItems()
 
         sitem.PCell->PurposeType = cellArea::PT_STOUDSON;
         sitem.PCell->PurposeIndex = i;
-
-        for ( TMapKeySector &ks : sitem.KeySectors )
-        {
-            if ( IsGamePlaySector( ks.CellId ) )
-                ks.PCell = &_cells(ks.CellId);
-        }
 
         sitem.ActiveTime = 0;
         sitem.TriggerTime = 0;
