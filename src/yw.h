@@ -1887,6 +1887,10 @@ public:
     std::string SessionPath() const;
     bool RestartLevel();
     bool RewindLevel();
+    void PlayRewind(double realSteps);
+    void EndRewind();
+    bool IsRewinding() const { return _rewinding; }
+    void DrawRewindNotice();
     void SaveWonState();
 
     // The world's own state, field by field: see World::State
@@ -2096,7 +2100,7 @@ public:
     void AddFrame();
     bool FrameAt(double step, World::Frame &out) const;
     void PlaceDrawnCamera(const World::Frame &frame);
-    void RenderGame(TUpdateArgs *arg, const World::Frame &frame, bool drawGui);
+    void RenderGame(TUpdateArgs *arg, const World::Frame &frame, bool live);
     void CheckSectorVisibility(Common::Point sect, TRenderingSector *sct, const World::Frame &frame, baseRender_msg *rndrParams);
     void RenderSector(TRenderingSector *sct, const World::Frame &frame, baseRender_msg *rndrParams);
     void RenderUnit(const World::Frame &frame, const World::Frame::Unit &unit, baseRender_msg *arg);
@@ -2308,7 +2312,7 @@ public:
     
     int32_t GetLegoBld(const cellArea *cell, int bldX, int bldY);
     int32_t GetLegoBld(const Common::Point &cell, int bldX, int bldY);
-    int32_t DrawnSectorType(const World::Frame::Sector &sector) const;
+    int32_t DrawnSectorType(const World::Frame::Sector &sector, const World::Frame::Construction *construction) const;
     
     void ClearOverrideModels();
     void LoadOverrideModels();
@@ -2601,6 +2605,19 @@ public:
     
     World::Recorder _recorder; // --record
     bool _rewindKeyHeld = false; // Since it went back: not to go on going back
+
+    // Going back through the frames of the steps the level was rewound over,
+    // drawing the step at _rewindPosition, down to _rewindTarget: the level
+    // is already back there
+    bool _rewinding = false;
+    double _rewindPosition = 0.0;
+    uint32_t _rewindTarget = 0;
+
+    double _drawnStep = 0.0; // The step drawn last, or how far between two
+
+    // Whether the level has stepped since it was set up: the interface shows
+    // it as a step leaves it
+    bool _stepped = false;
     
     THudVisor _guiVisor;
     

@@ -572,14 +572,28 @@ bool NC_STACK_ypaworld::SimulationStep(TUpdateArgs *arg)
     if ( !_doNotRender )
         AddFrame();
 
+    _stepped = true;
     return true;
 }
+
+// How far back the rewind key goes at least: the last step to go back to,
+// or the one before when that was just now
+static const uint32_t RewindMinSteps = 3 * 60;
+
+// How many frames are kept to go back through: as far as the rewind key goes,
+// and pressed again soon after, as far again as that
+static const size_t RewindFrames = 2 * World::Recorder::BlockSteps + RewindMinSteps + 2;
+
+// How many times as fast as the game goes on the rewind goes back
+static const double RewindSpeed = 4.0;
 
 // What the step left to draw
 void NC_STACK_ypaworld::AddFrame()
 {
     if ( !_frameMaker )
         _frameMaker.reset(new World::FrameMaker(World::State::MakeSchema(this, World::State::PART_VIEW)));
+
+    _frames.Keep(_recorder.IsRecording() && !_isNetGame ? RewindFrames : 2);
 
     World::Frame frame;
     _frameMaker->Make(this, _framesElapsed, _frames.Empty() ? NULL : &_frames.Last(), frame);
@@ -646,6 +660,24 @@ void NC_STACK_ypaworld::OverrideCamera(const vec3d &pos, const mat3x3 &rotation)
     _cameraOverrideRot = rotation;
 }
 
+// While the level goes back: a line over the world drawn
+void NC_STACK_ypaworld::DrawRewindNotice()
+{
+    CmdStream drawCmds;
+    drawCmds.reserve(256);
+
+    FontUA::select_tileset(&drawCmds, 15);
+
+    FontUA::set_xpos(&drawCmds, 0);
+    FontUA::set_center_ypos(&drawCmds, 2 * _fontH - _screenSize.y / 2);
+
+    FontUA::FormateCenteredSkipableItem(_guiTiles[15], &drawCmds, Locale::Text::Common(Locale::CMN_REWINDING), _screenSize.x);
+
+    FontUA::set_end(&drawCmds);
+
+    GFX::Engine.ProcessDrawSeq(drawCmds);
+}
+
 // What is drawn of the level goes, as its models do
 void NC_STACK_ypaworld::FreeDrawings()
 {
@@ -675,10 +707,18 @@ void NC_STACK_ypaworld::RenderFrame(TUpdateArgs *arg, float stepFraction)
 
         World::Frame frame;
 
-        if ( FrameAt(_frames.Empty() ? 0.0 : _frames.Last().Step - 1.0 + stepFraction, frame) )
+        if ( _rewinding )
+            _drawnStep = _rewindPosition;
+        else if ( !_frames.Empty() )
+            _drawnStep = _frames.Last().Step - 1.0 + stepFraction;
+
+        if ( FrameAt(_drawnStep, frame) )
         {
             GFX::Engine.SetAnimationTime(frame.Time);
-            RenderGame(arg, frame, true);
+            RenderGame(arg, frame, !_rewinding && _stepped);
+
+            if ( _rewinding )
+                DrawRewindNotice();
 
             if ( _isNetGame )
                 yw_NetDrawStats(this);
@@ -2093,6 +2133,8 @@ void NC_STACK_ypaworld::FreeLevel()
 
     // The next level is drawn once its first step has left a frame
     TF::Engine.SetViewPoint(NULL);
+    _stepped = false;
+    _rewinding = false;
     _frames.Clear();
     _frameMaker.reset();
     _cameraOverridden = false;
@@ -5886,10 +5928,6 @@ bool NC_STACK_ypaworld::RestartLevel()
     return _recorder.StartFrom(this, session, fmt::sprintf("level %d", _levelInfo.LevelID), start, start);
 }
 
-// How far back the rewind key goes at least: the last step to go back to,
-// or the one before when that was just now
-static const uint32_t RewindMinSteps = 3 * 60;
-
 // The rewind key: the level goes back to the latest step its recording keeps
 // to go back to, at least a few seconds back, and goes on recording from
 // there. False when there's none.
@@ -5910,6 +5948,10 @@ bool NC_STACK_ypaworld::RewindLevel()
         return false;
     }
 
+    // The frames of the steps gone back over, to go back through as they
+    // were drawn
+    World::Frames gone = std::move(_frames);
+
     FreeLevel();
 
     if ( !World::State::Restore(this, view, internal, false) )
@@ -5918,9 +5960,61 @@ bool NC_STACK_ypaworld::RewindLevel()
         return false;
     }
 
+    _rewindTarget = _framesElapsed;
+
+    if ( !gone.Empty() && gone.Last().Step > _rewindTarget )
+    {
+        _frames = std::move(gone);
+        _rewindPosition = std::min(_drawnStep, (double)_frames.Last().Step);
+        _rewinding = true;
+    }
+    else
+    {
+        EndRewind();
+    }
+
+    // Shaking is the sound's, which stands still meanwhile
+    _cameraShake = mat3x3::Ident();
+    return true;
+}
+
+// Goes on back through the frames of the steps the level was rewound over,
+// by realSteps steps of real time, RewindSpeed times as fast
+void NC_STACK_ypaworld::PlayRewind(double realSteps)
+{
+    // Nothing is heard going back, but the music plays on
+    SFXEngine::SFXe.BeginSoundFrame(1, _viewerPosition + vec3d::OY(50000.0), vec3d(0.0), mat3x3::Ident());
+    SFXEngine::SFXe.EndSoundFrame();
+
+    _rewindPosition -= realSteps * RewindSpeed;
+
+    // Going back over steps without frames, it ends where they do
+    if ( _rewindPosition <= _rewindTarget || _rewindPosition <= _frames.First().Step )
+        EndRewind();
+}
+
+// Back at the step the level was rewound to, where it goes on. It's drawn
+// there without the interface until it steps on.
+void NC_STACK_ypaworld::EndRewind()
+{
+    _rewinding = false;
+    _rewindPosition = _rewindTarget;
+
+    // The frames kept end with the step's, the level as it was restored
+    _frames.DropAfter(_rewindTarget);
+
+    if ( _frames.Empty() || _frames.Last().Step != _rewindTarget )
+    {
+        _frames.Clear();
+        AddFrame();
+    }
+
+    TInfoMessage msg;
+    msg.unit = NULL;
+    msg.Priority = 10;
+    msg.MsgID = 0;
     msg.txt = Locale::Text::Feedback(Locale::FEEDBACK_REWOUND);
     ShowMessage(&msg);
-    return true;
 }
 
 // A won level's end, to play the level again from there; the player's host
@@ -6939,10 +7033,10 @@ int32_t NC_STACK_ypaworld::GetLegoBld(const Common::Point &cell, int bldX, int b
 
 // The type a sector is drawn as: that of a building being built on it, which
 // it becomes when the building is done
-int32_t NC_STACK_ypaworld::DrawnSectorType(const World::Frame::Sector &sector) const
+int32_t NC_STACK_ypaworld::DrawnSectorType(const World::Frame::Sector &sector, const World::Frame::Construction *construction) const
 {
-    if ( sector.Constructing && sector.ConstructBuilding < _buildProtos.size() )
-        return _buildProtos[sector.ConstructBuilding].SecType;
+    if ( construction && construction->Building < _buildProtos.size() )
+        return _buildProtos[construction->Building].SecType;
 
     return sector.Type;
 }

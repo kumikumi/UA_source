@@ -15,6 +15,7 @@ struct TRenderingSector
 {
     cellArea *Cell;                       // Its place and height
     const World::Frame::Sector *Drawn;    // As the frame has it
+    const World::Frame::Construction *Construction; // A building being built
     int InMap;   // The sector is on the map
     int Visible; // Its bounding box is in view
 };

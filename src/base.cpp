@@ -573,7 +573,7 @@ size_t NC_STACK_base::Render(baseRender_msg *arg, Instance * inst)
             GFX::GFXEngine::Instance.QueueRenderMesh(&rend);
         }
 
-        if (inst)
+        if (inst && arg->emitParticles)
         {
             for (NC_STACK_ade::InstanceOpts *ade : inst->Particles)
             {

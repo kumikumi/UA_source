@@ -1497,6 +1497,7 @@ void NC_STACK_ypaworld::CheckSectorVisibility(Common::Point sect, TRenderingSect
         sct->InMap = 1;
         sct->Cell = &_cells( sect );
         sct->Drawn = &frame.Sectors->at(index);
+        sct->Construction = frame.FindConstruction(index);
 
         vec3d pos = World::SectorIDToCenterPos3( sect );
         pos.y = sct->Cell->height;
@@ -1525,11 +1526,12 @@ void NC_STACK_ypaworld::RenderSector(TRenderingSector *sct, const World::Frame &
     if ( sct->Visible )
     {
         const World::Frame::Sector &drawn = *sct->Drawn;
-        int32_t typeId = DrawnSectorType(drawn);
+        const World::Frame::Construction *construction = sct->Construction;
+        int32_t typeId = DrawnSectorType(drawn, construction);
 
         // A building being built grows
-        bool constructing = drawn.Constructing && drawn.ConstructEnd > 0;
-        vec3d scel = vec3d::OY(constructing ? (float)drawn.ConstructTime / (float)drawn.ConstructEnd : 1.0);
+        bool constructing = construction && construction->End > 0;
+        vec3d scel = vec3d::OY(constructing ? (float)construction->Time / (float)construction->End : 1.0);
 
         int subOffset, subCount;
 
@@ -1877,7 +1879,7 @@ void NC_STACK_ypaworld::RenderFillers(baseRender_msg *arg, int diameter)
                     h = sct2.Cell->averg_height;
                     
                 TCellFillerCh &filler = _cellsVFCache( sct2.Cell->CellId.x - 1, sct2.Cell->CellId.y );
-                PrepareFiller(sct.Cell, sct2.Cell, DrawnSectorType(*sct.Drawn), DrawnSectorType(*sct2.Drawn),
+                PrepareFiller(sct.Cell, sct2.Cell, DrawnSectorType(*sct.Drawn, sct.Construction), DrawnSectorType(*sct2.Drawn, sct2.Construction),
                               sct2.Cell->averg_height, h, true, &filler);
                 filler.Render(arg);
             }
@@ -1900,7 +1902,7 @@ void NC_STACK_ypaworld::RenderFillers(baseRender_msg *arg, int diameter)
                     h = sct2.Cell->averg_height;
                     
                 TCellFillerCh &filler = _cellsHFCache( sct2.Cell->CellId.x, sct2.Cell->CellId.y - 1 );
-                PrepareFiller(sct.Cell, sct2.Cell, DrawnSectorType(*sct.Drawn), DrawnSectorType(*sct2.Drawn),
+                PrepareFiller(sct.Cell, sct2.Cell, DrawnSectorType(*sct.Drawn, sct.Construction), DrawnSectorType(*sct2.Drawn, sct2.Construction),
                               sct2.Cell->averg_height, h, false, &filler);
                 filler.Render(arg);
             }
@@ -1908,8 +1910,9 @@ void NC_STACK_ypaworld::RenderFillers(baseRender_msg *arg, int diameter)
     }
 }
 
-// Draws a frame of the world, and the interface over it with drawGui
-void NC_STACK_ypaworld::RenderGame(TUpdateArgs *arg, const World::Frame &frame, bool drawGui)
+// Draws a frame of the world. Live, as the game goes on, with the interface
+// over it, and with particles: not when going back.
+void NC_STACK_ypaworld::RenderGame(TUpdateArgs *arg, const World::Frame &frame, bool live)
 {
     uint64_t sceneStart = System::PerfStats::Now();
 
@@ -1932,6 +1935,7 @@ void NC_STACK_ypaworld::RenderGame(TUpdateArgs *arg, const World::Frame &frame, 
     rndrs.frameTime = arg->DTime;
     rndrs.globTime = frame.Time;
     rndrs.adeCount = 0;
+    rndrs.emitParticles = live;
 
     rndrs.minZ = 1.0;
 
@@ -2055,7 +2059,7 @@ void NC_STACK_ypaworld::RenderGame(TUpdateArgs *arg, const World::Frame &frame, 
     // TODO(bug): The interface's markers, map icons and lines are placed from
     // the units as the last step left them, not from the frame, so they can
     // lag the world drawn by up to one step.
-    if ( drawGui )
+    if ( live )
     {
         System::PerfStats::Timer perf(System::PerfStats::SEC_GUI);
         uint32_t tpm = profiler_begin();

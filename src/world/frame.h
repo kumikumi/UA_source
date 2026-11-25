@@ -54,13 +54,19 @@ struct Frame
     {
         int32_t Type = 0;
         int16_t Health[9] = {};  // Each building's, x + 3 * y
-        bool Constructing = false;
-        uint8_t ConstructBuilding = 0;
-        int32_t ConstructTime = 0;
-        int32_t ConstructEnd = 0;
 
         bool operator==(const Sector &b) const;
         bool operator!=(const Sector &b) const { return !(*this == b); }
+    };
+
+    // A building being built, drawn growing: apart from the sectors, which
+    // then don't change every step
+    struct Construction
+    {
+        uint32_t Sector = 0;     // Its index
+        uint8_t Building = 0;
+        int32_t Time = 0;        // Of End, in 1/1024 s
+        int32_t End = 0;
     };
 
     // A bomb's wave
@@ -82,9 +88,11 @@ struct Frame
     // By index: shared with the frames before while no sector changes
     std::shared_ptr<const std::vector<Sector>> Sectors;
 
+    std::vector<Construction> Constructions; // In the order of their sectors
     std::vector<SuperItem> SuperItems;
 
     const Unit *FindUnit(uint32_t id) const;
+    const Construction *FindConstruction(uint32_t sector) const;
 
     // The frame t of the way from a to b, b following a or the other way
     // around: units and the camera moved and turned in between, as far as

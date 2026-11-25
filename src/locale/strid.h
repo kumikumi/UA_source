@@ -58,6 +58,7 @@ enum CMN
     CMN_WAVENAME    = 19,
     CMN_HELP        = 20,
     CMN_GAMENAME    = 21,
+    CMN_REWINDING   = 22,
     
     CMN_MAX
 };

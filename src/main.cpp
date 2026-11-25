@@ -144,6 +144,23 @@ int ProcessGameplayFrame(int32_t frameTicks, bool timeFrozen)
         if ( !ypaworld->PausedFrame(&world_update_arg) )
             draw = true; // The pause ended, draw the game again
     }
+    else if ( ypaworld->IsRewinding() )
+    {
+        // Going back through the last seconds as they were drawn: the game
+        // doesn't step, and the controls wait. A frame that took longer than
+        // the steps can catch up with, as the first drawing the level back
+        // does, goes back as far as a step's time.
+        input_states = TInputState();
+        Input::Engine.QueryEvents(&input_states);
+
+        if ( frameTicks > SimMaxStepsPerFrame * SimStepTicks )
+            frameTicks = SimStepTicks;
+
+        ypaworld->PlayRewind((double)frameTicks / SimStepTicks);
+
+        // Back there, the next step comes at once, to draw on from there
+        simPendingTicks = ypaworld->IsRewinding() ? 0 : SimStepTicks;
+    }
     else
     {
         int32_t stepTicks = SimStepTicks;

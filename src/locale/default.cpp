@@ -33,6 +33,7 @@ std::array<std::string, CMN_MAX> DefaultStrings::Commons = Common::ArrayInit<std
     {CMN_WAVENAME, "19 == STOUDSON WAVE"},
     {CMN_HELP, "HELP"},
     {CMN_GAMENAME, "21 == YOUR PERSONAL AMOK"},
+    {CMN_REWINDING, "--- REWINDING ---"},
 });
 
 std::array<std::string, HUDSTR_MAX> DefaultStrings::HudStrings = Common::ArrayInit<std::string, HUDSTR_MAX>(

@@ -60,6 +60,9 @@ struct baseRender_msg
     float maxZ = 0.;
     uint32_t flags = 0;
 
+    // Whether models' particle emitters emit: not while the game goes back
+    bool emitParticles = true;
+
     // While fogOverride is set, every object drawn uses this fog instead of
     // its own, or none at all with noFog: the world's view distance setting.
     bool fogOverride = false;

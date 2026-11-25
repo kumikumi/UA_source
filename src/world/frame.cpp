@@ -35,9 +35,7 @@ static mat3x3f Blend(const mat3x3f &a, const mat3x3f &b, float t)
 
 bool Frame::Sector::operator==(const Sector &b) const
 {
-    return Type == b.Type && !memcmp(Health, b.Health, sizeof(Health)) && Constructing == b.Constructing &&
-           ConstructBuilding == b.ConstructBuilding && ConstructTime == b.ConstructTime &&
-           ConstructEnd == b.ConstructEnd;
+    return Type == b.Type && !memcmp(Health, b.Health, sizeof(Health));
 }
 
 const Frame::Unit *Frame::FindUnit(uint32_t id) const
@@ -49,6 +47,17 @@ const Frame::Unit *Frame::FindUnit(uint32_t id) const
         return NULL;
 
     return &*it;
+}
+
+const Frame::Construction *Frame::FindConstruction(uint32_t sector) const
+{
+    for (const Construction &c : Constructions)
+    {
+        if ( c.Sector == sector )
+            return &c;
+    }
+
+    return NULL;
 }
 
 static const Frame::Extra *FindExtra(const std::vector<Frame::Extra> &extras, uint32_t unit, uint8_t slot)
@@ -80,6 +89,18 @@ void Frame::Between(const Frame &a, const Frame &b, float t, Frame &out)
     {
         out.CameraPosition = a.CameraPosition + (b.CameraPosition - a.CameraPosition) * t;
         out.CameraRotation = Blend(a.CameraRotation, b.CameraRotation, t);
+    }
+
+    // A building grows in between
+    out.Constructions = nearer.Constructions;
+
+    for (Construction &c : out.Constructions)
+    {
+        const Construction *ca = a.FindConstruction(c.Sector);
+        const Construction *cb = b.FindConstruction(c.Sector);
+
+        if ( ca && cb && ca->Building == cb->Building )
+            c.Time = ca->Time + (cb->Time - ca->Time) * t;
     }
 
     // A wave of the same bomb grows in between
@@ -243,10 +264,19 @@ void FrameMaker::Add(Frame &frame, std::vector<Frame::Sector> &sectors, uint8_t 
         Frame::Sector &s = sectors[id];
         get(_sectorType, &s.Type, sizeof(s.Type));
         get(_sectorHealth, s.Health, sizeof(s.Health));
-        get(_constructing, &s.Constructing, sizeof(s.Constructing));
-        get(_constructBuilding, &s.ConstructBuilding, sizeof(s.ConstructBuilding));
-        get(_constructTime, &s.ConstructTime, sizeof(s.ConstructTime));
-        get(_constructEnd, &s.ConstructEnd, sizeof(s.ConstructEnd));
+
+        bool constructing = false;
+        get(_constructing, &constructing, sizeof(constructing));
+
+        if ( constructing )
+        {
+            Frame::Construction c;
+            c.Sector = id;
+            get(_constructBuilding, &c.Building, sizeof(c.Building));
+            get(_constructTime, &c.Time, sizeof(c.Time));
+            get(_constructEnd, &c.End, sizeof(c.End));
+            frame.Constructions.push_back(c);
+        }
     }
     else if ( kind == State::KIND_SUPERITEM )
     {
@@ -300,9 +330,16 @@ void FrameMaker::End(Frame &frame, std::vector<Frame::Sector> &sectors, const Fr
     std::sort(frame.Units.begin(), frame.Units.end(),
               [](const Frame::Unit &a, const Frame::Unit &b) { return a.Id < b.Id; });
 
+    std::sort(frame.Constructions.begin(), frame.Constructions.end(),
+              [](const Frame::Construction &a, const Frame::Construction &b) { return a.Sector < b.Sector; });
+
     std::sort(frame.Extras.begin(), frame.Extras.end(),
               [](const Frame::Extra &a, const Frame::Extra &b)
               { return a.Unit < b.Unit || (a.Unit == b.Unit && a.Slot < b.Slot); });
+
+    // Frames are kept by the hundred: without room to grow
+    frame.Units.shrink_to_fit();
+    frame.Extras.shrink_to_fit();
 
     if ( before && before->Sectors && *before->Sectors == sectors )
         frame.Sectors = before->Sectors;
@@ -314,6 +351,9 @@ void FrameMaker::Make(NC_STACK_ypaworld *world, uint32_t step, const Frame *befo
 {
     out = Frame();
     out.Step = step;
+
+    if ( before )
+        out.Units.reserve(before->Units.size());
 
     std::vector<Frame::Sector> sectors;
     sectors.reserve(world->_cells.size());
