@@ -31,7 +31,6 @@
 #include "world/protos.h"
 #include "world/tools.h"
 #include "world/parsers.h"
-#include "world/saveparsers.h"
 #include "world/nparticle.h"
 
 
@@ -826,8 +825,10 @@ public:
     bool  ShellSoundsLoad();
 
     static int InputIndexFromConfig(uint32_t type, uint32_t index);
-    static bool IsHasSGM(const std::string &username, int id);
-    static bool IsHasRestartForLevel(const std::string &username, int id);
+    // The profile's saved game, a recording of the level up to when it was
+    // saved
+    static std::string SaveGamePath(const std::string &username);
+    static bool HasSaveGame(const std::string &username);
     
     bool IsWindowedFlag()
     {
@@ -1800,23 +1801,10 @@ class NC_STACK_ypaworld: public NC_STACK_nucleus //NC_STACK_base
 {
 friend class UserData;
 friend class World::Parsers::UserParser;
-friend class World::Parsers::SaveRoboParser;
-friend class World::Parsers::SaveSquadParser;
-friend class World::Parsers::SaveGemParser;
 friend class World::Parsers::VhclProtoParser;
 friend class World::Parsers::WeaponProtoParser;
 friend class World::Parsers::BuildProtoParser;
-friend class World::Parsers::SaveExtraViewParser;
-friend class World::Parsers::SaveKwFactorParser;
-friend class World::Parsers::SaveGlobalsParser;
-friend class World::Parsers::SaveOwnerMapParser;
-friend class World::Parsers::SaveBuildingMapParser;
-friend class World::Parsers::SaveEnergyMapParser;
-friend class World::Parsers::SaveLevelNumParser;
 friend class World::Parsers::LevelStatusParser;
-friend class World::Parsers::SaveHistoryParser;
-friend class World::Parsers::SaveMasksParser;
-friend class World::Parsers::SaveSuperBombParser;
 
 public:
     enum
@@ -1895,9 +1883,11 @@ public:
     virtual size_t LoadGame(const std::string &saveFile);
     virtual size_t SaveGame(const std::string &saveFile);
 
-    // What SaveGame writes, into a file or memory. A final save (.fin), the
-    // won level's end, has no settings, level statuses or history.
-    bool WriteSave(FSMgr::FileHandle *fil, bool isfin_save);
+    // The level being played in the campaign is recorded there; Restart
+    // starts it again from there; a won level's end is kept to play it again
+    std::string SessionPath() const;
+    bool RestartLevel();
+    void SaveWonState();
 
     // The world's own state, field by field: see World::State
     void VisitState(World::State::Visitor &v);
@@ -2086,8 +2076,6 @@ public:
     void ActivateSuperItem(int id, int resume);
     void StopSuperItem(int id);
     void TriggerSuperItem(int id);
-    int LoadingParseSaveFile(const std::string &filename);
-    void LoadingUnitsRefresh();
     int ParseSettingsFile(const std::string &fname, uint32_t sdfMask);
     void listSaveDir(const std::string &saveDir);
     bool InitMapRegionsNet();
@@ -2095,7 +2083,6 @@ public:
     bool ScanLevelFile(const std::string &fname, bool multiplayer);
     int ScanLevelDir(bool multiplayer);
     int yw_ScanLevels();
-    int yw_RestoreVehicleData();
     void EnableLevelPasses();
     int load_fonts_and_icons();
     int yw_LoadSet(int setID);
@@ -2120,8 +2107,6 @@ public:
     bool IsVisibleMapPos(vec2d pos);
     
     //PRT - Position Robo Target
-    void RefreshUnitPRT(NC_STACK_ypabact *unit, NC_STACK_ypabact *robo, bool isRobo); 
-    NC_STACK_ypabact * FindStationByUnitGid(uint32_t bactid); // CHECK IT
     
     void yw_processVhclDataMsgs(uamessage_vhclData *msg, NC_STACK_ypabact *host_node);
     NC_STACK_ypabact * yw_getHostByOwner(uint8_t owner);
@@ -2172,8 +2157,6 @@ public:
     
     int IsCheatKeyHit(TInputState *struc, int kkode);
     
-    bool yw_write_units(FSMgr::FileHandle *fil);
-    bool yw_write_robo(NC_STACK_yparobo *robo, FSMgr::FileHandle *fil);
     
     void CountUnitsPerOwner();
     
@@ -2457,7 +2440,7 @@ public:
     int32_t audio_volume = 0;
     
     bool _hasSGMSave = false;
-    bool _hasRSTSave = false;
+    bool _canRestart = false;
     
     bool _gamePaused = false;
     uint32_t _gamePausedTimeStamp = 0;

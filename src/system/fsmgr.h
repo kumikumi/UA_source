@@ -202,6 +202,9 @@ public:
     virtual int seek(long int offset, int origin) override;
     
     virtual void close() override;
+
+    // What was written so far, to the file
+    void flush();
     
     virtual char *gets(char *str, int num);
     virtual int puts(const std::string &str);

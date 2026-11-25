@@ -315,17 +315,6 @@ void CheckEnemySectorEntered(NC_STACK_ypaworld *yw);
 void FFeedback_Update(NC_STACK_ypaworld *yw);
 void HandleSnapshotKeys(NC_STACK_ypaworld *yw, TInputState *inpt);
 
-int yw_write_levelnum(NC_STACK_ypaworld *yw, FSMgr::FileHandle *fil);
-void yw_write_ownermap(NC_STACK_ypaworld *yw, FSMgr::FileHandle *fil);
-void yw_write_buildmap(NC_STACK_ypaworld *yw, FSMgr::FileHandle *fil);
-void yw_write_energymap(NC_STACK_ypaworld *yw, FSMgr::FileHandle *fil);
-int yw_write_units(NC_STACK_ypaworld *yw, FSMgr::FileHandle *fil);
-int yw_write_wunderinfo(NC_STACK_ypaworld *yw, FSMgr::FileHandle *fil);
-int yw_write_kwfactor(NC_STACK_ypaworld *yw, FSMgr::FileHandle *fil);
-int yw_write_globals(NC_STACK_ypaworld *yw, FSMgr::FileHandle *fil);
-int yw_write_superbomb(NC_STACK_ypaworld *yw, FSMgr::FileHandle *fil);
-int yw_write_history(NC_STACK_ypaworld *yw, FSMgr::FileHandle *fil);
-int yw_write_masks(NC_STACK_ypaworld *yw, FSMgr::FileHandle *fil);
 
 
 

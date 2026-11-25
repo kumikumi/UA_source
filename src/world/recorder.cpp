@@ -8,6 +8,7 @@
 #include "../yw.h"
 #include "../IFFile.h"
 #include "../utils.h"
+#include "../env.h"
 #include "../log.h"
 
 namespace World
@@ -36,6 +37,24 @@ static void PutText(std::string &out, const std::string &text)
     size_t length = std::min<size_t>(text.size(), 0xFFFF);
     Put16(out, length);
     out.append(text, 0, length);
+}
+
+// A file of the game's folder by its name with a prefix (save:...), else a
+// file by its path. NULL when it can't be opened.
+static FSMgr::FileHandle *OpenFile(const std::string &path, const std::string &mode)
+{
+    if ( Common::Env.ApplyPrefix(path) != path )
+        return uaOpenFileAlloc(path, mode);
+
+    FSMgr::FileHandle *file = new FSMgr::FileHandle(path, mode);
+
+    if ( !file->OK() )
+    {
+        delete file;
+        return NULL;
+    }
+
+    return file;
 }
 
 static uint64_t ObjectKey(uint8_t kind, uint32_t id)
@@ -307,15 +326,16 @@ Recorder::~Recorder() {}
 bool Recorder::Open(NC_STACK_ypaworld *world, const std::string &path, const std::string &startedFrom,
                     const State::Image &startView, const State::Image &startInternal)
 {
-    FSMgr::FileHandle *file = new FSMgr::FileHandle(path, "wb");
+    FSMgr::FileHandle *file = OpenFile(path, "wb");
 
-    if ( !file->OK() )
+    if ( !file )
     {
-        delete file;
         ypa_log_out("Unable to write the recording %s\n", path.c_str());
         return false;
     }
 
+    _path = path;
+    _fileHandle = file;
     _file.reset(new IFFile(file, true));
     _file->pushChunk(TAG_RPLY, TAG_FORM, -1);
 
@@ -376,6 +396,61 @@ void Recorder::Remember(NC_STACK_ypaworld *world, State::Part part, LastObjects 
     {
         last[ObjectKey(kind, id)] = LastObject{{data, data}, _step};
     });
+}
+
+bool Recorder::WriteState(NC_STACK_ypaworld *world, const std::string &path, const std::string &startedFrom)
+{
+    Recorder recorder;
+
+    if ( !recorder.Open(world, path, startedFrom, State::Capture(world, State::PART_VIEW),
+                        State::Capture(world, State::PART_INTERNAL)) )
+        return false;
+
+    recorder._file->popChunk();
+    recorder._file.reset();
+    return true;
+}
+
+bool Recorder::SaveTo(NC_STACK_ypaworld *world, const std::string &path)
+{
+    if ( !_file )
+        return false;
+
+    // Everything up to now in the file, the last step one to go on from
+    MakeResumable(world);
+    FlushPending();
+
+    if ( _blockSteps > 0 )
+        WriteBlock();
+
+    _fileHandle->flush();
+
+    std::unique_ptr<FSMgr::FileHandle> in(OpenFile(_path, "rb"));
+    if ( !in )
+        return false;
+
+    std::string data;
+    char buf[65536];
+    size_t got;
+    while ( (got = in->read(buf, sizeof(buf))) > 0 )
+        data.append(buf, got);
+
+    if ( data.size() < 12 )
+        return false;
+
+    // A whole FORM, unlike the one still being recorded
+    uint32_t size = data.size() - 8;
+    uint8_t sizeBytes[4] = {(uint8_t)(size >> 24), (uint8_t)(size >> 16), (uint8_t)(size >> 8), (uint8_t)size};
+    memcpy(&data[4], sizeBytes, 4);
+
+    std::unique_ptr<FSMgr::FileHandle> out(OpenFile(path, "wb"));
+    if ( !out || out->write(data.data(), data.size()) != data.size() )
+    {
+        ypa_log_out("Unable to write the saved game %s\n", path.c_str());
+        return false;
+    }
+
+    return true;
 }
 
 bool Recorder::Start(NC_STACK_ypaworld *world, const std::string &path, const std::string &startedFrom)
@@ -673,6 +748,7 @@ void Recorder::Stop(NC_STACK_ypaworld *world)
 
     _file->popChunk();
     _file.reset();
+    _fileHandle = NULL;
     _lastView.clear();
     _lastInternal.clear();
 }
@@ -703,9 +779,9 @@ static uint32_t BigEndian32(const std::string &data, size_t pos)
 
 bool Recording::Open(const std::string &path)
 {
-    FSMgr::FileHandle file(path, "rb");
+    std::unique_ptr<FSMgr::FileHandle> file(OpenFile(path, "rb"));
 
-    if ( !file.OK() )
+    if ( !file )
     {
         ypa_log_out("Can't read the recording %s\n", path.c_str());
         return false;
@@ -714,7 +790,7 @@ bool Recording::Open(const std::string &path)
     std::string data;
     char buf[65536];
     size_t got;
-    while ( (got = file.read(buf, sizeof(buf))) > 0 )
+    while ( (got = file->read(buf, sizeof(buf))) > 0 )
         data.append(buf, got);
 
     if ( data.size() < 12 || data.compare(0, 4, "FORM") || data.compare(8, 4, "RPLY") )

@@ -6536,19 +6536,17 @@ void NC_STACK_ypaworld::ExitMenuHandleInput(TInputState *inpt)
 
             if ( _GameShell )
             {
-                _hasSGMSave = UserData::IsHasSGM(_GameShell->UserName, 0);
+                _hasSGMSave = UserData::HasSaveGame(_GameShell->UserName);
 
-                if ( UserData::IsHasRestartForLevel(_GameShell->UserName, _levelInfo.LevelID) )
-                    _hasRSTSave = true;
-                else
-                    _hasRSTSave = false;
+                // Restart starts the level's recording again
+                _canRestart = _recorder.IsRecording();
 
                 // Started from the command line: nothing to load, and
                 // Restart starts the level the same way again
                 if ( _GameShell->DirectStart )
                 {
                     _hasSGMSave = false;
-                    _hasRSTSave = true;
+                    _canRestart = true;
                 }
             }
         }
@@ -6613,7 +6611,7 @@ void NC_STACK_ypaworld::ExitMenuHandleInput(TInputState *inpt)
         if ( !_hasSGMSave )
             disabledFlags = 1024;
 
-        if ( !_hasRSTSave )
+        if ( !_canRestart )
             disabledFlags |= 0x800;
 
         if ( _userUnit->_status == BACT_STATUS_DEAD || (_GameShell && _GameShell->DirectStart) )

@@ -657,6 +657,29 @@ void UserData::GameShellUiOpenNetwork()
 
 
 
+// A copy of a file as it is, byte for byte
+void CopyFileBytes(const std::string &srcPath, const std::string &dstPath)
+{
+    FSMgr::FileHandle *f1 = uaOpenFileAlloc(srcPath, "rb");
+    if ( f1 )
+    {
+        FSMgr::FileHandle *f2 = uaOpenFileAlloc(dstPath, "wb");
+
+        if ( f2 )
+        {
+            char buf[65536];
+            size_t got;
+
+            while ( (got = f1->read(buf, sizeof(buf))) > 0 )
+                f2->write(buf, got);
+
+            delete f2;
+        }
+
+        delete f1;
+    }
+}
+
 void CopyTextFile(const std::string &srcPath, const std::string &dstPath)
 {
     FSMgr::FileHandle *f1 = uaOpenFileAlloc(srcPath, "r");
@@ -719,20 +742,18 @@ void  UserData::SaveProfile()
             while ( dir.getNext(&node) )
             {
                 std::string tmp = node->getName();
-                if ( node->getType() == FSMgr::iNode::NTYPE_FILE
-                        && (tmp.rfind(".sgm") != std::string::npos
-                            || tmp.rfind(".SGM") != std::string::npos
-                            || tmp.rfind(".rst") != std::string::npos
-                            || tmp.rfind(".RST") != std::string::npos
-                            || tmp.rfind(".fin") != std::string::npos
-                            || tmp.rfind(".FIN") != std::string::npos
-                            || tmp.rfind(".def") != std::string::npos
-                            || tmp.rfind(".DEF") != std::string::npos) )
-                {
-                    std::string srcPath = fmt::sprintf("%s/%s", oldsave, tmp);
-                    std::string dstPath = fmt::sprintf("save:%s/%s", userNameDir, tmp);
-                    CopyTextFile(srcPath.c_str(), dstPath.c_str());
-                }
+                std::string srcPath = fmt::sprintf("%s/%s", oldsave, tmp);
+                std::string dstPath = fmt::sprintf("save:%s/%s", userNameDir, tmp);
+
+                if ( node->getType() != FSMgr::iNode::NTYPE_FILE )
+                    continue;
+
+                // The saved game and the won levels' ends, recordings
+                if ( tmp.rfind(".sav") != std::string::npos || tmp.rfind(".SAV") != std::string::npos
+                     || tmp.rfind(".won") != std::string::npos || tmp.rfind(".WON") != std::string::npos )
+                    CopyFileBytes(srcPath, dstPath);
+                else if ( tmp.rfind(".def") != std::string::npos || tmp.rfind(".DEF") != std::string::npos )
+                    CopyTextFile(srcPath, dstPath);
             }
         }
     }
@@ -2307,7 +2328,7 @@ void UserData::GameShellUiHandleInput()
     {
         if ( !sgmSaveExist )
         {
-            if ( IsHasSGM(UserName, 0) )
+            if ( HasSaveGame(UserName) )
                 sgmSaveExist = 1;
             else
                 sgmSaveExist = 2; // No, and We check it, so do not check it twice
@@ -4763,13 +4784,13 @@ int UserData::InputIndexFromConfig(uint32_t type, uint32_t index)
     return -1;
 }
 
-bool UserData::IsHasSGM(const std::string &username, int id)
+std::string UserData::SaveGamePath(const std::string &username)
 {
-    return uaFileExist( fmt::sprintf("save:%s/%d.sgm", username, id) );
+    return fmt::sprintf("save:%s/0.sav", username);
 }
 
-bool UserData::IsHasRestartForLevel(const std::string &username, int id)
+bool UserData::HasSaveGame(const std::string &username)
 {
-    return uaFileExist( fmt::sprintf("save:%s/%d.rst", username, id) );
+    return uaFileExist( SaveGamePath(username) );
 }
 

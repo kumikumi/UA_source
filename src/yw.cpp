@@ -38,8 +38,6 @@ int bottomThirdBtnPosX;
 GuiList briefingTextList;
 
 
-// method 169
-uint32_t maxLoadedCommandID;
 
 NC_STACK_ypaworld::NC_STACK_ypaworld()
 : _unitsList(this, NC_STACK_ypabact::GetKidRefNode, World::BLIST_UNITS)
@@ -5799,264 +5797,92 @@ size_t NC_STACK_ypaworld::BeamUnitThroughGate(NC_STACK_ypabact *bact)
     return 1;
 }
 
-int NC_STACK_ypaworld::LoadingParseSaveFile(const std::string &filename)
+// The recording of the level being played in the campaign, in the player's
+// profile: what a saved game copies, and what Restart starts again from
+std::string NC_STACK_ypaworld::SessionPath() const
 {
-    int lvlnum;
-    ScriptParser::HandlersList parsers
-    {
-        new World::Parsers::UserParser(this),
-        new World::Parsers::SaveRoboParser(this),
-        new World::Parsers::SaveSquadParser(this), // commander and units
-        new World::Parsers::SaveGemParser(this),
-        new World::Parsers::VhclProtoParser(this),
-        new World::Parsers::WeaponProtoParser(this),
-        new World::Parsers::BuildProtoParser(this),
-        new World::Parsers::SaveExtraViewParser(this),
-        new World::Parsers::SaveKwFactorParser(this),
-        new World::Parsers::SaveGlobalsParser(this),
-        new World::Parsers::SaveOwnerMapParser(this),
-        new World::Parsers::SaveBuildingMapParser(this),
-        new World::Parsers::SaveEnergyMapParser(this),
-        new World::Parsers::SaveLevelNumParser(this, &lvlnum),
-        new World::Parsers::LevelStatusParser(this, true),
-        new World::Parsers::SaveHistoryParser(this),
-        new World::Parsers::SaveMasksParser(this),
-        new World::Parsers::SaveSuperBombParser(this),
-    };
-
-    return ScriptParser::ParseFile(filename, parsers, ScriptParser::FLAG_SKIP_UNKNOWN);
+    return fmt::sprintf("save:%s/play.rec", _GameShell->UserName);
 }
 
-void NC_STACK_ypaworld::LoadingUnitsRefresh()
+// Where a won level's end is kept, to play the level again from there
+static std::string WonStatePath(const std::string &userName, int levelId)
 {
-    for ( NC_STACK_ypabact* &station : _unitsList )
-    {
-        RefreshUnitPRT(station, station, true);
-
-        for ( NC_STACK_ypabact* &commander : station->_kidList )
-        {
-            RefreshUnitPRT(commander, station, false);
-
-            for ( NC_STACK_ypabact* &slave : commander->_kidList )
-                RefreshUnitPRT(slave, station, false);
-        }
-    }
-
-    if ( _extraViewEnable )
-    {
-        NC_STACK_yparobo *robo = dynamic_cast<NC_STACK_yparobo *>(_userRobo);
-
-        if ( robo->_roboGuns.at(_extraViewNumber).gun_obj )
-        {
-            robo->_roboGuns.at(_extraViewNumber).gun_obj->setBACT_viewer(true);
-            robo->_roboGuns.at(_extraViewNumber).gun_obj->setBACT_inputting(true);
-        }
-    }
+    return fmt::sprintf("save:%s/%d.won", userName, levelId);
 }
 
+// A saved game is a recording: the level goes on from where it ends, the
+// campaign as it was then, and goes on recording from there
 size_t NC_STACK_ypaworld::LoadGame(const std::string &saveFile)
 {
-    bool loadOK = false;
+    World::Recording recording;
+    World::RecordedPoint start, point;
 
-    if ( !uaFileExist(saveFile) )
-        return 1;
-
-    if ( saveFile.find(".sgm") != std::string::npos || saveFile.find(".SGM") != std::string::npos )
+    if ( !recording.Open(saveFile) || !recording.Read(0, start, true) ||
+         !recording.Read(recording.LastResumable(recording.Steps()), point, true) )
     {
-        _maxReloadConst = 0;
-        _maxRoboEnergy = 0;
-    }
-
-    int lvlnum;
-    
-    ScriptParser::HandlersList parsers
-    {
-        new World::Parsers::SaveLevelNumParser(this, &lvlnum),
-    };
-
-    ScriptParser::ParseFile(saveFile, parsers, ScriptParser::FLAG_SKIP_UNKNOWN);
-
-    _extraViewNumber = -1;
-    _extraViewEnable = false;
-
-    TLevelDescription mapp;
-    
-    _particles.Clear();
-
-    if ( LevelCommonLoader(&mapp, lvlnum) )
-    {
-        if ( LoadTypeMap(mapp.TypStr) )
-        {
-            if ( LoadOwnerMap(mapp.OwnStr) )
-            {
-                if ( LoadHightMap(mapp.HgtStr) )
-                {
-                    if ( LoadBlgMap(mapp.BlgStr) )
-                        loadOK = true;
-                }
-            }
-        }
-    }
-
-    if ( !loadOK )
-    {
-        DeleteLevel();
+        ypa_log_out("Could not read the saved game %s\n", saveFile.c_str());
         return 0;
     }
 
-    _levelInfo.OwnerMask = 0;
-    _levelInfo.UserMask = 0;
-
-    maxLoadedCommandID = 0;
-
-    InitSuperItems();
-
-    _lvlPrimevalTypeMap = _lvlTypeMap;
-    _lvlPrimevalOwnMap = _lvlOwnMap;
-
-    if ( !LoadingParseSaveFile(saveFile) )
+    if ( !World::State::Restore(this, point.View, point.Internal, true) )
         return 0;
 
-    maxLoadedCommandID++;
-    _nextUnitId++;
-    _nextCommandId = maxLoadedCommandID;
-
-    LoadingUnitsRefresh();
-
-    if ( saveFile.find(".fin") != std::string::npos || saveFile.find(".FIN") != std::string::npos )
-        InitBuddies();
-
-    for(int y = 0; y < _mapSize.y; y++)
-    {
-        for(int x = 0; x < _mapSize.x; x++)
-        {
-            CellCheckHealth(&_cells(x, y), World::OWNER_NOCHANGE, NULL);
-        }
-    }
-
-    InitGates();
-    UpdatePowerEnergy();
-    
-    PrepareAllFillers();
-
-    if ( !GUI_Open(this) )
-        return 0;
+    if ( _GameShell && !_GameShell->DirectStart )
+        _recorder.StartFrom(this, SessionPath(), fmt::sprintf("%s at step %d", saveFile, point.Step), start, point);
 
     return 1;
 }
 
-
+// The level's recording so far, the step now one to go on from
 size_t NC_STACK_ypaworld::SaveGame(const std::string &saveFile)
 {
     if ( _GameShell && _GameShell->DirectStart )
         return 1;
 
-    if ( saveFile.find(".sgm") != std::string::npos || saveFile.find(".SGM") != std::string::npos )
-        uaDeleteFile( fmt::sprintf("save:%s/sgisold.txt", _GameShell->UserName) );
-
-    bool isfin_save = saveFile.find(".fin") != std::string::npos || saveFile.find(".FIN") != std::string::npos;
-
-    FSMgr::FileHandle *fil = uaOpenFileAlloc( saveFile, "w");
-
-    if ( !fil )
+    if ( !_recorder.IsRecording() )
     {
-        ypa_log_out("Unable to open savegame file\n");
+        ypa_log_out("Can't save: the level isn't being recorded\n");
         return 0;
     }
 
-    bool write_ok = WriteSave(fil, isfin_save);
-
-    delete fil;
-    return write_ok;
+    uaDeleteFile( fmt::sprintf("save:%s/sgisold.txt", _GameShell->UserName) );
+    return _recorder.SaveTo(this, saveFile);
 }
 
-bool NC_STACK_ypaworld::WriteSave(FSMgr::FileHandle *fil, bool isfin_save)
+// Starts the level being played over, from where its recording starts
+bool NC_STACK_ypaworld::RestartLevel()
 {
-    bool write_ok = true;
+    World::Recording recording;
+    World::RecordedPoint start;
+    std::string session = SessionPath();
 
-    int write_modifers;
-    int write_user;
-    int write_level_statuses;
-
-    if ( isfin_save )
+    if ( !recording.Open(session) || !recording.Read(0, start, true) )
     {
-        _maxRoboEnergy = _userRobo->_energy_max;
-        write_modifers = 0;
-        write_user = 0;
-        write_level_statuses = 0;
-        _maxReloadConst = _userRobo->_reload_const;
-    }
-    else
-    {
-        write_level_statuses = 1;
-        write_modifers = 1;
-        write_user = 1;
-    }
-    
-    if ( write_modifers )
-    {
-        if ( !yw_write_item_modifers(this, fil) )
-            write_ok = false;
+        ypa_log_out("Could not read %s to start the level again\n", session.c_str());
+        return false;
     }
 
-    if ( write_user )
-    {
-        if ( !yw_write_user(fil, _GameShell) )
-            write_ok = false;
-    }
+    if ( !World::State::Restore(this, start.View, start.Internal, false) )
+        return false;
 
-    if ( write_ok )
-    {
-        if ( yw_write_levelnum(this, fil) )
-        {
-            yw_write_ownermap(this, fil);
-            yw_write_buildmap(this, fil);
-            yw_write_energymap(this, fil);
-
-            if ( yw_write_units(fil) )
-            {
-                if ( yw_write_wunderinfo(this, fil) )
-                {
-                    if ( yw_write_kwfactor(this, fil) )
-                    {
-                        if ( yw_write_globals(this, fil) )
-                        {
-                            if ( yw_write_superbomb(this, fil) )
-                                write_ok = true;
-                        }
-                    }
-                }
-            }
-        }
-    }
-
-    if ( write_ok && write_level_statuses )
-    {
-        for (int i = 0; i < 256; i++)
-        {
-            if ( _globalMapRegions.MapRegions[i].Status != TMapRegionInfo::STATUS_NONE )
-            {
-                if ( !yw_write_level_status(fil, this, i) )
-                {
-                    write_ok = false;
-                    break;
-                }
-            }
-        }
-    }
-
-    if ( write_ok )
-    {
-        if ( !isfin_save )
-        {
-            yw_write_history(this, fil);
-            yw_write_masks(this, fil);
-        }
-    }
-
-    return write_ok;
+    return _recorder.StartFrom(this, session, fmt::sprintf("level %d", _levelInfo.LevelID), start, start);
 }
 
+// A won level's end, to play the level again from there; the player's host
+// station takes its energy into the levels to come
+void NC_STACK_ypaworld::SaveWonState()
+{
+    if ( !_GameShell || _GameShell->DirectStart )
+        return;
+
+    _maxRoboEnergy = _userRobo->_energy_max;
+    _maxReloadConst = _userRobo->_reload_const;
+
+    std::string path = WonStatePath(_GameShell->UserName, _levelInfo.LevelID);
+
+    if ( !World::Recorder::WriteState(this, path, fmt::sprintf("level %d won", _levelInfo.LevelID)) )
+        ypa_log_out("Warning: could not write %s\n", path.c_str());
+}
 
 void NC_STACK_ypaworld::VisitState(World::State::Visitor &v)
 {
@@ -6649,34 +6475,35 @@ bool NC_STACK_ypaworld::NetBroadcastMessage(uamessage_base *data, size_t dataSiz
     return _netDriver->Broadcast(data, dataSize, garantee);
 }
 
-int HasLevelFinSave(int lvlID, const char *userName)
-{
-    FSMgr::FileHandle *fil = uaOpenFileAlloc( fmt::sprintf("save:%s/%d.fin", userName, lvlID) , "r");
-
-    if ( !fil )
-        return 0;
-
-    delete fil;
-    return 1;
-}
-
 // Advanced Create Level
 size_t NC_STACK_ypaworld::AdvancedCreateLevel(TLevelLoadRequest *arg)
 {
     int loaded;
+    std::string won = WonStatePath(_GameShell->UserName, arg->lvlID);
 
-    if ( _globalMapRegions.MapRegions[ arg->lvlID ].Status == TMapRegionInfo::STATUS_COMPLETED && HasLevelFinSave(arg->lvlID, _GameShell->UserName.c_str()) )
+    if ( _globalMapRegions.MapRegions[ arg->lvlID ].Status == TMapRegionInfo::STATUS_COMPLETED && uaFileExist(won) )
     {
-        std::string savename = fmt::sprintf("save:%s/%d.fin", _GameShell->UserName, arg->lvlID);
-        loaded = LoadGame(savename);
+        // A won level played again goes on from where it was won, with the
+        // campaign as it is now
+        World::Recording recording;
+        World::RecordedPoint end;
 
-        if ( !loaded )
-            ypa_log_out("Warning: in YWM_ADVANCEDCREATELEVEL: YWM_LOADGAME of %s failed!\n", savename.c_str());
+        loaded = recording.Open(won) && recording.Read(0, end, true) &&
+                 World::State::Restore(this, end.View, end.Internal, false);
 
-        _userRobo->_energy = _userRobo->_energy_max;
+        if ( loaded )
+        {
+            InitBuddies();
 
-        // A won training mission played again has nothing left to teach
-        _tutorialHints.Stop();
+            _userRobo->_energy = _userRobo->_energy_max;
+
+            // A won training mission played again has nothing left to teach
+            _tutorialHints.Stop();
+        }
+        else
+        {
+            ypa_log_out("Warning: could not start won level %d from %s\n", arg->lvlID, won.c_str());
+        }
     }
     else
     {
@@ -6686,11 +6513,10 @@ size_t NC_STACK_ypaworld::AdvancedCreateLevel(TLevelLoadRequest *arg)
             ypa_log_out("Warning: in YWM_ADVANCEDCREATELEVEL: YWM_CREATELEVEL %d failed!\n", arg->lvlID);
     }
 
-    if ( loaded )
-    {
-        if ( !SaveGame(fmt::sprintf("save:%s/%d.rst", _GameShell->UserName, _levelInfo.LevelID)) )
-            ypa_log_out("Warning: could not create restart file for level %d, user %s.\n", _levelInfo.LevelID, _GameShell->UserName.c_str());
-    }
+    // Every level of the campaign is recorded, to be saved and started again
+    if ( loaded && !_recorder.Start(this, SessionPath(), fmt::sprintf("level %d", _levelInfo.LevelID)) )
+        ypa_log_out("Warning: level %d, user %s, isn't recorded, so it can't be saved or started again.\n",
+                    _levelInfo.LevelID, _GameShell->UserName.c_str());
 
     _lvlPrimevalTypeMap = _lvlTypeMap;
     _lvlPrimevalOwnMap = _lvlOwnMap;

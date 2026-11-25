@@ -19,7 +19,7 @@ import zlib
 ELEM_SIZE = {1: 1, 2: 1, 3: 1, 4: 2, 5: 2, 6: 4, 7: 4, 8: 4, 9: 8, 10: 4, 11: 4}
 ELEM_FORMAT = {1: "B", 2: "b", 3: "B", 4: "h", 5: "H", 6: "i", 7: "I", 8: "f", 9: "d", 10: "I", 11: "i"}
 T_F32, T_F64, T_UNIT = 8, 9, 10
-KIND_NAMES = {1: "world", 2: "sector", 3: "bomb", 4: "vehicle", 5: "weapon", 6: "building"}
+KIND_NAMES = {1: "world", 2: "sector", 3: "bomb", 4: "vehicle", 5: "weapon", 6: "building", 7: "campaign"}
 UNIT_TYPES = {1: "unit", 2: "tank", 3: "host station", 4: "missile", 6: "flyer", 7: "ufo", 8: "car", 9: "gun"}
 
 
@@ -268,12 +268,17 @@ def summary(rec):
             if v:
                 last_time[0] = struct.unpack("<i", v[1])[0]
 
+    start = {k: [v, v] for k, v in unpack_image(rec.start_view)[1].items()}
+    each(0, False, start, {})
     n, view, _ = rec.read(tally=tally, each=each)
     seconds = last_time[0] // 1024
     total = sum(rec.packed.values())
     print("%d steps, game time %d:%02d; %d bytes, %.0f a step" % (n, seconds // 60, seconds % 60, total, total / max(n, 1)))
     shown = resumable if len(resumable) <= 8 else resumable[:4] + ["..."] + resumable[-3:]
-    print("the level can go on from step 0 and %d more: %s" % (len(resumable), " ".join(map(str, shown))))
+    if resumable:
+        print("the level can go on from step 0 and %d more: %s" % (len(resumable), " ".join(map(str, shown))))
+    else:
+        print("the level can go on from its start only")
     units = collections.Counter(kind_name(k) for k, _ in view if k >= 16)
     print("at the end: " + ", ".join("%d %s" % (c, u) for u, c in sorted(units.items())))
     print("unpacked bytes a step, most first:")

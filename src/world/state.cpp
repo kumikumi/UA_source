@@ -1,4 +1,5 @@
 #include <algorithm>
+#include <array>
 #include <cstring>
 #include <set>
 #include <unordered_set>
@@ -565,6 +566,31 @@ static void VisitSuperItem(Visitor &v, TMapSuperItem &item)
 }
 
 
+// The campaign: the levels' statuses, the players' statistics, the energy
+// the player's host station takes into the next level, and the contacts made
+
+static void VisitCampaign(Visitor &v, NC_STACK_ypaworld *world)
+{
+    std::array<int32_t, 256> statuses;
+    for (size_t i = 0; i < statuses.size(); i++)
+        statuses[i] = world->_globalMapRegions.MapRegions[i].Status;
+
+    v.Field("levelStatuses", statuses.data(), statuses.size());
+
+    if ( v.Reads(INTERNAL) )
+    {
+        for (size_t i = 0; i < statuses.size(); i++)
+            world->_globalMapRegions.MapRegions[i].Status = statuses[i];
+    }
+
+    static_assert(sizeof(TPlayerStatus) == 28, "seven ints");
+    v.Field("playerStats", &world->_playersStats[0].DestroyedUnits, world->_playersStats.size() * 7);
+    v.Field("maxRoboEnergy", world->_maxRoboEnergy);
+    v.Field("maxReloadConst", world->_maxReloadConst);
+    v.Field("contacts", world->_levelInfo.JodieFoster.data(), world->_levelInfo.JodieFoster.size());
+}
+
+
 // Prototypes: their values, not their names, sounds or effects, which come
 // with the level's scripts
 
@@ -712,6 +738,13 @@ void ForEachObject(NC_STACK_ypaworld *world, Part part, const ObjectFunc &allFun
     world->VisitState(v);
     func(KIND_WORLD, 0, v.Out());
 
+    if ( has(KIND_CAMPAIGN) )
+    {
+        v.Out().clear();
+        VisitCampaign(v, world);
+        func(KIND_CAMPAIGN, 0, v.Out());
+    }
+
     for (size_t i = 0; has(KIND_SECTOR) && i < world->_cells.size(); i++)
     {
         v.Out().clear();
@@ -812,6 +845,12 @@ Schema MakeSchema(NC_STACK_ypaworld *world, Part part)
         Visitor v(Visitor::SCHEMA, world, part);
         VisitSuperItem(v, item);
         schema[KIND_SUPERITEM] = v.Fields();
+    }
+
+    {
+        Visitor v(Visitor::SCHEMA, world, part);
+        VisitCampaign(v, world);
+        schema[KIND_CAMPAIGN] = v.Fields();
     }
 
     {
@@ -1180,6 +1219,9 @@ static std::string ObjectName(const Object &obj)
     if ( obj.Kind == KIND_SUPERITEM )
         return fmt::sprintf("bomb %d", obj.Id);
 
+    if ( obj.Kind == KIND_CAMPAIGN )
+        return "campaign";
+
     if ( obj.Kind == KIND_VEHICLE )
         return fmt::sprintf("vehicle %d", obj.Id);
 
@@ -1259,7 +1301,7 @@ std::string Diff(const Schema &schema, const Image &a, const Image &b, size_t ma
 // Restore
 
 // Reads the objects of the images, each of a part, in that order
-static bool RestoreParts(NC_STACK_ypaworld *world, const std::vector<std::pair<Part, const Image *>> &parts)
+static bool RestoreParts(NC_STACK_ypaworld *world, const std::vector<std::pair<Part, const Image *>> &parts, bool campaign)
 {
     const Image &first = *parts.front().second;
 
@@ -1309,6 +1351,13 @@ static bool RestoreParts(NC_STACK_ypaworld *world, const std::vector<std::pair<P
             if ( obj.Kind == KIND_WORLD )
             {
                 world->VisitState(v);
+            }
+            else if ( obj.Kind == KIND_CAMPAIGN )
+            {
+                if ( !campaign )
+                    continue;
+
+                VisitCampaign(v, world);
             }
             else if ( obj.Kind == KIND_SECTOR )
             {
@@ -1365,14 +1414,14 @@ static bool RestoreParts(NC_STACK_ypaworld *world, const std::vector<std::pair<P
 
 bool Restore(NC_STACK_ypaworld *world, const Image &image)
 {
-    return RestoreParts(world, {{PART_ALL, &image}});
+    return RestoreParts(world, {{PART_ALL, &image}}, true);
 }
 
 // The view first: it has each unit's vehicle, which gives the unit its
 // prototype's models and guns that the internal part then fills in
-bool Restore(NC_STACK_ypaworld *world, const Image &view, const Image &internal)
+bool Restore(NC_STACK_ypaworld *world, const Image &view, const Image &internal, bool campaign)
 {
-    return RestoreParts(world, {{PART_VIEW, &view}, {PART_INTERNAL, &internal}});
+    return RestoreParts(world, {{PART_VIEW, &view}, {PART_INTERNAL, &internal}}, campaign);
 }
 
 }

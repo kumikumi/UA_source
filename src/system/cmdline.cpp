@@ -31,8 +31,8 @@ static const Option Options[] = {
                                 "win comes the debriefing, and then the game quits. Nothing is "
                                 "written to the player's profile, and the exit menu has no Save or "
                                 "Load"},
-    {"load",         "FILE",    "The same from a saved game, a file in the game's folder such as "
-                                "SAVE/Unnamed2/0.sgm, or from where a recording (--record) ends"},
+    {"load",         "FILE",    "The same from where a saved game or a recording (--record) ends, "
+                                "such as SAVE/Unnamed2/0.sav, the saved game of the profile Unnamed2"},
     {"step",         "N",       "With --load of a recording, go on from after its step N instead of "
                                 "the last the level can go on from"},
     {"headless",     NULL,      "Run the level --level or --load starts as fast as the machine can, "

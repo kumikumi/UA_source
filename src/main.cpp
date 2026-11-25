@@ -309,8 +309,8 @@ int ProcessGameplayFrame(int32_t frameTicks, bool timeFrozen)
             if ( !StartDirectLevel() )
                 return 0;
         }
-        else if ( !ypaworld->LoadGame( fmt::sprintf("save:%s/%d.rst", userdata.UserName, levelInfo.LevelID) ) )
-            ypa_log_out("Warning, load error\n");
+        else if ( !ypaworld->RestartLevel() )
+            ypa_log_out("Warning, could not start the level again\n");
 
         Input::Engine.QueryInput(&input_states);
     }
@@ -318,7 +318,7 @@ int ProcessGameplayFrame(int32_t frameTicks, bool timeFrozen)
 
     case TLevelInfo::STATE_SAVE:
     {
-        if ( !ypaworld->SaveGame( fmt::sprintf("save:%s/%d.sgm", userdata.UserName, 0) ) )
+        if ( !ypaworld->SaveGame( UserData::SaveGamePath(userdata.UserName) ) )
             ypa_log_out("Warning, Save error\n");
 
         Input::Engine.QueryInput(&input_states);
@@ -329,7 +329,7 @@ int ProcessGameplayFrame(int32_t frameTicks, bool timeFrozen)
     {
         ypaworld->DeleteLevel();
 
-        if ( !ypaworld->LoadGame( fmt::sprintf("save:%s/%d.sgm", userdata.UserName, 0) ) )
+        if ( !ypaworld->LoadGame( UserData::SaveGamePath(userdata.UserName) ) )
             ypa_log_out("Warning, load error\n");
 
         Input::Engine.QueryInput(&input_states);
@@ -393,7 +393,7 @@ int ProcessMenuFrame()
         if ( !userdata.SaveBuildProtoState() )
             return 0;
 
-        if ( !ypaworld->LoadGame( fmt::sprintf("save:%s/%d.sgm", userdata.UserName, 0) ) )
+        if ( !ypaworld->LoadGame( UserData::SaveGamePath(userdata.UserName) ) )
         {
             ypa_log_out("Error while loading level (level %d, User %s\n", levelInfo.LevelID, userdata.UserName.c_str());
 
@@ -979,10 +979,9 @@ static bool CheckDirectStart()
 {
     if ( !directStart.SaveFile.empty() )
     {
-        // A recording is read as a file, as --record writes it
-        if ( !IsRecordingFile(directStart.SaveFile) && !uaFileExist(directStart.SaveFile) )
+        if ( !IsRecordingFile(directStart.SaveFile) )
         {
-            System::CmdLine::PrintError("no saved game " + directStart.SaveFile + " in the game's folder");
+            System::CmdLine::PrintError(directStart.SaveFile + " is no saved game or recording");
             return false;
         }
 
@@ -1036,7 +1035,7 @@ static bool StartFromRecording(const std::string &path)
         return false;
     }
 
-    if ( !World::State::Restore(ypaworld, resumedPoint.View, resumedPoint.Internal) )
+    if ( !World::State::Restore(ypaworld, resumedPoint.View, resumedPoint.Internal, true) )
         return false;
 
     resumedFromRecording = true;
@@ -1053,13 +1052,9 @@ static bool StartDirectLevel()
 
     bool started;
 
-    if ( !directStart.SaveFile.empty() && IsRecordingFile(directStart.SaveFile) )
+    if ( !directStart.SaveFile.empty() )
     {
         started = StartFromRecording(directStart.SaveFile);
-    }
-    else if ( !directStart.SaveFile.empty() )
-    {
-        started = ypaworld->LoadGame(directStart.SaveFile) != 0;
     }
     else
     {

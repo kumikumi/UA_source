@@ -910,6 +910,12 @@ void FileHandle::close()
     hndl.reset();
 }
 
+void FileHandle::flush()
+{
+    if ( hndl )
+        fflush(hndl.get());
+}
+
 char *FileHandle::gets(char *str, int num)
 {
     if (!hndl)

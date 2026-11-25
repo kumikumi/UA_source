@@ -76,6 +76,8 @@ enum Kind : uint8_t
     KIND_VEHICLE = 4,   // Prototypes, by their index: what tech upgrades
     KIND_WEAPON = 5,    // change, and what earlier levels of the campaign
     KIND_BUILDING = 6,  // did
+    KIND_CAMPAIGN = 7,  // Where the campaign stands: what a saved game takes
+                        // back, but not a level started again
     KIND_UNIT = 16,
 };
 
@@ -245,10 +247,11 @@ Image Capture(NC_STACK_ypaworld *world, Part part = PART_ALL);
 Schema MakeSchema(NC_STACK_ypaworld *world, Part part = PART_ALL);
 
 // Sets up the level the images are of, in the state they hold: the whole
-// state, or its view and internal part. False, after logging why, when it
-// can't; the level is then gone.
+// state, or its view and internal part. The campaign's state too, with
+// campaign. False, after logging why, when it can't; the level is then
+// gone.
 bool Restore(NC_STACK_ypaworld *world, const Image &image);
-bool Restore(NC_STACK_ypaworld *world, const Image &view, const Image &internal);
+bool Restore(NC_STACK_ypaworld *world, const Image &view, const Image &internal, bool campaign);
 
 // A hash of the whole state
 uint64_t Hash(const Image &image);

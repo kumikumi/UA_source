@@ -14,6 +14,7 @@ struct z_stream_s;
 
 class NC_STACK_ypaworld;
 class IFFile;
+namespace FSMgr { class FileHandle; }
 struct TInfoMessage;
 
 namespace World
@@ -83,6 +84,11 @@ struct RecordedPoint
 // A recording cut short, as by a crash, has every block before the one
 // being recorded, and the FORM RPLY's size unwritten: it goes on from its
 // last step the level can go on from.
+//
+// A saved game is a recording up to the moment it was saved, and a won
+// level's end one without steps. In a campaign, every level is recorded
+// (NC_STACK_ypaworld::SessionPath); a saved game's level goes on recording
+// from where the saved game ends.
 class Recorder
 {
 public:
@@ -114,7 +120,16 @@ public:
     // closes the file
     void Stop(NC_STACK_ypaworld *world);
 
+    // A saved game: makes the last step one the level can go on from, and
+    // copies the recording so far to path, which then holds a whole one.
+    // Recording goes on.
+    bool SaveTo(NC_STACK_ypaworld *world, const std::string &path);
+
+    // A recording of the state now, without steps, as of a won level's end
+    static bool WriteState(NC_STACK_ypaworld *world, const std::string &path, const std::string &startedFrom);
+
     bool IsRecording() const { return _file != nullptr; }
+    const std::string &Path() const { return _path; }
 
 protected:
     // Each object as it was last written, to write only what changed
@@ -150,6 +165,8 @@ protected:
     void WriteBlock();
 
     std::unique_ptr<IFFile> _file;
+    FSMgr::FileHandle *_fileHandle = NULL; // _file's
+    std::string _path;
     bool _full = false;
     State::Schema _viewSchema, _internalSchema;
     Layouts _viewLayouts, _internalLayouts; // Point into the schemas

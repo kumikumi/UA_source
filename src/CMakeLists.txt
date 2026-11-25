@@ -75,7 +75,6 @@ set(SOURCES
 	world/nparticle.cpp
 	world/protos.cpp
 	world/recorder.cpp
-	world/saveparsers.cpp
 	world/state.cpp
 	world/tools.cpp
 	world/tutorialhints.cpp

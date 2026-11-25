@@ -2729,101 +2729,6 @@ void NC_STACK_ypaworld::TriggerSuperItem(int id)
 }
 
 
-NC_STACK_ypabact * NC_STACK_ypaworld::FindStationByUnitGid(uint32_t bactid)
-{
-    for ( NC_STACK_ypabact * &station : _unitsList )
-    {
-        if ( bactid == station->_gid )
-            return station;
-
-        for ( NC_STACK_ypabact * &commander : station->_kidList )
-        {
-            if ( bactid == commander->_gid )
-                return station; // CHECK IT
-
-            for ( NC_STACK_ypabact * &slave : commander->_kidList )
-            {
-                if ( bactid == slave->_gid )
-                    return station;  // CHECK IT
-            }
-        }
-    }
-
-    return NULL;
-}
-
-void NC_STACK_ypaworld::RefreshUnitPRT(NC_STACK_ypabact *unit, NC_STACK_ypabact *robo, bool isRobo)
-{
-    TUnitPlacement placement;
-    placement.pos = unit->_position;
-
-    if ( unit->_bact_type == BACT_TYPES_GUN )
-        placement.flags = 4;
-    else
-        placement.flags = 0;
-
-    unit->SetPosition(&placement);
-
-    if ( unit->_bact_type == BACT_TYPES_GUN )
-    {
-        NC_STACK_ypagun *guno = (NC_STACK_ypagun *)unit;
-
-        guno->SetGunBasis(guno->_gunBasis, false);
-    }
-
-    setState_msg stateMsg;
-    stateMsg.newStatus = unit->_status;
-    stateMsg.setFlags = 0;
-    stateMsg.unsetFlags = 0;
-    unit->SetState(&stateMsg);
-
-    if ( unit->_status_flg & BACT_STFLAG_DEATH2 )
-    {
-        stateMsg.newStatus = BACT_STATUS_NOPE;
-        stateMsg.unsetFlags = 0;
-        stateMsg.setFlags = BACT_STFLAG_DEATH2;
-        unit->SetState(&stateMsg);
-    }
-
-    if ( unit->_status_flg & BACT_STFLAG_FIRE )
-    {
-        stateMsg.newStatus = BACT_STATUS_NOPE;
-        stateMsg.unsetFlags = 0;
-        stateMsg.setFlags = BACT_STFLAG_FIRE;
-        unit->SetState(&stateMsg);
-    }
-
-    if ( !isRobo )
-    {
-        unit->_host_station = dynamic_cast<NC_STACK_yparobo *>(robo);
-        unit->_owner = robo->_owner;
-    }
-
-    if ( unit->_primTtype == BACT_TGT_TYPE_UNIT )
-    {
-        unit->_primTtype = BACT_TGT_TYPE_NONE;
-
-        setTarget_msg unitTargetMsg;
-        unitTargetMsg.tgt.pbact = FindStationByUnitGid((int)(size_t)unit->_primT.pbact);
-        unitTargetMsg.tgt_type = BACT_TGT_TYPE_UNIT_IND;
-        unitTargetMsg.priority = 0;
-        unit->SetTarget(&unitTargetMsg);
-    }
-
-    if ( unit->_primTtype == BACT_TGT_TYPE_CELL )
-    {
-        unit->_primTtype = BACT_TGT_TYPE_NONE;
-
-        setTarget_msg cellTargetMsg;
-        cellTargetMsg.tgt_type = BACT_TGT_TYPE_CELL_IND;
-        cellTargetMsg.tgt_pos = unit->_primTpos;
-        cellTargetMsg.priority = 0;
-
-        unit->SetTarget(&cellTargetMsg);
-    }
-}
-
-
 int HandlePause(NC_STACK_ypaworld *yw, TUpdateArgs *arg)
 {
     if ( yw->_isNetGame )
@@ -3399,19 +3304,6 @@ void NC_STACK_ypaworld::ProfileCalcValues()
     }
 }
 
-int NC_STACK_ypaworld::yw_RestoreVehicleData()
-{
-    std::string buf = fmt::sprintf("save:%s/%d.rst", _GameShell->UserName, _levelInfo.LevelID);
-
-    ScriptParser::HandlersList parsers {
-        new World::Parsers::VhclProtoParser(this),
-        new World::Parsers::WeaponProtoParser(this),
-        new World::Parsers::BuildProtoParser(this)
-    };
-
-    return ScriptParser::ParseFile(buf, parsers, ScriptParser::FLAG_SKIP_UNKNOWN);
-}
-
 void NC_STACK_ypaworld::EnableLevelPasses()
 {
     if ( _levelInfo.State == TLevelInfo::STATE_COMPLETED )
@@ -3425,10 +3317,6 @@ void NC_STACK_ypaworld::EnableLevelPasses()
             if ( _globalMapRegions.MapRegions[ lvl ].Status == TMapRegionInfo::STATUS_DISABLED )
                 _globalMapRegions.MapRegions[ lvl ].Status = TMapRegionInfo::STATUS_ENABLED;
         }
-    }
-    else if ( _levelInfo.State == TLevelInfo::STATE_ABORTED && !yw_RestoreVehicleData() )
-    {
-        ypa_log_out("yw_RestoreVehicleData() failed.\n");
     }
 }
 
