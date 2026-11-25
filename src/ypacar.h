@@ -10,6 +10,7 @@ public:
     virtual size_t Init(IDVList &stak);
     virtual size_t Deinit();
     virtual void Renew() override;
+    virtual void VisitState(World::State::Visitor &v) override;
     virtual size_t SetParameters(IDVList &stak) override;
     virtual void User_layer(update_msg *arg);
     virtual int AlignVehicleAI(float dtime, vec3d *pNormal);

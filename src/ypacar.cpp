@@ -10,6 +10,7 @@
 #include "yw_net.h"
 
 #include "log.h"
+#include "world/state.h"
 
 
 NC_STACK_ypacar::NC_STACK_ypacar() 
@@ -61,6 +62,14 @@ void NC_STACK_ypacar::Renew()
 
     _carKamikaze = false;
     _carBlast = 0;
+}
+
+void NC_STACK_ypacar::VisitState(World::State::Visitor &v)
+{
+    NC_STACK_ypatank::VisitState(v);
+
+    v.Field("carKamikaze", _carKamikaze);
+    v.Field("carBlast", _carBlast);
 }
 
 size_t NC_STACK_ypacar::SetParameters(IDVList &stak)

@@ -6,6 +6,7 @@
 #include "ypaflyer.h"
 #include "log.h"
 #include <math.h>
+#include "world/state.h"
 
 size_t NC_STACK_ypaflyer::Init(IDVList &stak)
 {
@@ -1111,6 +1112,14 @@ void NC_STACK_ypaflyer::Renew()
 
     _flyerType = 0;
     _flyerBoost = 0;
+}
+
+void NC_STACK_ypaflyer::VisitState(World::State::Visitor &v)
+{
+    NC_STACK_ypabact::VisitState(v);
+
+    v.Field("flyerBoost", _flyerBoost);
+    v.Field("flyerType", _flyerType);
 }
 
 void NC_STACK_ypaflyer::HandBrake(update_msg *arg)

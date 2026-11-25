@@ -7,6 +7,7 @@
 #include "log.h"
 
 #include <math.h>
+#include "world/state.h"
 
 
 size_t NC_STACK_ypaufo::Init(IDVList &stak)
@@ -936,6 +937,17 @@ void NC_STACK_ypaufo::Renew()
     _ufoFlags = 0;
 
     setBACT_landingOnWait(0);
+}
+
+void NC_STACK_ypaufo::VisitState(World::State::Visitor &v)
+{
+    NC_STACK_ypabact::VisitState(v);
+
+    v.Field("ufoTogo", _ufoTogo);
+    v.Field("ufoTogoResidue", _ufoTogoRisidue);
+    v.Field("ufoBoost", _ufoBoost);
+    v.Field("ufoProcAngle", _ufoProcAngle);
+    v.Field("ufoFlags", _ufoFlags);
 }
 
 

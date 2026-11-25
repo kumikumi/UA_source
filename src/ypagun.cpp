@@ -6,6 +6,7 @@
 #include "yw.h"
 #include "ypagun.h"
 #include "yparobo.h"
+#include "world/state.h"
 
 size_t NC_STACK_ypagun::Init(IDVList &stak)
 {
@@ -632,6 +633,22 @@ void NC_STACK_ypagun::Renew()
     _viewer_position = vec3d(0, 0, 0);
 
     _viewer_rotation = _rotation;
+}
+
+void NC_STACK_ypagun::VisitState(World::State::Visitor &v)
+{
+    NC_STACK_ypabact::VisitState(v);
+
+    v.Field("gunMaxUp", _gunMaxUp);
+    v.Field("gunMaxDown", _gunMaxDown);
+    v.Field("gunMaxSide", _gunMaxSide);
+    v.Field("gunBasis", _gunBasis);
+    v.Field("gunRott", _gunRott);
+    v.Field("gunType", _gunType);
+    v.Field("gunFireTime", _gunFireTime);
+    v.Field("gunFireCount", _gunFireCount);
+    v.Field("gunFlags", _gunFlags);
+    v.Field("gunDownTime", _gunDownTime);
 }
 
 bool NC_STACK_ypagun::TestTargetSector(const NC_STACK_ypabact * cel_unit) const

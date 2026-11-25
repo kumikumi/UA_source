@@ -73,6 +73,7 @@ static bool headless = false;
 static int32_t headlessTimeLimit = 0;
 
 static std::string recordFile; // --record
+static uint32_t checkResumeStep = 0; // --check-resume
 
 static bool StartDirectLevel();
 
@@ -879,6 +880,26 @@ static bool ReadDirectStart()
         headlessTimeLimit = seconds * 1024; // Timer ticks
     }
 
+    if ( System::CmdLine::Get("check-resume", &value) )
+    {
+        char *end = NULL;
+        long step = std::strtol(value.c_str(), &end, 10);
+
+        if ( value.empty() || *end || step < 1 )
+        {
+            System::CmdLine::PrintError("--check-resume " + value + ": not a step");
+            return false;
+        }
+
+        if ( !headless )
+        {
+            System::CmdLine::PrintError("--check-resume needs --headless");
+            return false;
+        }
+
+        checkResumeStep = step;
+    }
+
     if ( System::CmdLine::Get("record", &recordFile) )
     {
         if ( recordFile.empty() )
@@ -890,6 +911,12 @@ static bool ReadDirectStart()
         if ( !userdata.DirectStart || benchmark.IsActive() )
         {
             System::CmdLine::PrintError("--record needs --level or --load");
+            return false;
+        }
+
+        if ( checkResumeStep )
+        {
+            System::CmdLine::PrintError("--record and --check-resume don't go together");
             return false;
         }
     }
@@ -1002,6 +1029,67 @@ static std::string HeadlessOutcome(int32_t startTime)
     return std::string();
 }
 
+// One headless step, with an empty input
+static void HeadlessStep()
+{
+    input_states = TInputState();
+    input_states.Period = SimStepTicks;
+
+    world_update_arg.Input = &input_states;
+    world_update_arg.DTime = SimStepTicks;
+    world_update_arg.TimeStamp += SimStepTicks;
+
+    ypaworld->SimulationStep(&world_update_arg);
+}
+
+// --check-resume: keeps the state, plays on, starts again from what was kept
+// and plays the same steps again; each step's state must come out the same.
+// Returns the report.
+static std::string CheckResume(int32_t startTime, uint32_t step)
+{
+    const uint32_t CheckSteps = 600;
+    const int level = ypaworld->GetLevelInfo().LevelID;
+
+    World::State::Image kept = World::State::Capture(ypaworld);
+    const uint32_t keptTimeStamp = world_update_arg.TimeStamp;
+
+    // The steps as they went, packed: there can be many
+    std::vector<std::string> played;
+    for (uint32_t i = 0; i < CheckSteps && HeadlessOutcome(startTime).empty(); i++)
+    {
+        HeadlessStep();
+        played.push_back(World::State::Pack(World::State::Capture(ypaworld)));
+    }
+
+    ypaworld->DeleteLevel();
+
+    if ( !World::State::Restore(ypaworld, kept) )
+        return fmt::sprintf("Level %d at step %d: can't start again from the kept state\n", level, step);
+
+    world_update_arg.TimeStamp = keptTimeStamp;
+
+    World::State::Schema schema = World::State::MakeSchema(ypaworld);
+
+    std::string diff = World::State::Diff(schema, kept, World::State::Capture(ypaworld));
+    if ( !diff.empty() )
+        return fmt::sprintf("Level %d at step %d: the state read back isn't the one kept:\n%s", level, step, diff);
+
+    for (size_t i = 0; i < played.size(); i++)
+    {
+        HeadlessStep();
+
+        World::State::Image now = World::State::Capture(ypaworld);
+        World::State::Image then;
+        World::State::Unpack(played[i], then);
+
+        if ( !(now.Objects == then.Objects) )
+            return fmt::sprintf("Level %d at step %d: step %d after it differs (as played / started again):\n%s",
+                                level, step, (int)i + 1, World::State::Diff(schema, then, now));
+    }
+
+    return fmt::sprintf("Level %d at step %d: the same for %d steps after it\n", level, step, (int)played.size());
+}
+
 // Runs the level in steps, back to back, with an empty input, until it ends
 static void RunHeadless()
 {
@@ -1012,15 +1100,16 @@ static void RunHeadless()
 
     while ( outcome.empty() )
     {
-        input_states = TInputState();
-        input_states.Period = SimStepTicks;
-
-        world_update_arg.Input = &input_states;
-        world_update_arg.DTime = SimStepTicks;
-        world_update_arg.TimeStamp += SimStepTicks;
-
-        ypaworld->SimulationStep(&world_update_arg);
+        HeadlessStep();
         steps++;
+
+        if ( steps == checkResumeStep )
+        {
+            std::string report = CheckResume(startTime, steps);
+            fputs(report.c_str(), stdout);
+            fflush(stdout);
+            return;
+        }
 
         outcome = HeadlessOutcome(startTime);
     }

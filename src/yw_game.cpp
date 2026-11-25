@@ -1407,23 +1407,24 @@ void NC_STACK_ypaworld::FFeedback_VehicleChanged()
 
 
 
+// The class of each unit type, BACT_TYPES_*
+static const std::array<const std::string, 11> unit_classes_names
+{
+    "dummy.class",      // 0
+    "ypabact.class",    // 1
+    "ypatank.class",    // 2
+    "yparobo.class",    // 3
+    "ypamissile.class", // 4
+    "ypazepp.class",    // 5
+    "ypaflyer.class",   // 6
+    "ypaufo.class",     // 7
+    "ypacar.class",     // 8
+    "ypagun.class",     // 9
+    "ypahovercraft.class" //10
+};
+
 NC_STACK_ypabact *NC_STACK_ypaworld::yw_createUnit( int model_id)
 {
-    std::array<const std::string, 11> unit_classes_names
-    {
-        "dummy.class",      // 0
-        "ypabact.class",    // 1
-        "ypatank.class",    // 2
-        "yparobo.class",    // 3
-        "ypamissile.class", // 4
-        "ypazepp.class",    // 5
-        "ypaflyer.class",   // 6
-        "ypaufo.class",     // 7
-        "ypacar.class",     // 8
-        "ypagun.class",     // 9
-        "ypahovercraft.class" //10
-    };
-
     NC_STACK_ypabact *bacto = NULL;
 
     // Reuse a dead unit of the same class: Renew starts it as a new one.
@@ -1464,6 +1465,22 @@ NC_STACK_ypabact *NC_STACK_ypaworld::yw_createUnit( int model_id)
     _nextUnitId++;
 
     return bacto;
+}
+
+NC_STACK_ypabact *NC_STACK_ypaworld::NewUnitObject(int type)
+{
+    if ( type <= 0 || type >= (int)unit_classes_names.size() )
+        return NULL;
+
+    return yw_createUnit(type);
+}
+
+NC_STACK_ypabact *NC_STACK_ypaworld::MakeUnitObject(int type)
+{
+    if ( type <= 0 || type >= (int)unit_classes_names.size() )
+        return NULL;
+
+    return Nucleus::CTFInit<NC_STACK_ypabact>(unit_classes_names[type], {{NC_STACK_ypabact::BACT_ATT_WORLD, this}} );
 }
 
 

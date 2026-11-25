@@ -9,6 +9,7 @@
 #include "log.h"
 
 #include "yw_net.h"
+#include "world/state.h"
 
 NC_STACK_ypatank::NC_STACK_ypatank()
 {
@@ -1619,6 +1620,19 @@ void NC_STACK_ypatank::Renew()
     _tankCollisionWay = 0.0;
     _tankCollisionFlag = 0;
     _tankExpectTgt = false;
+}
+
+void NC_STACK_ypatank::VisitState(World::State::Visitor &v)
+{
+    NC_STACK_ypabact::VisitState(v);
+
+    v.Field("tankFlags", _tankFlags);
+    v.Field("tankWaitCount", _tankWaitCount);
+    v.Field("tankCollisionVector", _tankCollisionVector);
+    v.Field("tankCollisionAngle", _tankCollisionAngle);
+    v.Field("tankCollisionWay", _tankCollisionWay);
+    v.Field("tankCollisionFlag", _tankCollisionFlag);
+    v.Field("tankExpectTarget", _tankExpectTgt);
 }
 
 size_t NC_STACK_ypatank::CheckFireAI(TFireCheck *arg)

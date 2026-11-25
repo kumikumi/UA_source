@@ -17,6 +17,8 @@ class NC_STACK_ypamissile;
 
 class NC_STACK_ypaworld;
 
+namespace World { namespace State { class Visitor; } }
+
 struct TSectorDamage;
 
 struct cellArea;
@@ -405,6 +407,16 @@ public:
     virtual void GetForcesRatio(TForcesRatio *arg);
     virtual void GetFormationPosition(TFormationSlot *arg);
     virtual void Renew();
+
+    // Its state, field by field: see World::State
+    virtual void VisitState(World::State::Visitor &v);
+
+    // Which of its models an instance draws: 0 none, 1 normal, 2 firing,
+    // 3 waiting, 4 dead, 5 exploding, 6 beaming in, 7 another, 8 and on its
+    // effect models (_vp_fx_models)
+    uint8_t ModelIndex(const NC_STACK_base::Instance *inst) const;
+    NC_STACK_base *ModelByIndex(uint8_t index) const;
+
     virtual void HandBrake(update_msg *arg);
     virtual void CreationTimeUpdate(update_msg *arg);
     virtual size_t IsDestroyed();

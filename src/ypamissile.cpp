@@ -10,6 +10,7 @@
 #include "log.h"
 
 #include <math.h>
+#include "world/state.h"
 
 size_t NC_STACK_ypamissile::Init(IDVList &stak)
 {
@@ -729,6 +730,27 @@ void NC_STACK_ypamissile::Renew()
     _mislRadiusRobo = 0.0;
 
     setBACT_yourLastSeconds(3000);
+}
+
+void NC_STACK_ypamissile::VisitState(World::State::Visitor &v)
+{
+    NC_STACK_ypabact::VisitState(v);
+
+    v.Field("missileType", _mislType);
+    v.Unit("emitter", _mislEmitter);
+    v.Field("lifeTime", _mislLifeTime);
+    v.Field("driveTime", _mislDriveTime);
+    v.Field("delayTime", _mislDelayTime);
+    v.Field("missileFlags", _mislFlags);
+    v.Field("startHeight", _mislStartHeight);
+    v.Field("energyHeli", _mislEnergyHeli);
+    v.Field("energyTank", _mislEnergyTank);
+    v.Field("energyFlyer", _mislEnergyFlyer);
+    v.Field("energyRobo", _mislEnergyRobo);
+    v.Field("radiusHeli", _mislRadiusHeli);
+    v.Field("radiusTank", _mislRadiusTank);
+    v.Field("radiusFlyer", _mislRadiusFlyer);
+    v.Field("radiusRobo", _mislRadiusRobo);
 }
 
 size_t NC_STACK_ypamissile::SetStateInternal(setState_msg *arg)

@@ -37,6 +37,7 @@
 
 #include "world/tutorialhints.h"
 #include "world/recorder.h"
+#include "world/state.h"
 #include "locale/locale.h"
 
 
@@ -1897,6 +1898,20 @@ public:
     // What SaveGame writes, into a file or memory. A final save (.fin), the
     // won level's end, has no settings, level statuses or history.
     bool WriteSave(FSMgr::FileHandle *fil, bool isfin_save);
+
+    // The world's own state, field by field: see World::State
+    void VisitState(World::State::Visitor &v);
+
+    // For World::State::Restore: the level's fixed data (ground, prototypes,
+    // the definitions of gates and bombs) without its units; a unit of a
+    // class, made as yw_createUnit does, or not counted (MakeUnitObject);
+    // a unit's models, sounds and effects from its prototype; and what is
+    // worked out from the state once it is read
+    bool LoadLevelData(int levelId);
+    NC_STACK_ypabact *NewUnitObject(int type);
+    NC_STACK_ypabact *MakeUnitObject(int type);
+    void GiveUnitAssets(NC_STACK_ypabact *unit);
+    void FinishRestore();
     virtual bool SaveSettings(UserData *usr, const std::string &fileName, uint32_t sdfMask);
     virtual size_t LoadSettings(const std::string &fileName, const std::string &userName, uint32_t sdfMask, bool updateGameShell, bool playIntro = false);
     virtual bool ReloadInput(size_t id);

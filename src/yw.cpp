@@ -6058,6 +6058,138 @@ bool NC_STACK_ypaworld::WriteSave(FSMgr::FileHandle *fil, bool isfin_save)
 }
 
 
+void NC_STACK_ypaworld::VisitState(World::State::Visitor &v)
+{
+    v.Field("time", _timeStamp);
+    v.Field("steps", _framesElapsed);
+    v.Field("nextUnitId", _nextUnitId);
+    v.Field("nextCommandId", _nextCommandId);
+
+    static_assert(sizeof(TLastRoboMessage) == 16, "four ints");
+    v.Field("lastRoboMessages", &_lastRoboMessages[0].param1, _lastRoboMessages.size() * 4);
+    v.Field("lastEnemyHostFound", _lastEnemyHostFoundMsgTime.data(), _lastEnemyHostFoundMsgTime.size());
+    v.Field("msgTimeGates", _msgTimestampGates);
+    v.Field("msgTimeHostReturn", _msgTimestampHSReturn);
+    v.Field("msgTimeEnemySector", _msgTimestampEnemySector);
+    v.Field("msgTimePowerUnderAttack", _msgTimestampPSUnderAtk);
+
+    v.Field("vehicleTakenTime", _vehicleTakenControlTimestamp);
+    v.Field("vehicleTakenCommand", _vehicleTakenCommandId);
+    v.Field("invulnerable", _invulnerable);
+    v.Field("playerHostDestroyed", _playerHSDestroyed);
+    v.Field("beamEnergy", _beamEnergyCurrent);
+    v.Field("beamCapacity", _beamEnergyCapacity);
+    v.Field("nextPowerStation", _nextPSForUpdate);
+
+    v.Field("upgrade", _upgradeId);
+    v.Field("upgradeTime", _upgradeTimeStamp);
+    v.Field("upgradeVehicle", _upgradeVehicleId);
+    v.Field("upgradeWeapon", _upgradeWeaponId);
+    v.Field("upgradeBuilding", _upgradeBuildId);
+
+    v.Unit("userRobo", _userRobo);
+    v.Unit("userUnit", _userUnit);
+    v.Unit("viewer", _viewerBact);
+    v.Field("extraViewEnable", _extraViewEnable);
+    v.Field("extraViewNumber", _extraViewNumber);
+    v.Field("ownerMask", _levelInfo.OwnerMask);
+    v.Field("userMask", _levelInfo.UserMask);
+
+    // The squads that came from the last level, and those that went
+    // through a gate since, for the next
+    std::vector<int32_t> buddyCommands, buddyTypes, buddyEnergies;
+    for ( const TMapBuddy &b : _levelInfo.Buddies )
+    {
+        buddyCommands.push_back(b.CommandID);
+        buddyTypes.push_back(b.Type);
+        buddyEnergies.push_back(b.Energy);
+    }
+
+    v.Field("buddyCommands", buddyCommands);
+    v.Field("buddyTypes", buddyTypes);
+    v.Field("buddyEnergies", buddyEnergies);
+
+    if ( v.Reading() )
+    {
+        _levelInfo.Buddies.clear();
+        for (size_t i = 0; i < buddyCommands.size() && i < buddyTypes.size() && i < buddyEnergies.size(); i++)
+            _levelInfo.Buddies.emplace_back(buddyCommands[i], buddyTypes[i], buddyEnergies[i]);
+    }
+
+    _tutorialHints.VisitState(v);
+
+    v.Kids("units", _unitsList);
+}
+
+bool NC_STACK_ypaworld::LoadLevelData(int levelId)
+{
+    _extraViewNumber = -1;
+    _extraViewEnable = false;
+
+    TLevelDescription mapp;
+
+    _particles.Clear();
+
+    if ( !LevelCommonLoader(&mapp, levelId) || !LoadTypeMap(mapp.TypStr) || !LoadOwnerMap(mapp.OwnStr) ||
+         !LoadHightMap(mapp.HgtStr) )
+    {
+        DeleteLevel();
+        return false;
+    }
+
+    // What the debriefing starts from: the level's maps as it begins
+    _lvlPrimevalTypeMap = _lvlTypeMap;
+    _lvlPrimevalOwnMap = _lvlOwnMap;
+
+    // Their buildings and states come with the sectors and the state
+    LinkGatesAndSuperItems();
+    return true;
+}
+
+void NC_STACK_ypaworld::GiveUnitAssets(NC_STACK_ypabact *unit)
+{
+    if ( unit->_bact_type == BACT_TYPES_MISSLE )
+    {
+        if ( unit->_vehicleID < _weaponProtos.size() )
+            SetWeaponAssets(static_cast<NC_STACK_ypamissile *>(unit), _weaponProtos[unit->_vehicleID]);
+
+        return;
+    }
+
+    if ( unit->_vehicleID >= _vhclProtos.size() )
+        return;
+
+    World::TVhclProto &vhcl = _vhclProtos[unit->_vehicleID];
+    SetVehicleAssets(unit, vhcl);
+
+    // Its guns and collision points, which its state then fills in
+    if ( unit->_bact_type == BACT_TYPES_ROBO && vhcl.RoboProto )
+    {
+        NC_STACK_yparobo *robo = static_cast<NC_STACK_yparobo *>(unit);
+        robo->_roboGuns = vhcl.RoboProto->guns;
+        robo->_roboColls = vhcl.RoboProto->coll;
+    }
+}
+
+void NC_STACK_ypaworld::FinishRestore()
+{
+    _countSectorsPerOwner.fill(0);
+
+    for (size_t i = 0; i < _cells.size(); i++)
+    {
+        cellArea &cell = _cells.At(i);
+
+        _lvlTypeMap(i) = cell.type_id;
+        _lvlOwnMap(i) = cell.owner;
+        _countSectorsPerOwner[cell.owner]++;
+    }
+
+    CountUnitsPerOwner();
+    PrepareAllFillers();
+    GUI_Open(this);
+}
+
+
 // Saving game
 bool NC_STACK_ypaworld::SaveSettings(UserData *usr, const std::string &fileName, uint32_t sdfMask)
 {

@@ -1,6 +1,7 @@
 #include "tutorialhints.h"
 #include "../yw.h"
 #include "../yw_internal.h"
+#include "state.h"
 
 extern tehMap robo_map;
 
@@ -133,6 +134,39 @@ void TutorialHints::Stop()
     _hints.clear();
     _lastPlayedHint = -1;
     _lastPlayTime = 0;
+}
+
+void TutorialHints::VisitState(State::Visitor &v)
+{
+    std::vector<uint8_t> reached, played;
+    std::vector<int32_t> reachedTime, nextMessage;
+
+    for ( const Hint &hint : _hints )
+    {
+        reached.push_back(hint.Reached);
+        reachedTime.push_back(hint.ReachedTime);
+        played.push_back(hint.Played);
+        nextMessage.push_back(hint.NextMessage);
+    }
+
+    v.Field("hintReached", reached);
+    v.Field("hintReachedTime", reachedTime);
+    v.Field("hintPlayed", played);
+    v.Field("hintNextMessage", nextMessage);
+    v.Field("lastHint", _lastPlayedHint);
+    v.Field("lastHintTime", _lastPlayTime);
+
+    if ( v.Reading() )
+    {
+        for (size_t i = 0; i < _hints.size(); i++)
+        {
+            Hint &hint = _hints[i];
+            hint.Reached = i < reached.size() && reached[i];
+            hint.ReachedTime = i < reachedTime.size() ? reachedTime[i] : 0;
+            hint.Played = i < played.size() && played[i];
+            hint.NextMessage = i < nextMessage.size() ? nextMessage[i] : 0;
+        }
+    }
 }
 
 void TutorialHints::Update(NC_STACK_ypaworld *world)

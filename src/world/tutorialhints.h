@@ -9,6 +9,7 @@ class NC_STACK_ypaworld;
 
 namespace World
 {
+namespace State { class Visitor; }
 
 // The spoken hints of the training missions. A level's event_loop, 1 to 3,
 // picks a list of hints. Each update goes down the list to the first hint
@@ -22,6 +23,9 @@ public:
     void Stop();
 
     void Update(NC_STACK_ypaworld *world);
+
+    // How far the hints have got: see World::State
+    void VisitState(State::Visitor &v);
 
 protected:
     enum HintType

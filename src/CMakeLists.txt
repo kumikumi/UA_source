@@ -76,6 +76,7 @@ set(SOURCES
 	world/protos.cpp
 	world/recorder.cpp
 	world/saveparsers.cpp
+	world/state.cpp
 	world/tools.cpp
 	world/tutorialhints.cpp
 	wrapal.cpp

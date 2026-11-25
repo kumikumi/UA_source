@@ -39,6 +39,10 @@ static const Option Options[] = {
                                 "host station is left. Needs no display, GPU or sound device. How "
                                 "it ended goes to stdout"},
     {"time-limit",   "SECONDS", "With --headless, stop after this much game time"},
+    {"check-resume", "STEP",    "With --headless, check that the state the game keeps is complete: "
+                                "at step STEP, keep it, play 600 steps, start again from what was "
+                                "kept and play them again. Reports whether every step came out the "
+                                "same, or the first fields that didn't"},
     {"record",       "FILE",    "Record the level that --level or --load starts, until it ends, into "
                                 "FILE: every step, and every 10 s of game time what a save holds. "
                                 "tool/recording.py reads it; the format is in "

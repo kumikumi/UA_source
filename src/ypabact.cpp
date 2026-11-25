@@ -8,6 +8,8 @@
 #include "ypabact.h"
 #include "yparobo.h"
 #include "ypamissile.h"
+#include "world/state.h"
+#include "fmtlib/printf.h"
 #include "yw_net.h"
 
 #include "log.h"
@@ -4924,6 +4926,194 @@ void NC_STACK_ypabact::Renew()
     _yls_time = 3000;
     _hidden = false;
     _unhideRadar = 0;
+}
+
+uint8_t NC_STACK_ypabact::ModelIndex(const NC_STACK_base::Instance *inst) const
+{
+    if ( !inst )
+        return 0;
+
+    const NC_STACK_base *models[] = {_vp_normal, _vp_fire, _vp_wait, _vp_dead, _vp_megadeth, _vp_genesis};
+
+    for (int i = 0; i < 6; i++)
+    {
+        if ( models[i] && inst->Bas == models[i] )
+            return i + 1;
+    }
+
+    for (int i = 0; i < 32; i++)
+    {
+        if ( _vp_fx_models[i] && inst->Bas == _vp_fx_models[i] )
+            return i + 8;
+    }
+
+    return 7;
+}
+
+NC_STACK_base *NC_STACK_ypabact::ModelByIndex(uint8_t index) const
+{
+    switch ( index )
+    {
+    case 1: return _vp_normal;
+    case 2: return _vp_fire;
+    case 3: return _vp_wait;
+    case 4: return _vp_dead;
+    case 5: return _vp_megadeth;
+    case 6: return _vp_genesis;
+    default: return (index >= 8 && index < 40) ? _vp_fx_models[index - 8] : NULL;
+    }
+}
+
+void NC_STACK_ypabact::VisitState(World::State::Visitor &v)
+{
+    // First, so that reading can give it its prototype's models and sounds
+    v.Field("vehicle", _vehicleID);
+
+    if ( v.Reading() )
+        _world->GiveUnitAssets(this);
+
+    v.Field("bflags", _bflags);
+    v.Field("command", _commandID);
+    v.Unit("hostStation", _host_station);
+    v.Unit("parent", _parent);
+    v.Kids("kids", _kidList);
+    v.Field("soundFlags", _soundFlags);
+    v.Field("energy", _energy);
+    v.Field("energyMax", _energy_max);
+    v.Field("reloadConst", _reload_const);
+    v.Field("shield", _shield);
+    v.Field("radar", _radar);
+    v.Field("owner", _owner);
+    v.Field("aggression", _aggr);
+    v.Field("status", _status);
+    v.Field("statusFlags", _status_flg);
+
+    v.Field("primaryType", _primTtype);
+    v.Field("secondaryType", _secndTtype);
+    v.Field("primaryCommand", _primT_cmdID);
+    v.Field("secondaryCommand", _secndT_cmdID);
+    v.Target("primary", _primTtype, _primT);
+    v.Field("primaryPos", _primTpos);
+    v.Target("secondary", _secndTtype, _secndT);
+    v.Field("secondaryPos", _sencdTpos);
+
+    v.Field("adistSector", _adist_sector);
+    v.Field("adistUnit", _adist_bact);
+    v.Field("sdistSector", _sdist_sector);
+    v.Field("sdistUnit", _sdist_bact);
+    v.Field("waypoints", _waypoints, 32);
+    v.Field("waypoint", _current_waypoint);
+    v.Field("waypointCount", _waypoints_count);
+    v.Field("mCommand", _m_cmdID);
+    v.Field("mOwner", _m_owner);
+    v.Field("enemyCommand", _fe_cmdID);
+    v.Field("enemyTime", _fe_time);
+
+    v.Field("mass", _mass);
+    v.Field("force", _force);
+    v.Field("airconst", _airconst);
+    v.Field("airconstStatic", _airconst_static);
+    v.Field("maxrot", _maxrot);
+
+    v.Field("viewerPosition", _viewer_position);
+    v.Field("viewerRotation", _viewer_rotation);
+    v.Field("viewerHorizAngle", _viewer_horiz_angle);
+    v.Field("viewerVertAngle", _viewer_vert_angle);
+    v.Field("viewerMaxUp", _viewer_max_up);
+    v.Field("viewerMaxDown", _viewer_max_down);
+    v.Field("viewerMaxSide", _viewer_max_side);
+
+    v.Field("thraction", _thraction);
+    v.Field("flyDir", _fly_dir);
+    v.Field("flyDirLength", _fly_dir_length);
+    v.Field("position", _position);
+    v.Field("oldPosition", _old_pos);
+    v.Field("targetVec", _target_vec);
+    v.Field("targetDir", _target_dir);
+    v.Field("rotation", _rotation);
+    v.Field("height", _height);
+    v.Field("heightMaxUser", _height_max_user);
+    v.Field("scale", _scale);
+
+    uint8_t look = ModelIndex(_current_vp);
+    v.Field("look", look);
+    v.Field("modelActive", _vp_active);
+
+    if ( v.Reading() )
+        SetVP(ModelByIndex(look));
+
+    for (int i = 0; i < 3; i++)
+    {
+        extra_vproto &ex = _vp_extra[i];
+        uint8_t model = ModelIndex(ex.vp);
+
+        v.Field(fmt::sprintf("extra%dScale", i).c_str(), ex.scale);
+        v.Field(fmt::sprintf("extra%dPos", i).c_str(), ex.pos);
+        v.Field(fmt::sprintf("extra%dRotation", i).c_str(), ex.rotate);
+        v.Field(fmt::sprintf("extra%dFlags", i).c_str(), ex.flags);
+        v.Field(fmt::sprintf("extra%dModel", i).c_str(), model);
+
+        if ( v.Reading() )
+            ex.SetVP(ModelByIndex(model));
+    }
+
+    v.Field("extraMode", _vp_extra_mode);
+    v.Field("radius", _radius);
+    v.Field("viewerRadius", _viewer_radius);
+    v.Field("overeof", _overeof);
+    v.Field("viewerOvereof", _viewer_overeof);
+
+    v.Field("clock", _clock);
+    v.Field("aiTime1", _AI_time1);
+    v.Field("aiTime2", _AI_time2);
+    v.Field("searchTime1", _search_time1);
+    v.Field("searchTime2", _search_time2);
+    v.Field("scaleTime", _scale_time);
+    v.Field("brkfrTime", _brkfr_time);
+    v.Field("brkfrTime2", _brkfr_time2);
+    v.Field("newTargetTime", _newtarget_time);
+    v.Field("assessTime", _assess_time);
+    v.Field("waitColTime", _waitCol_time);
+    v.Field("sliderTime", _slider_time);
+    v.Field("deadTime", _dead_time);
+    v.Field("beamTime", _beam_time);
+    v.Field("energyTime", _energy_time);
+    v.Field("mpos", _mpos);
+
+    v.Field("weapon", _weapon);
+    v.Field("weaponFlags", _weapon_flags);
+    v.Field("mgun", _mgun);
+    v.Field("numWeapons", _num_weapons);
+    v.Missiles("missiles", _missiles_list);
+    v.Field("weaponTime", _weapon_time);
+    v.Field("firePos", _fire_pos);
+    v.Field("gunAngle", _gun_angle);
+    v.Field("gunAngleUser", _gun_angle_user);
+    v.Field("gunLeftRight", _gun_leftright);
+    v.Field("gunRadius", _gun_radius);
+    v.Field("gunPower", _gun_power);
+    v.Field("mgunTime", _mgun_time);
+    v.Field("salveCounter", _salve_counter);
+    v.Field("killAfterShot", _kill_after_shot);
+    v.Field("headingSpeed", _heading_speed);
+
+    v.Unit("killer", _killer);
+    v.Field("killerOwner", _killer_owner);
+    v.Field("rebCount", _reb_count);
+    v.Field("atkRet", _atk_ret);
+
+    v.Field("scaleStart", _scale_start);
+    v.Field("scaleSpeed", _scale_speed);
+    v.Field("scaleAccel", _scale_accel);
+    v.Field("scaleDuration", _scale_duration);
+    v.Field("scalePos", _scale_pos);
+    v.Field("scaleDelay", _scale_delay);
+
+    v.Field("objectFlags", _oflags);
+    v.Attackers("attackerTypes", "attackers", _attackersList);
+    v.Field("lastSeconds", _yls_time);
+    v.Field("hidden", _hidden);
+    v.Field("unhideRadar", _unhideRadar);
 }
 
 void NC_STACK_ypabact::HandBrake(update_msg *arg)

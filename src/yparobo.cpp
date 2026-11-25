@@ -10,6 +10,7 @@
 #include "fmtlib/printf.h"
 
 #include <math.h>
+#include "world/state.h"
 
 
 const std::array<Common::Point, 8> NearDxy 
@@ -5211,6 +5212,151 @@ void NC_STACK_yparobo::Renew()
     setBACT_yourLastSeconds(3000);
 
     _roboTimeScale = _world->GetAITimeline();
+}
+
+void NC_STACK_yparobo::VisitState(World::State::Visitor &v)
+{
+    NC_STACK_ypabact::VisitState(v);
+
+    v.Field("flotage", _roboFlotage);
+    v.Field("collTurnAngle", _roboColls.lastTurnAngle);
+
+    // The prototype's collision points and guns, which reading gives the
+    // unit first, with what changes of them
+    std::vector<vec3d> collPrev;
+    for ( const World::TRoboColl &c : _roboColls.roboColls )
+        collPrev.push_back(c.prev_coll_pos);
+
+    v.Field("collPrevPos", collPrev);
+
+    if ( v.Reading() )
+    {
+        for (size_t i = 0; i < collPrev.size() && i < _roboColls.roboColls.size(); i++)
+            _roboColls.roboColls[i].prev_coll_pos = collPrev[i];
+    }
+
+    std::vector<vec3d> gunDirs;
+    std::vector<NC_STACK_ypabact *> guns;
+    for ( const World::TRoboGun &gun : _roboGuns )
+    {
+        gunDirs.push_back(gun.dir);
+        guns.push_back(gun.gun_obj);
+    }
+
+    v.Field("gunDirs", gunDirs);
+    v.Units("guns", guns);
+
+    if ( v.Reading() )
+    {
+        for (size_t i = 0; i < _roboGuns.size(); i++)
+        {
+            if ( i < gunDirs.size() )
+                _roboGuns[i].dir = gunDirs[i];
+            _roboGuns[i].gun_obj = i < guns.size() ? guns[i] : NULL;
+        }
+    }
+
+    v.Field("yPos", _roboYPos);
+    v.Field("wFlags", _roboWFlags);
+    v.Field("state", _roboState);
+    v.Field("timeScale", _roboTimeScale);
+
+    v.Field("epConquer", _roboEpConquer);
+    v.Field("epRadar", _roboEpRadar);
+    v.Field("epPower", _roboEpPower);
+    v.Field("epDefense", _roboEpDefense);
+    v.Field("epSafety", _roboEpSafety);
+    v.Field("epRecon", _roboEpRecon);
+    v.Field("epChangePlace", _roboEpChangePlace);
+    v.Field("epRobo", _roboEpRobo);
+
+    v.Field("dockEnergy", _roboDockEnerg);
+    v.Field("dockCount", _roboDockCnt);
+    v.Field("dockUser", _roboDockUser);
+    v.Field("dockTime", _roboDockTime);
+    v.Field("dockTargetPos", _roboDockTargetPos);
+    v.Field("dockTargetType", _roboDockTargetType);
+    v.Field("dockAggression", _roboDockAggr);
+    v.Field("dockTargetCommand", _roboDockTargetCommandID);
+    v.Field("dockPos", _roboDockPos);
+
+    v.Field("radarValue", _roboRadarValue);
+    v.Sector("radarCell", _roboRadarCell);
+    v.Field("radarCellId", _roboRadarCellID);
+    v.Field("radarCellIndex", _roboRadarCellIndex);
+    v.Field("radarTime", _roboRadarTime);
+    v.Field("radarDelay", _roboRadarDelay);
+    v.Field("safetyValue", _roboSafetyValue);
+    v.Sector("safetyCell", _roboSafetyCell);
+    v.Field("safetyCellId", _roboSafetyCellID);
+    v.Field("safetyCellIndex", _roboSafetyCellIndex);
+    v.Field("safetyTime", _roboSafetyTime);
+    v.Field("safetyDelay", _roboSafetyDelay);
+    v.Field("powerValue", _roboPowerValue);
+    v.Sector("powerCell", _roboPowerCell);
+    v.Field("powerCellId", _roboPowerCellID);
+    v.Field("powerCellIndex", _roboPowerCellIndex);
+    v.Field("powerTime", _roboPowerTime);
+    v.Field("powerDelay", _roboPowerDelay);
+    v.Field("conqValue", _roboConqValue);
+    v.Sector("conqCell", _roboConqCell);
+    v.Field("conqCellId", _roboConqCellID);
+    v.Field("conqCellIndex", _roboConqCellIndex);
+    v.Field("conqTime", _roboConqTime);
+    v.Field("conqDelay", _roboConqDelay);
+    v.Field("positionValue", _roboPositionValue);
+    v.Sector("positionCell", _roboPositionCell);
+    v.Field("positionCellId", _roboPositionCellID);
+    v.Field("positionCellIndex", _roboPositionCellIndex);
+    v.Field("positionTime", _roboPositionTime);
+    v.Field("positionDelay", _roboPositionDelay);
+    v.Field("exploreValue", _roboExploreValue);
+    v.Sector("exploreCell", _roboExploreCell);
+    v.Field("exploreCellId", _roboExploreCellID);
+    v.Field("exploreCellIndex", _roboExploreCellIndex);
+    v.Field("exploreTime", _roboExploreTime);
+    v.Field("exploreDelay", _roboExploreDelay);
+
+    v.Field("enemyValue", _roboEnemyValue);
+    v.Sector("enemyCell", _roboEnemyCell);
+    v.Field("enemyCellId", _roboEnemyCellID);
+    v.Field("enemyCommand", _roboEnemyCommandID);
+    v.Field("enemyTime", _roboEnemyTime);
+    v.Field("enemyDiv", _roboEnemyDiv);
+    v.Field("enemyDelay", _roboEnemyDelay);
+
+    v.Field("dangerValue", _roboDangerValue);
+    v.Sector("dangerCell", _roboDangerCell);
+    v.Field("dangerCellId", _roboDangerCellID);
+    v.Field("dangerCommand", _roboDangerCommandID);
+    v.Field("dangerTime", _roboDangerTime);
+    v.Field("dangerDelay", _roboDangerDelay);
+
+    v.Field("vehicleCellId", _roboVehicleCellID);
+    v.Sector("vehicleCell", _roboVehicleCell);
+    v.Field("vehicleDuty", _roboVehicleDuty);
+    v.Field("vehicleCommand", _roboVehicleCommandID);
+    v.Field("buildingCellId", _roboBuildingCellID);
+    v.Sector("buildingCell", _roboBuildingCell);
+    v.Field("buildingDuty", _roboBuildingDuty);
+    v.Field("testEnemyTime", _roboTestEnemyTime);
+
+    v.Field("energyLife", _roboEnergyLife);
+    v.Field("energyMove", _roboEnergyMove);
+    v.Field("fillMode", _roboFillMode);
+    v.Field("energyLoadFlags", _roboEnergyLoadFlags);
+    v.Field("energyLossFlags", _roboEnergyLossFlags);
+    v.Field("energyReloadPS", _roboEnergyReloadPS);
+    v.Field("buildSpare", _roboBuildSpare);
+    v.Field("vehicleSpare", _roboVehicleSpare);
+    v.Field("beamTimePre", _roboBeamTimePre);
+    v.Field("beamPos", _roboBeamPos);
+    v.Field("beamFXTime", _roboBeamFXTime);
+
+    static_assert(sizeof(TRoboAttackSlot) == 8, "two command ids");
+    v.Field("attackSlots", &_roboAttackers[0].squadCommandID, _roboAttackers.size() * 2);
+    v.Field("attackersTime", _roboAttackersTime);
+    v.Field("attackersClearTime", _roboAttackersClearTime);
 }
 
 void NC_STACK_yparobo::HandBrake(update_msg *)
