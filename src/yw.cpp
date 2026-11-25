@@ -6157,6 +6157,9 @@ void NC_STACK_ypaworld::GiveUnitAssets(NC_STACK_ypabact *unit)
 
 void NC_STACK_ypaworld::FinishRestore()
 {
+    // As setYW_userHostStation sets it for a level started anew
+    _playerOwner = _userRobo ? _userRobo->_owner : 0;
+
     _countSectorsPerOwner.fill(0);
 
     for (size_t i = 0; i < _cells.size(); i++)
