@@ -64,8 +64,10 @@
 #define TAG_FLSH   MKTAG('F','L','S','H')
 #define TAG_RPLY   MKTAG('R','P','L','Y')
 #define TAG_INFO   MKTAG('I','N','F','O')
-#define TAG_BLCK   MKTAG('B','L','C','K')
-#define TAG_KEYF   MKTAG('K','E','Y','F')
+#define TAG_SCHV   MKTAG('S','C','H','V')
+#define TAG_SCHI   MKTAG('S','C','H','I')
+#define TAG_STRV   MKTAG('S','T','R','V')
+#define TAG_STRI   MKTAG('S','T','R','I')
 #define TAG_STEP   MKTAG('S','T','E','P')
 
 #define POW2(x)  ( (x) * (x) )

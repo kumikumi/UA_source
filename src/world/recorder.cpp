@@ -1,12 +1,11 @@
 #include <algorithm>
 #include <cmath>
-#include <cstddef>
 #include <cstring>
+#include <map>
 #include <zlib.h>
 
 #include "recorder.h"
 #include "../yw.h"
-#include "../ypamissile.h"
 #include "../IFFile.h"
 #include "../utils.h"
 #include "../log.h"
@@ -33,12 +32,6 @@ static void Put32(std::string &out, uint32_t v)
     Put16(out, v >> 16);
 }
 
-static void Put64(std::string &out, uint64_t v)
-{
-    Put32(out, v & 0xFFFFFFFF);
-    Put32(out, v >> 32);
-}
-
 static void PutText(std::string &out, const std::string &text)
 {
     size_t length = std::min<size_t>(text.size(), 0xFFFF);
@@ -46,81 +39,9 @@ static void PutText(std::string &out, const std::string &text)
     out.append(text, 0, length);
 }
 
-
-// Mixes the state's bytes, 8 at a time, doubles and all: what tells two
-// recordings apart at the first step they differ
-static uint64_t Hash(uint64_t h, const void *data, size_t size)
+static uint64_t ObjectKey(uint8_t kind, uint32_t id)
 {
-    const uint8_t *bytes = (const uint8_t *)data;
-
-    for (; size >= 8; bytes += 8, size -= 8)
-    {
-        uint64_t word;
-        memcpy(&word, bytes, 8);
-        h = (h ^ word) * 0x9E3779B97F4A7C15ULL;
-        h ^= h >> 29;
-    }
-
-    for (; size > 0; bytes++, size--)
-    {
-        h = (h ^ *bytes) * 0x9E3779B97F4A7C15ULL;
-        h ^= h >> 29;
-    }
-
-    return h;
-}
-
-static const uint64_t HashStart = 1469598103934665603ULL;
-
-static uint32_t SectorIndex(NC_STACK_ypaworld *world, const cellArea *cell)
-{
-    if ( !cell )
-        return 0;
-
-    return cell->CellId.y * world->_mapSize.x + cell->CellId.x;
-}
-
-static uint32_t TargetId(NC_STACK_ypaworld *world, uint8_t type, const BactTarget &target, const vec3d &pos)
-{
-    switch ( type )
-    {
-    case BACT_TGT_TYPE_UNIT:
-        return target.pbact ? target.pbact->_gid : 0;
-
-    case BACT_TGT_TYPE_CELL:
-        return SectorIndex(world, target.pcell);
-
-    case BACT_TGT_TYPE_FRMT:
-    case BACT_TGT_TYPE_DRCT:
-    {
-        // A position: the sector it is in
-        Common::Point sector = World::PositionToSectorID(pos);
-        return sector.y * world->_mapSize.x + sector.x;
-    }
-
-    default:
-        return 0;
-    }
-}
-
-static uint8_t Look(NC_STACK_ypabact *unit)
-{
-    NC_STACK_base *vp = unit->GetVP();
-
-    if ( vp == unit->_vp_normal )
-        return 1;
-    else if ( vp == unit->_vp_fire )
-        return 2;
-    else if ( vp == unit->_vp_wait )
-        return 3;
-    else if ( vp == unit->_vp_dead )
-        return 4;
-    else if ( vp == unit->_vp_megadeth )
-        return 5;
-    else if ( vp == unit->_vp_genesis )
-        return 6;
-
-    return 0;
+    return ((uint64_t)kind << 32) | id;
 }
 
 static std::string Platform()
@@ -146,11 +67,257 @@ static std::string Platform()
     return platform;
 }
 
+// zlib, with the size unpacked first
+static std::string Packed(const std::string &data, int level)
+{
+    uLongf packedSize = compressBound(data.size());
+    std::string out(4 + packedSize, '\0');
+    uint32_t size = data.size();
+    memcpy(&out[0], &size, 4);
+
+    if ( compress2((Bytef *)&out[4], &packedSize, (const Bytef *)data.data(), data.size(), level) != Z_OK )
+    {
+        ypa_log_out("Recording: could not compress a block\n");
+        packedSize = 0;
+    }
+
+    out.resize(4 + packedSize);
+    return out;
+}
+
+static bool Unpacked(const std::string &packed, std::string &data)
+{
+    if ( packed.size() < 4 )
+        return false;
+
+    uint32_t size;
+    memcpy(&size, packed.data(), 4);
+
+    data.assign(size, '\0');
+    uLongf outSize = size;
+
+    return uncompress((Bytef *)&data[0], &outSize, (const Bytef *)packed.data() + 4, packed.size() - 4) == Z_OK &&
+           outSize == size;
+}
+
+
+// A float field's value guessed from its last two: the last, moved on by as
+// much as it last moved. The guess is what a change is XORed with, so the
+// closer it is, the more of the XOR is zeros. Written so that no compiler
+// fuses it into one rounding, and only with finite values, whose arithmetic
+// every platform does alike.
+template <class T>
+static void PredictElements(const char *last, const char *before, char *guess, size_t count)
+{
+    for (size_t i = 0; i < count; i++)
+    {
+        T v1, v0;
+        memcpy(&v1, last + i * sizeof(T), sizeof(T));
+        memcpy(&v0, before + i * sizeof(T), sizeof(T));
+
+        T g = v1;
+        if ( std::isfinite(v1) && std::isfinite(v0) )
+        {
+            T moved = v1 - v0;
+            T next = v1 + moved;
+
+            if ( std::isfinite(moved) && std::isfinite(next) )
+                g = next;
+        }
+
+        memcpy(guess + i * sizeof(T), &g, sizeof(T));
+    }
+}
+
+// What a field's new bytes are XORed with: the guess for floats, else the
+// last bytes
+static void Guess(const State::FieldInfo &field, const char *last, const char *before, size_t size, char *guess)
+{
+    if ( before && field.ElemType == State::T_F32 )
+        PredictElements<float>(last, before, guess, size / 4);
+    else if ( before && field.ElemType == State::T_F64 )
+        PredictElements<double>(last, before, guess, size / 8);
+    else
+        memcpy(guess, last, size);
+}
+
+// The bytes of a field before the last change, when they fit
+static const char *BeforeBytes(const State::FieldInfo &field, const std::string &before,
+                               const std::vector<size_t> &beforeOffsets, bool beforeFits, size_t i, size_t size)
+{
+    if ( !beforeFits || field.List || beforeOffsets[i + 1] - beforeOffsets[i] != size )
+        return NULL;
+
+    return before.data() + beforeOffsets[i];
+}
+
+// What changed of an object: its fields that differ from the last bytes,
+// written as the format says
+static void PutChangedFields(std::string &out, const std::vector<State::FieldInfo> &fields, const ObjectVersions &old,
+                             const std::vector<size_t> &oldOffsets, const std::string &newData,
+                             const std::vector<size_t> &newOffsets)
+{
+    std::vector<size_t> beforeOffsets;
+    bool beforeFits = State::FieldOffsets(fields, old.Before, beforeOffsets);
+
+    std::string changed;
+    uint16_t count = 0;
+    char guess[256];
+
+    for (size_t i = 0; i < fields.size(); i++)
+    {
+        size_t oldSize = oldOffsets[i + 1] - oldOffsets[i];
+        size_t newSize = newOffsets[i + 1] - newOffsets[i];
+        const char *o = old.Data.data() + oldOffsets[i];
+        const char *n = newData.data() + newOffsets[i];
+
+        if ( oldSize == newSize && !memcmp(o, n, newSize) )
+            continue;
+
+        Put16(changed, i);
+
+        if ( fields[i].List || newSize > sizeof(guess) )
+        {
+            changed.append(n, newSize);
+        }
+        else
+        {
+            Guess(fields[i], o, BeforeBytes(fields[i], old.Before, beforeOffsets, beforeFits, i, newSize), newSize, guess);
+
+            for (size_t b = 0; b < newSize; b++)
+                changed.push_back(guess[b] ^ n[b]);
+        }
+
+        count++;
+    }
+
+    Put16(out, count);
+    out += changed;
+}
+
+// Applies what changed, as the format says, to objects by key. Returns where
+// it ended, or NULL when it doesn't read.
+static const char *ApplyChanges(std::map<uint64_t, ObjectVersions> &objects, const State::Schema &schema,
+                                const char *p, const char *end)
+{
+    std::vector<size_t> offsets, beforeOffsets;
+    char guess[256];
+
+    if ( p + 4 > end )
+        return NULL;
+
+    uint32_t changes;
+    memcpy(&changes, p, 4);
+    p += 4;
+
+    for (uint32_t c = 0; c < changes; c++)
+    {
+        if ( p + 6 > end )
+            return NULL;
+
+        uint8_t kind = p[0], what = p[5];
+        uint32_t id;
+        memcpy(&id, p + 1, 4);
+        p += 6;
+
+        uint64_t key = ObjectKey(kind, id);
+
+        if ( what == 0 )
+        {
+            objects.erase(key);
+        }
+        else if ( what == 1 )
+        {
+            uint32_t size;
+            if ( p + 4 > end )
+                return NULL;
+
+            memcpy(&size, p, 4);
+            p += 4;
+
+            if ( p + size > end )
+                return NULL;
+
+            ObjectVersions &obj = objects[key];
+            obj.Data.assign(p, size);
+            obj.Before = obj.Data;
+            p += size;
+        }
+        else
+        {
+            auto sit = schema.find(kind);
+            auto oit = objects.find(key);
+
+            if ( sit == schema.end() || oit == objects.end() || p + 2 > end ||
+                 !State::FieldOffsets(sit->second, oit->second.Data, offsets) )
+                return NULL;
+
+            const std::vector<State::FieldInfo> &fields = sit->second;
+            const std::string &old = oit->second.Data;
+            bool beforeFits = State::FieldOffsets(fields, oit->second.Before, beforeOffsets);
+
+            uint16_t n;
+            memcpy(&n, p, 2);
+            p += 2;
+
+            std::string updated;
+            size_t field = 0;
+
+            for (uint16_t i = 0; i < n; i++)
+            {
+                uint16_t index;
+                if ( p + 2 > end )
+                    return NULL;
+
+                memcpy(&index, p, 2);
+                p += 2;
+
+                if ( index >= fields.size() || index < field )
+                    return NULL;
+
+                updated.append(old, offsets[field], offsets[index] - offsets[field]);
+
+                size_t size = State::FieldSize(fields[index], p, end - p);
+                if ( !size )
+                    return NULL;
+
+                if ( fields[index].List || size > sizeof(guess) )
+                {
+                    updated.append(p, size);
+                }
+                else
+                {
+                    if ( offsets[index + 1] - offsets[index] != size )
+                        return NULL;
+
+                    Guess(fields[index], old.data() + offsets[index],
+                          BeforeBytes(fields[index], oit->second.Before, beforeOffsets, beforeFits, index, size), size, guess);
+
+                    for (size_t b = 0; b < size; b++)
+                        updated.push_back(guess[b] ^ p[b]);
+                }
+
+                p += size;
+                field = index + 1;
+            }
+
+            updated.append(old, offsets[field], old.size() - offsets[field]);
+            oit->second.Before = std::move(oit->second.Data);
+            oit->second.Data = std::move(updated);
+        }
+    }
+
+    return p;
+}
+
+
+// Recorder
 
 Recorder::Recorder() {}
 Recorder::~Recorder() {}
 
-bool Recorder::Start(NC_STACK_ypaworld *world, const std::string &path, const std::string &startedFrom)
+bool Recorder::Open(NC_STACK_ypaworld *world, const std::string &path, const std::string &startedFrom,
+                    const State::Image &startView, const State::Image &startInternal)
 {
     FSMgr::FileHandle *file = new FSMgr::FileHandle(path, "wb");
 
@@ -165,8 +332,8 @@ bool Recorder::Start(NC_STACK_ypaworld *world, const std::string &path, const st
     _file->pushChunk(TAG_RPLY, TAG_FORM, -1);
 
     std::string info;
-    Put16(info, 1);
-    Put16(info, world->_levelInfo.LevelID);
+    Put16(info, 2);
+    Put16(info, startView.Level);
 
     for (const std::string &text : {startedFrom, Platform(),
 #if defined(__VERSION__)
@@ -180,13 +347,152 @@ bool Recorder::Start(NC_STACK_ypaworld *world, const std::string &path, const st
         info.push_back('\0');
     }
 
-    _file->pushChunk(0, TAG_INFO, -1);
-    _file->write(info.data(), info.size());
-    _file->popChunk();
+    _viewSchema = State::MakeSchema(world, State::PART_VIEW);
+    _internalSchema = State::MakeSchema(world, State::PART_INTERNAL);
 
+    for (auto chunk : {std::make_pair(TAG_INFO, info),
+                       std::make_pair(TAG_SCHV, State::WriteSchema(_viewSchema)),
+                       std::make_pair(TAG_SCHI, State::WriteSchema(_internalSchema)),
+                       std::make_pair(TAG_STRV, State::Pack(startView)),
+                       std::make_pair(TAG_STRI, State::Pack(startInternal))})
+    {
+        _file->pushChunk(0, chunk.first, -1);
+        _file->write(chunk.second.data(), chunk.second.size());
+        _file->popChunk();
+    }
+
+    _steps.clear();
+    _blockSteps = 0;
+    _messages.clear();
+    _messageCount = 0;
+    _hasPending = false;
+    _lastView.clear();
+    _lastInternal.clear();
     _step = 0;
-    BeginBlock(world);
     return true;
+}
+
+void Recorder::Remember(NC_STACK_ypaworld *world, State::Part part, LastObjects &last)
+{
+    last.clear();
+
+    State::ForEachObject(world, part, [this, &last](uint8_t kind, uint32_t id, const std::string &data)
+    {
+        last[ObjectKey(kind, id)] = LastObject{{data, data}, _step};
+    });
+}
+
+bool Recorder::Start(NC_STACK_ypaworld *world, const std::string &path, const std::string &startedFrom)
+{
+    if ( !Open(world, path, startedFrom, State::Capture(world, State::PART_VIEW), State::Capture(world, State::PART_INTERNAL)) )
+        return false;
+
+    Remember(world, State::PART_VIEW, _lastView);
+    Remember(world, State::PART_INTERNAL, _lastInternal);
+    return true;
+}
+
+bool Recorder::StartFrom(NC_STACK_ypaworld *world, const std::string &path, const std::string &startedFrom,
+                         const RecordedPoint &start, const RecordedPoint &point)
+{
+    if ( !Open(world, path, startedFrom, start.View, start.Internal) )
+        return false;
+
+    for ( const std::string &step : point.Steps )
+        AddStep(step);
+
+    // Where the recorded steps led, as the recording has it: the changes to
+    // come are written from there
+    _step = point.Step;
+    _lastView.clear();
+    _lastInternal.clear();
+
+    for ( const auto &it : point.ViewVersions )
+        _lastView[it.first] = LastObject{it.second, _step};
+
+    for ( const auto &it : point.InternalVersions )
+        _lastInternal[it.first] = LastObject{it.second, _step};
+
+    return true;
+}
+
+std::string Recorder::Changes(NC_STACK_ypaworld *world, State::Part part, const State::Schema &schema, LastObjects &last)
+{
+    std::string changes;
+    uint32_t changeCount = 0;
+    std::vector<size_t> oldOffsets, newOffsets;
+
+    State::ForEachObject(world, part, [&](uint8_t kind, uint32_t id, const std::string &data)
+    {
+        uint64_t key = ObjectKey(kind, id);
+        auto it = last.find(key);
+
+        if ( it == last.end() )
+        {
+            Put8(changes, kind);
+            Put32(changes, id);
+            Put8(changes, 1);
+            Put32(changes, data.size());
+            changes += data;
+            changeCount++;
+
+            last[key] = LastObject{{data, data}, _step};
+            return;
+        }
+
+        LastObject &obj = it->second;
+        obj.SeenStep = _step;
+
+        if ( obj.Versions.Data == data )
+            return;
+
+        auto sit = schema.find(kind);
+
+        Put8(changes, kind);
+        Put32(changes, id);
+
+        if ( sit != schema.end() && State::FieldOffsets(sit->second, obj.Versions.Data, oldOffsets) &&
+             State::FieldOffsets(sit->second, data, newOffsets) )
+        {
+            Put8(changes, 2);
+            PutChangedFields(changes, sit->second, obj.Versions, oldOffsets, data, newOffsets);
+        }
+        else
+        {
+            // Bytes that don't fit the fields, which shouldn't be: in full
+            Put8(changes, 1);
+            Put32(changes, data.size());
+            changes += data;
+        }
+
+        changeCount++;
+        obj.Versions.Before = std::move(obj.Versions.Data);
+        obj.Versions.Data = data;
+    }, &schema);
+
+    // The objects gone, in order of kind and id
+    std::vector<uint64_t> gone;
+    for ( const auto &it : last )
+    {
+        if ( it.second.SeenStep != _step )
+            gone.push_back(it.first);
+    }
+
+    std::sort(gone.begin(), gone.end());
+
+    for ( uint64_t key : gone )
+    {
+        Put8(changes, key >> 32);
+        Put32(changes, key & 0xFFFFFFFF);
+        Put8(changes, 0);
+        changeCount++;
+        last.erase(key);
+    }
+
+    std::string out;
+    Put32(out, changeCount);
+    out += changes;
+    return out;
 }
 
 void Recorder::Step(NC_STACK_ypaworld *world)
@@ -194,62 +500,58 @@ void Recorder::Step(NC_STACK_ypaworld *world)
     if ( !_file )
         return;
 
+    FlushPending();
+
     _step++;
 
-    Put32(_steps, _step);
-    Put32(_steps, world->_timeStamp);
+    _pendingView = Changes(world, State::PART_VIEW, _viewSchema, _lastView);
 
-    _objects.clear();
-    _objectCount = 0;
-
-    uint64_t unitsHash = HashStart;
-    for (NC_STACK_ypabact *unit : world->_unitsList)
-        WriteObject(world, unit, &unitsHash);
-
-    uint64_t sectorsHash = HashStart;
-    WriteSectors(world, &sectorsHash);
-
-    Put64(_steps, unitsHash);
-    Put64(_steps, sectorsHash);
-    Put32(_steps, world->_userUnit ? world->_userUnit->_gid : 0);
-
-    Put16(_steps, _objectCount);
-    _steps += _objects;
-
-    std::string gone;
-    uint16_t goneCount = 0;
-
-    for (auto it = _lastObjects.begin(); it != _lastObjects.end(); )
-    {
-        if ( it->second.seenStep == _step )
-        {
-            it++;
-        }
-        else
-        {
-            Put32(gone, it->first);
-            goneCount++;
-            it = _lastObjects.erase(it);
-        }
-    }
-
-    Put16(_steps, goneCount);
-    _steps += gone;
-
-    _steps += _sectorsOut;
-
-    Put16(_steps, _messageCount);
-    _steps += _messages;
+    _pendingMessages.clear();
+    Put16(_pendingMessages, _messageCount);
+    _pendingMessages += _messages;
     _messages.clear();
     _messageCount = 0;
 
+    _pendingResumable = false;
+    _pendingInternal.clear();
+    _hasPending = true;
+
+    if ( _full || _step % BlockSteps == 0 )
+        MakeResumable(world);
+}
+
+void Recorder::MakeResumable(NC_STACK_ypaworld *world)
+{
+    if ( !_hasPending || _pendingResumable )
+        return;
+
+    _pendingInternal = Changes(world, State::PART_INTERNAL, _internalSchema, _lastInternal);
+    _pendingResumable = true;
+}
+
+void Recorder::FlushPending()
+{
+    if ( !_hasPending )
+        return;
+
+    std::string step;
+    Put8(step, _pendingResumable ? 1 : 0);
+    step += _pendingView;
+    step += _pendingMessages;
+    step += _pendingInternal;
+
+    _hasPending = false;
+    AddStep(step);
+}
+
+void Recorder::AddStep(const std::string &step)
+{
+    Put32(_steps, step.size());
+    _steps += step;
     _blockSteps++;
 
     if ( _blockSteps >= BlockSteps )
-    {
         WriteBlock();
-        BeginBlock(world);
-    }
 }
 
 void Recorder::Message(const TInfoMessage &msg)
@@ -269,211 +571,251 @@ void Recorder::Stop(NC_STACK_ypaworld *world)
     if ( !_file )
         return;
 
-    // The block being recorded, then one with only the end's state
-    if ( _blockSteps > 0 )
-    {
-        WriteBlock();
-        BeginBlock(world);
-    }
+    MakeResumable(world);
+    FlushPending();
 
-    WriteBlock();
+    if ( _blockSteps > 0 )
+        WriteBlock();
 
     _file->popChunk();
     _file.reset();
-}
-
-void Recorder::BeginBlock(NC_STACK_ypaworld *world)
-{
-    FSMgr::MemFileHandle save;
-    world->WriteSave(&save, false);
-
-    _keyframe = std::move(save.Data);
-    _steps.clear();
-    _blockSteps = 0;
-
-    _lastObjects.clear();
-    _lastSectors.clear();
+    _lastView.clear();
+    _lastInternal.clear();
 }
 
 void Recorder::WriteBlock()
 {
-    _file->pushChunk(TAG_BLCK, TAG_FORM, -1);
+    std::string packed = Packed(_steps, Z_DEFAULT_COMPRESSION);
 
-    for (auto chunk : {std::make_pair(TAG_KEYF, &_keyframe), std::make_pair(TAG_STEP, &_steps)})
-    {
-        const std::string &data = *chunk.second;
-
-        uLongf packedSize = compressBound(data.size());
-        std::vector<uint8_t> packed(packedSize);
-
-        if ( compress2(packed.data(), &packedSize, (const Bytef *)data.data(), data.size(), Z_BEST_SPEED) != Z_OK )
-        {
-            ypa_log_out("Recording: could not compress a block\n");
-            packedSize = 0;
-        }
-
-        _file->pushChunk(0, chunk.first, -1);
-        _file->writeU32L(data.size());
-        _file->write(packed.data(), packedSize);
-        _file->popChunk();
-    }
-
+    _file->pushChunk(0, TAG_STEP, -1);
+    _file->write(packed.data(), packed.size());
     _file->popChunk();
+
+    _steps.clear();
+    _blockSteps = 0;
 }
 
-void Recorder::WriteObject(NC_STACK_ypaworld *world, NC_STACK_ypabact *unit, uint64_t *hash)
+
+// Recording
+
+static uint32_t BigEndian32(const std::string &data, size_t pos)
 {
-    // The exact state, for the hash, in one piece
-    struct
+    const uint8_t *p = (const uint8_t *)data.data() + pos;
+    return ((uint32_t)p[0] << 24) | ((uint32_t)p[1] << 16) | ((uint32_t)p[2] << 8) | p[3];
+}
+
+bool Recording::Open(const std::string &path)
+{
+    FSMgr::FileHandle file(path, "rb");
+
+    if ( !file.OK() )
     {
-        vec3d position, flyDir;
-        mat3x3 rotation;
-        uint32_t gid;
-        int32_t energy, flags;
-        float flyDirLength;
-        uint8_t owner, type, status;
-    } exact;
-
-    memset(&exact, 0, sizeof(exact));
-    exact.position = unit->_position;
-    exact.flyDir = unit->_fly_dir;
-    exact.rotation = unit->_rotation;
-    exact.gid = unit->_gid;
-    exact.energy = unit->_energy;
-    exact.flags = unit->_status_flg;
-    exact.flyDirLength = unit->_fly_dir_length;
-    exact.owner = unit->_owner;
-    exact.type = unit->_bact_type;
-    exact.status = unit->_status;
-    *hash = Hash(*hash, &exact, sizeof(exact));
-
-    ObjectRecord rec;
-
-    NC_STACK_ypabact *parent = unit->_parent;
-    if ( unit->_bact_type == BACT_TYPES_MISSLE )
-        parent = static_cast<NC_STACK_ypamissile *>(unit)->GetLauncherBact();
-
-    rec.type = unit->_bact_type;
-    rec.owner = unit->_owner;
-    rec.vehicle = unit->_vehicleID;
-    rec.parent = parent ? parent->_gid : 0;
-    rec.status = unit->_status;
-    rec.flags = unit->_status_flg;
-    rec.energy = unit->_energy;
-    rec.position[0] = unit->_position.x;
-    rec.position[1] = unit->_position.y;
-    rec.position[2] = unit->_position.z;
-
-    const mat3x3 &m = unit->_rotation;
-    const double rows[9] = {m.m00, m.m01, m.m02, m.m10, m.m11, m.m12, m.m20, m.m21, m.m22};
-    for (int i = 0; i < 9; i++)
-    {
-        double v = rows[i] > 1.0 ? 1.0 : (rows[i] < -1.0 ? -1.0 : rows[i]);
-        rec.rotation[i] = (int16_t)(v * 32767.0 + (v < 0.0 ? -0.5 : 0.5));
+        ypa_log_out("Can't read the recording %s\n", path.c_str());
+        return false;
     }
 
-    rec.look = Look(unit);
-    rec.primaryType = unit->_primTtype;
-    rec.primary = TargetId(world, unit->_primTtype, unit->_primT, unit->_primTpos);
-    rec.secondaryType = unit->_secndTtype;
-    rec.secondary = TargetId(world, unit->_secndTtype, unit->_secndT, unit->_sencdTpos);
-    rec.aggression = unit->_aggr;
+    std::string data;
+    char buf[65536];
+    size_t got;
+    while ( (got = file.read(buf, sizeof(buf))) > 0 )
+        data.append(buf, got);
 
-    // Where each OBJ_* field starts in the record, and the record's end
-    static const size_t starts[] = {
-        offsetof(ObjectRecord, type), offsetof(ObjectRecord, status), offsetof(ObjectRecord, energy),
-        offsetof(ObjectRecord, position), offsetof(ObjectRecord, rotation), offsetof(ObjectRecord, look),
-        offsetof(ObjectRecord, primaryType), offsetof(ObjectRecord, aggression), sizeof(ObjectRecord)};
+    if ( data.size() < 12 || data.compare(0, 4, "FORM") || data.compare(8, 4, "RPLY") )
+    {
+        ypa_log_out("%s is not a recording\n", path.c_str());
+        return false;
+    }
 
-    const uint8_t *now = (const uint8_t *)&rec;
-    LastObject &last = _lastObjects[unit->_gid];
-    uint16_t changed = 0;
+    bool haveInfo = false, haveSchemas = true;
+    size_t pos = 12;
 
-    if ( last.seenStep == 0 )
-        changed = 0xFF; // New
+    while ( pos + 8 <= data.size() )
+    {
+        std::string tag = data.substr(pos, 4);
+        uint32_t size = BigEndian32(data, pos + 4);
+
+        // Cut short: the rest is the chunk being written, if anything
+        if ( size == 0xFFFFFFFF || pos + 8 + size > data.size() )
+            break;
+
+        std::string body = data.substr(pos + 8, size);
+        pos += 8 + size + (size & 1);
+
+        if ( tag == "INFO" )
+        {
+            if ( body.size() < 4 )
+                break;
+
+            uint16_t version, level;
+            memcpy(&version, body.data(), 2);
+            memcpy(&level, body.data() + 2, 2);
+
+            if ( version != 2 )
+            {
+                ypa_log_out("%s is a recording of format %d, not 2\n", path.c_str(), version);
+                return false;
+            }
+
+            _level = level;
+            _startedFrom = std::string(body.c_str() + 4);
+            haveInfo = true;
+        }
+        else if ( tag == "SCHV" )
+        {
+            haveSchemas &= State::ReadSchema(body, _viewSchema);
+        }
+        else if ( tag == "SCHI" )
+        {
+            haveSchemas &= State::ReadSchema(body, _internalSchema);
+        }
+        else if ( tag == "STRV" )
+        {
+            _startView = std::move(body);
+        }
+        else if ( tag == "STRI" )
+        {
+            _startInternal = std::move(body);
+        }
+        else if ( tag == "STEP" )
+        {
+            std::string steps;
+            if ( !Unpacked(body, steps) )
+                break;
+
+            for (size_t at = 0; at + 5 <= steps.size(); )
+            {
+                uint32_t stepSize;
+                memcpy(&stepSize, steps.data() + at, 4);
+                _resumable.push_back(steps[at + 4] != 0);
+                at += 4 + stepSize;
+            }
+
+            _blocks.push_back(std::move(body));
+        }
+    }
+
+    if ( !haveInfo || !haveSchemas || _viewSchema.empty() || _startView.empty() || _startInternal.empty() )
+    {
+        ypa_log_out("%s is not a whole recording\n", path.c_str());
+        return false;
+    }
+
+    return true;
+}
+
+uint32_t Recording::LastResumable(uint32_t step) const
+{
+    step = std::min<uint32_t>(step, _resumable.size());
+
+    while ( step > 0 && !_resumable[step - 1] )
+        step--;
+
+    return step;
+}
+
+static void ToImage(int level, const ObjectsVersions &objects, State::Image &image)
+{
+    image = State::Image();
+    image.Level = level;
+
+    for ( auto &it : objects )
+    {
+        State::Object obj;
+        obj.Kind = it.first >> 32;
+        obj.Id = it.first & 0xFFFFFFFF;
+        obj.Data = it.second.Data;
+        image.Objects.push_back(std::move(obj));
+    }
+}
+
+bool Recording::Read(uint32_t step, RecordedPoint &point, bool resume) const
+{
+    if ( step > Steps() || (resume && !IsResumable(step)) )
+        return false;
+
+    point = RecordedPoint();
+    point.Step = step;
+
+    ObjectsVersions &viewObjects = point.ViewVersions;
+    ObjectsVersions &internalObjects = point.InternalVersions;
+
+    for (auto part : {std::make_pair(&_startView, &viewObjects), std::make_pair(&_startInternal, &internalObjects)})
+    {
+        State::Image start;
+        if ( !State::Unpack(*part.first, start) )
+            return false;
+
+        for ( State::Object &obj : start.Objects )
+            (*part.second)[ObjectKey(obj.Kind, obj.Id)] = ObjectVersions{obj.Data, obj.Data};
+    }
+
+    uint32_t done = 0;
+
+    for (size_t b = 0; b < _blocks.size() && done < step; b++)
+    {
+        std::string block;
+        if ( !Unpacked(_blocks[b], block) )
+            return false;
+
+        size_t at = 0;
+
+        while ( done < step && at + 4 <= block.size() )
+        {
+            uint32_t stepSize;
+            memcpy(&stepSize, block.data() + at, 4);
+
+            if ( stepSize < 1 || at + 4 + stepSize > block.size() )
+                return false;
+
+            const char *p = block.data() + at + 4;
+            const char *end = p + stepSize;
+
+            point.Steps.emplace_back(p, stepSize);
+
+            bool resumable = *p++ != 0;
+
+            p = ApplyChanges(viewObjects, _viewSchema, p, end);
+            if ( !p || p + 2 > end )
+                return false;
+
+            // The messages
+            uint16_t messages;
+            memcpy(&messages, p, 2);
+            p += 2;
+
+            for (uint16_t m = 0; m < messages; m++)
+            {
+                if ( p + 12 > end )
+                    return false;
+
+                uint16_t length;
+                memcpy(&length, p + 10, 2);
+                p += 12 + length;
+            }
+
+            if ( resumable && resume )
+            {
+                p = ApplyChanges(internalObjects, _internalSchema, p, end);
+                if ( !p )
+                    return false;
+            }
+
+            at += 4 + stepSize;
+            done++;
+        }
+    }
+
+    if ( done < step )
+        return false;
+
+    ToImage(_level, viewObjects, point.View);
+
+    if ( resume )
+        ToImage(_level, internalObjects, point.Internal);
     else
-    {
-        const uint8_t *before = (const uint8_t *)&last.rec;
+        internalObjects.clear();
 
-        for (int i = 0; i < 8; i++)
-        {
-            if ( memcmp(now + starts[i], before + starts[i], starts[i + 1] - starts[i]) )
-                changed |= 1 << i;
-        }
-    }
-
-    if ( changed )
-    {
-        Put32(_objects, unit->_gid);
-        Put16(_objects, changed);
-
-        for (int i = 0; i < 8; i++)
-        {
-            if ( changed & (1 << i) )
-                _objects.append((const char *)now + starts[i], starts[i + 1] - starts[i]);
-        }
-
-        _objectCount++;
-        last.rec = rec;
-    }
-
-    last.seenStep = _step;
-
-    for (NC_STACK_ypamissile *m : unit->_missiles_list)
-        WriteObject(world, m, hash);
-
-    for (NC_STACK_ypabact *kid : unit->_kidList)
-        WriteObject(world, kid, hash);
-}
-
-void Recorder::WriteSectors(NC_STACK_ypaworld *world, uint64_t *hash)
-{
-    const size_t count = world->_mapSize.x * world->_mapSize.y;
-    const bool full = _lastSectors.size() != count; // All written anew
-
-    if ( full )
-        _lastSectors.resize(count);
-
-    std::vector<SectorRecord> &now = _sectorsNow;
-    now.resize(count);
-
-    for (int y = 0; y < world->_mapSize.y; y++)
-    {
-        for (int x = 0; x < world->_mapSize.x; x++)
-        {
-            cellArea &cell = world->_cells(x, y);
-            SectorRecord &rec = now[y * world->_mapSize.x + x];
-
-            rec.owner = cell.owner;
-            rec.type = cell.type_id;
-            rec.simple = cell.SectorType;
-            rec.purpose = cell.PurposeType;
-
-            const int16_t *health = cell.buildings_health.data();
-            for (int i = 0; i < 9; i++)
-                rec.health[i] = health[i] < 0 ? 0 : (health[i] > 255 ? 255 : health[i]);
-        }
-    }
-
-    *hash = Hash(*hash, now.data(), count * sizeof(SectorRecord));
-
-    uint16_t written = 0;
-    std::string out;
-
-    for (size_t i = 0; i < count; i++)
-    {
-        if ( full || memcmp(&now[i], &_lastSectors[i], sizeof(SectorRecord)) )
-        {
-            Put16(out, i);
-            out.append((const char *)&now[i], sizeof(SectorRecord));
-            written++;
-            _lastSectors[i] = now[i];
-        }
-    }
-
-    _sectorsOut.clear();
-    Put16(_sectorsOut, written);
-    _sectorsOut += out;
+    return true;
 }
 
 }

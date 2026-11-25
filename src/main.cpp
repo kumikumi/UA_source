@@ -73,6 +73,7 @@ static bool headless = false;
 static int32_t headlessTimeLimit = 0;
 
 static std::string recordFile; // --record
+static bool recordFull = false; // --record-full
 static uint32_t checkResumeStep = 0; // --check-resume
 
 static bool StartDirectLevel();
@@ -800,10 +801,18 @@ uint32_t maxTicks = 1000/60; // init on 60FPS
 struct DirectStart
 {
     int Level = 0;        // Started as new
-    std::string SaveFile; // Or from this saved game
+    std::string SaveFile; // Or from this saved game or recording
+    bool HasStep = false; // --step: from after this step of the recording
+    uint32_t Step = 0;
 };
 
 static DirectStart directStart;
+
+// Started from a recording: the step it went on from, and the recording's
+// start and steps up to there, for a recording that goes on from it
+static bool resumedFromRecording = false;
+static uint32_t resumedStep = 0;
+static World::RecordedPoint resumedStart, resumedPoint;
 
 // False, after saying why, when the command line starts a level in more
 // than one way, or names no level
@@ -836,6 +845,27 @@ static bool ReadDirectStart()
         }
 
         ways++;
+    }
+
+    if ( System::CmdLine::Get("step", &value) )
+    {
+        char *end = NULL;
+        long step = std::strtol(value.c_str(), &end, 10);
+
+        if ( value.empty() || *end || step < 0 )
+        {
+            System::CmdLine::PrintError("--step " + value + ": not a step");
+            return false;
+        }
+
+        if ( directStart.SaveFile.empty() )
+        {
+            System::CmdLine::PrintError("--step needs --load of a recording");
+            return false;
+        }
+
+        directStart.HasStep = true;
+        directStart.Step = step;
     }
 
     if ( benchmark.IsActive() )
@@ -921,15 +951,36 @@ static bool ReadDirectStart()
         }
     }
 
+    if ( System::CmdLine::Has("record-full") )
+    {
+        if ( recordFile.empty() )
+        {
+            System::CmdLine::PrintError("--record-full needs --record");
+            return false;
+        }
+
+        recordFull = true;
+    }
+
     return true;
 }
 
 // Whether the level or saved game the command line names is there
+// Whether the file is a recording, not a saved game
+static bool IsRecordingFile(const std::string &path)
+{
+    FSMgr::FileHandle file(path, "rb");
+    char head[12];
+
+    return file.OK() && file.read(head, 12) == 12 && !memcmp(head, "FORM", 4) && !memcmp(head + 8, "RPLY", 4);
+}
+
 static bool CheckDirectStart()
 {
     if ( !directStart.SaveFile.empty() )
     {
-        if ( !uaFileExist(directStart.SaveFile) )
+        // A recording is read as a file, as --record writes it
+        if ( !IsRecordingFile(directStart.SaveFile) && !uaFileExist(directStart.SaveFile) )
         {
             System::CmdLine::PrintError("no saved game " + directStart.SaveFile + " in the game's folder");
             return false;
@@ -955,6 +1006,44 @@ static bool CheckDirectStart()
     return true;
 }
 
+// Starts the level of a recording as it was after the step --step names, or
+// after the last it can go on from
+static bool StartFromRecording(const std::string &path)
+{
+    World::Recording recording;
+
+    if ( !recording.Open(path) )
+        return false;
+
+    uint32_t step = directStart.HasStep ? directStart.Step : recording.LastResumable(recording.Steps());
+
+    if ( step > recording.Steps() )
+    {
+        ypa_log_out("The recording %s has %d steps, not %d\n", path.c_str(), recording.Steps(), step);
+        return false;
+    }
+
+    if ( !recording.IsResumable(step) )
+    {
+        ypa_log_out("The level can't go on from step %d of %s, only from one every %d steps: the one before is %d\n",
+                    step, path.c_str(), (int)World::Recorder::BlockSteps, recording.LastResumable(step));
+        return false;
+    }
+
+    if ( !recording.Read(0, resumedStart, true) || !recording.Read(step, resumedPoint, true) )
+    {
+        ypa_log_out("The recording %s can't be read up to step %d\n", path.c_str(), step);
+        return false;
+    }
+
+    if ( !World::State::Restore(ypaworld, resumedPoint.View, resumedPoint.Internal) )
+        return false;
+
+    resumedFromRecording = true;
+    resumedStep = step;
+    return true;
+}
+
 // Leaves the menus for the level the command line names, and starts it again
 // for Restart
 static bool StartDirectLevel()
@@ -964,7 +1053,11 @@ static bool StartDirectLevel()
 
     bool started;
 
-    if ( !directStart.SaveFile.empty() )
+    if ( !directStart.SaveFile.empty() && IsRecordingFile(directStart.SaveFile) )
+    {
+        started = StartFromRecording(directStart.SaveFile);
+    }
+    else if ( !directStart.SaveFile.empty() )
     {
         started = ypaworld->LoadGame(directStart.SaveFile) != 0;
     }
@@ -986,9 +1079,12 @@ static bool StartDirectLevel()
     }
 
     // What the debriefing compares the end of the level with, as when the
-    // level map starts a level
-    ypaworld->_lvlPrimevalTypeMap = ypaworld->_lvlTypeMap;
-    ypaworld->_lvlPrimevalOwnMap = ypaworld->_lvlOwnMap;
+    // level map starts a level. A recording's level has its start's.
+    if ( !resumedFromRecording )
+    {
+        ypaworld->_lvlPrimevalTypeMap = ypaworld->_lvlTypeMap;
+        ypaworld->_lvlPrimevalOwnMap = ypaworld->_lvlOwnMap;
+    }
 
     GameScreenMode = GAME_SCREEN_MODE_GAME;
 
@@ -1191,8 +1287,21 @@ int main(int argc, char *argv[])
         if ( !recordFile.empty() )
         {
             std::string from = directStart.SaveFile.empty() ? fmt::sprintf("level %d", directStart.Level) : directStart.SaveFile;
+            bool recording;
 
-            if ( !ypaworld->_recorder.Start(ypaworld, recordFile, from) )
+            ypaworld->_recorder.SetFull(recordFull);
+
+            if ( resumedFromRecording )
+            {
+                from += fmt::sprintf(" at step %d", resumedStep);
+                recording = ypaworld->_recorder.StartFrom(ypaworld, recordFile, from, resumedStart, resumedPoint);
+            }
+            else
+            {
+                recording = ypaworld->_recorder.Start(ypaworld, recordFile, from);
+            }
+
+            if ( !recording )
             {
                 System::CmdLine::PrintError("can't write " + recordFile);
                 ShutdownGame();
