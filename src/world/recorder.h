@@ -10,6 +10,8 @@
 
 #include "state.h"
 
+struct z_stream_s;
+
 class NC_STACK_ypaworld;
 class IFFile;
 struct TInfoMessage;
@@ -124,22 +126,40 @@ protected:
 
     typedef std::unordered_map<uint64_t, LastObject> LastObjects;
 
+    // A kind's fields, and where they start when they're all of a fixed size
+    struct Layout
+    {
+        const std::vector<State::FieldInfo> *Fields = NULL;
+        bool Fixed = false;
+        std::vector<size_t> Offsets;
+    };
+
+    typedef std::unordered_map<uint8_t, Layout> Layouts;
+
+    static Layouts MakeLayouts(const State::Schema &schema);
+
     bool Open(NC_STACK_ypaworld *world, const std::string &path, const std::string &startedFrom,
               const State::Image &startView, const State::Image &startInternal);
-    std::string Changes(NC_STACK_ypaworld *world, State::Part part, const State::Schema &schema, LastObjects &last);
+    std::string Changes(NC_STACK_ypaworld *world, State::Part part, const State::Schema &schema, const Layouts &layouts,
+                        LastObjects &last);
     void Remember(NC_STACK_ypaworld *world, State::Part part, LastObjects &last);
     void MakeResumable(NC_STACK_ypaworld *world);
     void FlushPending();
     void AddStep(const std::string &step);
+    void Deflate(const void *data, size_t size, int flush);
     void WriteBlock();
 
     std::unique_ptr<IFFile> _file;
     bool _full = false;
     State::Schema _viewSchema, _internalSchema;
+    Layouts _viewLayouts, _internalLayouts; // Point into the schemas
     LastObjects _lastView, _lastInternal;
     uint32_t _step = 0;
 
-    std::string _steps; // The block's steps so far
+    // The block's steps so far, packed as they come
+    std::unique_ptr<z_stream_s> _packer;
+    std::string _packed;
+    uint32_t _unpackedSize = 0;
     int _blockSteps = 0;
 
     std::string _messages; // Shown in the step under way

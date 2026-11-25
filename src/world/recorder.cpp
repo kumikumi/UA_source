@@ -13,7 +13,8 @@
 namespace World
 {
 
-// Little-endian values into a byte string
+// Little-endian values into a byte string, as the platforms that build this
+// keep them, like the state's values
 
 static void Put8(std::string &out, uint8_t v)
 {
@@ -22,14 +23,12 @@ static void Put8(std::string &out, uint8_t v)
 
 static void Put16(std::string &out, uint16_t v)
 {
-    Put8(out, v & 0xFF);
-    Put8(out, v >> 8);
+    out.append((const char *)&v, 2);
 }
 
 static void Put32(std::string &out, uint32_t v)
 {
-    Put16(out, v & 0xFFFF);
-    Put16(out, v >> 16);
+    out.append((const char *)&v, 4);
 }
 
 static void PutText(std::string &out, const std::string &text)
@@ -65,24 +64,6 @@ static std::string Platform()
 #endif
 
     return platform;
-}
-
-// zlib, with the size unpacked first
-static std::string Packed(const std::string &data, int level)
-{
-    uLongf packedSize = compressBound(data.size());
-    std::string out(4 + packedSize, '\0');
-    uint32_t size = data.size();
-    memcpy(&out[0], &size, 4);
-
-    if ( compress2((Bytef *)&out[4], &packedSize, (const Bytef *)data.data(), data.size(), level) != Z_OK )
-    {
-        ypa_log_out("Recording: could not compress a block\n");
-        packedSize = 0;
-    }
-
-    out.resize(4 + packedSize);
-    return out;
 }
 
 static bool Unpacked(const std::string &packed, std::string &data)
@@ -152,16 +133,16 @@ static const char *BeforeBytes(const State::FieldInfo &field, const std::string 
 }
 
 // What changed of an object: its fields that differ from the last bytes,
-// written as the format says
+// written as the format says. beforeOffsets is NULL when the bytes before
+// don't fit the fields.
 static void PutChangedFields(std::string &out, const std::vector<State::FieldInfo> &fields, const ObjectVersions &old,
                              const std::vector<size_t> &oldOffsets, const std::string &newData,
-                             const std::vector<size_t> &newOffsets)
+                             const std::vector<size_t> &newOffsets, const std::vector<size_t> *beforeOffsets)
 {
-    std::vector<size_t> beforeOffsets;
-    bool beforeFits = State::FieldOffsets(fields, old.Before, beforeOffsets);
-
-    std::string changed;
+    size_t countAt = out.size();
     uint16_t count = 0;
+    Put16(out, 0);
+
     char guess[256];
 
     for (size_t i = 0; i < fields.size(); i++)
@@ -174,25 +155,32 @@ static void PutChangedFields(std::string &out, const std::vector<State::FieldInf
         if ( oldSize == newSize && !memcmp(o, n, newSize) )
             continue;
 
-        Put16(changed, i);
+        Put16(out, i);
 
         if ( fields[i].List || newSize > sizeof(guess) )
         {
-            changed.append(n, newSize);
+            out.append(n, newSize);
         }
         else
         {
-            Guess(fields[i], o, BeforeBytes(fields[i], old.Before, beforeOffsets, beforeFits, i, newSize), newSize, guess);
+            const char *before = NULL;
+            if ( beforeOffsets && (*beforeOffsets)[i + 1] - (*beforeOffsets)[i] == newSize )
+                before = old.Before.data() + (*beforeOffsets)[i];
+
+            Guess(fields[i], o, before, newSize, guess);
+
+            size_t at = out.size();
+            out.resize(at + newSize);
+            char *dst = &out[at];
 
             for (size_t b = 0; b < newSize; b++)
-                changed.push_back(guess[b] ^ n[b]);
+                dst[b] = guess[b] ^ n[b];
         }
 
         count++;
     }
 
-    Put16(out, count);
-    out += changed;
+    memcpy(&out[countAt], &count, 2);
 }
 
 // Applies what changed, as the format says, to objects by key. Returns where
@@ -349,6 +337,8 @@ bool Recorder::Open(NC_STACK_ypaworld *world, const std::string &path, const std
 
     _viewSchema = State::MakeSchema(world, State::PART_VIEW);
     _internalSchema = State::MakeSchema(world, State::PART_INTERNAL);
+    _viewLayouts = MakeLayouts(_viewSchema);
+    _internalLayouts = MakeLayouts(_internalSchema);
 
     for (auto chunk : {std::make_pair(TAG_INFO, info),
                        std::make_pair(TAG_SCHV, State::WriteSchema(_viewSchema)),
@@ -361,7 +351,13 @@ bool Recorder::Open(NC_STACK_ypaworld *world, const std::string &path, const std
         _file->popChunk();
     }
 
-    _steps.clear();
+    if ( _packer )
+    {
+        deflateEnd(_packer.get());
+        _packer.reset();
+    }
+
+    _packed.clear();
     _blockSteps = 0;
     _messages.clear();
     _messageCount = 0;
@@ -416,11 +412,43 @@ bool Recorder::StartFrom(NC_STACK_ypaworld *world, const std::string &path, cons
     return true;
 }
 
-std::string Recorder::Changes(NC_STACK_ypaworld *world, State::Part part, const State::Schema &schema, LastObjects &last)
+// Where each kind's fields start, when all of them have a fixed size, as
+// in the view: worked out once
+Recorder::Layouts Recorder::MakeLayouts(const State::Schema &schema)
 {
-    std::string changes;
+    Layouts layouts;
+
+    for ( const auto &it : schema )
+    {
+        Layout &layout = layouts[it.first];
+        layout.Fields = &it.second;
+        layout.Fixed = true;
+        layout.Offsets.push_back(0);
+
+        for ( const State::FieldInfo &f : it.second )
+        {
+            if ( f.List )
+            {
+                layout.Fixed = false;
+                layout.Offsets.clear();
+                break;
+            }
+
+            layout.Offsets.push_back(layout.Offsets.back() + State::ElemSize(f.ElemType) * f.Count);
+        }
+    }
+
+    return layouts;
+}
+
+std::string Recorder::Changes(NC_STACK_ypaworld *world, State::Part part, const State::Schema &schema,
+                              const Layouts &layouts, LastObjects &last)
+{
+    // The count of changes first, filled in at the end
+    std::string changes(4, '\0');
     uint32_t changeCount = 0;
-    std::vector<size_t> oldOffsets, newOffsets;
+    size_t seen = 0;
+    std::vector<size_t> oldOffsets, newOffsets, beforeOffsets;
 
     State::ForEachObject(world, part, [&](uint8_t kind, uint32_t id, const std::string &data)
     {
@@ -435,6 +463,7 @@ std::string Recorder::Changes(NC_STACK_ypaworld *world, State::Part part, const 
             Put32(changes, data.size());
             changes += data;
             changeCount++;
+            seen++;
 
             last[key] = LastObject{{data, data}, _step};
             return;
@@ -442,22 +471,50 @@ std::string Recorder::Changes(NC_STACK_ypaworld *world, State::Part part, const 
 
         LastObject &obj = it->second;
         obj.SeenStep = _step;
+        seen++;
 
         if ( obj.Versions.Data == data )
             return;
 
-        auto sit = schema.find(kind);
-
         Put8(changes, kind);
         Put32(changes, id);
 
-        if ( sit != schema.end() && State::FieldOffsets(sit->second, obj.Versions.Data, oldOffsets) &&
-             State::FieldOffsets(sit->second, data, newOffsets) )
+        auto lit = layouts.find(kind);
+        bool fits = false;
+        const std::vector<size_t> *before = NULL;
+
+        if ( lit != layouts.end() )
         {
-            Put8(changes, 2);
-            PutChangedFields(changes, sit->second, obj.Versions, oldOffsets, data, newOffsets);
+            const Layout &layout = lit->second;
+
+            if ( layout.Fixed )
+            {
+                size_t size = layout.Offsets.back();
+                fits = obj.Versions.Data.size() == size && data.size() == size;
+
+                if ( fits )
+                {
+                    if ( obj.Versions.Before.size() == size )
+                        before = &layout.Offsets;
+
+                    Put8(changes, 2);
+                    PutChangedFields(changes, *layout.Fields, obj.Versions, layout.Offsets, data, layout.Offsets, before);
+                }
+            }
+            else if ( State::FieldOffsets(*layout.Fields, obj.Versions.Data, oldOffsets) &&
+                      State::FieldOffsets(*layout.Fields, data, newOffsets) )
+            {
+                fits = true;
+
+                if ( State::FieldOffsets(*layout.Fields, obj.Versions.Before, beforeOffsets) )
+                    before = &beforeOffsets;
+
+                Put8(changes, 2);
+                PutChangedFields(changes, *layout.Fields, obj.Versions, oldOffsets, data, newOffsets, before);
+            }
         }
-        else
+
+        if ( !fits )
         {
             // Bytes that don't fit the fields, which shouldn't be: in full
             Put8(changes, 1);
@@ -466,33 +523,34 @@ std::string Recorder::Changes(NC_STACK_ypaworld *world, State::Part part, const 
         }
 
         changeCount++;
-        obj.Versions.Before = std::move(obj.Versions.Data);
-        obj.Versions.Data = data;
+        obj.Versions.Before.swap(obj.Versions.Data);
+        obj.Versions.Data.assign(data);
     }, &schema);
 
     // The objects gone, in order of kind and id
-    std::vector<uint64_t> gone;
-    for ( const auto &it : last )
+    if ( seen < last.size() )
     {
-        if ( it.second.SeenStep != _step )
-            gone.push_back(it.first);
+        std::vector<uint64_t> gone;
+        for ( const auto &it : last )
+        {
+            if ( it.second.SeenStep != _step )
+                gone.push_back(it.first);
+        }
+
+        std::sort(gone.begin(), gone.end());
+
+        for ( uint64_t key : gone )
+        {
+            Put8(changes, key >> 32);
+            Put32(changes, key & 0xFFFFFFFF);
+            Put8(changes, 0);
+            changeCount++;
+            last.erase(key);
+        }
     }
 
-    std::sort(gone.begin(), gone.end());
-
-    for ( uint64_t key : gone )
-    {
-        Put8(changes, key >> 32);
-        Put32(changes, key & 0xFFFFFFFF);
-        Put8(changes, 0);
-        changeCount++;
-        last.erase(key);
-    }
-
-    std::string out;
-    Put32(out, changeCount);
-    out += changes;
-    return out;
+    memcpy(&changes[0], &changeCount, 4);
+    return changes;
 }
 
 void Recorder::Step(NC_STACK_ypaworld *world)
@@ -504,7 +562,7 @@ void Recorder::Step(NC_STACK_ypaworld *world)
 
     _step++;
 
-    _pendingView = Changes(world, State::PART_VIEW, _viewSchema, _lastView);
+    _pendingView = Changes(world, State::PART_VIEW, _viewSchema, _viewLayouts, _lastView);
 
     _pendingMessages.clear();
     Put16(_pendingMessages, _messageCount);
@@ -525,7 +583,7 @@ void Recorder::MakeResumable(NC_STACK_ypaworld *world)
     if ( !_hasPending || _pendingResumable )
         return;
 
-    _pendingInternal = Changes(world, State::PART_INTERNAL, _internalSchema, _lastInternal);
+    _pendingInternal = Changes(world, State::PART_INTERNAL, _internalSchema, _internalLayouts, _lastInternal);
     _pendingResumable = true;
 }
 
@@ -544,10 +602,46 @@ void Recorder::FlushPending()
     AddStep(step);
 }
 
+// Packs what comes into the block's zlib stream, a step at a time, so that
+// the packing doesn't stop the game for a whole block at its end
+void Recorder::Deflate(const void *data, size_t size, int flush)
+{
+    if ( !_packer )
+    {
+        _packer.reset(new z_stream());
+        deflateInit(_packer.get(), Z_DEFAULT_COMPRESSION);
+        _packed.clear();
+        _unpackedSize = 0;
+    }
+
+    z_stream &zs = *_packer;
+    zs.next_in = (Bytef *)data;
+    zs.avail_in = size;
+    _unpackedSize += size;
+
+    char out[16384];
+
+    do
+    {
+        zs.next_out = (Bytef *)out;
+        zs.avail_out = sizeof(out);
+
+        if ( deflate(&zs, flush) == Z_STREAM_ERROR )
+        {
+            ypa_log_out("Recording: could not compress a block\n");
+            break;
+        }
+
+        _packed.append(out, sizeof(out) - zs.avail_out);
+    }
+    while ( zs.avail_out == 0 || (flush == Z_FINISH && zs.avail_in > 0) );
+}
+
 void Recorder::AddStep(const std::string &step)
 {
-    Put32(_steps, step.size());
-    _steps += step;
+    uint32_t size = step.size();
+    Deflate(&size, 4, Z_NO_FLUSH);
+    Deflate(step.data(), step.size(), Z_NO_FLUSH);
     _blockSteps++;
 
     if ( _blockSteps >= BlockSteps )
@@ -585,13 +679,16 @@ void Recorder::Stop(NC_STACK_ypaworld *world)
 
 void Recorder::WriteBlock()
 {
-    std::string packed = Packed(_steps, Z_DEFAULT_COMPRESSION);
+    Deflate(NULL, 0, Z_FINISH);
+    deflateEnd(_packer.get());
+    _packer.reset();
 
     _file->pushChunk(0, TAG_STEP, -1);
-    _file->write(packed.data(), packed.size());
+    _file->writeU32L(_unpackedSize);
+    _file->write(_packed.data(), _packed.size());
     _file->popChunk();
 
-    _steps.clear();
+    _packed.clear();
     _blockSteps = 0;
 }
 
