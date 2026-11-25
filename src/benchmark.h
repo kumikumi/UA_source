@@ -6,7 +6,6 @@
 
 #include "common/common.h"
 #include "system/perf.h"
-#include "system/tform.h"
 
 class NC_STACK_ypaworld;
 
@@ -70,7 +69,6 @@ protected:
 
     int _framesDone = 0;
     Common::Point _screenSize; // Of the frames measured
-    TF::TForm3D _camera;
     std::string _cameraText; // For the report
 };
 

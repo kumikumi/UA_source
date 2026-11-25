@@ -512,9 +512,6 @@ void NC_STACK_ypabact::Update(update_msg *arg)
     if ( _kidRef.IsListType(World::BLIST_CACHE) ) // Do not update units in dead list
         return;
         
-    static TF::TForm3D bact_cam;
-    TF::Engine.SetViewPoint(&bact_cam);
-
     TSectorInfo sect_info;
     sect_info.pos_x = _position.x;
     sect_info.pos_z = _position.z;
@@ -579,21 +576,6 @@ void NC_STACK_ypabact::Update(update_msg *arg)
         misl->Update(arg);
 
     ReleaseExpiredMissiles(this);
-
-    if ( _oflags & BACT_OFLAG_VIEWER )
-    {
-        if ( _oflags & BACT_OFLAG_EXTRAVIEW )
-            bact_cam.Pos = _position + _rotation.Transpose().Transform(_viewer_position);
-        else
-            bact_cam.Pos = _position;
-
-        if ( _oflags & BACT_OFLAG_EXTRAVIEW )
-            bact_cam.SclRot = _viewer_rotation;
-        else
-            bact_cam.SclRot = _rotation;
-
-        GFX::Engine.matrixAspectCorrection(bact_cam.SclRot, false);
-    }
 
     _tForm.Pos = _position;
 

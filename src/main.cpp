@@ -172,10 +172,10 @@ int ProcessGameplayFrame(int32_t frameTicks, bool timeFrozen)
                 simPendingTicks = SimMaxStepsPerFrame * SimStepTicks;
 
             // A level is not drawn before its first step, nor before a step
-            // has set the view point again after it was restored
+            // has placed the camera again after it was restored
             if ( ypaworld->_framesElapsed == 0 )
                 simPendingTicks = SimStepTicks;
-            else if ( !TF::Engine.GetViewPoint() && simPendingTicks < SimStepTicks )
+            else if ( !ypaworld->ReadyToDraw() && simPendingTicks < SimStepTicks )
                 simPendingTicks = SimStepTicks;
         }
 

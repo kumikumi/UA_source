@@ -86,7 +86,7 @@ void Visitor::Field(const char *name, uint32_t &v, Role role) { if ( Includes(ro
 void Visitor::Field(const char *name, float &v, Role role)    { if ( Includes(role) ) Raw(name, T_F32, 1, &v, 4); }
 
 // Doubles the view rounds to floats, as they're drawn. Reading the view
-// skips them: the internal part has them exact.
+// skips those the internal part has exact.
 void Visitor::Doubles(const char *name, double *v, size_t count, Role role)
 {
     if ( !Includes(role) )
@@ -103,6 +103,12 @@ void Visitor::Doubles(const char *name, double *v, size_t count, Role role)
         f[i] = v[i];
 
     Raw(name, T_F32, count, f, count * 4);
+
+    if ( Reading() && role == VIEW )
+    {
+        for (size_t i = 0; i < count; i++)
+            v[i] = f[i];
+    }
 }
 
 void Visitor::Field(const char *name, double &v, Role role) { Doubles(name, &v, 1, role); }

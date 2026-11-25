@@ -162,11 +162,7 @@ void Benchmark::PlaceCamera(NC_STACK_ypaworld *yw)
 
     vec3d down = forward * right;
 
-    _camera.Pos = eye;
-    _camera.SclRot = mat3x3::Basis(right, down, forward);
-    GFX::Engine.matrixAspectCorrection(_camera.SclRot, false);
-
-    TF::Engine.SetViewPoint(&_camera);
+    yw->OverrideCamera(eye, mat3x3::Basis(right, down, forward));
 
     // The sectors drawn and the sky are placed around the viewer, so move
     // it to the camera. Only the viewer itself: a host station would take

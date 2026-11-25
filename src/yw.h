@@ -1847,6 +1847,15 @@ public:
     void SaveUnitTransforms();
     void InterpolateUnitTransforms(float stepFraction);
     void RestoreUnitTransforms();
+    void PlaceDrawnCamera(float stepFraction);
+
+    // Whether a step has placed the camera since the level was set up, so
+    // that the level can be drawn
+    bool ReadyToDraw() const { return _cameraPlaced; }
+
+    // The world is drawn from this camera instead of the player's, as the
+    // benchmark does: where it is and how it's turned
+    void OverrideCamera(const vec3d &pos, const mat3x3 &rotation);
     virtual void DamageSectorBuilding(TSectorDamage *arg);
     virtual size_t GetSectorInfo(TSectorInfo *arg);
     virtual void SetViewerUnit(NC_STACK_ypabact *bact);
@@ -2465,9 +2474,22 @@ public:
     std::vector<TSavedTForm> _steppedTForms; // Step transforms while drawing
 
     // The camera at the start of the last step
-    TF::TForm3D *_prevView = NULL;
-    vec3d _prevViewPos;
-    mat3x3 _prevViewSclRot;
+    vec3d _prevViewerPosition;
+    mat3x3 _prevViewerRotation;
+
+    // How the sound shook the camera in the last step: only the picture
+    // shakes
+    mat3x3 _cameraShake = mat3x3::Ident();
+
+    // Whether a step has placed the camera since the level was set up
+    bool _cameraPlaced = false;
+
+    // The camera the world is drawn from, and the one the benchmark puts in
+    // place of the player's
+    TF::TForm3D _drawnCamera;
+    bool _cameraOverridden = false;
+    vec3d _cameraOverridePos;
+    mat3x3 _cameraOverrideRot;
     
     std::string _buildDate; 
     

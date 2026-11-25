@@ -106,7 +106,8 @@ typedef std::map<uint8_t, std::vector<FieldInfo>> Schema;
 enum Role
 {
     INTERNAL,     // The internal part
-    VIEW,         // The view, exact
+    VIEW,         // The view: exact, but doubles as the 32-bit floats they're
+                  // drawn as
     VIEW_ROUNDED, // The view as 32-bit floats, and the internal part exact
 };
 
@@ -206,7 +207,7 @@ protected:
         return _part == PART_ALL || (_part == PART_VIEW ? role != INTERNAL : role != VIEW);
     }
 
-    bool Rounds(Role role) const { return _part == PART_VIEW && role == VIEW_ROUNDED; }
+    bool Rounds(Role role) const { return _part == PART_VIEW && role != INTERNAL; }
 
     // Writing and reading a field's raw bytes, little-endian on the
     // platforms that build this

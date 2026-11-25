@@ -512,10 +512,8 @@ bool NC_STACK_ypaworld::SimulationStep(TUpdateArgs *arg)
 
     VoiceMessageUpdate(); // update sound messages
 
-    const mat3x3 &shake = SFXEngine::SFXe.EndSoundFrame();
-    TF::TForm3D *viewPoint = TF::Engine.GetViewPoint();
-
-    viewPoint->SclRot = shake * viewPoint->SclRot;
+    _cameraShake = SFXEngine::SFXe.EndSoundFrame();
+    _cameraPlaced = true;
 
     CheckEnemySectorEntered(this);
 
@@ -599,14 +597,8 @@ void NC_STACK_ypaworld::SaveUnitTransforms()
 {
     _simStep++;
 
-    // The camera is a transform of its own, which the viewer unit fills in
-    _prevView = TF::Engine.GetViewPoint();
-
-    if ( _prevView )
-    {
-        _prevViewPos = _prevView->Pos;
-        _prevViewSclRot = _prevView->SclRot;
-    }
+    _prevViewerPosition = _viewerPosition;
+    _prevViewerRotation = _viewerRotation;
 
     for (cellArea &cell : _cells)
     {
@@ -650,9 +642,41 @@ void NC_STACK_ypaworld::InterpolateUnitTransforms(float stepFraction)
                 blend(&unit->_tForm, unit->_prevTFormPos, unit->_prevTFormSclRot);
         }
     }
+}
 
-    if ( _prevView && _prevView == TF::Engine.GetViewPoint() )
-        blend(_prevView, _prevViewPos, _prevViewSclRot);
+// Places the camera the world is drawn from stepFraction of the way through
+// the last step, shaken as the sound shook it, and stretched to the screen's
+// shape
+void NC_STACK_ypaworld::PlaceDrawnCamera(float stepFraction)
+{
+    if ( _cameraOverridden )
+    {
+        _drawnCamera.Pos = _cameraOverridePos;
+        _drawnCamera.SclRot = _cameraOverrideRot;
+    }
+    else
+    {
+        _drawnCamera.Pos = _viewerPosition;
+        _drawnCamera.SclRot = _viewerRotation;
+
+        if ( !IsStepJump(_prevViewerPosition, _prevViewerRotation, _viewerPosition, _viewerRotation) )
+        {
+            _drawnCamera.Pos = _prevViewerPosition + (_viewerPosition - _prevViewerPosition) * stepFraction;
+            _drawnCamera.SclRot = _prevViewerRotation * (1.0 - stepFraction) + _viewerRotation * stepFraction;
+        }
+
+        _drawnCamera.SclRot = _cameraShake * _drawnCamera.SclRot;
+    }
+
+    GFX::Engine.matrixAspectCorrection(_drawnCamera.SclRot, false);
+    TF::Engine.SetViewPoint(&_drawnCamera);
+}
+
+void NC_STACK_ypaworld::OverrideCamera(const vec3d &pos, const mat3x3 &rotation)
+{
+    _cameraOverridden = true;
+    _cameraOverridePos = pos;
+    _cameraOverrideRot = rotation;
 }
 
 // Puts back the transforms of the last step, for the simulation to go on from.
@@ -687,6 +711,7 @@ void NC_STACK_ypaworld::RenderFrame(TUpdateArgs *arg, float stepFraction)
         GFX::Engine.BeginFrame();
 
         InterpolateUnitTransforms(stepFraction);
+        PlaceDrawnCamera(stepFraction);
 
         if ( _userUnit->_cellId ) // if cell is not 0,0
         {
@@ -2105,10 +2130,10 @@ void NC_STACK_ypaworld::FreeLevel()
     while ( !_deadCacheList.empty() )
         _deadCacheList.front()->Delete();
 
-    // The view point was one of the level's units. The next level's units
-    // set it again in its first step, after SaveUnitTransforms.
+    // The next level is drawn once its first step has placed the camera
     TF::Engine.SetViewPoint(NULL);
-    _prevView = NULL;
+    _cameraPlaced = false;
+    _cameraOverridden = false;
 
     ProtosFreeSounds();
 
@@ -5957,6 +5982,10 @@ void NC_STACK_ypaworld::VisitState(World::State::Visitor &v)
     v.Unit("userRobo", _userRobo, World::State::VIEW);
     v.Unit("userUnit", _userUnit, World::State::VIEW);
     v.Unit("viewer", _viewerBact, World::State::VIEW);
+
+    // Where the player looks from, as the viewer left it
+    v.Field("cameraPosition", _viewerPosition, World::State::VIEW);
+    v.Field("cameraRotation", _viewerRotation, World::State::VIEW);
 
     // The last tech upgrade, as the HUD shows it
     v.Field("upgrade", _upgradeId, World::State::VIEW);
