@@ -2659,7 +2659,7 @@ void NC_STACK_yparobo::buildConquer()
     }
     else
     {
-        robo_loct1 loct;
+        robo_loct1 loct = robo_loct1(); // Not every path fills every field
 
         loct.distance = (forcesRatio.pos.XZ() - _position.XZ()).length();
         loct.tgt_pos = forcesRatio.pos.X0Z();
@@ -2751,7 +2751,7 @@ void NC_STACK_yparobo::buildDefense()
         }
         else
         {
-            robo_loct1 loct;
+            robo_loct1 loct = robo_loct1(); // Not every path fills every field
             loct.distance = (targetMsg.tgt.pbact->_position.XZ() - _position.XZ()).length();
             loct.tgt_pos = targetMsg.tgt.pbact->_position;
 
@@ -2834,7 +2834,7 @@ void NC_STACK_yparobo::buildRobo()
         }
         else
         {
-            robo_loct1 loct;
+            robo_loct1 loct = robo_loct1(); // Not every path fills every field
             loct.distance = (targetMsg.tgt.pbact->_position.XZ() - _position.XZ()).length();
             loct.tgt_pos = targetMsg.tgt.pbact->_position;
 
@@ -2900,7 +2900,7 @@ void NC_STACK_yparobo::buildReconnoitre()
     }
     else
     {
-        robo_loct1 loct;
+        robo_loct1 loct = robo_loct1(); // Not every path fills every field
         loct.tgt_pos = World::SectorIDToCenterPos3( {_roboVehicleCellID % _wrldSectors.x, _roboVehicleCellID / _wrldSectors.x} );
 
         loct.energ = 10;
