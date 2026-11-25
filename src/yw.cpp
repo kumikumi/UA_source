@@ -309,8 +309,6 @@ bool NC_STACK_ypaworld::SimulationStep(TUpdateArgs *arg)
 
     bool rewindPressed = arg->Input->HotKeyID == 47 && !_rewindKeyHeld;
 
-    SaveUnitTransforms();
-
     uint32_t frameStart = profiler_begin();
 
     _netChatSystem = false;
@@ -513,7 +511,6 @@ bool NC_STACK_ypaworld::SimulationStep(TUpdateArgs *arg)
     VoiceMessageUpdate(); // update sound messages
 
     _cameraShake = SFXEngine::SFXe.EndSoundFrame();
-    _cameraPlaced = true;
 
     CheckEnemySectorEntered(this);
 
@@ -572,82 +569,60 @@ bool NC_STACK_ypaworld::SimulationStep(TUpdateArgs *arg)
 
     _recorder.Step(this);
 
+    if ( !_doNotRender )
+        AddFrame();
+
     return true;
 }
 
-// Units that move further than this in one step, as when beamed, are drawn
-// where they ended up instead of in between.
-static const double MaxInterpolatedMove = 300.0;
-
-// Whether a transform changed too much in one step to draw it in between: it
-// moved too far, or turned more than about 30 degrees, as the camera does
-// when the player switches to another unit.
-static bool IsStepJump(const vec3d &pos0, const mat3x3 &rot0, const vec3d &pos1, const mat3x3 &rot1)
+// What the step left to draw
+void NC_STACK_ypaworld::AddFrame()
 {
-    if ( (pos1 - pos0).length() > MaxInterpolatedMove )
-        return true;
+    if ( !_frameMaker )
+        _frameMaker.reset(new World::FrameMaker(World::State::MakeSchema(this, World::State::PART_VIEW)));
 
-    return (rot1.AxisY() - rot0.AxisY()).length() > 0.5 ||
-           (rot1.AxisZ() - rot0.AxisZ()).length() > 0.5;
-}
+    World::Frame frame;
+    _frameMaker->Make(this, _framesElapsed, _frames.Empty() ? NULL : &_frames.Last(), frame);
+    _frames.Add(std::move(frame));
 
-// Remembers every unit's transform at the start of a simulation step, so it
-// can be drawn between there and where the step leaves it.
-void NC_STACK_ypaworld::SaveUnitTransforms()
-{
-    _simStep++;
+    // What was drawn of the units gone from the last two frames goes with
+    // them
+    const World::Frame &last = _frames.Last();
+    const World::Frame *before = _frames.At(last.Step - 1);
 
-    _prevViewerPosition = _viewerPosition;
-    _prevViewerRotation = _viewerRotation;
-
-    for (cellArea &cell : _cells)
+    for (auto it = _unitDrawings.begin(); it != _unitDrawings.end(); )
     {
-        for (NC_STACK_ypabact *unit : cell.unitsList)
-        {
-            unit->_prevTFormPos = unit->_tForm.Pos;
-            unit->_prevTFormSclRot = unit->_tForm.SclRot;
-            unit->_prevStep = _simStep;
-        }
+        if ( !last.FindUnit(it->first) && (!before || !before->FindUnit(it->first)) )
+            it = _unitDrawings.erase(it);
+        else
+            it++;
     }
 }
 
-// Moves every unit and the camera stepFraction of the way through the last
-// step, from where they started it towards where they ended it, until
-// RestoreUnitTransforms.
-// TODO(bug): HUD markers, map icons and the sky are placed from unit
-// positions, not these interpolated transforms, so they can lag by up to
-// one step.
-void NC_STACK_ypaworld::InterpolateUnitTransforms(float stepFraction)
+// The frame at a step, or between two, as far as the frames kept go: step
+// counts steps as frames do. False when there are none.
+bool NC_STACK_ypaworld::FrameAt(double step, World::Frame &out) const
 {
-    _steppedTForms.clear();
+    if ( _frames.Empty() )
+        return false;
 
-    auto blend = [this, stepFraction](TF::TForm3D *tf, const vec3d &pos0, const mat3x3 &sclRot0)
-    {
-        if ( IsStepJump(pos0, sclRot0, tf->Pos, tf->SclRot) )
-            return;
+    step = std::max(step, (double)_frames.First().Step);
+    step = std::min(step, (double)_frames.Last().Step);
 
-        _steppedTForms.push_back({tf, tf->Pos, tf->SclRot});
+    uint32_t whole = (uint32_t)step;
+    const World::Frame *a = _frames.At(whole);
+    const World::Frame *b = _frames.At(whole + 1);
 
-        // Blending the matrices keeps scale exact. Turns within one step are
-        // small enough that the blend stays a rotation.
-        tf->Pos = pos0 + (tf->Pos - pos0) * stepFraction;
-        tf->SclRot = sclRot0 * (1.0 - stepFraction) + tf->SclRot * stepFraction;
-    };
+    if ( !b )
+        b = a;
 
-    for (cellArea &cell : _cells)
-    {
-        for (NC_STACK_ypabact *unit : cell.unitsList)
-        {
-            if ( unit->_prevStep == _simStep ) // Else it appeared during the step
-                blend(&unit->_tForm, unit->_prevTFormPos, unit->_prevTFormSclRot);
-        }
-    }
+    World::Frame::Between(*a, *b, step - whole, out);
+    return true;
 }
 
-// Places the camera the world is drawn from stepFraction of the way through
-// the last step, shaken as the sound shook it, and stretched to the screen's
-// shape
-void NC_STACK_ypaworld::PlaceDrawnCamera(float stepFraction)
+// Places the camera the world is drawn from: the frame's, shaken as the
+// sound shook it, and stretched to the screen's shape
+void NC_STACK_ypaworld::PlaceDrawnCamera(const World::Frame &frame)
 {
     if ( _cameraOverridden )
     {
@@ -656,16 +631,8 @@ void NC_STACK_ypaworld::PlaceDrawnCamera(float stepFraction)
     }
     else
     {
-        _drawnCamera.Pos = _viewerPosition;
-        _drawnCamera.SclRot = _viewerRotation;
-
-        if ( !IsStepJump(_prevViewerPosition, _prevViewerRotation, _viewerPosition, _viewerRotation) )
-        {
-            _drawnCamera.Pos = _prevViewerPosition + (_viewerPosition - _prevViewerPosition) * stepFraction;
-            _drawnCamera.SclRot = _prevViewerRotation * (1.0 - stepFraction) + _viewerRotation * stepFraction;
-        }
-
-        _drawnCamera.SclRot = _cameraShake * _drawnCamera.SclRot;
+        _drawnCamera.Pos = vec3d(frame.CameraPosition);
+        _drawnCamera.SclRot = _cameraShake * mat3x3(frame.CameraRotation);
     }
 
     GFX::Engine.matrixAspectCorrection(_drawnCamera.SclRot, false);
@@ -679,21 +646,17 @@ void NC_STACK_ypaworld::OverrideCamera(const vec3d &pos, const mat3x3 &rotation)
     _cameraOverrideRot = rotation;
 }
 
-// Puts back the transforms of the last step, for the simulation to go on from.
-void NC_STACK_ypaworld::RestoreUnitTransforms()
+// What is drawn of the level goes, as its models do
+void NC_STACK_ypaworld::FreeDrawings()
 {
-    for (const TSavedTForm &saved : _steppedTForms)
-    {
-        saved.TForm->Pos = saved.Pos;
-        saved.TForm->SclRot = saved.SclRot;
-    }
-
-    _steppedTForms.clear();
+    _unitDrawings.clear();
+    _buildingDrawings.clear();
 }
 
-// Draws the world stepFraction of the way through the last simulation step.
-// arg->DTime is the time since the last frame, for what animates while
-// drawing: particles and the interface.
+// Draws the world stepFraction of the way through the last simulation step:
+// the game is shown one step late, in exchange for smooth motion at any
+// frame rate. arg->DTime is the time since the last frame, for what
+// animates while drawing: particles and the interface.
 void NC_STACK_ypaworld::RenderFrame(TUpdateArgs *arg, float stepFraction)
 {
     if ( arg->DTime > 0 )
@@ -710,19 +673,17 @@ void NC_STACK_ypaworld::RenderFrame(TUpdateArgs *arg, float stepFraction)
 
         GFX::Engine.BeginFrame();
 
-        InterpolateUnitTransforms(stepFraction);
-        PlaceDrawnCamera(stepFraction);
+        World::Frame frame;
 
-        if ( _userUnit->_cellId ) // if cell is not 0,0
+        if ( FrameAt(_frames.Empty() ? 0.0 : _frames.Last().Step - 1.0 + stepFraction, frame) )
         {
-            RenderGame(arg, 1);
+            GFX::Engine.SetAnimationTime(frame.Time);
+            RenderGame(arg, frame, true);
 
             if ( _isNetGame )
                 yw_NetDrawStats(this);
         }
 
-        RestoreUnitTransforms();
-        
         debug_info_draw(arg->Input);
         DrawPerfOverlay(arg->Input);
 
@@ -2130,10 +2091,12 @@ void NC_STACK_ypaworld::FreeLevel()
     while ( !_deadCacheList.empty() )
         _deadCacheList.front()->Delete();
 
-    // The next level is drawn once its first step has placed the camera
+    // The next level is drawn once its first step has left a frame
     TF::Engine.SetViewPoint(NULL);
-    _cameraPlaced = false;
+    _frames.Clear();
+    _frameMaker.reset();
     _cameraOverridden = false;
+    FreeDrawings();
 
     ProtosFreeSounds();
 
@@ -6976,16 +6939,53 @@ int32_t NC_STACK_ypaworld::GetLegoBld(const Common::Point &cell, int bldX, int b
 
 // The type a sector is drawn as: that of a building being built on it, which
 // it becomes when the building is done
-int32_t NC_STACK_ypaworld::DrawnSectorType(const cellArea &cell) const
+int32_t NC_STACK_ypaworld::DrawnSectorType(const World::Frame::Sector &sector) const
 {
-    if ( cell.PurposeType == cellArea::PT_CONSTRUCTING )
+    if ( sector.Constructing && sector.ConstructBuilding < _buildProtos.size() )
+        return _buildProtos[sector.ConstructBuilding].SecType;
+
+    return sector.Type;
+}
+
+// The model a unit shows by its look (NC_STACK_ypabact::ModelByIndex): its
+// prototype's, a weapon's for a missile
+NC_STACK_base *NC_STACK_ypaworld::UnitModel(uint8_t type, uint8_t vehicle, uint8_t look) const
+{
+    std::array<int, 6> models;
+    const std::array<int16_t, 32> *fxModels = NULL;
+
+    if ( type == BACT_TYPES_MISSLE )
     {
-        auto it = _inBuildProcess.find(cell.Id);
-        if ( it != _inBuildProcess.end() )
-            return _buildProtos.at(it->second.BuildID).SecType;
+        if ( vehicle >= _weaponProtos.size() )
+            return NULL;
+
+        const World::TWeapProto &w = _weaponProtos[vehicle];
+        models = {w.vp_normal, w.vp_fire, w.vp_wait, w.vp_dead, w.vp_megadeth, w.vp_genesis};
+    }
+    else
+    {
+        if ( vehicle >= _vhclProtos.size() )
+            return NULL;
+
+        const World::TVhclProto &v = _vhclProtos[vehicle];
+        models = {v.vp_normal, v.vp_fire, v.vp_wait, v.vp_dead, v.vp_megadeth, v.vp_genesis};
+        fxModels = &v.scale_fx_pXX;
     }
 
-    return cell.type_id;
+    if ( look >= 1 && look <= 6 )
+        return _vhclModels.at( models[look - 1] );
+
+    if ( look >= 8 && fxModels )
+    {
+        // The effect models a unit has are the first that aren't 0
+        for (size_t i = 0; i < fxModels->size() && fxModels->at(i); i++)
+        {
+            if ( i == size_t(look - 8) )
+                return _vhclModels.at( fxModels->at(i) );
+        }
+    }
+
+    return NULL;
 }
 
 TCellFillerCh::~TCellFillerCh()

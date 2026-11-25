@@ -162,16 +162,8 @@ void Benchmark::PlaceCamera(NC_STACK_ypaworld *yw)
 
     vec3d down = forward * right;
 
+    // The sectors drawn and the sky are placed around it too
     yw->OverrideCamera(eye, mat3x3::Basis(right, down, forward));
-
-    // The sectors drawn and the sky are placed around the viewer, so move
-    // it to the camera. Only the viewer itself: a host station would take
-    // its guns along. Host stations are drawn whatever sector they are in,
-    // and with the simulation standing still, this one where it was.
-    TUnitPlacement placement;
-    placement.pos = eye;
-    placement.flags = 2; // Exactly there
-    yw->_viewerBact->NC_STACK_ypabact::SetPosition(&placement);
 
     _cameraText = fmt::sprintf("over sector %d,%d %.0f above the highest ground, looking at sector %d,%d",
                                from.x, from.y, CameraHeight, to.x, to.y);

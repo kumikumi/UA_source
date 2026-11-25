@@ -701,7 +701,7 @@ void NC_STACK_yparobo::doBeamUpdate(int frameTime)
                 _vp_extra[0].rotate = _rotation;
                 _vp_extra[0].flags = (EVPROTO_FLAG_ACTIVE | EVPROTO_FLAG_SCALE);
                 _vp_extra[0].scale = 1.0;
-                _vp_extra[0].SetVP(_vp_genesis);
+                _vp_extra[0].model = _vp_genesis;
             }
 
             if ( _vp_extra[1].flags & EVPROTO_FLAG_ACTIVE )
@@ -716,7 +716,7 @@ void NC_STACK_yparobo::doBeamUpdate(int frameTime)
                 _vp_extra[1].pos = _roboBeamPos;
                 _vp_extra[1].rotate = _rotation;
                 _vp_extra[1].flags = EVPROTO_FLAG_ACTIVE;
-                _vp_extra[1].SetVP(_vp_genesis);
+                _vp_extra[1].model = _vp_genesis;
             }
         }
 
@@ -5406,7 +5406,7 @@ void NC_STACK_yparobo::DeadTimeUpdate(update_msg *arg)
 
         if ( _scale_time <= 0 )
         {
-            _vp_extra[0].SetVP((NC_STACK_base::Instance *)NULL);
+            _vp_extra[0].model = NULL;
 
             if ( lastSeconds > 0 )
                 return;
@@ -5439,7 +5439,7 @@ void NC_STACK_yparobo::DeadTimeUpdate(update_msg *arg)
         _vp_extra[0].scale = 0.75;
         _vp_extra[0].pos = _position;
         _vp_extra[0].rotate = _rotation;
-        _vp_extra[0].SetVP(_vp_genesis);
+        _vp_extra[0].model = _vp_genesis;
         _vp_extra[0].flags |= (EVPROTO_FLAG_ACTIVE | EVPROTO_FLAG_SCALE);
 
         if ( _world->_isNetGame )

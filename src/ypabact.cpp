@@ -132,7 +132,6 @@ NC_STACK_ypabact::NC_STACK_ypabact()
 
 NC_STACK_ypabact::~NC_STACK_ypabact()
 {
-    Common::DeleteAndNull(&_current_vp);
 }
 
 
@@ -577,13 +576,6 @@ void NC_STACK_ypabact::Update(update_msg *arg)
 
     ReleaseExpiredMissiles(this);
 
-    _tForm.Pos = _position;
-
-    if ( _status_flg & BACT_STFLAG_SCALE )
-        _tForm.SclRot = _rotation.Transpose() * mat3x3::Scale( _scale );
-    else
-        _tForm.SclRot = _rotation.Transpose();
-
     int numbid = arg->units_count;
 
     arg->units_count = 0;
@@ -611,43 +603,6 @@ void NC_STACK_ypabact::Update(update_msg *arg)
     _soundcarrier.Vector = _fly_dir * _fly_dir_length;
 
     SFXEngine::SFXe.UpdateSoundCarrier(&_soundcarrier);
-}
-
-void NC_STACK_ypabact::Render(baseRender_msg *arg)
-{
-    if ( _current_vp )
-    {
-        if ( !(_status_flg & BACT_STFLAG_NORENDER) )
-        {
-            if ( !(_oflags & BACT_OFLAG_VIEWER) || _oflags & BACT_OFLAG_ALWAYSREND )
-            {
-                _current_vp->Bas->TForm().Pos = _tForm.Pos;
-                _current_vp->Bas->TForm().SclRot = _tForm.SclRot;
-
-                _current_vp->Bas->Render(arg, _current_vp);
-            }
-        }
-    }
-
-    for (int i = 0; i < 3; i++)
-    {
-        extra_vproto *bd = &_vp_extra[i];
-
-        if ( bd->vp )
-        {
-            if ( bd->flags & EVPROTO_FLAG_ACTIVE )
-            {
-                bd->vp->Bas->TForm().Pos = bd->pos;
-
-                if ( bd->flags & EVPROTO_FLAG_SCALE )
-                    bd->vp->Bas->TForm().SclRot = bd->rotate.Transpose() * mat3x3::Scale( vec3d(bd->scale, bd->scale, bd->scale) );
-                else
-                    bd->vp->Bas->TForm().SclRot = bd->rotate.Transpose();
-
-                bd->vp->Bas->Render(arg, bd->vp);
-            }
-        }
-    }
 }
 
 void NC_STACK_ypabact::SetTarget(setTarget_msg *arg)
@@ -4151,7 +4106,7 @@ size_t NC_STACK_ypabact::CollisionWithBact(int arg)
                             if ( bnode->_owner != _owner )
                             {
                                 bnode->_vp_extra[0].flags = 0;
-                                bnode->_vp_extra[0].SetVP((NC_STACK_base::Instance *)NULL);// = NULL;
+                                bnode->_vp_extra[0].model = NULL;
                             }
                         }
                         break;
@@ -4840,13 +4795,6 @@ void NC_STACK_ypabact::Renew()
     _overeof = 10.0;
     _viewer_overeof = 40.0;
 
-    _tForm = TF::TForm3D();
-    _tForm.Pos = _position;
-    _tForm.SclRot = _rotation;
-    _prevTFormPos = vec3d();
-    _prevTFormSclRot = mat3x3();
-    _prevStep = 0;
-
     _clock = 0;
     _AI_time1 = 0;
     _AI_time2 = 0;
@@ -4902,29 +4850,29 @@ void NC_STACK_ypabact::Renew()
         model = NULL;
 
     _oflags = BACT_OFLAG_EXACTCOLL | BACT_OFLAG_LANDONWAIT;
-    Common::DeleteAndNull(&_current_vp);
+    _current_vp = NULL;
     _attackersList.clear();
     _yls_time = 3000;
     _hidden = false;
     _unhideRadar = 0;
 }
 
-uint8_t NC_STACK_ypabact::ModelIndex(const NC_STACK_base::Instance *inst) const
+uint8_t NC_STACK_ypabact::ModelIndex(const NC_STACK_base *model) const
 {
-    if ( !inst )
+    if ( !model )
         return 0;
 
     const NC_STACK_base *models[] = {_vp_normal, _vp_fire, _vp_wait, _vp_dead, _vp_megadeth, _vp_genesis};
 
     for (int i = 0; i < 6; i++)
     {
-        if ( models[i] && inst->Bas == models[i] )
+        if ( models[i] && model == models[i] )
             return i + 1;
     }
 
     for (int i = 0; i < 32; i++)
     {
-        if ( _vp_fx_models[i] && inst->Bas == _vp_fx_models[i] )
+        if ( _vp_fx_models[i] && model == _vp_fx_models[i] )
             return i + 8;
     }
 
@@ -4993,7 +4941,7 @@ void NC_STACK_ypabact::VisitView(World::State::Visitor &v)
     for (int i = 0; i < 3; i++)
     {
         extra_vproto &ex = _vp_extra[i];
-        uint8_t model = ModelIndex(ex.vp);
+        uint8_t model = ModelIndex(ex.model);
 
         v.Field(extraNames[i][0], ex.scale, World::State::VIEW);
         v.Field(extraNames[i][1], ex.pos, World::State::VIEW_ROUNDED);
@@ -5002,7 +4950,7 @@ void NC_STACK_ypabact::VisitView(World::State::Visitor &v)
         v.Field(extraNames[i][4], model, World::State::VIEW);
 
         if ( v.Reads(World::State::VIEW) )
-            ex.SetVP(ModelByIndex(model));
+            ex.model = ModelByIndex(model);
     }
 }
 
@@ -6932,7 +6880,7 @@ void ypabact_NetUpdate_VPHACKS(NC_STACK_ypabact *bact, update_msg *upd)
         bact->_scale_time -= upd->frameTime;
 
         if ( bact->_scale_time < 0 )
-            bact->_vp_extra[0].SetVP((NC_STACK_base::Instance *)NULL);
+            bact->_vp_extra[0].model = NULL;
     }
 
     if ( bact->_vp_extra_mode == 2 )
@@ -6967,7 +6915,7 @@ void ypabact_NetUpdate_VPHACKS(NC_STACK_ypabact *bact, update_msg *upd)
                         bact->_vp_extra[0].rotate = bact->_rotation;;
                         bact->_vp_extra[0].flags = 3;
                         bact->_vp_extra[0].scale = 1.25;
-                        bact->_vp_extra[0].SetVP(bact->_vp_genesis);
+                        bact->_vp_extra[0].model = bact->_vp_genesis;
                     }
 
                     if ( roboo->_vp_extra[1].flags & EVPROTO_FLAG_ACTIVE )
@@ -6981,7 +6929,7 @@ void ypabact_NetUpdate_VPHACKS(NC_STACK_ypabact *bact, update_msg *upd)
                         bact->_vp_extra[1].pos = roboo->_roboBeamPos;
                         bact->_vp_extra[1].rotate = bact->_rotation;
                         bact->_vp_extra[1].flags = 1;
-                        bact->_vp_extra[1].SetVP(bact->_vp_genesis);
+                        bact->_vp_extra[1].model = bact->_vp_genesis;
                     }
                 }
                 roboo->_roboBeamFXTime -= upd->frameTime;
@@ -7029,13 +6977,6 @@ void NC_STACK_ypabact::NetUpdate(update_msg *upd)
     }
 
     ReleaseExpiredMissiles(this);
-
-    _tForm.Pos = _position;
-
-    if ( _status_flg & BACT_STFLAG_SCALE )
-        _tForm.SclRot = _rotation.Transpose() * mat3x3::Scale(_scale);
-    else
-        _tForm.SclRot = _rotation.Transpose();
 
     int units_cnt = upd->units_count;
 
@@ -7488,7 +7429,7 @@ void NC_STACK_ypabact::DeadTimeUpdate(update_msg *arg)
 
                 if ( _scale_time <= 0 )
                 {
-                    _vp_extra[0].SetVP((NC_STACK_base::Instance *)NULL);
+                    _vp_extra[0].model = NULL;
 
                     if ( _yls_time <= 0 )
                     {
@@ -7514,7 +7455,7 @@ void NC_STACK_ypabact::DeadTimeUpdate(update_msg *arg)
                 _vp_extra[0].scale = 0.75;
                 _vp_extra[0].pos = _position;
                 _vp_extra[0].rotate = _rotation;
-                _vp_extra[0].SetVP(_vp_genesis);
+                _vp_extra[0].model = _vp_genesis;
                 _vp_extra[0].flags |= (EVPROTO_FLAG_ACTIVE | EVPROTO_FLAG_SCALE);
 
                 if ( _world->_isNetGame )
@@ -8083,9 +8024,7 @@ void NC_STACK_ypabact::setBACT_yourLastSeconds(int ls)
 
 void NC_STACK_ypabact::SetVP(NC_STACK_base *vp)
 {
-    Common::DeleteAndNull(&_current_vp);
-    if (vp)
-        _current_vp = vp->GenRenderInstance();
+    _current_vp = vp;
 }
 
 void NC_STACK_ypabact::setBACT_aggression(int aggr)

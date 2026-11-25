@@ -33,35 +33,14 @@ enum EVPROTO_FLAG
     EVPROTO_FLAG_SCALE  = 2
 };
 
+// A model a unit shows besides its own, as while it's being made
 struct extra_vproto
 {
     float scale = 0.0;
     vec3d pos;
     mat3x3 rotate;
     int flags = 0;
-    NC_STACK_base::Instance *vp = NULL;
-    
-    ~extra_vproto()
-    {
-        if (vp)
-            delete vp;
-    }
-    
-    void SetVP(NC_STACK_base::Instance *newVP)
-    {
-        Common::DeleteAndNull(&vp);
-        vp = newVP;
-    }
-    
-    void SetVP(NC_STACK_base *bas)
-    {
-        Common::DeleteAndNull(&vp);
-        
-        if (bas)
-            vp = bas->GenRenderInstance();
-        else
-            vp = NULL;
-    }
+    NC_STACK_base *model = NULL;
 };
 
 enum BACT_TGT_TYPE
@@ -379,7 +358,6 @@ public:
     virtual size_t Deinit();
     virtual size_t SetParameters(IDVList &stak);
     virtual void Update(update_msg *arg);
-    virtual void Render(baseRender_msg *arg);
     virtual void SetTarget(setTarget_msg *arg);
     virtual void AI_layer1(update_msg *arg);
     virtual void AI_layer2(update_msg *arg);
@@ -414,10 +392,10 @@ public:
     virtual void VisitView(World::State::Visitor &v);
     virtual void VisitInternal(World::State::Visitor &v);
 
-    // Which of its models an instance draws: 0 none, 1 normal, 2 firing,
-    // 3 waiting, 4 dead, 5 exploding, 6 beaming in, 7 another, 8 and on its
-    // effect models (_vp_fx_models)
-    uint8_t ModelIndex(const NC_STACK_base::Instance *inst) const;
+    // Which of its models it shows: 0 none, 1 normal, 2 firing, 3 waiting,
+    // 4 dead, 5 exploding, 6 beaming in, 7 another, 8 and on its effect
+    // models (_vp_fx_models)
+    uint8_t ModelIndex(const NC_STACK_base *model) const;
     NC_STACK_base *ModelByIndex(uint8_t index) const;
 
     virtual void HandBrake(update_msg *arg);
@@ -497,9 +475,6 @@ public:
     virtual NC_STACK_ypaworld *getBACT_pWorld()
     { return _world; }
     
-    virtual TF::TForm3D *getBACT_pTransform()
-    { return &_tForm; }
-    
     virtual bool getBACT_viewer() const 
     { return (_oflags & BACT_OFLAG_VIEWER) != 0; }
     
@@ -519,12 +494,7 @@ public:
     { return _yls_time; }
     
     virtual NC_STACK_base *GetVP()
-    {
-        if (_current_vp)
-            return _current_vp->Bas;
-
-        return NULL;
-    }
+    { return _current_vp; }
     
     virtual int getBACT_aggression() const
     { return _aggr; }
@@ -688,14 +658,6 @@ public:
 //
 //    float pos_y_cntr;
 
-    TF::TForm3D _tForm;
-
-    // _tForm at the start of the simulation step _prevStep, for drawing
-    // between steps (NC_STACK_ypaworld::InterpolateUnitTransforms)
-    vec3d _prevTFormPos;
-    mat3x3 _prevTFormSclRot;
-    uint32_t _prevStep = 0;
-
     int _clock;           // local time
     int _AI_time1;
     int _AI_time2;
@@ -750,7 +712,7 @@ public:
     NC_STACK_base *_vp_fx_models[32];
 
     int _oflags = 0;
-    NC_STACK_base::Instance *_current_vp = NULL;
+    NC_STACK_base *_current_vp = NULL; // The model it shows
     std::list<TBactAttacker> _attackersList;
     int _yls_time;  
     

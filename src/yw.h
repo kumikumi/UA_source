@@ -4,7 +4,9 @@
 #include <string.h>
 #include <array>
 #include <limits>
+#include <memory>
 #include <string>
+#include <unordered_map>
 
 #include "types.h"
 
@@ -36,6 +38,7 @@
 #include "world/tutorialhints.h"
 #include "world/recorder.h"
 #include "world/state.h"
+#include "world/frame.h"
 #include "locale/locale.h"
 
 
@@ -882,7 +885,6 @@ struct cellArea
     uint8_t SectorType = 0; // Complex (3x3) or simple
     int32_t energy_power = 0; // Cell electric power
     Common::PlaneArray<int16_t, 3, 3> buildings_health = Common::PlaneArray<int16_t, 3, 3>::ArrayInit(0);
-    Common::PlaneArray<NC_STACK_base::Instance *, 3, 3> BldVPOpts = Common::PlaneArray<NC_STACK_base::Instance *, 3, 3>::ArrayInit(NULL);
     uint8_t view_mask = 0; // Who can view this sector (mask)
     uint8_t UnhideMask = 0; // Who can unhide other fractions (mask)
     
@@ -906,17 +908,7 @@ struct cellArea
     float height = 0.0;
     float averg_height = 0.0;
     
-    cellArea() : unitsList(this, NC_STACK_ypabact::GetCellRefNode) 
-    { BldVPOpts.fill(NULL); };
-    
-    ~cellArea()
-    {
-        for (NC_STACK_base::Instance* opts : BldVPOpts)
-        {
-            if (opts)
-                delete opts;
-        }
-    }
+    cellArea() : unitsList(this, NC_STACK_ypabact::GetCellRefNode) {};
     
     bool IsCanSee(int owant) const
     {
@@ -1844,14 +1836,8 @@ public:
     bool SimulationStep(TUpdateArgs *arg);
     void RenderFrame(TUpdateArgs *arg, float stepFraction);
 
-    void SaveUnitTransforms();
-    void InterpolateUnitTransforms(float stepFraction);
-    void RestoreUnitTransforms();
-    void PlaceDrawnCamera(float stepFraction);
-
-    // Whether a step has placed the camera since the level was set up, so
-    // that the level can be drawn
-    bool ReadyToDraw() const { return _cameraPlaced; }
+    // Whether a step has left a frame to draw since the level was set up
+    bool ReadyToDraw() const { return !_frames.Empty(); }
 
     // The world is drawn from this camera instead of the player's, as the
     // benchmark does: where it is and how it's turned
@@ -2107,18 +2093,24 @@ public:
     void DrawMapRegionsTutorial();
     void DrawMapRegions();
     
-    void RenderGame(TUpdateArgs *bs64, int drawGui);
-    void CheckSectorVisibility(Common::Point sect, TRenderingSector *sct, baseRender_msg *rndrParams);
-    void RenderSector(TRenderingSector *sct, baseRender_msg *rndrParams);
-    void yw_renderSky(baseRender_msg *rndr_params);
-    void RenderSuperItems(baseRender_msg *arg);
-    void RenderSuperWave(vec2d pos, vec2d fromPos, baseRender_msg *arg);
+    void AddFrame();
+    bool FrameAt(double step, World::Frame &out) const;
+    void PlaceDrawnCamera(const World::Frame &frame);
+    void RenderGame(TUpdateArgs *arg, const World::Frame &frame, bool drawGui);
+    void CheckSectorVisibility(Common::Point sect, TRenderingSector *sct, const World::Frame &frame, baseRender_msg *rndrParams);
+    void RenderSector(TRenderingSector *sct, const World::Frame &frame, baseRender_msg *rndrParams);
+    void RenderUnit(const World::Frame &frame, const World::Frame::Unit &unit, baseRender_msg *arg);
+    void yw_renderSky(const vec3d &viewerPos, baseRender_msg *rndr_params);
+    void RenderSuperItems(const World::Frame &frame, const Common::Point &viewerSector, baseRender_msg *arg);
+    void RenderSuperWave(vec2d pos, vec2d fromPos, const Common::Point &viewerSector, baseRender_msg *arg);
     void RenderFillers(baseRender_msg *arg, int diameter);
+    NC_STACK_base *UnitModel(uint8_t type, uint8_t vehicle, uint8_t look) const;
+    void FreeDrawings();
     
-    void PrepareFiller(cellArea *sct, cellArea *sct2, float startCornerHeight, float endCornerHeight, bool vertical, TCellFillerCh *out, bool force = false);
+    void PrepareFiller(cellArea *sct, cellArea *sct2, int32_t type, int32_t type2, float startCornerHeight, float endCornerHeight, bool vertical, TCellFillerCh *out, bool force = false);
     void PrepareAllFillers();
     
-    bool IsVisibleMapPos(vec2d pos);
+    bool IsVisibleMapPos(vec2d pos, const Common::Point &viewerSector);
     
     //PRT - Position Robo Target
     
@@ -2316,7 +2308,7 @@ public:
     
     int32_t GetLegoBld(const cellArea *cell, int bldX, int bldY);
     int32_t GetLegoBld(const Common::Point &cell, int bldX, int bldY);
-    int32_t DrawnSectorType(const cellArea &cell) const;
+    int32_t DrawnSectorType(const World::Frame::Sector &sector) const;
     
     void ClearOverrideModels();
     void LoadOverrideModels();
@@ -2463,26 +2455,28 @@ public:
     int32_t _frameTime = 0;
     uint32_t _framesElapsed = 0;
 
-    uint32_t _simStep = 0; // Simulation steps since start, for interpolation
+    // What the last steps left to draw, and what makes it
+    World::Frames _frames;
+    std::unique_ptr<World::FrameMaker> _frameMaker;
 
-    struct TSavedTForm
+    // What drawing a unit's models keeps from one frame to the next: their
+    // particles' emitters
+    struct TUnitDrawing
     {
-        TF::TForm3D *TForm;
-        vec3d Pos;
-        mat3x3 SclRot;
+        std::unique_ptr<NC_STACK_base::Instance> Model;
+        std::unique_ptr<NC_STACK_base::Instance> Extras[3];
     };
-    std::vector<TSavedTForm> _steppedTForms; // Step transforms while drawing
 
-    // The camera at the start of the last step
-    vec3d _prevViewerPosition;
-    mat3x3 _prevViewerRotation;
+    std::unordered_map<uint32_t, TUnitDrawing> _unitDrawings; // By unit id
+    std::vector<std::unique_ptr<NC_STACK_base::Instance>> _buildingDrawings; // 9 a sector
+
+    // The units of the frame drawn, by sector: the first's index in each
+    // sector, and the next's after each, -1 for none
+    std::vector<int32_t> _drawnUnitFirst, _drawnUnitNext;
 
     // How the sound shook the camera in the last step: only the picture
     // shakes
     mat3x3 _cameraShake = mat3x3::Ident();
-
-    // Whether a step has placed the camera since the level was set up
-    bool _cameraPlaced = false;
 
     // The camera the world is drawn from, and the one the benchmark puts in
     // place of the player's

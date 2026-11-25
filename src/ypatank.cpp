@@ -1345,7 +1345,7 @@ size_t NC_STACK_ypatank::CollisionWithBact(int arg)
                                     if ( _owner != unit->_owner )
                                     {
                                         unit->_vp_extra[0].flags = 0;
-                                        unit->_vp_extra[0].SetVP((NC_STACK_base::Instance *)NULL);
+                                        unit->_vp_extra[0].model = NULL;
                                     }
                                 }
                                 break;

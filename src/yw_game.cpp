@@ -1485,15 +1485,18 @@ NC_STACK_ypabact *NC_STACK_ypaworld::MakeUnitObject(int type)
 
 
 
-void NC_STACK_ypaworld::CheckSectorVisibility(Common::Point sect, TRenderingSector *sct, baseRender_msg *rndrParams)
+void NC_STACK_ypaworld::CheckSectorVisibility(Common::Point sect, TRenderingSector *sct, const World::Frame &frame, baseRender_msg *rndrParams)
 {
     sct->Visible = 0;
     sct->InMap = 0;
 
-    if ( IsSector( sect ) )
+    size_t index = sect.y * _mapSize.x + sect.x;
+
+    if ( IsSector( sect ) && frame.Sectors && index < frame.Sectors->size() )
     {
         sct->InMap = 1;
         sct->Cell = &_cells( sect );
+        sct->Drawn = &frame.Sectors->at(index);
 
         vec3d pos = World::SectorIDToCenterPos3( sect );
         pos.y = sct->Cell->height;
@@ -1507,28 +1510,26 @@ void NC_STACK_ypaworld::CheckSectorVisibility(Common::Point sect, TRenderingSect
     }
 }
 
-void NC_STACK_ypaworld::RenderSector(TRenderingSector *sct, baseRender_msg *rndrParams)
+// What a model's drawing keeps from one frame to the next, made anew for
+// another model
+static NC_STACK_base::Instance *Drawing(std::unique_ptr<NC_STACK_base::Instance> &drawing, NC_STACK_base *model)
+{
+    if ( !drawing || drawing->Bas != model )
+        drawing.reset(model->GenRenderInstance());
+
+    return drawing.get();
+}
+
+void NC_STACK_ypaworld::RenderSector(TRenderingSector *sct, const World::Frame &frame, baseRender_msg *rndrParams)
 {
     if ( sct->Visible )
     {
-        cellArea *pcell = sct->Cell;
+        const World::Frame::Sector &drawn = *sct->Drawn;
+        int32_t typeId = DrawnSectorType(drawn);
 
-        int constructing = 0;
-        int32_t typeId = DrawnSectorType(*pcell);
-
-        vec3d scel;
-        if ( pcell->PurposeType == cellArea::PT_CONSTRUCTING )
-        {
-            auto it = _inBuildProcess.find(pcell->Id);
-            if (it != _inBuildProcess.end())
-            {
-                TConstructInfo &bldProc = it->second;
-
-                scel = vec3d::OY((float)bldProc.Time / (float)bldProc.EndTime);
-
-                constructing = 1;
-            }
-        }
+        // A building being built grows
+        bool constructing = drawn.Constructing && drawn.ConstructEnd > 0;
+        vec3d scel = vec3d::OY(constructing ? (float)drawn.ConstructTime / (float)drawn.ConstructEnd : 1.0);
 
         int subOffset, subCount;
 
@@ -1543,52 +1544,99 @@ void NC_STACK_ypaworld::RenderSector(TRenderingSector *sct, baseRender_msg *rndr
             subCount = 3;
         }
 
+        size_t cellIndex = sct->Cell->CellId.y * _mapSize.x + sct->Cell->CellId.x;
+
+        if ( _buildingDrawings.size() < _cells.size() * 9 )
+            _buildingDrawings.resize(_cells.size() * 9);
+
         for (int zz = 0; zz < subCount; zz++)
         {
             for (int xx = 0; xx < subCount; xx++)
             {
                 vec3d pos = sct->Cell->CenterPos + vec3d((subOffset + xx) * 300.0, 0.0, (subOffset + zz) * 300.0);
+                std::unique_ptr<NC_STACK_base::Instance> &drawing = _buildingDrawings[cellIndex * 9 + xx + zz * 3];
+                TSubSectorDesc *ssec = _secTypeArray[ typeId ].SubSectors.At(xx, zz);
 
                 if ( constructing )
                 {
-                    NC_STACK_base *bld = _legoArray[ _secTypeArray[ typeId ].SubSectors.At(xx, zz)->HPModels[0] ].Base;
+                    NC_STACK_base *bld = _legoArray[ ssec->HPModels[0] ].Base;
 
                     bld->SetStatic(false);
 
                     bld->SetScale(scel, NC_STACK_base::UF_Y); //Scale only Y
                     bld->SetPosition(pos);
-                    
-                    NC_STACK_base::CheckOpts( &pcell->BldVPOpts.At(xx, zz), bld );
-                    
-                    bld->Render(rndrParams, pcell->BldVPOpts.At(xx, zz));
+
+                    bld->Render(rndrParams, Drawing(drawing, bld));
 
                     bld->SetStatic(true);
                 }
                 else
                 {
-                    NC_STACK_base *bld = _legoArray[ GetLegoBld(pcell, xx, zz) ].Base;
+                    int16_t health = drawn.Health[xx + zz * 3];
+                    NC_STACK_base *bld = _legoArray[ ssec->HPModels[ _buildHealthModelId[ health ] ] ].Base;
 
                     bld->SetPosition(pos);
-                    
-                    NC_STACK_base::CheckOpts( &pcell->BldVPOpts.At(xx, zz), bld );
-                    
-                    bld->Render(rndrParams, pcell->BldVPOpts.At(xx, zz));
+
+                    bld->Render(rndrParams, Drawing(drawing, bld));
                 }
             }
         }
     }
 
-    for ( NC_STACK_ypabact* &bact : sct->Cell->unitsList )
+    size_t cellIndex = sct->Cell->CellId.y * _mapSize.x + sct->Cell->CellId.x;
+
+    for (int32_t i = _drawnUnitFirst.at(cellIndex); i >= 0; i = _drawnUnitNext[i])
     {
-        if ( sct->Visible || bact->_bact_type == BACT_TYPES_ROBO)
+        const World::Frame::Unit &unit = frame.Units[i];
+
+        if ( sct->Visible || unit.Type == BACT_TYPES_ROBO )
         {
-            bact->Render(rndrParams);
+            RenderUnit(frame, unit, rndrParams);
             System::Perf.Count(System::PerfStats::CNT_UNITS);
         }
     }
 }
 
-void NC_STACK_ypaworld::yw_renderSky(baseRender_msg *rndr_params)
+void NC_STACK_ypaworld::RenderUnit(const World::Frame &frame, const World::Frame::Unit &unit, baseRender_msg *arg)
+{
+    TUnitDrawing &drawing = _unitDrawings[unit.Id];
+    NC_STACK_base *model = UnitModel(unit.Type, unit.Vehicle, unit.Look);
+
+    // Not the unit the player sees from, but a host station's deck
+    if ( model && !(unit.StatusFlags & BACT_STFLAG_NORENDER) &&
+         (unit.Id != frame.Viewer || unit.Type == BACT_TYPES_ROBO) )
+    {
+        model->TForm().Pos = vec3d(unit.Position);
+
+        if ( unit.StatusFlags & BACT_STFLAG_SCALE )
+            model->TForm().SclRot = mat3x3(unit.Rotation).Transpose() * mat3x3::Scale( vec3d(unit.Scale) );
+        else
+            model->TForm().SclRot = mat3x3(unit.Rotation).Transpose();
+
+        model->Render(arg, Drawing(drawing.Model, model));
+    }
+
+    auto it = std::lower_bound(frame.Extras.begin(), frame.Extras.end(), unit.Id,
+                               [](const World::Frame::Extra &e, uint32_t id) { return e.Unit < id; });
+
+    for (; it != frame.Extras.end() && it->Unit == unit.Id; it++)
+    {
+        NC_STACK_base *extra = UnitModel(unit.Type, unit.Vehicle, it->Model);
+        if ( !extra || it->Slot >= 3 )
+            continue;
+
+        extra->TForm().Pos = vec3d(it->Position);
+
+        if ( it->Flags & EVPROTO_FLAG_SCALE )
+            extra->TForm().SclRot = mat3x3(it->Rotation).Transpose() * mat3x3::Scale( vec3d(it->Scale, it->Scale, it->Scale) );
+        else
+            extra->TForm().SclRot = mat3x3(it->Rotation).Transpose();
+
+        extra->Render(arg, Drawing(drawing.Extras[it->Slot], extra));
+    }
+}
+
+void NC_STACK_ypaworld::yw_renderSky(const vec3d &viewerPos, baseRender_msg *rndr_params)
 {
     if ( _skyObject )
     {
@@ -1596,7 +1644,7 @@ void NC_STACK_ypaworld::yw_renderSky(baseRender_msg *rndr_params)
         uint32_t flags = rndr_params->flags;
         bool fadeOut = rndr_params->fadeOut;
 
-        _skyObject->SetPosition( _viewerBact->_position + vec3d::OY(_skyHeight) );
+        _skyObject->SetPosition( viewerPos + vec3d::OY(_skyHeight) );
 
         rndr_params->maxZ = 32000.0;
         rndr_params->flags = GFX::RFLAGS_SKY | GFX::RFLAGS_COMPUTED_COLOR;
@@ -1611,30 +1659,30 @@ void NC_STACK_ypaworld::yw_renderSky(baseRender_msg *rndr_params)
 }
 
 
-bool NC_STACK_ypaworld::IsVisibleMapPos(vec2d pos)
+bool NC_STACK_ypaworld::IsVisibleMapPos(vec2d pos, const Common::Point &viewerSector)
 {
     Common::Point pt( ((pos.x + 150) / 300) / 4, ((-pos.y + 150) / 300) / 4 );
 
-    if ( !IsGamePlaySector( pt ) || !_viewerBact )
+    if ( !IsGamePlaySector( pt ) )
         return false;
 
     int radius = std::min(GetViewDistance().SectorRadius, GetMapSectorRadius());
 
-    Common::Point dist = _viewerBact->_cellId.AbsDistance( pt ); 
+    Common::Point dist = viewerSector.AbsDistance( pt );
     if ( dist.x + dist.y <= radius )
         return true;
 
     return false;
 }
 
-void NC_STACK_ypaworld::RenderSuperWave(vec2d pos, vec2d fromPos, baseRender_msg *arg)
+void NC_STACK_ypaworld::RenderSuperWave(vec2d pos, vec2d fromPos, const Common::Point &viewerSector, baseRender_msg *arg)
 {
     if ( !_stoudsonWaveVehicleId )
         return;
     
     if ( pos.x > 0.0 && pos.y < 0.0 && pos.x < _mapLength.x && -_mapLength.y < pos.y )
     {
-        if ( IsVisibleMapPos(pos) )
+        if ( IsVisibleMapPos(pos, viewerSector) )
         {
             int vpId = _vhclProtos[_stoudsonWaveVehicleId].vp_normal;
 
@@ -1684,20 +1732,23 @@ void NC_STACK_ypaworld::RenderSuperWave(vec2d pos, vec2d fromPos, baseRender_msg
     }
 }
 
-void NC_STACK_ypaworld::RenderSuperItems(baseRender_msg *arg)
+
+void NC_STACK_ypaworld::RenderSuperItems(const World::Frame &frame, const Common::Point &viewerSector, baseRender_msg *arg)
 {
     // Render super items
-    for ( const TMapSuperItem &sitem : _levelInfo.SuperItems )
+    for (size_t i = 0; i < frame.SuperItems.size() && i < _levelInfo.SuperItems.size(); i++)
     {
+        const World::Frame::SuperItem &sitem = frame.SuperItems[i];
+
         if ( sitem.State == TMapSuperItem::STATE_TRIGGED )
         {
-            vec2d pos = World::SectorIDToCenterPos2( sitem.CellId );
+            vec2d pos = World::SectorIDToCenterPos2( _levelInfo.SuperItems[i].CellId );
 
             float maxRadius = sqrt( POW2(_mapLength.x) + POW2(_mapLength.y) );
 
-            if ( sitem.CurrentRadius > 300 && sitem.CurrentRadius < maxRadius )
+            if ( sitem.Radius > 300 && sitem.Radius < maxRadius )
             {
-                float wallCount = (2 * sitem.CurrentRadius) * C_PI / 300.0;
+                float wallCount = (2 * sitem.Radius) * C_PI / 300.0;
 
                 if ( wallCount > 2.0 )
                 {
@@ -1705,8 +1756,8 @@ void NC_STACK_ypaworld::RenderSuperItems(baseRender_msg *arg)
 
                     for (float j = 0.0; j < 6.283; j = j + angleStep )
                     {
-                        vec2d wallpos = vec2d(cos(j), sin(j)) * sitem.CurrentRadius + pos;
-                        RenderSuperWave(wallpos, pos, arg);
+                        vec2d wallpos = vec2d(cos(j), sin(j)) * sitem.Radius + pos;
+                        RenderSuperWave(wallpos, pos, viewerSector, arg);
                     }
                 }
             }
@@ -1714,10 +1765,10 @@ void NC_STACK_ypaworld::RenderSuperItems(baseRender_msg *arg)
     }
 }
 
-void NC_STACK_ypaworld::PrepareFiller(cellArea *sct, cellArea *sct2, float startCornerHeight, float endCornerHeight, bool vertical, TCellFillerCh *out, bool force)
+void NC_STACK_ypaworld::PrepareFiller(cellArea *sct, cellArea *sct2, int32_t type, int32_t type2, float startCornerHeight, float endCornerHeight, bool vertical, TCellFillerCh *out, bool force)
 {
-    int x = _secTypeArray[ DrawnSectorType(*sct) ].SurfaceType;
-    int y = _secTypeArray[ DrawnSectorType(*sct2) ].SurfaceType;
+    int x = _secTypeArray[ type ].SurfaceType;
+    int y = _secTypeArray[ type2 ].SurfaceType;
     
     if (!force && (out->Id1 == x && out->Id2 == y && 
         out->Heights[0] == sct->height && out->Heights[1] == sct2->height && 
@@ -1762,6 +1813,7 @@ void NC_STACK_ypaworld::PrepareFiller(cellArea *sct, cellArea *sct2, float start
     out->Heights[3] = startCornerHeight;
 }
 
+
 void NC_STACK_ypaworld::PrepareAllFillers()
 {
     for (int i = 0; i < _mapSize.x - 1; i++)
@@ -1777,7 +1829,7 @@ void NC_STACK_ypaworld::PrepareAllFillers()
             else
                 h = _cells(i + 1, j + 1).averg_height;
             
-            PrepareFiller(sct, sct2, sct2->averg_height, h, false, &_cellsHFCache(i, j), true);
+            PrepareFiller(sct, sct2, sct->type_id, sct2->type_id, sct2->averg_height, h, false, &_cellsHFCache(i, j), true);
         }
     }
     
@@ -1794,7 +1846,7 @@ void NC_STACK_ypaworld::PrepareAllFillers()
             else
                 h = _cells(i + 1, j + 1).averg_height;
             
-            PrepareFiller(sct, sct2, sct2->averg_height, h, true, &_cellsVFCache(i, j), true);
+            PrepareFiller(sct, sct2, sct->type_id, sct2->type_id, sct2->averg_height, h, true, &_cellsVFCache(i, j), true);
         }
     }
 }
@@ -1825,7 +1877,8 @@ void NC_STACK_ypaworld::RenderFillers(baseRender_msg *arg, int diameter)
                     h = sct2.Cell->averg_height;
                     
                 TCellFillerCh &filler = _cellsVFCache( sct2.Cell->CellId.x - 1, sct2.Cell->CellId.y );
-                PrepareFiller(sct.Cell, sct2.Cell, sct2.Cell->averg_height, h, true, &filler);
+                PrepareFiller(sct.Cell, sct2.Cell, DrawnSectorType(*sct.Drawn), DrawnSectorType(*sct2.Drawn),
+                              sct2.Cell->averg_height, h, true, &filler);
                 filler.Render(arg);
             }
         }
@@ -1847,30 +1900,37 @@ void NC_STACK_ypaworld::RenderFillers(baseRender_msg *arg, int diameter)
                     h = sct2.Cell->averg_height;
                     
                 TCellFillerCh &filler = _cellsHFCache( sct2.Cell->CellId.x, sct2.Cell->CellId.y - 1 );
-                PrepareFiller(sct.Cell, sct2.Cell, sct2.Cell->averg_height, h, false, &filler);
+                PrepareFiller(sct.Cell, sct2.Cell, DrawnSectorType(*sct.Drawn), DrawnSectorType(*sct2.Drawn),
+                              sct2.Cell->averg_height, h, false, &filler);
                 filler.Render(arg);
             }
         }
     }
 }
 
-void NC_STACK_ypaworld::RenderGame(TUpdateArgs *bs64, int drawGui)
+// Draws a frame of the world, and the interface over it with drawGui
+void NC_STACK_ypaworld::RenderGame(TUpdateArgs *arg, const World::Frame &frame, bool drawGui)
 {
-    if ( !_viewerBact )
-        return;
-
     uint64_t sceneStart = System::PerfStats::Now();
 
-    TF::TForm3D *viewPoint = TF::Engine.GetViewPoint();
+    PlaceDrawnCamera(frame);
+    _drawnCamera.CalcGlobal();
 
-    if ( viewPoint )
-        viewPoint->CalcGlobal();
+    // The sectors drawn and the sky are placed around the viewer
+    vec3d viewerPos = vec3d(frame.CameraPosition);
+
+    if ( _cameraOverridden )
+        viewerPos = _cameraOverridePos;
+    else if ( const World::Frame::Unit *viewer = frame.FindUnit(frame.Viewer) )
+        viewerPos = vec3d(viewer->Position);
+
+    Common::Point viewerSector = World::PositionToSectorID(viewerPos);
 
     baseRender_msg rndrs;
 
     rndrs.flags = 0;
-    rndrs.frameTime = bs64->DTime;
-    rndrs.globTime = bs64->TimeStamp;
+    rndrs.frameTime = arg->DTime;
+    rndrs.globTime = frame.Time;
     rndrs.adeCount = 0;
 
     rndrs.minZ = 1.0;
@@ -1912,6 +1972,23 @@ void NC_STACK_ypaworld::RenderGame(TUpdateArgs *bs64, int drawGui)
         sct.Visible = 0;
     }
 
+    // The frame's units by the sector they're in, each sector's in the
+    // order of their ids
+    _drawnUnitFirst.assign(_cells.size(), -1);
+    _drawnUnitNext.assign(frame.Units.size(), -1);
+
+    for (int32_t i = (int32_t)frame.Units.size() - 1; i >= 0; i--)
+    {
+        Common::Point sector = World::PositionToSectorID(frame.Units[i].Position.x, frame.Units[i].Position.z);
+
+        if ( IsSector(sector) )
+        {
+            size_t index = sector.y * _mapSize.x + sector.x;
+            _drawnUnitNext[i] = _drawnUnitFirst[index];
+            _drawnUnitFirst[index] = i;
+        }
+    }
+
     for (int i = 0; i <= radius; i++)
     {
         int rowOffset = radius - i;
@@ -1920,11 +1997,10 @@ void NC_STACK_ypaworld::RenderGame(TUpdateArgs *bs64, int drawGui)
         {
             TRenderingSector *sct = &rendering_sectors(radius + j, radius - rowOffset);
 
-            CheckSectorVisibility( _viewerBact->_cellId + Common::Point(j, -rowOffset), 
-                                    sct, &rndrs);
+            CheckSectorVisibility( viewerSector + Common::Point(j, -rowOffset), sct, frame, &rndrs);
 
             if ( sct->InMap )
-                RenderSector(sct, &rndrs);
+                RenderSector(sct, frame, &rndrs);
 
         }
 
@@ -1934,29 +2010,28 @@ void NC_STACK_ypaworld::RenderGame(TUpdateArgs *bs64, int drawGui)
             {
                 TRenderingSector *sct = &rendering_sectors(radius + j, radius + rowOffset);
 
-                CheckSectorVisibility( _viewerBact->_cellId + Common::Point(j, rowOffset), 
-                                        sct, &rndrs);
+                CheckSectorVisibility( viewerSector + Common::Point(j, rowOffset), sct, frame, &rndrs);
 
                 if ( sct->InMap )
-                    RenderSector(sct, &rndrs);
+                    RenderSector(sct, frame, &rndrs);
             }
         }
     }
 
     
-    RenderSuperItems(&rndrs);
+    RenderSuperItems(frame, viewerSector, &rndrs);
 
     RenderFillers(&rndrs, diameter);
 
-    bs64->AdeCount = rndrs.adeCount;
+    arg->AdeCount = rndrs.adeCount;
 
     _polysCount = rndrs.adeCount;
     _polysDraw = 7777;
 
 
     TObjectRenderParams rrg;
-    rrg.timeStamp = bs64->TimeStamp;
-    rrg.frameTime = bs64->DTime;
+    rrg.timeStamp = frame.Time;
+    rrg.frameTime = arg->DTime;
     rrg.minZ = 1.0;
     rrg.maxZ = rndrs.maxZ;
     rrg.ViewTForm = TF::Engine.GetViewPoint();
@@ -1964,12 +2039,12 @@ void NC_STACK_ypaworld::RenderGame(TUpdateArgs *bs64, int drawGui)
     rrg.flags = 0;
 
 
-    ParticleSystem().UpdateRender(&rrg, bs64->DTime);
+    ParticleSystem().UpdateRender(&rrg, arg->DTime);
 
     GFX::Engine.BeginScene();
     
     if ( _skyRender )
-        yw_renderSky(&rndrs);
+        yw_renderSky(viewerPos, &rndrs);
 
     System::Perf.AddTime(System::PerfStats::SEC_SCENE, System::PerfStats::Now() - sceneStart);
 
@@ -1977,6 +2052,9 @@ void NC_STACK_ypaworld::RenderGame(TUpdateArgs *bs64, int drawGui)
 
     GFX::Engine.EndScene();
 
+    // TODO(bug): The interface's markers, map icons and lines are placed from
+    // the units as the last step left them, not from the frame, so they can
+    // lag the world drawn by up to one step.
     if ( drawGui )
     {
         System::PerfStats::Timer perf(System::PerfStats::SEC_GUI);

@@ -13,7 +13,8 @@ struct TSectorCollision
 // For rendering
 struct TRenderingSector
 {
-    cellArea *Cell;
+    cellArea *Cell;                       // Its place and height
+    const World::Frame::Sector *Drawn;    // As the frame has it
     int InMap;   // The sector is on the map
     int Visible; // Its bounding box is in view
 };
