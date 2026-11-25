@@ -561,6 +561,8 @@ bool NC_STACK_ypaworld::SimulationStep(TUpdateArgs *arg)
         OpenHelpURL(&help_link); //launch online help
     }
 
+    _recorder.Step(this);
+
     return true;
 }
 
@@ -1949,6 +1951,9 @@ void NC_STACK_ypaworld::FindUnitOnRay(TUnitRayQuery *arg)
 
 void NC_STACK_ypaworld::DeleteLevel()
 {
+    // With the end's state, before anything of the level goes
+    _recorder.Stop(this);
+
     EnableLevelPasses();
 
     if ( _levelInfo.State == TLevelInfo::STATE_COMPLETED )
@@ -5458,6 +5463,8 @@ void NC_STACK_ypaworld::ProcessGameShell()
 
 void NC_STACK_ypaworld::ShowMessage(TInfoMessage *arg)
 {
+    _recorder.Message(*arg);
+
     if ( arg->MsgID )
         VoiceMessagePlayMsg(arg->unit, arg->Priority, arg->MsgID);
 

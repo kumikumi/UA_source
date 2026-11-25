@@ -69,6 +69,11 @@
 #define TAG_SEQN   MKTAG('S','E','Q','N')
 #define TAG_SINF   MKTAG('S','I','N','F')
 #define TAG_FLSH   MKTAG('F','L','S','H')
+#define TAG_RPLY   MKTAG('R','P','L','Y')
+#define TAG_INFO   MKTAG('I','N','F','O')
+#define TAG_BLCK   MKTAG('B','L','C','K')
+#define TAG_KEYF   MKTAG('K','E','Y','F')
+#define TAG_STEP   MKTAG('S','T','E','P')
 
 #define POW2(x)  ( (x) * (x) )
 #define MMAX(a, b) ((a) > (b) ? (a) : (b))

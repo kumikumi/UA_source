@@ -39,6 +39,10 @@ static const Option Options[] = {
                                 "host station is left. Needs no display, GPU or sound device. How "
                                 "it ended goes to stdout"},
     {"time-limit",   "SECONDS", "With --headless, stop after this much game time"},
+    {"record",       "FILE",    "Record the level that --level or --load starts, until it ends, into "
+                                "FILE: every step, and every 10 s of game time what a save holds. "
+                                "tool/recording.py reads it; the format is in "
+                                "src/world/recorder.h"},
     {"bench",        NULL,      "Run the benchmark: level 21 drawn over and over from above, the frame "
                                 "times reported"},
     {"bench-level",  "N",       "The benchmark's level instead"},

@@ -74,6 +74,7 @@ set(SOURCES
 	world/parsers.cpp
 	world/nparticle.cpp
 	world/protos.cpp
+	world/recorder.cpp
 	world/saveparsers.cpp
 	world/tools.cpp
 	world/tutorialhints.cpp
@@ -127,6 +128,9 @@ if(APPLE)
 else()
     find_package(OpenAL REQUIRED)
 endif()
+
+# Recordings compress their blocks with zlib
+find_package(ZLIB REQUIRED)
 
 # The SDL_GPU renderer's shaders are written in Slang (src/shaders) and
 # compiled when the game is built: to Metal Shading Language for macOS and to
@@ -232,6 +236,7 @@ target_link_libraries(UA_source SDL3::SDL3
 							 ${OPENGL_LIBRARIES}
 							 ${VORBISFILE_LIBRARIES}
 							 ${OPENAL_LIBRARY}
+							 ZLIB::ZLIB
 							 FFmpeg::avcodec
 							 FFmpeg::avformat
 							 FFmpeg::avutil

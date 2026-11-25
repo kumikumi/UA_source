@@ -75,6 +75,8 @@ static Benchmark benchmark; // --bench
 static bool headless = false;
 static int32_t headlessTimeLimit = 0;
 
+static std::string recordFile; // --record
+
 static bool StartDirectLevel();
 
 // The game advances in fixed steps, so how units behave does not depend on
@@ -1079,6 +1081,21 @@ static bool ReadDirectStart()
         headlessTimeLimit = seconds * 1024; // Timer ticks
     }
 
+    if ( System::CmdLine::Get("record", &recordFile) )
+    {
+        if ( recordFile.empty() )
+        {
+            System::CmdLine::PrintError("--record needs FILE");
+            return false;
+        }
+
+        if ( !userdata.DirectStart || benchmark.IsActive() )
+        {
+            System::CmdLine::PrintError("--record needs --level or --load");
+            return false;
+        }
+    }
+
     return true;
 }
 
@@ -1281,6 +1298,22 @@ int main(int argc, char *argv[])
             GFX::Engine.Deinit();
             System::Deinit();
             return 1;
+        }
+
+        // Only the first start: a restart ends the recording, as it ends the
+        // level
+        if ( !recordFile.empty() )
+        {
+            std::string from = directStart.SaveFile.empty() ? fmt::sprintf("level %d", directStart.Level) : directStart.SaveFile;
+
+            if ( !ypaworld->_recorder.Start(ypaworld, recordFile, from) )
+            {
+                System::CmdLine::PrintError("can't write " + recordFile);
+                ShutdownGame();
+                GFX::Engine.Deinit();
+                System::Deinit();
+                return 1;
+            }
         }
 
         if ( headless )

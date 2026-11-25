@@ -36,6 +36,7 @@
 
 
 #include "world/tutorialhints.h"
+#include "world/recorder.h"
 #include "locale/locale.h"
 
 
@@ -2659,6 +2660,7 @@ public:
     int32_t _screenShotSeqFrame = 0; //Screenshoting frame
     
     TGameRecorder *_replayPlayer = NULL; // For play replay
+    World::Recorder _recorder; // --record
     
     THudVisor _guiVisor;
     
