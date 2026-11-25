@@ -1174,7 +1174,8 @@ void DebriefStartHistoryReplay(NC_STACK_ypaworld *yw, TInputState *struc, TBrief
 {
     brf->StartTime = brf->CurrTime;
     brf->Stage = TBriefengScreen::STAGE_PLAYER_RN;
-    brf->LastFrameTimeStamp = 0;
+    brf->ReplayedTime = 0;
+    brf->EventsReplayed = 0;
 
     brf->OwnMap = yw->_lvlPrimevalOwnMap;
     brf->TypMap = yw->_lvlPrimevalTypeMap;
@@ -1187,31 +1188,22 @@ void DebriefStartHistoryReplay(NC_STACK_ypaworld *yw, TInputState *struc, TBrief
     brf->Upgrades.clear();
 }
 
-void yw_DebriefConqSector(NC_STACK_ypaworld *yw, TBriefengScreen *brf, World::History::Conq *arg, uint32_t time, uint32_t stime)
+// A sector taken, marked for a while after
+void yw_DebriefDrawConquest(NC_STACK_ypaworld *yw, TBriefengScreen *brf, const World::History::Event &e, uint32_t time)
 {
-    uint32_t dtime = time - stime;
-
-    brf->OwnMap(arg->secX, arg->secY) = arg->owner;
-
-    if ( stime == brf->LastFrameTimeStamp )
-    {
-        arg->AddScore(&brf->StatsIngame);
-
-        if ( yw->_GameShell )
-            SFXEngine::SFXe.startSound(&yw->_GameShell->samples1_info, 12);
-    }
+    uint32_t dtime = time - e.Time;
 
     if ( dtime < 30000 )
     {
-        if ( arg->owner )
+        if ( e.Owner )
         {
             if ( brf->VectorGfx[3] )
             {
                 float sectorW = brf->MapBlitEnd.Width() / (float)yw->_mapSize.x;
                 float sectorH = brf->MapBlitEnd.Height() / (float)yw->_mapSize.y;
 
-                float posX = (float)arg->secX * sectorW + brf->MapBlitEnd.left + sectorW * 0.5;
-                float posY = (float)arg->secY * sectorH + brf->MapBlitEnd.top + sectorH * 0.5;
+                float posX = (float)e.SectorX * sectorW + brf->MapBlitEnd.left + sectorW * 0.5;
+                float posY = (float)e.SectorY * sectorH + brf->MapBlitEnd.top + sectorH * 0.5;
 
                 float sizeFactor = 1.0 - (float )dtime / 30000.0;
 
@@ -1223,24 +1215,16 @@ void yw_DebriefConqSector(NC_STACK_ypaworld *yw, TBriefengScreen *brf, World::Hi
                 float scaleX = sectorW * sizeFactor;
                 float scaleY = sectorH * sizeFactor;
 
-                yw_RenderVector2D(yw, brf->VectorGfx[3]->GetSkelet(), posX, posY, 1.0, 0.0, 0.0, 1.0, scaleX, scaleY,  yw->GetColor(arg->owner), NULL, NULL);
+                yw_RenderVector2D(yw, brf->VectorGfx[3]->GetSkelet(), posX, posY, 1.0, 0.0, 0.0, 1.0, scaleX, scaleY,  yw->GetColor(e.Owner), NULL, NULL);
             }
         }
     }
 }
 
-void yw_DebriefVhclKill(NC_STACK_ypaworld *yw, TBriefengScreen *brf, World::History::VhclKill *arg, uint32_t time, uint32_t stime)
+// A unit killed, marked in its owner's colour for a while after
+void yw_DebriefDrawKill(NC_STACK_ypaworld *yw, TBriefengScreen *brf, const World::History::Event &e, uint32_t time)
 {
-    int own = arg->owners & 7;
-    uint32_t dtime = time - stime;
-
-    if ( stime == brf->LastFrameTimeStamp )
-    {
-        arg->AddScore(&brf->StatsIngame);
-
-        if ( yw->_GameShell )
-            SFXEngine::SFXe.startSound(&yw->_GameShell->samples1_info, 13);
-    }
+    uint32_t dtime = time - e.Time;
 
     if ( dtime < 120000 )
     {
@@ -1249,8 +1233,8 @@ void yw_DebriefVhclKill(NC_STACK_ypaworld *yw, TBriefengScreen *brf, World::Hist
             float mapW = brf->MapBlitEnd.Width();
             float mapH = brf->MapBlitEnd.Height();
 
-            float posX = mapW * (arg->posX / 256.0) + brf->MapBlitEnd.left;
-            float posY = mapH * (arg->posY / 256.0) + brf->MapBlitEnd.top;
+            float posX = mapW * (e.MapX / 256.0) + brf->MapBlitEnd.left;
+            float posY = mapH * (e.MapY / 256.0) + brf->MapBlitEnd.top;
 
             float sizeFactor;
 
@@ -1271,14 +1255,15 @@ void yw_DebriefVhclKill(NC_STACK_ypaworld *yw, TBriefengScreen *brf, World::Hist
             float scaleX = ((mapW / (float)yw->_mapSize.x) / 2.0) * sizeFactor;
             float scaleY = ((mapH / (float)yw->_mapSize.y) / 2.0) * sizeFactor;
 
-            yw_RenderVector2D(yw, brf->VectorGfx[1]->GetSkelet(), posX, posY, 1.0, 0.0, 0.0, 1.0, scaleX, scaleY, yw->GetColor(own), NULL, NULL);
+            yw_RenderVector2D(yw, brf->VectorGfx[1]->GetSkelet(), posX, posY, 1.0, 0.0, 0.0, 1.0, scaleX, scaleY, yw->GetColor(e.Owner), NULL, NULL);
         }
     }
 }
 
-void yw_DebriefVhclCreate(NC_STACK_ypaworld *yw, TBriefengScreen *brf, World::History::VhclCreate *arg, int time, int stime)
+// A unit made, growing for a while after
+void yw_DebriefDrawCreation(NC_STACK_ypaworld *yw, TBriefengScreen *brf, const World::History::Event &e, uint32_t time)
 {
-    int dtime = time - stime;
+    int dtime = time - e.Time;
     if ( dtime < 45000 )
     {
         if ( brf->VectorGfx[1] )
@@ -1286,8 +1271,8 @@ void yw_DebriefVhclCreate(NC_STACK_ypaworld *yw, TBriefengScreen *brf, World::Hi
             float mapW = brf->MapBlitEnd.Width();
             float mapH = brf->MapBlitEnd.Height();
 
-            float posX = mapW * (arg->posX / 256.0) + brf->MapBlitEnd.left;
-            float posY = mapH * (arg->posY / 256.0) + brf->MapBlitEnd.top;
+            float posX = mapW * (e.MapX / 256.0) + brf->MapBlitEnd.left;
+            float posY = mapH * (e.MapY / 256.0) + brf->MapBlitEnd.top;
 
             float sizeFactor = dtime / 45000.0;
 
@@ -1299,18 +1284,19 @@ void yw_DebriefVhclCreate(NC_STACK_ypaworld *yw, TBriefengScreen *brf, World::Hi
             float scaleX = ((mapW / (float)yw->_mapSize.x) / 8.0) * sizeFactor;
             float scaleY = ((mapH / (float)yw->_mapSize.y) / 8.0) * sizeFactor;
 
-            yw_RenderVector2D(yw, brf->VectorGfx[1]->GetSkelet(), posX, posY, 1.0, 0.0, 0.0, 1.0, scaleX, scaleY, yw->GetColor(arg->owner), NULL, NULL);
+            yw_RenderVector2D(yw, brf->VectorGfx[1]->GetSkelet(), posX, posY, 1.0, 0.0, 0.0, 1.0, scaleX, scaleY, yw->GetColor(e.Owner), NULL, NULL);
         }
     }
 }
 
-void yw_DebriefAddTechUpgrade(NC_STACK_ypaworld *yw, TBriefengScreen *brf, World::History::Upgrade *arg)
+void yw_DebriefAddTechUpgrade(NC_STACK_ypaworld *yw, TBriefengScreen *brf, const World::History::Event &e)
 {
-    if ( !yw->_gameWasNetGame || arg->owner == yw->_userOwnerIdWasInNetGame )
+    if ( !yw->_gameWasNetGame || e.Owner == yw->_userOwnerIdWasInNetGame )
     {
         for (auto &u : brf->Upgrades)
         {
-            if ( u.upgradeType == arg->upgradeType && u.lastVhcl == arg->lastVhcl && u.lastWeapon == arg->lastWeapon && u.lastBuild == arg->lastBuild)
+            if ( u.UpgradeType == e.UpgradeType && u.UpgradeVehicle == e.UpgradeVehicle &&
+                 u.UpgradeWeapon == e.UpgradeWeapon && u.UpgradeBuilding == e.UpgradeBuilding )
                 return;
         }
 
@@ -1318,8 +1304,44 @@ void yw_DebriefAddTechUpgrade(NC_STACK_ypaworld *yw, TBriefengScreen *brf, World
         /*if ( brf->tp1_count >= 7 ) 
             brf->tp1_count = 6;*/
         
-        brf->Upgrades.push_back(*arg);
+        brf->Upgrades.push_back(e);
     }
+}
+
+// An event the replay of the level's history has come to: counted, heard,
+// and the map changed by it
+void yw_DebriefEventReached(NC_STACK_ypaworld *yw, TBriefengScreen *brf, const World::History::Event &e)
+{
+    World::History::AddScore(e, brf->StatsIngame);
+
+    int sound = -1;
+
+    switch ( e.What )
+    {
+    case World::History::Event::CONQUEST:
+        brf->OwnMap(e.SectorX, e.SectorY) = e.Owner;
+        sound = 12;
+        break;
+
+    case World::History::Event::KILL:
+        sound = 13;
+        break;
+
+    case World::History::Event::POWER_STATION:
+        sound = 14;
+        break;
+
+    case World::History::Event::TECH_UPGRADE:
+        yw_DebriefAddTechUpgrade(yw, brf, e);
+        sound = 14;
+        break;
+
+    case World::History::Event::CREATION:
+        break;
+    }
+
+    if ( sound >= 0 && yw->_GameShell )
+        SFXEngine::SFXe.startSound(&yw->_GameShell->samples1_info, sound);
 }
 
 void yw_DebriefRenderSectorsOwners(NC_STACK_ypaworld *yw, TBriefengScreen *brf)
@@ -1707,7 +1729,7 @@ void yw_DebriefRenderTime(NC_STACK_ypaworld *yw, TBriefengScreen *brf, CmdStream
         columns[0].flags = 36;
         columns[0].fontID = 15;
 
-        int seconds = brf->LastFrameTimeStamp / 1024;
+        int seconds = brf->ReplayedTime / 1024;
 
         columns[1].txt = fmt::sprintf("%02d:%02d:%02d", seconds / 60 / 60, seconds / 60 % 60, seconds % 60);
         columns[1].fontID = 15;
@@ -1731,7 +1753,7 @@ void yw_DebriefRenderTime(NC_STACK_ypaworld *yw, TBriefengScreen *brf, CmdStream
         columns[0].flags = 36;
         columns[0].fontID = 15;
 
-        int seconds = brf->LastFrameTimeStamp / 1024;
+        int seconds = brf->ReplayedTime / 1024;
 
         columns[1].txt = fmt::sprintf("%02d:%02d:%02d", seconds / 60 / 60, seconds / 60 % 60, seconds % 60);
         columns[1].width = tableWidth * 0.3;
@@ -1753,7 +1775,7 @@ void yw_DebriefRenderTime(NC_STACK_ypaworld *yw, TBriefengScreen *brf, CmdStream
         columns[0].postfixChar = 0;
         columns[0].fontID = 15;
 
-        seconds = (brf->LastFrameTimeStamp + brf->StatsGlobal[yw->_playerOwner].ElapsedTime) / 1024;
+        seconds = (brf->ReplayedTime + brf->StatsGlobal[yw->_playerOwner].ElapsedTime) / 1024;
 
         columns[1].txt = fmt::sprintf("%02d:%02d:%02d", seconds / 60 / 60, seconds / 60 % 60, seconds % 60);
         columns[1].fontID = 15;
@@ -1792,11 +1814,11 @@ void yw_DebriefScoreTable(NC_STACK_ypaworld *yw, TBriefengScreen *brf, CmdStream
     yw_DebriefRenderTime(yw, brf, in, tableWidth);
 }
 
-void yw_DebriefTechUpgradeLine(NC_STACK_ypaworld *yw, TBriefengScreen *brf, const World::History::Upgrade &upg, CmdStream *in, int lineWidth)
+void yw_DebriefTechUpgradeLine(NC_STACK_ypaworld *yw, TBriefengScreen *brf, const World::History::Event &upg, CmdStream *in, int lineWidth)
 {
-    int lastWeapon = upg.lastWeapon;
-    int lastVhcl   = upg.lastVhcl;
-    int lastBuild  = upg.lastBuild;
+    int lastWeapon = upg.UpgradeWeapon;
+    int lastVhcl   = upg.UpgradeVehicle;
+    int lastBuild  = upg.UpgradeBuilding;
 
     if ( lastVhcl == 0 && lastWeapon != 0 )
     {
@@ -1853,7 +1875,7 @@ void yw_DebriefTechUpgradeLine(NC_STACK_ypaworld *yw, TBriefengScreen *brf, cons
             nameText = yw->GetBuildingName(*bld, false);
     }
 
-    switch ( upg.upgradeType )
+    switch ( upg.UpgradeType )
     {
     case World::UPGRADE_WEAPON:
         if ( wpn )
@@ -1980,93 +2002,48 @@ void yw_DebriefRunDebrief(NC_STACK_ypaworld *yw, TInputState *struc, TBriefengSc
 
     FontUA::set_end(&cmdbuf);
 
-    uint32_t lastFrameTimeStamp = 0;
-
     GFX::Engine.ProcessDrawSeq(cmdbuf);
-
-    int moreHistory = 0;
-    
-    
 
     if ( brf->Stage == TBriefengScreen::STAGE_PLAYER_RN )
     {
-        bool readLoop = true;
-        auto reader = yw->_history.GetReader();
-        
-        World::History::Instance HistDecoders;
+        // The level's history replayed: what happened before the replay's
+        // time, the newly come to counted and heard
+        const std::vector<World::History::Event> &events = yw->_history;
+        size_t reached = brf->EventsReplayed;
 
-        while (readLoop && !reader.Eof())
+        while ( reached < events.size() && events[reached].Time < dtime )
         {
-            World::History::Record *decoder = HistDecoders[ reader.ReadU8() ];
-            if (decoder)
+            yw_DebriefEventReached(yw, brf, events[reached]);
+            brf->ReplayedTime = events[reached].Time;
+            reached++;
+        }
+
+        brf->EventsReplayed = reached;
+
+        for (size_t i = 0; i < reached; i++)
+        {
+            const World::History::Event &e = events[i];
+
+            switch ( e.What )
             {
-                World::History::FillDecoderBStrm(decoder, &reader);
-                
-                switch(decoder->type)
-                {
-                case World::History::TYPE_FRAME:
-                {
-                    World::History::Frame *frm = static_cast<World::History::Frame *>(decoder);
-                    
-                    lastFrameTimeStamp = frm->TimeStamp;
-
-                    if ( lastFrameTimeStamp >= brf->LastFrameTimeStamp )
-                        brf->LastFrameTimeStamp = lastFrameTimeStamp;
-
-                    if ( lastFrameTimeStamp >= dtime )
-                    {
-                        moreHistory = 1;
-                        readLoop = false;
-                    }
-                }
+            case World::History::Event::CONQUEST:
+                yw_DebriefDrawConquest(yw, brf, e, dtime);
                 break;
 
-                case World::History::TYPE_CONQ:
-                    yw_DebriefConqSector(yw, brf, static_cast<World::History::Conq *>(decoder), dtime, lastFrameTimeStamp);
-                    break;
+            case World::History::Event::KILL:
+                yw_DebriefDrawKill(yw, brf, e, dtime);
+                break;
 
-                case World::History::TYPE_VHCLKILL:
-                    yw_DebriefVhclKill(yw, brf, static_cast<World::History::VhclKill *>(decoder), dtime, lastFrameTimeStamp);
-                    break;
+            case World::History::Event::CREATION:
+                yw_DebriefDrawCreation(yw, brf, e, dtime);
+                break;
 
-                case World::History::TYPE_VHCLCREATE:
-                    yw_DebriefVhclCreate(yw, brf, static_cast<World::History::VhclCreate *>(decoder), dtime, lastFrameTimeStamp);
-                    break;
-
-                case World::History::TYPE_POWERST:
-                    if ( lastFrameTimeStamp == brf->LastFrameTimeStamp )
-                    {
-                        decoder->AddScore(&brf->StatsIngame);
-
-                        if ( yw->_GameShell )
-                            SFXEngine::SFXe.startSound(&yw->_GameShell->samples1_info, 14);
-                    }
-                    break;
-
-                case World::History::TYPE_UPGRADE:
-                    if ( lastFrameTimeStamp == brf->LastFrameTimeStamp )
-                    {
-                        decoder->AddScore(&brf->StatsIngame);
-                        yw_DebriefAddTechUpgrade(yw, brf, static_cast<World::History::Upgrade *>(decoder));
-
-                        if ( yw->_GameShell )
-                            SFXEngine::SFXe.startSound(&yw->_GameShell->samples1_info, 14);
-
-                    }
-                    break;
-
-                default:
-                    readLoop = false;
-                    break;
-                }
-            }
-            else
-            {
-                readLoop = false;
+            default:
+                break;
             }
         }
 
-        if ( !moreHistory )
+        if ( reached == events.size() )
         {
             brf->Stage = TBriefengScreen::STAGE_PLAYER_END;
             if ( yw->_gameWasNetGame )

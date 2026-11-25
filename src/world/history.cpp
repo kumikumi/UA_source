@@ -54,7 +54,108 @@ static T Get(const std::string &data, const ViewField &f)
     return v;
 }
 
-bool Derive(NC_STACK_ypaworld *world, const Recording &recording, Common::BlocksStream &out)
+Event Event::Conquest(int32_t x, int32_t y, uint8_t owner)
+{
+    Event e;
+    e.What = CONQUEST;
+    e.SectorX = x;
+    e.SectorY = y;
+    e.Owner = owner;
+    return e;
+}
+
+Event Event::PowerStation(int32_t x, int32_t y, uint8_t owner)
+{
+    Event e = Conquest(x, y, owner);
+    e.What = POWER_STATION;
+    return e;
+}
+
+Event Event::Creation(uint8_t owner, uint8_t mapX, uint8_t mapY)
+{
+    Event e;
+    e.What = CREATION;
+    e.Owner = owner;
+    e.MapX = mapX;
+    e.MapY = mapY;
+    return e;
+}
+
+Event Event::Kill(uint8_t owner, uint8_t killer, bool byViewer, bool ofViewer, bool hostStation,
+                  uint8_t mapX, uint8_t mapY)
+{
+    Event e = Creation(owner, mapX, mapY);
+    e.What = KILL;
+    e.Killer = killer;
+    e.ByViewer = byViewer;
+    e.OfViewer = ofViewer;
+    e.HostStation = hostStation;
+    return e;
+}
+
+Event Event::TechUpgrade(int32_t x, int32_t y, uint8_t owner, uint8_t type,
+                         int32_t vehicle, int32_t weapon, int32_t building)
+{
+    Event e = Conquest(x, y, owner);
+    e.What = TECH_UPGRADE;
+    e.UpgradeType = type;
+    e.UpgradeVehicle = vehicle;
+    e.UpgradeWeapon = weapon;
+    e.UpgradeBuilding = building;
+    return e;
+}
+
+void AddScore(const Event &event, std::array<TPlayerStatus, CVFractionsCount> &stats)
+{
+    uint8_t owner = event.What == Event::KILL ? event.Killer : event.Owner;
+
+    if ( owner >= stats.size() )
+        return;
+
+    TPlayerStatus &s = stats[owner];
+
+    switch ( event.What )
+    {
+    case Event::CONQUEST:
+        s.SectorsTaked++;
+        s.Score++;
+        break;
+
+    case Event::POWER_STATION:
+        s.Power++;
+        s.Score += 100;
+        break;
+
+    case Event::TECH_UPGRADE:
+        s.Upgrades++;
+        s.Score += 500;
+        break;
+
+    case Event::KILL:
+        s.DestroyedUnits++;
+
+        // Most for the player's own kills, and those of one unit the
+        // player was in of another
+        if ( event.ByViewer )
+        {
+            s.DestroyedByUser++;
+            s.Score += event.OfViewer ? 200 : 20;
+        }
+        else
+        {
+            s.Score += 10;
+        }
+
+        if ( event.HostStation )
+            s.Score += 1000;
+        break;
+
+    case Event::CREATION:
+        break;
+    }
+}
+
+bool Derive(NC_STACK_ypaworld *world, const Recording &recording, std::vector<Event> &out)
 {
     const State::Schema &schema = recording.ViewSchema();
     const uint8_t unitKinds[] = {State::KIND_UNIT + BACT_TYPES_BACT, State::KIND_UNIT + BACT_TYPES_TANK,
@@ -78,7 +179,6 @@ bool Derive(NC_STACK_ypaworld *world, const Recording &recording, Common::Blocks
     // A unit's, the same in every class: the view lists the base class's
     // fields first
     const uint8_t anyUnit = State::KIND_UNIT + BACT_TYPES_BACT;
-    ViewField unitVehicle = FindField(schema, anyUnit, "vehicle");
     ViewField unitOwner = FindField(schema, anyUnit, "owner");
     ViewField unitStatus = FindField(schema, anyUnit, "status");
     ViewField unitFlags = FindField(schema, anyUnit, "statusFlags");
@@ -99,7 +199,7 @@ bool Derive(NC_STACK_ypaworld *world, const Recording &recording, Common::Blocks
     uint32_t lastUpgradeTime = 0;
     bool started = false;
 
-    out.Clear();
+    out.clear();
 
     bool ok = recording.ForEachView([&](uint32_t step, const ObjectsVersions &view, const Recording::ChangedObjects &changed)
     {
@@ -109,7 +209,7 @@ bool Derive(NC_STACK_ypaworld *world, const Recording &recording, Common::Blocks
 
         const std::string &worldData = wit->second.Data;
         uint32_t viewerId = Get<uint32_t>(worldData, viewer);
-        std::vector<Common::ByteArray> events;
+        std::vector<Event> events;
 
         if ( !started )
         {
@@ -167,11 +267,11 @@ bool Derive(NC_STACK_ypaworld *world, const Recording &recording, Common::Blocks
                 if ( owner != owners[id] )
                 {
                     int x = id % mapWidth, y = id / mapWidth;
-                    events.push_back(Conq(x, y, owner).MakeByteArray());
+                    events.push_back(Event::Conquest(x, y, owner));
 
                     // A power station then, or lost with its owner in the step
                     if ( purpose == cellArea::PT_POWERSTATION || purposes[id] == cellArea::PT_POWERSTATION )
-                        events.push_back(PowerST(x, y, owner).MakeByteArray());
+                        events.push_back(Event::PowerStation(x, y, owner));
 
                     owners[id] = owner;
                 }
@@ -196,7 +296,7 @@ bool Derive(NC_STACK_ypaworld *world, const Recording &recording, Common::Blocks
                     // missile or a gun
                     if ( kind != State::KIND_UNIT + BACT_TYPES_MISSLE && kind != State::KIND_UNIT + BACT_TYPES_GUN &&
                          Get<uint32_t>(data, unitParent) && status != BACT_STATUS_DEAD )
-                        events.push_back(VhclCreate(owner, Get<uint8_t>(data, unitVehicle), mapX, mapY).MakeByteArray());
+                        events.push_back(Event::Creation(owner, mapX, mapY));
                 }
                 else if ( sit->second != BACT_STATUS_DEAD && status == BACT_STATUS_DEAD )
                 {
@@ -224,19 +324,10 @@ bool Derive(NC_STACK_ypaworld *world, const Recording &recording, Common::Blocks
                             }
                         }
 
-                        uint8_t ownerBits = (killerOwner << 3) | owner;
-
-                        if ( killer == viewerId || (killerFlags & BACT_STFLAG_ISVIEW) )
-                            ownerBits |= 0x80;
-
-                        if ( id == viewerId || (flags & BACT_STFLAG_ISVIEW) )
-                            ownerBits |= 0x40;
-
-                        uint16_t vp = Get<uint8_t>(data, unitVehicle);
-                        if ( kind == State::KIND_UNIT + BACT_TYPES_ROBO )
-                            vp |= 0x8000;
-
-                        events.push_back(VhclKill(ownerBits, vp, mapX, mapY).MakeByteArray());
+                        events.push_back(Event::Kill(owner, killerOwner,
+                                                     killer == viewerId || (killerFlags & BACT_STFLAG_ISVIEW),
+                                                     id == viewerId || (flags & BACT_STFLAG_ISVIEW),
+                                                     kind == State::KIND_UNIT + BACT_TYPES_ROBO, mapX, mapY));
                     }
                 }
 
@@ -259,19 +350,19 @@ bool Derive(NC_STACK_ypaworld *world, const Recording &recording, Common::Blocks
                 if ( sit != view.end() )
                     owner = Get<uint8_t>(sit->second.Data, sectorOwner);
 
-                events.push_back(Upgrade(g.CellId.x, g.CellId.y, owner, g.Type, Get<int32_t>(worldData, upgradeVehicle),
-                                         Get<int32_t>(worldData, upgradeWeapon), Get<int32_t>(worldData, upgradeBuilding)).MakeByteArray());
+                events.push_back(Event::TechUpgrade(g.CellId.x, g.CellId.y, owner, g.Type, Get<int32_t>(worldData, upgradeVehicle),
+                                                    Get<int32_t>(worldData, upgradeWeapon), Get<int32_t>(worldData, upgradeBuilding)));
             }
 
             lastUpgradeTime = upgraded;
         }
 
-        if ( !events.empty() )
-        {
-            out.Write(Frame(Get<int32_t>(worldData, time)).MakeByteArray());
+        uint32_t now = Get<uint32_t>(worldData, time);
 
-            for ( const Common::ByteArray &e : events )
-                out.Write(e);
+        for ( Event &e : events )
+        {
+            e.Time = now;
+            out.push_back(e);
         }
     });
 

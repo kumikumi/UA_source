@@ -260,30 +260,6 @@ inline void StringSetEnd(std::string *str, const std::string &chars)
 }
 
 
-inline uint16_t UL16Byte(const void *dat)
-{
-    return ((uint8_t *)dat)[0] | (((uint8_t *)dat)[1] << 8);
-}
-
-inline uint32_t UL32Byte(const void *dat)
-{
-    return ((uint8_t *)dat)[0] | (((uint8_t *)dat)[1] << 8) | (((uint8_t *)dat)[2] << 16) | (((uint8_t *)dat)[3] << 24);
-}
-
-inline void ByteUL16(void *dat, uint16_t v)
-{
-    ((uint8_t *)dat)[0] = v & 0xFF;
-    ((uint8_t *)dat)[1] = (v >> 8) & 0xFF;
-}
-
-inline void ByteUL32(void *dat, uint32_t v)
-{
-    ((uint8_t *)dat)[0] = v & 0xFF;
-    ((uint8_t *)dat)[1] = (v >> 8) & 0xFF;
-    ((uint8_t *)dat)[2] = (v >> 16) & 0xFF;
-    ((uint8_t *)dat)[3] = (v >> 24) & 0xFF;
-}
-
 template <typename T>
 const std::vector<T> IterateListCopy(std::list<T> &lst)
 {

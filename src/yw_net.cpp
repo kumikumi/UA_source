@@ -2270,7 +2270,7 @@ size_t yw_handleNormMsg(NC_STACK_ypaworld *yw, windp_recvMsg *msg, std::string *
             break;
         }
 
-        yw->ScoreEvent( World::History::Upgrade(gemProt.CellId.x, gemProt.CellId.y, owner, gemProt.Type, lastVhcl, 0, lastBuild) );
+        yw->ScoreEvent( World::History::Event::TechUpgrade(gemProt.CellId.x, gemProt.CellId.y, owner, gemProt.Type, lastVhcl, 0, lastBuild) );
 
         if ( cl.PurposeType != cellArea::PT_TECHUPGRADE )
         {

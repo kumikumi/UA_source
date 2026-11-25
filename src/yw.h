@@ -7,7 +7,6 @@
 #include <string>
 
 #include "types.h"
-#include "memstream.h"
 
 #include "common/plane.h"
 
@@ -1379,11 +1378,12 @@ struct TBriefengScreen
     Common::PlaneBytes OwnMap;
     Common::PlaneBytes TypMap;
     //int _owner;
-    uint32_t LastFrameTimeStamp = 0;
+    uint32_t ReplayedTime = 0;   // The level's game time the replay of its history is at
+    size_t EventsReplayed = 0;  // Of the level's history, counted and drawn
     std::array<World::TPlayerStatus, World::CVFractionsCount> StatsGlobal;
     std::array<World::TPlayerStatus, World::CVFractionsCount> StatsIngame;
     std::string MovieStr;
-    std::vector<World::History::Upgrade> Upgrades;
+    std::vector<World::History::Event> Upgrades;
     
     ~TBriefengScreen()
     {
@@ -1452,7 +1452,8 @@ struct TBriefengScreen
         ZoomFromGate = false;
 
         //_owner = 0;
-        LastFrameTimeStamp = 0;
+        ReplayedTime = 0;
+        EventsReplayed = 0;
 
         StatsGlobal.fill( World::TPlayerStatus() );
         StatsIngame.fill( World::TPlayerStatus() );
@@ -1924,7 +1925,7 @@ public:
     virtual bool NetBroadcastMessage(uamessage_base *data, size_t dataSize, bool garantee);
 
     virtual size_t AdvancedCreateLevel(TLevelLoadRequest *arg);
-    void ScoreEvent(const World::History::Record &arg);
+    void ScoreEvent(const World::History::Event &event);
     virtual void OpenHelpURL(const void *arg);
 
     NC_STACK_ypaworld();
@@ -2596,7 +2597,7 @@ public:
     // History
     // A won level's events, worked out from its recording as it ends, for
     // the debriefing and the score
-    Common::BlocksStream _history;
+    std::vector<World::History::Event> _history;
     
     int32_t _stoudsonWaveVehicleId = 0;
     int32_t _stoudsonCenterVehicleId = 0; // Not used :-/

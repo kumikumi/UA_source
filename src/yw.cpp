@@ -1043,7 +1043,7 @@ void NC_STACK_ypaworld::DamageSectorBuilding(TSectorDamage *arg)
                     else
                         yw_ActivateWunderstein(&cell, cell.PurposeIndex);                  
 
-                    ScoreEvent( World::History::Upgrade(sec.x, sec.y, cell.owner, _techUpgrades[ _upgradeId ].Type, _upgradeVehicleId, _upgradeWeaponId, _upgradeBuildId) );
+                    ScoreEvent( World::History::Event::TechUpgrade(sec.x, sec.y, cell.owner, _techUpgrades[ _upgradeId ].Type, _upgradeVehicleId, _upgradeWeaponId, _upgradeBuildId) );
                 }
             }
             else if ( cell.PurposeType == cellArea::PT_TECHDEACTIVE )
@@ -1964,7 +1964,7 @@ void NC_STACK_ypaworld::DeleteLevel()
 
     // A won level's debriefing and score come from its events, worked out
     // from its recording while the level is still there
-    _history.Clear();
+    _history.clear();
 
     if ( _levelInfo.State == TLevelInfo::STATE_COMPLETED && !recorded.empty() )
     {
@@ -6410,7 +6410,7 @@ void NC_STACK_ypaworld::HandleRoboDestroyed(TRoboDestroyed *arg)
                 else
                     yw_ActivateWunderstein(&cell, cell.PurposeIndex);
                 
-                ScoreEvent( World::History::Upgrade(j, i, cell.owner, _techUpgrades[ _upgradeId ].Type, _upgradeVehicleId, _upgradeWeaponId, _upgradeBuildId) );
+                ScoreEvent( World::History::Event::TechUpgrade(j, i, cell.owner, _techUpgrades[ _upgradeId ].Type, _upgradeVehicleId, _upgradeWeaponId, _upgradeBuildId) );
             }
 
         }
@@ -6539,10 +6539,10 @@ size_t NC_STACK_ypaworld::AdvancedCreateLevel(TLevelLoadRequest *arg)
 // What a network game's score table, which the players see as they play,
 // counts of an event. Single-player levels have their events and scores
 // worked out from their recordings at the end (World::History::Derive).
-void NC_STACK_ypaworld::ScoreEvent(const World::History::Record &arg)
+void NC_STACK_ypaworld::ScoreEvent(const World::History::Event &event)
 {
     if ( _GameShell && _GameShell->isHost )
-        arg.AddScore(&_gameplayStats);
+        World::History::AddScore(event, _gameplayStats);
 }
 
 

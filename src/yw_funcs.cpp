@@ -1747,60 +1747,24 @@ ON_ERR:
 }
 
 
+// Adds the last level's score to the campaign's, once
 void yw_calcPlayerScore(NC_STACK_ypaworld *yw)
 {
     if ( !yw->_gameWasNetGame )
     {
-        int last_time = 0;
+        uint32_t lastTime = 0;
 
-        //yw_f726c_nod *hnode = (yw_f726c_nod *)yw->history->lst.head;
-        auto reader = yw->_history.GetReader();
-        
-        bool run = true;
-        //int tlen = 0;
-        //uint8_t *bf = hnode->bufStart;
-        
-        World::History::Instance HistDecoders;
-
-        while (run && !reader.Eof())
+        for ( const World::History::Event &e : yw->_history )
         {
-            World::History::Record *decoder = HistDecoders[ reader.ReadU8() ];
-            if (decoder)
-            {
-                World::History::FillDecoderBStrm(decoder, &reader);
-                
-                switch(decoder->type)
-                {
-                case World::History::TYPE_FRAME:
-                {
-                    World::History::Frame *frm = static_cast<World::History::Frame *>(decoder);
-                    last_time = frm->TimeStamp;
-                }
-                break;
-
-                case World::History::TYPE_CONQ:
-                case World::History::TYPE_VHCLKILL:
-                case World::History::TYPE_VHCLCREATE:
-                case World::History::TYPE_POWERST:
-                case World::History::TYPE_UPGRADE:
-                    decoder->AddScore(&yw->_playersStats);
-                    break;
-
-                default:
-                    run = 0;
-                    break;
-                }
-            }
-            else
-            {
-                run = 0;
-            }
+            World::History::AddScore(e, yw->_playersStats);
+            lastTime = e.Time;
         }
 
         for (int i = 0; i < 8; i++)
-            yw->_playersStats[i].ElapsedTime += last_time;
-
+            yw->_playersStats[i].ElapsedTime += lastTime;
     }
+
+    yw->_history.clear();
 }
 
 void NC_STACK_ypaworld::UpdateCampaignScreen()

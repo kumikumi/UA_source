@@ -243,7 +243,7 @@ int NC_STACK_ypaworld::LevelCommonLoader(TLevelDescription *mapp, int levelID)
         _profileTotal[i] = 0;
     }
 
-    _history.Clear();
+    _history.clear();
 
     audio_volume = SFXEngine::SFXe.getMasterVolume();
 
@@ -776,10 +776,10 @@ void NC_STACK_ypaworld::CellSetOwner(cellArea *cell, uint8_t owner)
 {
     if ( cell->owner != owner )
     {
-        ScoreEvent( World::History::Conq(cell->CellId.x, cell->CellId.y, owner) );
+        ScoreEvent( World::History::Event::Conquest(cell->CellId.x, cell->CellId.y, owner) );
 
         if ( cell->PurposeType == cellArea::PT_POWERSTATION )
-            ScoreEvent( World::History::PowerST(cell->CellId.x, cell->CellId.y, owner) );
+            ScoreEvent( World::History::Event::PowerStation(cell->CellId.x, cell->CellId.y, owner) );
 
         _countSectorsPerOwner[cell->owner]--;
         _countSectorsPerOwner[owner]++;
@@ -4176,19 +4176,10 @@ void NC_STACK_ypaworld::ScoreKill(NC_STACK_ypabact *bact)
 {
     if ( bact->_killer )
     {
-        uint8_t owners = (bact->_killer->_owner << 3) | bact->_owner;
-
-        if ( bact->_killer->getBACT_viewer() || (bact->_killer->_status_flg & BACT_STFLAG_ISVIEW) )
-            owners |= 0x80;
-
-        if ( bact->getBACT_viewer() || (bact->_status_flg & BACT_STFLAG_ISVIEW) )
-            owners |= 0x40;
-
-        uint16_t vp = bact->_vehicleID;
-
-        if ( bact->_bact_type == BACT_TYPES_ROBO )
-            vp |= 0x8000;
-
-        ScoreEvent( World::History::VhclKill(owners, vp, bact->_position.x * 256.0 / bact->_wrldSize.x, bact->_position.z * 256.0 / bact->_wrldSize.y) );
+        ScoreEvent( World::History::Event::Kill(bact->_owner, bact->_killer->_owner,
+                                                bact->_killer->getBACT_viewer() || (bact->_killer->_status_flg & BACT_STFLAG_ISVIEW),
+                                                bact->getBACT_viewer() || (bact->_status_flg & BACT_STFLAG_ISVIEW),
+                                                bact->_bact_type == BACT_TYPES_ROBO,
+                                                bact->_position.x * 256.0 / bact->_wrldSize.x, bact->_position.z * 256.0 / bact->_wrldSize.y) );
     }
 }
