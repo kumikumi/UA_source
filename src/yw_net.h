@@ -4,6 +4,11 @@
 #include "yw.h"
 
 
+// Players meet only others whose game says the same here (unless
+// net.versioncheck is off): change it whenever a message below, or what a
+// game does with one, changes
+constexpr const char *NET_VERSION = "UA_source net 2026-11-27";
+
 enum RECVMSG
 {
     RECVMSG_NONE   = 0,

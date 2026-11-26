@@ -9,6 +9,7 @@
 #include "font.h"
 #include "button.h"
 #include "windp.h"
+#include "yw_net.h"
 #include "env.h"
 #include "loaders.h"
 #include "system/inivals.h"
@@ -378,7 +379,7 @@ int yw_InitNetwork(NC_STACK_ypaworld *yw)
 
     yw->_netTcpAddress.clear();
 
-    yw->_netDriver->SetVersion(yw->_buildDate);
+    yw->_netDriver->SetVersion(NET_VERSION);
 
     return 1;
 }
