@@ -1020,6 +1020,17 @@ bool Recorder::SaveTo(NC_STACK_ypaworld *world, const std::string &path)
     return true;
 }
 
+// How many of the keyframes in the file are at least minSteps before the
+// last step: the last of them is where Rewind goes back to
+size_t Recorder::KeyframesBack(uint32_t minSteps) const
+{
+    size_t n = _keyframes.size();
+    while ( n > 0 && _keyframes[n - 1].Step + minSteps > _step )
+        n--;
+
+    return n;
+}
+
 bool Recorder::RewindTarget(uint32_t minSteps, uint32_t &step) const
 {
     // The keyframe being packed is one too
@@ -1029,16 +1040,12 @@ bool Recorder::RewindTarget(uint32_t minSteps, uint32_t &step) const
         return true;
     }
 
-    for (size_t n = _keyframes.size(); n > 0; n--)
-    {
-        if ( _keyframes[n - 1].Step + minSteps <= _step )
-        {
-            step = _keyframes[n - 1].Step;
-            return true;
-        }
-    }
+    size_t n = KeyframesBack(minSteps);
 
-    return false;
+    if ( n > 0 )
+        step = _keyframes[n - 1].Step;
+
+    return n > 0;
 }
 
 bool Recorder::KeyframeBefore(uint32_t step, uint32_t &keyframe) const
@@ -1082,9 +1089,7 @@ bool Recorder::Rewind(uint32_t minSteps, State::Image &view, State::Image &inter
     Cut();
     PackKeyframe(SIZE_MAX);
 
-    size_t n = _keyframes.size();
-    while ( n > 0 && _keyframes[n - 1].Step + minSteps > _step )
-        n--;
+    size_t n = KeyframesBack(minSteps);
 
     if ( n == 0 )
         return false;

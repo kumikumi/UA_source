@@ -883,8 +883,7 @@ void UserData::CreateNewProfile()
 
         p_YW->_levelInfo.JodieFoster.fill(0);
 
-        sgmSaveExist = 0;
-        continueLevel = -1;
+        LookForSavedGamesAgain();
 
         disk_button->HideScreen();
 
@@ -1986,8 +1985,7 @@ printf("%s, %d\n",__FILE__, __LINE__);
 
 
         diskScreenMode = 0;
-        sgmSaveExist = 0;
-        continueLevel = -1;
+        LookForSavedGamesAgain();
 
         disk_button->HideScreen();
 
@@ -2377,7 +2375,6 @@ void UserData::GameShellUiHandleInput()
             {
             case 1:
             {
-                sgmSaveExist = 0;
                 p_YW->_isNetGame = false;
 
                 sub_bar_button->HideScreen();
@@ -2428,7 +2425,6 @@ void UserData::GameShellUiHandleInput()
             {
             case 1:
             {
-                sgmSaveExist = 0;
                 p_YW->_isNetGame = false;
                 sub_bar_button->HideScreen();
                 envAction.action = EnvAction::ACTION_LOAD;
@@ -2579,7 +2575,6 @@ void UserData::GameShellUiHandleInput()
 
         case 1019:
         {
-            sgmSaveExist = 0;
             p_YW->_isNetGame = false;
 
             sub_bar_button->HideScreen();
@@ -4818,9 +4813,17 @@ std::string UserData::SessionPath(const std::string &username)
     return fmt::sprintf("save:%s/play.rec", username);
 }
 
+// The saved game and the level left unfinished are looked for again: the
+// shell opened anew, or the profile changed
+void UserData::LookForSavedGamesAgain()
+{
+    sgmSaveExist = 0;
+    continueLevel = -1;
+}
+
 // The campaign's level whose recording ends unfinished, as when the game was
 // quit while it was played, and which can still be played: 0 when there's
-// none. Looked for once, until the shell opens again or the profile changes.
+// none. Looked for once, until LookForSavedGamesAgain.
 int UserData::UnfinishedLevel()
 {
     if ( continueLevel >= 0 )

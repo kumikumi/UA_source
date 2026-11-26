@@ -228,6 +228,7 @@ protected:
     void MakeKeyframe(NC_STACK_ypaworld *world);
     void PackKeyframe(size_t bytes);
     void Cut();
+    size_t KeyframesBack(uint32_t minSteps) const;
 
     std::unique_ptr<FSMgr::FileHandle> _file;
     std::string _path;

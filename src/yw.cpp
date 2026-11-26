@@ -607,14 +607,13 @@ void NC_STACK_ypaworld::AddFrame()
     if ( !_frameMaker )
         _frameMaker.reset(new World::FrameMaker(World::State::MakeSchema(this, World::State::PART_VIEW)));
 
-    _frames.Keep(CanRewind() ? SIZE_MAX : 2);
-
     World::Frame frame;
     _frameMaker->Make(this, _framesElapsed, _frames.Empty() ? NULL : &_frames.Last(), frame);
     _frames.Add(std::move(frame));
 
-    if ( CanRewind() )
-        _frames.DropBefore(FramesKeptFrom());
+    // Kept: as far back as going back needs, else the two drawn between
+    uint32_t step = _frames.Last().Step;
+    _frames.DropBefore(CanRewind() ? FramesKeptFrom() : (step > 0 ? step - 1 : 0));
 
     // What was drawn of the units gone from the last two frames goes with
     // them
@@ -5164,8 +5163,7 @@ bool NC_STACK_ypaworld::OpenGameShell()
         return false;
     }
 
-    _GameShell->sgmSaveExist = 0;
-    _GameShell->continueLevel = -1;
+    _GameShell->LookForSavedGamesAgain();
     _GameShell->confFirstKey = true;
     _GameShell->p_YW->_upScreenBorder = 0;
     _GameShell->keyCatchMode = false;

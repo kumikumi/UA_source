@@ -412,23 +412,12 @@ void FrameMaker::Make(NC_STACK_ypaworld *world, uint32_t step, const Frame *befo
 
 // Frames kept
 
-void Frames::Keep(size_t keep)
-{
-    _keep = std::max(keep, (size_t)2);
-
-    while ( _frames.size() > _keep )
-        _frames.pop_front();
-}
-
 void Frames::Add(Frame &&frame)
 {
     if ( !_frames.empty() && frame.Step != _frames.back().Step + 1 )
         _frames.clear();
 
     _frames.push_back(std::move(frame));
-
-    while ( _frames.size() > _keep )
-        _frames.pop_front();
 }
 
 bool Frames::Prepend(std::vector<Frame> &&frames)

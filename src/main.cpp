@@ -1042,21 +1042,14 @@ static std::string TemporaryRecordingPath()
     return std::string(dir ? dir : "/tmp") + "/ua_source_level.rec";
 }
 
-// Whether the file is a recording, as saved games are
-static bool IsRecordingFile(const std::string &path)
-{
-    FSMgr::FileHandle file(path, "rb");
-    char head[6];
-
-    return file.OK() && file.read(head, 6) == 6 && !memcmp(head, "UAREC", 6);
-}
-
 // Whether the level or saved game the command line names is there
 static bool CheckDirectStart()
 {
     if ( !directStart.SaveFile.empty() )
     {
-        if ( !IsRecordingFile(directStart.SaveFile) )
+        World::Recording recording;
+
+        if ( !recording.Open(directStart.SaveFile) )
         {
             System::CmdLine::PrintError(directStart.SaveFile + " is no saved game or recording");
             return false;

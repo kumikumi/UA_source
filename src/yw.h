@@ -841,6 +841,7 @@ public:
     static std::string SessionPath(const std::string &username);
     int UnfinishedLevel();
     void ContinueGame();
+    void LookForSavedGamesAgain();
     
     bool IsWindowedFlag()
     {

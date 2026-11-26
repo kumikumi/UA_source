@@ -150,11 +150,6 @@ protected:
 class Frames
 {
 public:
-    // How many frames are kept, the last ones: at least the two drawn
-    // between
-    explicit Frames(size_t keep = 2) : _keep(std::max(keep, (size_t)2)) {}
-    void Keep(size_t keep);
-
     void Clear() { _frames.clear(); }
 
     // The frame after the last; one that doesn't follow it starts the
@@ -176,7 +171,6 @@ public:
 
 protected:
     std::deque<Frame> _frames;
-    size_t _keep;
 };
 
 // The frames of a recording's steps from a keyframe up to a step, made a

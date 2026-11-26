@@ -2821,8 +2821,7 @@ void UserData::clear()
     for(TInputConf &cfg : InputConfig)
         cfg = TInputConf();
 
-    sgmSaveExist = 0;
-    continueLevel = -1;
+    LookForSavedGamesAgain();
     shelltrack = 0;
     missiontrack = 0;
     loadingtrack = 0;
