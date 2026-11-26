@@ -227,6 +227,7 @@ class Recording:
         if version != 3:
             sys.exit("%s: a recording of format %d, not 3" % (path, version))
         self.keyframes, self.blocks, self.packed = [], [], collections.Counter()
+        self.end = None  # How the level was left, when the recording says
         total, p = os.path.getsize(path), 8
         while p + 12 <= total:
             self.file.seek(p)
@@ -255,6 +256,9 @@ class Recording:
             elif tag == "STEP":
                 first, steps = struct.unpack("<II", self.file.read(8))
                 self.blocks.append((first, steps, at, size))
+            elif tag == "END ":
+                self.end, = struct.unpack("<B", self.file.read(1))
+                break
         if not self.keyframes:
             sys.exit("%s: no keyframe" % path)
 
@@ -362,6 +366,9 @@ def summary(rec):
     print("%d keyframes: %s" % (len(keys), " ".join(map(str, shown))))
     print("packed: steps %d bytes, keyframes %d bytes (%.1f%%)" % (rec.packed["STEP"], rec.packed["KEYF"],
                                                                    100.0 * rec.packed["KEYF"] / max(total, 1)))
+    ends = {0: "left unfinished", 1: "won", 2: "lost: the player's host station destroyed"}
+    print("the level was " + ends.get(rec.end, "left %d" % rec.end) if rec.end is not None else
+          "no end: a saved game, still being recorded or cut short")
     units = collections.Counter(kind_name(k) for k, _ in view if k >= 16)
     print("at the end: " + ", ".join("%d %s" % (c, u) for u, c in sorted(units.items())))
     print("unpacked bytes a step, most first:")

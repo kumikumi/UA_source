@@ -62,7 +62,8 @@ std::array<std::string, TITLE_MAX> DefaultStrings::Titles = Common::ArrayInit<st
     {TITLE_PROFILE, "PLAYER"},
     {TITLE_LOCALE, "LOCALE"},
     {TITLE_HELP, "HELP"},
-    {TITLE_QUIT, "QUIT"}
+    {TITLE_QUIT, "QUIT"},
+    {TITLE_CONTINUE, "Continue"}
 });
 
 
@@ -357,6 +358,7 @@ std::array<std::string, TIP_MAX> DefaultStrings::Tooltips = Common::ArrayInit<st
     {TIP_MENU_EXITDEBRIEF, "EXIT DEBRIEFING"},
     {TIP_MENU_GOTOLOADSAVE, "GOTO LOAD/SAVE SCREEN"},
     {TIP_MENU_SELRENDERER, "Select a Renderer in the Drop-Down List"},
+    {TIP_MENU_CONTINUE, "Continue the Level You Left Unfinished"},
     {TIP_MENU_SENDMSG, "SEND THIS MESSAGE"},
     {TIP_MENU_ALTJOY, "USE ALTERNATE JOYSTICK MODEL"},
     {TIP_MOUSECAPTURED, "880 == MOUSE CONTROL MODE ACTIVE (PRESS RMB TO DEACTIVATE)"},

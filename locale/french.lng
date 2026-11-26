@@ -87,7 +87,7 @@
 86  = Langues
 87  = Aide
 88  = Quitter
-89  = <>
+89  = Continuer
 90  = <>
 91  = <>
 92  = <>
@@ -793,7 +793,7 @@
 880  = Mode Commande souris activé : Cliquez sur le bouton droit de la souris pour le désactiver
 881  = ERREUR : Limite des unités atteinte.
 882  = Choisissez un moteur de rendu dans la liste déroulante
-883  = <>
+883  = Reprendre le niveau laissé inachevé
 884  = <>
 885  = Passer en mode fenêtré
 886  = <>

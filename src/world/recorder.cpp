@@ -1107,7 +1107,7 @@ void Recorder::PackKeyframe(size_t bytes)
     _keyRaw.clear();
 }
 
-std::string Recorder::Stop(NC_STACK_ypaworld *world)
+std::string Recorder::Stop(NC_STACK_ypaworld *world, RecordingEnd end)
 {
     if ( !_file )
         return std::string();
@@ -1120,6 +1120,10 @@ std::string Recorder::Stop(NC_STACK_ypaworld *world)
         MakeKeyframe(world);
         PackKeyframe(SIZE_MAX);
     }
+
+    std::string how;
+    Put8(how, end);
+    WriteChunk("END ", std::string(), how);
 
     _file.reset();
     Reset();
@@ -1352,6 +1356,15 @@ bool Recording::Open(const std::string &path)
             at.End = pos;
             _keyframes.push_back(at);
             _lastStep = step;
+        }
+        else if ( tag == "END " )
+        {
+            uint8_t end;
+            if ( size < 1 || file->read(&end, 1) != 1 )
+                break;
+
+            _end = (RecordingEnd)end;
+            break;
         }
         else if ( tag == "STEP" )
         {

@@ -87,7 +87,7 @@
 86  = <OBSOLETE>
 87  = Hilfe
 88  = Urban Assault beenden
-89  = <>
+89  = Weiterspielen
 90  = <>
 91  = <>
 92  = <>
@@ -793,7 +793,7 @@
 880  = Maus-Steuerungsmodus aktiviert: Klicken Sie die rechte Maustaste, um den Modus zu deaktivieren
 881  = FEHLER: Einheiten-Limit erreicht.
 882  = Wählen Sie einen Renderer aus dem Kombinationsfeld
-883  = <>
+883  = Zuletzt nicht beendeten Level fortsetzen
 884  = <>
 885  = Wechseln Sie in den Fenstermodus
 886  = <>

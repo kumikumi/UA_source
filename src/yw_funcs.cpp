@@ -2822,6 +2822,7 @@ void UserData::clear()
         cfg = TInputConf();
 
     sgmSaveExist = 0;
+    continueLevel = -1;
     shelltrack = 0;
     missiontrack = 0;
     loadingtrack = 0;

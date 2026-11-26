@@ -2079,8 +2079,16 @@ void NC_STACK_ypaworld::DeleteLevel()
     if ( _rewinding )
         EndRewind();
 
-    // With the end's state, before anything of the level goes
-    std::string recorded = _recorder.Stop(this);
+    // With the end's state, before anything of the level goes, and how it
+    // was left
+    World::RecordingEnd end = World::END_UNFINISHED;
+
+    if ( _levelInfo.State == TLevelInfo::STATE_COMPLETED )
+        end = World::END_WON;
+    else if ( _userRobo && _userRobo->_status == BACT_STATUS_DEAD )
+        end = World::END_LOST;
+
+    std::string recorded = _recorder.Stop(this, end);
 
     EnableLevelPasses();
 
@@ -2817,8 +2825,16 @@ bool NC_STACK_ypaworld::CreateTitleControls(){
         btn_64arg.downCode = UIWidgets::MAIN_MENU_EVENT_IDS::ALL_DOWN;
         btn_64arg.button_id = UIWidgets::MAIN_MENU_WIDGET_IDS::BTN_MULTIPLAYER;
 
+        // Below the two, shown only when there's a level to go on with
         if ( _GameShell->titel_button->Add(&btn_64arg) )
         {
+            btn_64arg.ypos = _screenSize.y * 0.3708333333333334;
+            btn_64arg.caption = Locale::Text::Title(Locale::TITLE_CONTINUE);
+            btn_64arg.caption2.clear();
+            btn_64arg.upCode = UIWidgets::MAIN_MENU_EVENT_IDS::BTN_CONTINUE_UP;
+            btn_64arg.button_id = UIWidgets::MAIN_MENU_WIDGET_IDS::BTN_CONTINUE;
+            _GameShell->titel_button->Add(&btn_64arg);
+
             btn_64arg.xpos = _screenSize.x * 0.3328125;
             btn_64arg.ypos = _screenSize.y * 0.4333333333333334;
             btn_64arg.width = _screenSize.x / 3;
@@ -5145,6 +5161,7 @@ bool NC_STACK_ypaworld::OpenGameShell()
     }
 
     _GameShell->sgmSaveExist = 0;
+    _GameShell->continueLevel = -1;
     _GameShell->confFirstKey = true;
     _GameShell->p_YW->_upScreenBorder = 0;
     _GameShell->keyCatchMode = false;
@@ -6001,7 +6018,7 @@ size_t NC_STACK_ypaworld::BeamUnitThroughGate(NC_STACK_ypabact *bact)
 // profile: what a saved game copies, and what Restart starts again from
 std::string NC_STACK_ypaworld::SessionPath() const
 {
-    return fmt::sprintf("save:%s/play.rec", _GameShell->UserName);
+    return UserData::SessionPath(_GameShell->UserName);
 }
 
 // Where a won level's end is kept, to play the level again from there

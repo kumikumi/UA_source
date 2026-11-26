@@ -69,8 +69,8 @@ namespace UIWidgets {
         BTN_LANGUAGE = 1008,
         BTN_MULTIPLAYER = 1016,
         BTN_HELP = 1017,
-        BTN_SINGLE_PLAYER = 1018
-        
+        BTN_SINGLE_PLAYER = 1018,
+        BTN_CONTINUE = 1009
     };
     enum MAIN_MENU_EVENT_IDS{
         ALL_DOWN = 1251,
@@ -81,7 +81,8 @@ namespace UIWidgets {
         BTN_SAVE_LOAD_UP = 1001,
         BTN_LANGUAGE_UP = 1011,
         BTN_HELP_UP = 1025,
-        BTN_QUIT_UP = 1013
+        BTN_QUIT_UP = 1013,
+        BTN_CONTINUE_UP = 1027
     };
     enum NETWORK_MENU_WIDGET_IDS{
         TXT_MENU_TITLE = 1204,
@@ -446,7 +447,8 @@ struct EnvAction
         ACTION_QUIT     = 1,
         ACTION_PLAY     = 2,
         ACTION_LOAD     = 3,
-        ACTION_NETPLAY  = 4
+        ACTION_NETPLAY  = 4,
+        ACTION_CONTINUE = 5  // The level left unfinished (UnfinishedLevel)
     };
 
     int8_t action = ACTION_NONE;
@@ -737,6 +739,9 @@ public:
        1 - exist
        2 - not exist, but checked*/
     int8_t sgmSaveExist = 0; 
+
+    // The level UnfinishedLevel found, 0 for none, -1 not looked for yet
+    int continueLevel = -1;
     
     int16_t shelltrack;
     int16_t missiontrack;
@@ -832,6 +837,12 @@ public:
     // saved
     static std::string SaveGamePath(const std::string &username);
     static bool HasSaveGame(const std::string &username);
+
+    // The recording of the level the profile plays in the campaign, and
+    // that level when it was left unfinished: Continue goes on with it
+    static std::string SessionPath(const std::string &username);
+    int UnfinishedLevel();
+    void ContinueGame();
     
     bool IsWindowedFlag()
     {

@@ -94,6 +94,7 @@ enum TITLE
     TITLE_LOCALE   = 6,
     TITLE_HELP     = 7,
     TITLE_QUIT     = 8,
+    TITLE_CONTINUE = 9,
     
     TITLE_MAX
 };
@@ -386,6 +387,7 @@ enum TIP
     
     TIP_UNITLIMIT           = 81,
     TIP_MENU_SELRENDERER    = 82, // Was the 3D device, 75
+    TIP_MENU_CONTINUE       = 83,
     
     TIP_MENU_WINDOWED       = 85,
     

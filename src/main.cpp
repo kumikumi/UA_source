@@ -404,11 +404,16 @@ int ProcessMenuFrame()
         GameScreenMode = GAME_SCREEN_MODE_GAME;
         Input::Engine.QueryInput(&input_states);
     }
-    else if ( userdata.envAction.action == EnvAction::ACTION_LOAD )
+    else if ( userdata.envAction.action == EnvAction::ACTION_LOAD || userdata.envAction.action == EnvAction::ACTION_CONTINUE )
     {
         GameScreenMode = GAME_SCREEN_MODE_UNKNOWN;
 
         const TLevelInfo &levelInfo = ypaworld->GetLevelInfo();
+
+        // The saved game, or the level left unfinished, whose recording
+        // goes on
+        std::string file = userdata.envAction.action == EnvAction::ACTION_LOAD ? UserData::SaveGamePath(userdata.UserName)
+                                                                                : UserData::SessionPath(userdata.UserName);
 
         userdata.SaveSettings();
         ypaworld->CloseGameShell();
@@ -416,7 +421,7 @@ int ProcessMenuFrame()
         if ( !userdata.SaveBuildProtoState() )
             return 0;
 
-        if ( !ypaworld->LoadGame( UserData::SaveGamePath(userdata.UserName) ) )
+        if ( !ypaworld->LoadGame(file) )
         {
             ypa_log_out("Error while loading level (level %d, User %s\n", levelInfo.LevelID, userdata.UserName.c_str());
 

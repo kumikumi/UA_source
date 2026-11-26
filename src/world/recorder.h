@@ -54,6 +54,15 @@ struct KeyframeAt
 
 class Recording;
 
+// How a level was left, as the end of its recording says
+enum RecordingEnd : uint8_t
+{
+    END_UNFINISHED = 0, // Gone back to the level map, or the game quit: it
+                        // can go on (Continue)
+    END_WON = 1,
+    END_LOST = 2,       // The player's host station was destroyed
+};
+
 // Records a level as it is played (--record FILE): keyframes, each the whole
 // state of the level after a step (World::State: the view and the internal
 // part), and between them what each step changed of the view, as the game
@@ -83,9 +92,12 @@ class Recording;
 //           ...  what changed of the view since the step before
 //           u16  messages shown, each i32 message id, i16 priority, u32
 //                unit id (0 for none), u16 length and the text
+//   END   (with a space) u8 how the level was left (RecordingEnd)
 //
 // INFO, SCHV and SCHI come first, then keyframes with the steps between
-// them: KEYF, STEP, KEYF, STEP ... KEYF.
+// them: KEYF, STEP, KEYF, STEP ... KEYF, and END when the level was left.
+// A saved game, a recording still being made and one cut short have no
+// END: they're unfinished.
 //
 // What changed: u32 objects, each u8 kind, u32 id and u8 what:
 //   0  gone
@@ -141,9 +153,10 @@ public:
     // A message the game shows
     void Message(const TInfoMessage &msg);
 
-    // Ends the recording with a keyframe of the level as it is now, and
-    // closes the file. Its path, or empty when nothing was recorded.
-    std::string Stop(NC_STACK_ypaworld *world);
+    // Ends the recording with a keyframe of the level as it is now and how
+    // it was left, and closes the file. Its path, or empty when nothing was
+    // recorded.
+    std::string Stop(NC_STACK_ypaworld *world, RecordingEnd end);
 
     // A saved game: a keyframe of the level as it is now, and the recording
     // so far copied to path. Recording goes on.
@@ -269,6 +282,9 @@ public:
 
     const std::vector<KeyframeAt> &Keyframes() const { return _keyframes; }
 
+    // How the level was left: unfinished when the recording doesn't say
+    RecordingEnd End() const { return _end; }
+
     // The keyframe at that step, or the latest before it; NULL when there's
     // none
     const KeyframeAt *KeyframeAtOrBefore(uint32_t step) const;
@@ -302,6 +318,7 @@ protected:
     std::vector<KeyframeAt> _keyframes;
     std::vector<Block> _blocks;
     uint32_t _lastStep = 0;
+    RecordingEnd _end = END_UNFINISHED;
 };
 
 // Goes through a recording's views a step at a time, from a keyframe on

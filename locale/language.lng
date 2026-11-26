@@ -87,7 +87,7 @@
 86  = <OBSOLETE>
 87  = Help
 88  = Exit
-89  = <>
+89  = Continue
 90  = <>
 91  = <>
 92  = <>
@@ -793,7 +793,7 @@
 880  = Mouse Control Mode Activated: Click Right Mouse Button to Deactivate
 881  = ERROR: Unit limit reached.
 882  = Select a Renderer in the Drop-Down List
-883  = <>
+883  = Continue the Level You Left Unfinished
 884  = <>
 885  = Switch to windowed mode
 886  = <>

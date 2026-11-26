@@ -884,6 +884,7 @@ void UserData::CreateNewProfile()
         p_YW->_levelInfo.JodieFoster.fill(0);
 
         sgmSaveExist = 0;
+        continueLevel = -1;
 
         disk_button->HideScreen();
 
@@ -1234,6 +1235,10 @@ void UserData::ShowToolTip(int id)
     case 1167:
     case 1218:
         p_YW->SetShowingTooltip(Locale::TIP_MENU_HELP);
+        break;
+
+    case UIWidgets::MAIN_MENU_WIDGET_IDS::BTN_CONTINUE:
+        p_YW->SetShowingTooltip(Locale::TIP_MENU_CONTINUE);
         break;
 
     case UIWidgets::MAIN_MENU_WIDGET_IDS::BTN_SINGLE_PLAYER:
@@ -1982,6 +1987,7 @@ printf("%s, %d\n",__FILE__, __LINE__);
 
         diskScreenMode = 0;
         sgmSaveExist = 0;
+        continueLevel = -1;
 
         disk_button->HideScreen();
 
@@ -2232,6 +2238,8 @@ void UserData::GameShellUiHandleInput()
     titel_button->Disable(&enableState);
     enableState.butID = UIWidgets::MAIN_MENU_WIDGET_IDS::BTN_MULTIPLAYER;
     titel_button->Disable(&enableState);
+    enableState.butID = UIWidgets::MAIN_MENU_WIDGET_IDS::BTN_CONTINUE;
+    titel_button->Disable(&enableState);
 
     NC_STACK_button::WidgetPlacement placement;
     placement.ypos = -1;
@@ -2323,6 +2331,12 @@ void UserData::GameShellUiHandleInput()
 
         enableState.butID = UIWidgets::MAIN_MENU_WIDGET_IDS::BTN_MULTIPLAYER;
         titel_button->Enable(&enableState);
+
+        if ( UnfinishedLevel() )
+        {
+            enableState.butID = UIWidgets::MAIN_MENU_WIDGET_IDS::BTN_CONTINUE;
+            titel_button->Enable(&enableState);
+        }
     }
     else if ( EnvMode == ENVMODE_SINGLEPLAY || EnvMode == ENVMODE_TUTORIAL )
     {
@@ -2486,6 +2500,10 @@ void UserData::GameShellUiHandleInput()
         else if ( r.code == UIWidgets::MAIN_MENU_EVENT_IDS::BTN_MULTIPLAYER_UP )
         {
             GameShellUiOpenNetwork();
+        }
+        else if ( r.code == UIWidgets::MAIN_MENU_EVENT_IDS::BTN_CONTINUE_UP )
+        {
+            ContinueGame();
         }
         else if ( r.code == UIWidgets::MAIN_MENU_EVENT_IDS::BTN_SINGLE_PLAYER_UP )
         {
@@ -4792,5 +4810,48 @@ std::string UserData::SaveGamePath(const std::string &username)
 bool UserData::HasSaveGame(const std::string &username)
 {
     return uaFileExist( SaveGamePath(username) );
+}
+
+std::string UserData::SessionPath(const std::string &username)
+{
+    return fmt::sprintf("save:%s/play.rec", username);
+}
+
+// The campaign's level whose recording ends unfinished, as when the game was
+// quit while it was played, and which can still be played: 0 when there's
+// none. Looked for once, until the shell opens again or the profile changes.
+int UserData::UnfinishedLevel()
+{
+    if ( continueLevel >= 0 )
+        return continueLevel;
+
+    continueLevel = 0;
+
+    std::string path = SessionPath(UserName);
+    World::Recording recording;
+
+    if ( !uaFileExist(path) || !recording.Open(path) || recording.End() != World::END_UNFINISHED )
+        return 0;
+
+    const auto &regions = p_YW->_globalMapRegions.MapRegions;
+    int level = recording.Level();
+
+    if ( level > 0 && level < (int)regions.size() &&
+         (regions[level].Status == TMapRegionInfo::STATUS_ENABLED || regions[level].Status == TMapRegionInfo::STATUS_COMPLETED) )
+        continueLevel = level;
+
+    return continueLevel;
+}
+
+// Goes on with the level left unfinished, from its recording's last
+// keyframe
+void UserData::ContinueGame()
+{
+    titel_button->HideScreen();
+    p_YW->_isNetGame = false;
+
+    // Back from the level, the level map
+    EnvMode = ENVMODE_SINGLEPLAY;
+    envAction.action = EnvAction::ACTION_CONTINUE;
 }
 
