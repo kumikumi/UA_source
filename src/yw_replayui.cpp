@@ -27,8 +27,7 @@ static std::string FactionName(uint8_t owner)
     }
 }
 
-// A box filled with the pen's colour, in pixels from the top left
-static void FillBox(const NC_STACK_ypaworld *yw, int x, int y, int w, int h)
+void FillScreenBox(const NC_STACK_ypaworld *yw, int x, int y, int w, int h)
 {
     int cx = yw->_screenSize.x / 2;
     int cy = yw->_screenSize.y / 2;
@@ -470,12 +469,12 @@ void ReplayFactionWindow::DrawExtras(NC_STACK_ypaworld *yw)
         int filled = (int)(bar.W * bar.Fill + 0.5);
 
         GFX::Engine.SetPen(dark);
-        FillBox(yw, bar.X, bar.Y, bar.W, bar.H);
+        FillScreenBox(yw, bar.X, bar.Y, bar.W, bar.H);
 
         if ( filled > 0 )
         {
             GFX::Engine.SetPen(color);
-            FillBox(yw, bar.X, bar.Y, filled, bar.H);
+            FillScreenBox(yw, bar.X, bar.Y, filled, bar.H);
         }
     }
 }

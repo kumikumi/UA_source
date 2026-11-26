@@ -685,16 +685,6 @@ void NC_STACK_ypaworld::HandleReplayInput(TInputState *inpt)
         FlyReplayCamera(inpt);
 }
 
-// A box filled with the pen's colour, in pixels from the top left
-static void FillScreenBox(const NC_STACK_ypaworld *yw, int x, int y, int w, int h)
-{
-    int cx = yw->_screenSize.x / 2;
-    int cy = yw->_screenSize.y / 2;
-
-    for (int row = y; row < y + h; row++)
-        GFX::Engine.DrawLineCentered(Common::Line(x - cx, row - cy, x + w - 1 - cx, row - cy));
-}
-
 // Text from a point on, in the timeline's font
 static void ReplayText(NC_STACK_ypaworld *yw, CmdStream *cmds, int x, int y, int width, int flags, const std::string &text)
 {

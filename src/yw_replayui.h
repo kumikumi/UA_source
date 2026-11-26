@@ -15,6 +15,9 @@
 class NC_STACK_ypaworld;
 struct TInputState;
 
+// A box filled with the pen's colour, in pixels from the top left
+void FillScreenBox(const NC_STACK_ypaworld *yw, int x, int y, int w, int h);
+
 // How the replay viewer looks at the level (yw_replay.cpp)
 struct ReplayCamera
 {
