@@ -855,7 +855,7 @@ void NC_STACK_ypaworld::DrawReplayWindows()
 }
 
 // The HUD of the unit looked from, as the game shows the player's: none in
-// a host station, and a blinking line once it's gone
+// a host station or a missile, and a blinking line once it's gone
 void NC_STACK_ypaworld::DrawReplayHud(const World::Frame &frame)
 {
     uint32_t viewed = ReplayViewedUnit(frame);
@@ -865,9 +865,11 @@ void NC_STACK_ypaworld::DrawReplayHud(const World::Frame &frame)
     CmdStream buf;
     buf.reserve(1024);
 
-    // Flown freely, hidden, or gone back to before it was made: nothing to
-    // show of it
-    if ( !viewed || !_replayHudShown || (!unit && (frame.Units.empty() || viewed > frame.Units.back().Id)) )
+    // Flown freely, hidden, a missile as the game shows nothing of, or gone
+    // back to before it was made: nothing to show of it
+    bool shown = viewed && _replayHudShown && !(unit && unit->Type == BACT_TYPES_MISSLE);
+
+    if ( !shown || (!unit && (frame.Units.empty() || viewed > frame.Units.back().Id)) )
         ;
     else if ( !unit || !info || info->Status == BACT_STATUS_DEAD )
     {
@@ -944,7 +946,7 @@ void NC_STACK_ypaworld::DrawReplayHud(const World::Frame &frame)
         yw_RenderUnitLifeBar(this, &buf, hovered);
     }
 
-    if ( _replayHudShown && unit )
+    if ( shown && unit )
         yw_RenderOverlayCursors(this, &buf);
 
     FontUA::set_end(&buf);
