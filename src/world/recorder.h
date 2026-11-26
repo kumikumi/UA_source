@@ -155,8 +155,19 @@ public:
 
     // Goes back to the latest keyframe at least minSteps before the last
     // step: the recording ends there and goes on from it, and view and
-    // internal are the state then. False when there's none.
+    // internal are the state then. False when there's none. The file is cut
+    // there as recording goes on, so that until then it can still be read
+    // as it was (Recording).
     bool Rewind(uint32_t minSteps, State::Image &view, State::Image &internal);
+
+    // The step Rewind would go back to. False when there's none.
+    bool RewindTarget(uint32_t minSteps, uint32_t &step) const;
+
+    // The latest keyframe in the file before a step. False when there's none.
+    bool KeyframeBefore(uint32_t step, uint32_t &keyframe) const;
+
+    // Puts what was written so far in the file, for a Recording to read
+    void Flush();
 
     bool IsRecording() const { return _file != nullptr; }
     uint32_t Step() const { return _step; } // The last step recorded, as the world counts them
@@ -204,6 +215,7 @@ protected:
     void EndBlock();
     void MakeKeyframe(NC_STACK_ypaworld *world);
     void PackKeyframe(size_t bytes);
+    void Cut();
 
     std::unique_ptr<FSMgr::FileHandle> _file;
     std::string _path;
@@ -215,6 +227,11 @@ protected:
     uint32_t _step = 0;
 
     std::vector<KeyframeAt> _keyframes; // In the file, in order
+
+    // Where Rewind went back to: the file is cut there before it's written
+    // again
+    bool _cutPending = false;
+    uint64_t _cutAt = 0;
 
     // The steps since the last keyframe, packed as they come
     Packer _steps;

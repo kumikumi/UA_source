@@ -646,6 +646,7 @@ Recorder::~Recorder() {}
 
 void Recorder::Reset()
 {
+    _cutPending = false;
     _steps.Drop();
     _blockSteps = 0;
     _keyPacker.Drop();
@@ -968,6 +969,7 @@ void Recorder::Step(NC_STACK_ypaworld *world)
     if ( !_file )
         return;
 
+    Cut();
     _step++;
 
     std::string step = Changes(world, State::PART_VIEW, _viewSchema, _viewLayouts, _lastView);
@@ -1110,6 +1112,7 @@ std::string Recorder::Stop(NC_STACK_ypaworld *world)
     if ( !_file )
         return std::string();
 
+    Cut();
     EndBlock();
 
     if ( _keyframes.empty() || _keyframes.back().Step != _step )
@@ -1129,6 +1132,7 @@ bool Recorder::SaveTo(NC_STACK_ypaworld *world, const std::string &path)
         return false;
 
     // Everything up to now in the file, ending with a keyframe of now
+    Cut();
     EndBlock();
 
     if ( _keyframes.empty() || _keyframes.back().Step != _step )
@@ -1148,12 +1152,66 @@ bool Recorder::SaveTo(NC_STACK_ypaworld *world, const std::string &path)
     return true;
 }
 
+bool Recorder::RewindTarget(uint32_t minSteps, uint32_t &step) const
+{
+    // The keyframe being packed is one too
+    if ( _keyPending && _keyStep + minSteps <= _step )
+    {
+        step = _keyStep;
+        return true;
+    }
+
+    for (size_t n = _keyframes.size(); n > 0; n--)
+    {
+        if ( _keyframes[n - 1].Step + minSteps <= _step )
+        {
+            step = _keyframes[n - 1].Step;
+            return true;
+        }
+    }
+
+    return false;
+}
+
+bool Recorder::KeyframeBefore(uint32_t step, uint32_t &keyframe) const
+{
+    for (size_t n = _keyframes.size(); n > 0; n--)
+    {
+        if ( _keyframes[n - 1].Step < step )
+        {
+            keyframe = _keyframes[n - 1].Step;
+            return true;
+        }
+    }
+
+    return false;
+}
+
+void Recorder::Flush()
+{
+    if ( _file )
+        _file->flush();
+}
+
+// Where Rewind went back to, the file ends
+void Recorder::Cut()
+{
+    if ( !_cutPending )
+        return;
+
+    _cutPending = false;
+
+    if ( !_file->truncate(_cutAt) )
+        ypa_log_out("Recording: could not cut %s back\n", _path.c_str());
+}
+
 bool Recorder::Rewind(uint32_t minSteps, State::Image &view, State::Image &internal)
 {
     if ( !_file )
         return false;
 
     // The latest keyframe, should it be the one, written whole
+    Cut();
     PackKeyframe(SIZE_MAX);
 
     size_t n = _keyframes.size();
@@ -1172,11 +1230,10 @@ bool Recorder::Rewind(uint32_t minSteps, State::Image &view, State::Image &inter
         return false;
     }
 
-    if ( !_file->truncate(at.End) )
-    {
-        ypa_log_out("Recording: could not cut %s back to step %d\n", _path.c_str(), at.Step);
-        return false;
-    }
+    // The file is cut after it before it's written again: until then, what
+    // came after it can still be read
+    _cutPending = true;
+    _cutAt = at.End;
 
     // What came after it goes: the steps since the last keyframe and their
     // messages

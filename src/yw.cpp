@@ -275,6 +275,22 @@ bool NC_STACK_ypaworld::PausedFrame(TUpdateArgs *arg)
     return HandlePause(this, arg) != 0;
 }
 
+// How far back the rewind key goes at least: the last step to go back to,
+// or the one before when that was just now
+static const uint32_t RewindMinSteps = 3 * 60;
+
+// How many times as fast as the game goes on the rewind goes back
+static const double RewindSpeed = 4.0;
+
+// How long restoring the level goes on in each frame while going back, in
+// milliseconds
+static const double RestoreSliceMs = 2.0;
+
+// How long making frames from the recording goes on in each step, and in
+// each frame while going back waits for them, in milliseconds
+static const double FramesBackSliceMs = 1.0;
+static const double FramesBackWaitMs = 12.0;
+
 // One step of the game: input, interface commands, network and units,
 // arg->DTime timer ticks long. Returns false when the frame should not be
 // drawn: while paused, or after a network game was aborted.
@@ -570,26 +586,20 @@ bool NC_STACK_ypaworld::SimulationStep(TUpdateArgs *arg)
     _recorder.Step(this);
 
     if ( !_doNotRender )
+    {
         AddFrame();
+        MakeFramesBack(FramesBackSliceMs, FramesKeptFrom());
+    }
 
     _stepped = true;
     return true;
 }
 
-// How far back the rewind key goes at least: the last step to go back to,
-// or the one before when that was just now
-static const uint32_t RewindMinSteps = 3 * 60;
-
-// How many frames are kept to go back through: as far as the rewind key goes,
-// and pressed again soon after, as far again as that
-static const size_t RewindFrames = 2 * World::Recorder::KeyframeSteps + RewindMinSteps + 2;
-
-// How many times as fast as the game goes on the rewind goes back
-static const double RewindSpeed = 4.0;
-
-// How long restoring the level goes on in each frame while going back, in
-// milliseconds
-static const double RestoreSliceMs = 2.0;
+// Whether the level can go back
+bool NC_STACK_ypaworld::CanRewind() const
+{
+    return _recorder.IsRecording() && !_isNetGame;
+}
 
 // What the step left to draw
 void NC_STACK_ypaworld::AddFrame()
@@ -597,11 +607,14 @@ void NC_STACK_ypaworld::AddFrame()
     if ( !_frameMaker )
         _frameMaker.reset(new World::FrameMaker(World::State::MakeSchema(this, World::State::PART_VIEW)));
 
-    _frames.Keep(_recorder.IsRecording() && !_isNetGame ? RewindFrames : 2);
+    _frames.Keep(CanRewind() ? SIZE_MAX : 2);
 
     World::Frame frame;
     _frameMaker->Make(this, _framesElapsed, _frames.Empty() ? NULL : &_frames.Last(), frame);
     _frames.Add(std::move(frame));
+
+    if ( CanRewind() )
+        _frames.DropBefore(FramesKeptFrom());
 
     // What was drawn of the units gone from the last two frames goes with
     // them
@@ -615,6 +628,59 @@ void NC_STACK_ypaworld::AddFrame()
         else
             it++;
     }
+}
+
+// The first step whose frame is kept: those as far back as the rewind key
+// goes now, and as far again from there, to go back again at once
+uint32_t NC_STACK_ypaworld::FramesKeptFrom() const
+{
+    uint32_t target, before;
+
+    if ( !_recorder.RewindTarget(RewindMinSteps, target) )
+        return 0;
+
+    return _recorder.KeyframeBefore(target, before) ? before : target;
+}
+
+// Makes the frames of steps from wantFrom on that aren't kept, from the
+// recording, a keyframe's steps at a time, for about ms milliseconds:
+// for going back over them as smoothly as over those kept. False when
+// there's nothing to make, or it can't be made.
+bool NC_STACK_ypaworld::MakeFramesBack(double ms, uint32_t wantFrom)
+{
+    if ( !CanRewind() || !_frameMaker || _frames.Empty() )
+    {
+        _framesBack.reset();
+        return false;
+    }
+
+    uint32_t first = _frames.First().Step;
+
+    // The frames kept changed under it
+    if ( _framesBack && _framesBack->To() != first )
+        _framesBack.reset();
+
+    if ( !_framesBack )
+    {
+        uint32_t from;
+
+        if ( first <= wantFrom || first == _framesBackFailedTo || !_recorder.KeyframeBefore(first, from) )
+            return false;
+
+        _recorder.Flush();
+        _framesBack.reset(new World::FramesFromRecording(_recorder.Path(), from, first));
+    }
+
+    if ( !_framesBack->Work(*_frameMaker, ms) )
+        return true;
+
+    bool made = !_framesBack->Failed() && _frames.Prepend(std::move(_framesBack->Made()));
+
+    if ( !made )
+        _framesBackFailedTo = first;
+
+    _framesBack.reset();
+    return made;
 }
 
 // The frame at a step, or between two, as far as the frames kept go: step
@@ -2115,6 +2181,8 @@ void NC_STACK_ypaworld::FreeLevel()
     _rewinding = false;
     _rewindRestore.reset();
     _frames.Clear();
+    _framesBack.reset();
+    _framesBackFailedTo = UINT32_MAX;
     _frameMaker.reset();
     _cameraOverridden = false;
     FreeDrawings();
@@ -6050,8 +6118,16 @@ void NC_STACK_ypaworld::PlayRewind(double realSteps)
 
     _rewindRestore->Work(RestoreSliceMs);
 
-    // Going back over steps without frames, it ends where they do
-    if ( _rewindPosition <= _rewindTarget || _rewindPosition <= _frames.First().Step )
+    // Going back past the frames kept, those before them are made from the
+    // recording: it waits for them at the first one kept, or ends there when
+    // there are none to make
+    bool waiting = _rewindPosition < _frames.First().Step;
+    bool making = MakeFramesBack(waiting ? FramesBackWaitMs : RestoreSliceMs, _rewindTarget);
+
+    if ( _rewindPosition < _frames.First().Step && making )
+        _rewindPosition = _frames.First().Step;
+
+    if ( _rewindPosition <= _rewindTarget || (_rewindPosition <= _frames.First().Step && !making) )
         EndRewind();
 }
 

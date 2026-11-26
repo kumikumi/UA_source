@@ -2,6 +2,8 @@
 #include <cstring>
 
 #include "../yw.h"
+#include "../log.h"
+#include "../system/perf.h"
 #include "frame.h"
 
 namespace World
@@ -372,6 +374,22 @@ void FrameMaker::End(Frame &frame, std::vector<Frame::Sector> &sectors, const Fr
         frame.Sectors = std::make_shared<const std::vector<Frame::Sector>>(std::move(sectors));
 }
 
+void FrameMaker::FromView(const ObjectsVersions &view, uint32_t step, const Frame *before, Frame &out) const
+{
+    out = Frame();
+    out.Step = step;
+
+    if ( before )
+        out.Units.reserve(before->Units.size());
+
+    std::vector<Frame::Sector> sectors;
+
+    for ( const auto &it : view )
+        Add(out, sectors, it.first >> 32, it.first & 0xFFFFFFFF, it.second.Data);
+
+    End(out, sectors, before);
+}
+
 void FrameMaker::Make(NC_STACK_ypaworld *world, uint32_t step, const Frame *before, Frame &out) const
 {
     out = Frame();
@@ -413,10 +431,77 @@ void Frames::Add(Frame &&frame)
         _frames.pop_front();
 }
 
+bool Frames::Prepend(std::vector<Frame> &&frames)
+{
+    if ( frames.empty() )
+        return true;
+
+    if ( !_frames.empty() && frames.back().Step + 1 != _frames.front().Step )
+        return false;
+
+    _frames.insert(_frames.begin(), std::make_move_iterator(frames.begin()), std::make_move_iterator(frames.end()));
+    frames.clear();
+    return true;
+}
+
 void Frames::DropAfter(uint32_t step)
 {
     while ( !_frames.empty() && _frames.back().Step > step )
         _frames.pop_back();
+}
+
+void Frames::DropBefore(uint32_t step)
+{
+    while ( _frames.size() > 1 && _frames.front().Step < step )
+        _frames.pop_front();
+}
+
+
+// Frames from a recording
+
+bool FramesFromRecording::Work(const FrameMaker &maker, double ms)
+{
+    uint64_t start = System::PerfStats::Now();
+
+    while ( !_done )
+    {
+        bool read;
+
+        if ( !_reader )
+        {
+            _recording.reset(new Recording);
+            _reader.reset(new ViewReader(*_recording));
+            read = _recording->Open(_path) && _reader->Seek(_from);
+        }
+        else
+        {
+            read = _reader->Next();
+        }
+
+        if ( !read )
+        {
+            ypa_log_out("Could not make the frames of steps %d to %d from %s\n", _from, _to, _path.c_str());
+            _failed = true;
+            _done = true;
+            break;
+        }
+
+        _made.emplace_back();
+        maker.FromView(_reader->View(), _reader->Step(), _made.size() > 1 ? &_made[_made.size() - 2] : NULL, _made.back());
+
+        if ( _reader->Step() + 1 >= _to )
+            _done = true;
+        else if ( System::PerfStats::TicksToMs(System::PerfStats::Now() - start) >= ms )
+            break;
+    }
+
+    if ( _done )
+    {
+        _reader.reset();
+        _recording.reset();
+    }
+
+    return _done;
 }
 
 const Frame *Frames::At(uint32_t step) const

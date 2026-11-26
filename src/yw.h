@@ -2101,7 +2101,10 @@ public:
     void DrawMapRegionsTutorial();
     void DrawMapRegions();
     
+    bool CanRewind() const;
     void AddFrame();
+    uint32_t FramesKeptFrom() const;
+    bool MakeFramesBack(double ms, uint32_t wantFrom);
     bool FrameAt(double step, World::Frame &out) const;
     void PlaceDrawnCamera(const World::Frame &frame);
     void RenderGame(TUpdateArgs *arg, const World::Frame &frame, bool live);
@@ -2466,6 +2469,11 @@ public:
     // What the last steps left to draw, and what makes it
     World::Frames _frames;
     std::unique_ptr<World::FrameMaker> _frameMaker;
+
+    // The frames of steps before those kept, being made from the recording;
+    // and where they ended when that failed, not to try again
+    std::unique_ptr<World::FramesFromRecording> _framesBack;
+    uint32_t _framesBackFailedTo = UINT32_MAX;
 
     // What drawing a unit's models keeps from one frame to the next: their
     // particles' emitters

@@ -12,6 +12,7 @@
 #include "../vectors.h"
 #include "../matrix.h"
 #include "state.h"
+#include "recorder.h"
 
 class NC_STACK_ypaworld;
 
@@ -116,6 +117,9 @@ public:
     void Add(Frame &frame, std::vector<Frame::Sector> &sectors, uint8_t kind, uint32_t id, const std::string &data) const;
     void End(Frame &frame, std::vector<Frame::Sector> &sectors, const Frame *before) const;
 
+    // A frame of a recording's view after a step, as a ViewReader has it
+    void FromView(const ObjectsVersions &view, uint32_t step, const Frame *before, Frame &out) const;
+
 protected:
     // Where a field of a kind's view is, how big it is and of what type
     struct Field
@@ -157,8 +161,13 @@ public:
     // frames over
     void Add(Frame &&frame);
 
-    // Drops those after a step
+    // The frames of the steps before the first, up to it. False, keeping
+    // none of them, when they don't end there.
+    bool Prepend(std::vector<Frame> &&frames);
+
+    // Drops those after a step, or before one, but the last
     void DropAfter(uint32_t step);
+    void DropBefore(uint32_t step);
 
     bool Empty() const { return _frames.empty(); }
     const Frame *At(uint32_t step) const;
@@ -168,6 +177,32 @@ public:
 protected:
     std::deque<Frame> _frames;
     size_t _keep;
+};
+
+// The frames of a recording's steps from a keyframe up to a step, made a
+// little at a time: to go back through steps whose frames weren't kept
+class FramesFromRecording
+{
+public:
+    // From the keyframe at from up to to, not to's
+    FramesFromRecording(const std::string &path, uint32_t from, uint32_t to) : _path(path), _from(from), _to(to) {}
+
+    // Goes on for about that many milliseconds. True once done, then failed
+    // or not.
+    bool Work(const FrameMaker &maker, double ms);
+    bool Failed() const { return _failed; }
+
+    uint32_t From() const { return _from; }
+    uint32_t To() const { return _to; }
+    std::vector<Frame> &Made() { return _made; }
+
+protected:
+    std::string _path;
+    uint32_t _from, _to;
+    std::unique_ptr<Recording> _recording;
+    std::unique_ptr<ViewReader> _reader; // Of _recording
+    std::vector<Frame> _made;
+    bool _done = false, _failed = false;
 };
 
 }
