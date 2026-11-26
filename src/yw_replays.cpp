@@ -24,7 +24,6 @@ extern int button1LineWidth;
 // debriefing shows it, with the level's history played over it as there
 struct TReplayPreview
 {
-    std::string Path;
     TBriefengScreen Brf;
     Common::PlaneBytes StartOwners; // As the level starts
     World::History::Replay History;
@@ -380,9 +379,10 @@ void UserData::FreeReplayPreview()
 {
     delete replayPreview;
     replayPreview = NULL;
+    replayPreviewOf.clear();
 }
 
-// The map of the replay chosen, made when it's chosen
+// The map of the replay chosen, made when it's chosen: once, made or not
 void UserData::LoadReplayPreview()
 {
     if ( replaysSelected < 0 || replaysSelected >= (int)replays.size() )
@@ -393,13 +393,13 @@ void UserData::LoadReplayPreview()
 
     const TReplayFile &replay = replays[replaysSelected];
 
-    if ( replayPreview && replayPreview->Path == replay.Path )
+    if ( replayPreviewOf == replay.Path )
         return;
 
     FreeReplayPreview();
 
+    replayPreviewOf = replay.Path;
     replayPreview = new TReplayPreview;
-    replayPreview->Path = replay.Path;
     TBriefengScreen &brf = replayPreview->Brf;
 
     // Reading the level's description puts its maps in the world's, which
@@ -432,7 +432,8 @@ void UserData::LoadReplayPreview()
     if ( !loaded || !replayPreview->History.Open(replay.Path, level) )
     {
         ypa_log_out("No map of the replay %s\n", replay.Path.c_str());
-        FreeReplayPreview();
+        delete replayPreview;
+        replayPreview = NULL;
         return;
     }
 

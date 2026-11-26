@@ -643,6 +643,7 @@ public:
     std::vector<TReplayFile> replays;
     int replaysSelected = 0;
     TReplayPreview *replayPreview = NULL;
+    std::string replayPreviewOf; // The replay it was made for, or couldn't be
     Common::Rect replaysMapArea;
 
     // The replay the viewer is to show (EnvAction::ACTION_VIEW_REPLAY), and
