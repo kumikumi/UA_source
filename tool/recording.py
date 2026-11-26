@@ -2,16 +2,18 @@
 """Reads recordings made with UA_source --record (the format is described in
 src/world/recorder.h; the state's fields in src/world/state.h).
 
-  recording.py FILE                  what it holds: steps, the steps the level
-                                     can go on from, bytes per part and field
-  recording.py FILE OTHER            the first step where two recordings
-                                     differ, and the fields that do
+  recording.py FILE                  what it holds: steps, keyframes, bytes
+                                     per part and field
+  recording.py FILE OTHER            the first step and the first keyframe
+                                     where two recordings differ, and the
+                                     fields that do
   recording.py FILE --at STEP        the view after that step, object by
                                      object; --internal adds the internal part
-                                     (only at steps the level can go on from)
+                                     (only at keyframes)
 """
 import collections
 import math
+import os
 import struct
 import sys
 import zlib
@@ -77,16 +79,18 @@ def offsets(fields, data):
     return out if at == len(data) else None
 
 
-def unpack_image(packed):
-    raw = zlib.decompress(packed[4:])
-    level, count = struct.unpack_from("<iI", raw, 0)
-    p, objects = 8, {}
+def read_image(raw, p):
+    """An image's objects, as State::Serialize writes them, from p on; and
+    where it ends."""
+    level, count = struct.unpack_from("<iI", raw, p)
+    p += 8
+    objects = {}
     for _ in range(count):
         kind, oid, size = struct.unpack_from("<BII", raw, p)
         p += 9
         objects[(kind, oid)] = raw[p:p + size]
         p += size
-    return level, objects
+    return objects, p
 
 
 MAX_GUESSED = 256  # Changed fields bigger than this are stored as they are
@@ -178,72 +182,118 @@ def apply_changes(objects, schema, raw, p, tally=None, part=""):
 
 
 class Recording:
+    """A recording's chunks, found as it's opened; their bytes are read when
+    they're needed."""
+
     def __init__(self, path):
-        data = open(path, "rb").read()
-        if data[:4] != b"FORM" or data[8:12] != b"RPLY":
+        self.path = path
+        self.file = open(path, "rb")
+        head = self.file.read(8)
+        if head[:6] != b"UAREC\0":
             sys.exit("%s: not a recording" % path)
-        self.path, self.blocks, self.packed = path, [], collections.Counter()
-        p = 12
-        while p + 8 <= len(data):
-            tag = data[p:p + 4].decode("latin-1")
-            size, = struct.unpack(">I", data[p + 4:p + 8])
-            if size == 0xFFFFFFFF or p + 8 + size > len(data):
-                print("%s is cut short after %d blocks" % (path, len(self.blocks)), file=sys.stderr)
+        version, = struct.unpack("<H", head[6:8])
+        if version != 3:
+            sys.exit("%s: a recording of format %d, not 3" % (path, version))
+        self.keyframes, self.blocks, self.packed = [], [], collections.Counter()
+        total, p = os.path.getsize(path), 8
+        while p + 12 <= total:
+            self.file.seek(p)
+            chunk = self.file.read(12)
+            tag = chunk[:4].decode("latin-1")
+            size, = struct.unpack("<Q", chunk[4:])
+            if p + 12 + size > total:
+                print("%s is cut short after step %d" % (path, self.last_step()), file=sys.stderr)
                 break
-            body = data[p + 8:p + 8 + size]
-            p += 8 + size + (size & 1)
+            at = p + 12
+            p += 12 + size
             self.packed[tag] += size
-            if tag == "INFO":
-                version, self.level = struct.unpack("<HH", body[:4])
-                if version != 2:
-                    sys.exit("%s: a recording of format %d, not 2" % (path, version))
-                texts = [t.decode("latin-1") for t in body[4:].split(b"\0")[:4]]
-                self.started, self.platform, self.compiler, self.built = texts
-            elif tag == "SCHV":
-                self.view_schema, self.view_schema_bytes = read_schema(body), body
-            elif tag == "SCHI":
-                self.internal_schema, self.internal_schema_bytes = read_schema(body), body
-            elif tag == "STRV":
-                self.start_view = body
-            elif tag == "STRI":
-                self.start_internal = body
+            if tag in ("INFO", "SCHV", "SCHI"):
+                body = self.file.read(size)
+                if tag == "INFO":
+                    self.level, = struct.unpack("<H", body[:2])
+                    texts = [t.decode("latin-1") for t in body[2:].split(b"\0")[:4]]
+                    self.started, self.platform, self.compiler, self.built = texts
+                elif tag == "SCHV":
+                    self.view_schema, self.view_schema_bytes = read_schema(body), body
+                else:
+                    self.internal_schema, self.internal_schema_bytes = read_schema(body), body
+            elif tag == "KEYF":
+                step, = struct.unpack("<I", self.file.read(4))
+                self.keyframes.append((step, at, size))
             elif tag == "STEP":
-                self.blocks.append(body)
+                first, steps = struct.unpack("<II", self.file.read(8))
+                self.blocks.append((first, steps, at, size))
+        if not self.keyframes:
+            sys.exit("%s: no keyframe" % path)
+
+    def last_step(self):
+        last = self.keyframes[-1][0] if self.keyframes else 0
+        if self.blocks:
+            last = max(last, self.blocks[-1][0] + self.blocks[-1][1] - 1)
+        return last
+
+    def chunk(self, at, size):
+        self.file.seek(at)
+        return self.file.read(size)
+
+    def keyframe(self, index):
+        """A keyframe's view and internal part."""
+        _, at, size = self.keyframes[index]
+        raw = zlib.decompress(self.chunk(at, size)[8:])
+        view, p = read_image(raw, 0)
+        internal, _ = read_image(raw, p)
+        return view, internal
+
+    def keyframe_raw(self, index):
+        _, at, size = self.keyframes[index]
+        return zlib.decompress(self.chunk(at, size)[8:])
+
+    def block_steps(self, block):
+        """A block's steps: each one's number and bytes."""
+        first, _, at, size = block
+        raw = zlib.decompress(self.chunk(at, size)[12:])
+        p, n = 0, first
+        while p + 4 <= len(raw):
+            size, = struct.unpack_from("<I", raw, p)
+            yield n, raw[p + 4:p + 4 + size]
+            p += 4 + size
+            n += 1
 
     def steps(self):
-        """Every step's bytes, in order."""
+        """Every step's number and bytes, in order."""
         for block in self.blocks:
-            raw = zlib.decompress(block[4:])
-            p = 0
-            while p + 4 <= len(raw):
-                size, = struct.unpack_from("<I", raw, p)
-                yield raw[p + 4:p + 4 + size]
-                p += 4 + size
+            yield from self.block_steps(block)
 
     def read(self, upto=None, internal=False, tally=None, each=None):
-        """The view and internal objects after upto steps (all when None).
-        each(step, resumable, view, internal) is called after every step."""
-        view = {k: [v, v] for k, v in unpack_image(self.start_view)[1].items()}
-        inner = {k: [v, v] for k, v in unpack_image(self.start_internal)[1].items()}
-        n = 0
-        for raw in self.steps():
+        """The view after step upto (the last when None), and the internal
+        part of the last keyframe up to there. each(step, keyframe, view,
+        internal) is called at the first keyframe and after every step."""
+        keyed = {step: i for i, (step, _, _) in enumerate(self.keyframes)}
+        v, inner = self.keyframe(0)
+        view = {k: [d, d] for k, d in v.items()}
+        if not internal:
+            inner = {}
+        n = self.keyframes[0][0]
+        if each:
+            each(n, True, view, inner)
+        for block in self.blocks:
             if upto is not None and n >= upto:
                 break
-            n += 1
-            resumable = raw[0] != 0
-            p = apply_changes(view, self.view_schema, raw, 1, tally, "view")
-            count, = struct.unpack_from("<H", raw, p)
-            start = p
-            p += 2
-            for _ in range(count):
-                length, = struct.unpack_from("<H", raw, p + 10)
-                p += 12 + length
-            if tally is not None:
-                tally[("messages", "")] += p - start
-            if resumable and (internal or tally is not None):
-                apply_changes(inner, self.internal_schema, raw, p, tally, "internal")
-            if each:
-                each(n, resumable, view, inner)
+            # After a keyframe the guesses start over
+            for obj in view.values():
+                obj[1] = obj[0]
+            for step, raw in self.block_steps(block):
+                if upto is not None and step > upto:
+                    break
+                n = step
+                p = apply_changes(view, self.view_schema, raw, 0, tally, "view")
+                if tally is not None:
+                    tally[("messages", "")] += len(raw) - p
+                keyframe = n in keyed
+                if keyframe and internal:
+                    inner = self.keyframe(keyed[n])[1]
+                if each:
+                    each(n, keyframe, view, inner)
         return n, view, inner
 
 
@@ -259,84 +309,114 @@ def summary(rec):
     print("%s: level %d, from %s; recorded on %s with %s, built %s"
           % (rec.path, rec.level, rec.started, rec.platform, rec.compiler, rec.built))
     tally = collections.Counter()
-    resumable = []
     last_time = [0]
 
-    def each(n, res, view, inner):
-        if res:
-            resumable.append(n)
+    def each(n, keyframe, view, inner):
         world = view.get((1, 0))
         if world:
             v = field_values(rec.view_schema, 1, world[0]).get("time")
             if v:
                 last_time[0] = struct.unpack("<i", v[1])[0]
 
-    start = {k: [v, v] for k, v in unpack_image(rec.start_view)[1].items()}
-    each(0, False, start, {})
     n, view, _ = rec.read(tally=tally, each=each)
+    first = rec.keyframes[0][0]
+    steps = n - first
     seconds = last_time[0] // 1024
-    total = sum(rec.packed.values())
-    print("%d steps, game time %d:%02d; %d bytes, %.0f a step" % (n, seconds // 60, seconds % 60, total, total / max(n, 1)))
-    shown = resumable if len(resumable) <= 8 else resumable[:4] + ["..."] + resumable[-3:]
-    if resumable:
-        print("the level can go on from step 0 and %d more: %s" % (len(resumable), " ".join(map(str, shown))))
-    else:
-        print("the level can go on from its start only")
+    total = os.path.getsize(rec.path)
+    print("steps %d to %d, game time %d:%02d; %d bytes, %.0f a step" % (first, n, seconds // 60, seconds % 60, total,
+                                                                         total / max(steps, 1)))
+    keys = [k[0] for k in rec.keyframes]
+    shown = keys if len(keys) <= 8 else keys[:4] + ["..."] + keys[-3:]
+    print("%d keyframes: %s" % (len(keys), " ".join(map(str, shown))))
+    print("packed: steps %d bytes, keyframes %d bytes (%.1f%%)" % (rec.packed["STEP"], rec.packed["KEYF"],
+                                                                   100.0 * rec.packed["KEYF"] / max(total, 1)))
     units = collections.Counter(kind_name(k) for k, _ in view if k >= 16)
     print("at the end: " + ", ".join("%d %s" % (c, u) for u, c in sorted(units.items())))
     print("unpacked bytes a step, most first:")
     for (part, what), size in tally.most_common(20):
-        print("%9.1f  %s %s" % (size / max(n, 1), part, what))
+        print("%9.1f  %s %s" % (size / max(steps, 1), part, what))
 
 
-def compare(a, b):
-    print("%s: %s; %s: %s" % (a.path, a.started, b.path, b.started))
-    n = 0
-    for n, (sa, sb) in enumerate(zip(a.steps(), b.steps()), 1):
-        if sa != sb:
-            break
-    else:
-        print("the same for all %d steps they share" % n)
-        return
-    print("step %d differs" % n)
-    if a.view_schema_bytes != b.view_schema_bytes or a.internal_schema_bytes != b.internal_schema_bytes:
-        print("they were recorded with different fields, so their values aren't compared")
-        return
-    _, va, ia = a.read(n, internal=True)
-    _, vb, ib = b.read(n, internal=True)
-    parts = [("view", va, vb, a.view_schema), ("internal", ia, ib, a.internal_schema)]
-    if (sa[0] != 0) != (sb[0] != 0):
-        # As when one ends there: its last step is one to go on from
-        print("only %s can go on from it, so only its views are compared" % (a.path if sa[0] else b.path))
-        parts = parts[:1]
+def object_diffs(part, oa, ob, schema, name_a, name_b):
     lines = []
-    for part, oa, ob, schema in parts:
-        for key in sorted(set(oa) | set(ob)):
-            name = "%s %d" % (kind_name(key[0]), key[1])
-            if key not in ob or key not in oa:
-                lines.append("%s %s: only in %s" % (part, name, a.path if key in oa else b.path))
-                continue
-            fa, fb = field_values(schema, key[0], oa[key][0]), field_values(schema, key[0], ob[key][0])
-            for fname, (f, raw) in fa.items():
-                if fb.get(fname, (None, None))[1] != raw:
-                    lines.append("%s %s %s: %s / %s" % (part, name, fname, f.show(raw),
-                                                        f.show(fb[fname][1]) if fname in fb else "-"))
-    if not lines:
-        print("its views are the same")
+    for key in sorted(set(oa) | set(ob)):
+        name = "%s %d" % (kind_name(key[0]), key[1])
+        if key not in ob or key not in oa:
+            lines.append("%s %s: only in %s" % (part, name, name_a if key in oa else name_b))
+            continue
+        fa, fb = field_values(schema, key[0], oa[key]), field_values(schema, key[0], ob[key])
+        for fname, (f, raw) in fa.items():
+            if fb.get(fname, (None, None))[1] != raw:
+                lines.append("%s %s %s: %s / %s" % (part, name, fname, f.show(raw),
+                                                    f.show(fb[fname][1]) if fname in fb else "-"))
+    return lines
+
+
+def show_lines(lines):
     for line in lines[:40]:
         print(line)
     if len(lines) > 40:
         print("... and %d more" % (len(lines) - 40))
 
 
+def compare(a, b):
+    print("%s: %s; %s: %s" % (a.path, a.started, b.path, b.started))
+    same_fields = a.view_schema_bytes == b.view_schema_bytes and a.internal_schema_bytes == b.internal_schema_bytes
+    if not same_fields:
+        print("they were recorded with different fields, so their values aren't compared")
+
+    # The keyframes they both have
+    kb = {step: i for i, (step, _, _) in enumerate(b.keyframes)}
+    shared = 0
+    for i, (step, _, _) in enumerate(a.keyframes):
+        if step not in kb:
+            continue
+        shared += 1
+        if a.keyframe_raw(i) != b.keyframe_raw(kb[step]):
+            print("their keyframes at step %d differ" % step)
+            if same_fields:
+                (va, ia), (vb, ib) = a.keyframe(i), b.keyframe(kb[step])
+                lines = object_diffs("view", va, vb, a.view_schema, a.path, b.path)
+                lines += object_diffs("internal", ia, ib, a.internal_schema, a.path, b.path)
+                show_lines(lines)
+            break
+    else:
+        print("the same at all %d keyframes they share" % shared)
+
+    # The steps they both have
+    sb = dict(b.steps())
+    n = shared = 0
+    for n, raw in a.steps():
+        if n not in sb:
+            continue
+        shared += 1
+        if sb[n] != raw:
+            break
+    else:
+        print("the same for all %d steps they share" % shared)
+        return
+    print("step %d differs" % n)
+    if same_fields:
+        _, va, _ = a.read(n)
+        _, vb, _ = b.read(n)
+        lines = object_diffs("view", {k: v[0] for k, v in va.items()}, {k: v[0] for k, v in vb.items()},
+                             a.view_schema, a.path, b.path)
+        if not lines:
+            print("its views are the same")
+        show_lines(lines)
+
+
 def show_at(rec, step, internal):
     n, view, inner = rec.read(step, internal=internal)
     print("after step %d:" % n)
-    for part, objects, schema in (("view", view, rec.view_schema), ("internal", inner, rec.internal_schema)):
+    if internal and n not in [k[0] for k in rec.keyframes]:
+        print("no keyframe there: the internal part is the last keyframe's")
+    for part, objects, schema in (("view", {k: v[0] for k, v in view.items()}, rec.view_schema),
+                                  ("internal", inner, rec.internal_schema)):
         if part == "internal" and not internal:
             continue
         for key in sorted(objects):
-            values = field_values(schema, key[0], objects[key][0])
+            values = field_values(schema, key[0], objects[key])
             print("%s %s %d: %s" % (part, kind_name(key[0]), key[1],
                                     ", ".join("%s %s" % (k, f.show(v)) for k, (f, v) in values.items())))
 

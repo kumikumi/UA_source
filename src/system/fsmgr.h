@@ -139,8 +139,9 @@ public:
     virtual size_t read(void *buf, size_t num) = 0;
     virtual size_t write(const void *buf, size_t num) = 0;
 
-    virtual size_t tell() const = 0;
-    virtual int seek(long int offset, int origin) = 0;
+    // Positions in the file: 64-bit, for files over 4 GB
+    virtual uint64_t tell() const = 0;
+    virtual int seek(int64_t offset, int origin) = 0;
     
     virtual bool OK() const = 0;
     virtual bool eof() const = 0;
@@ -198,8 +199,8 @@ public:
     virtual size_t read(void *buf, size_t num) override;
     virtual size_t write(const void *buf, size_t num)  override;
 
-    virtual size_t tell() const override;
-    virtual int seek(long int offset, int origin) override;
+    virtual uint64_t tell() const override;
+    virtual int seek(int64_t offset, int origin) override;
     
     virtual void close() override;
 
@@ -207,7 +208,7 @@ public:
     void flush();
 
     // Cuts the file to that size, to go on writing at its end
-    bool truncate(size_t size);
+    bool truncate(uint64_t size);
     
     virtual char *gets(char *str, int num);
     virtual int puts(const std::string &str);
@@ -252,8 +253,8 @@ public:
     virtual size_t read(void *, size_t) override { return 0; }
     virtual size_t write(const void *buf, size_t num) override;
 
-    virtual size_t tell() const override { return Data.size(); }
-    virtual int seek(long int, int) override { return -1; }
+    virtual uint64_t tell() const override { return Data.size(); }
+    virtual int seek(int64_t, int) override { return -1; }
 
     virtual void close() override {}
 

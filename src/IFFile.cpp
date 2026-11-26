@@ -307,12 +307,12 @@ bool IFFile::OK() const
     return file_handle.OK();
 }
 
-size_t IFFile::tell() const
+uint64_t IFFile::tell() const
 {
     return file_handle.tell();
 }
 
-int IFFile::seek(long int offset, int origin)
+int IFFile::seek(int64_t offset, int origin)
 {
     return 0;
 }

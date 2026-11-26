@@ -582,7 +582,7 @@ static const uint32_t RewindMinSteps = 3 * 60;
 
 // How many frames are kept to go back through: as far as the rewind key goes,
 // and pressed again soon after, as far again as that
-static const size_t RewindFrames = 2 * World::Recorder::BlockSteps + RewindMinSteps + 2;
+static const size_t RewindFrames = 2 * World::Recorder::KeyframeSteps + RewindMinSteps + 2;
 
 // How many times as fast as the game goes on the rewind goes back
 static const double RewindSpeed = 4.0;
@@ -5942,25 +5942,24 @@ static std::string WonStatePath(const std::string &userName, int levelId)
     return fmt::sprintf("save:%s/%d.won", userName, levelId);
 }
 
-// A saved game is a recording: the level goes on from where it ends, the
-// campaign as it was then, and goes on recording from there
+// A saved game is a recording: the level goes on from its last keyframe,
+// the campaign as it was then, and goes on recording from there
 size_t NC_STACK_ypaworld::LoadGame(const std::string &saveFile)
 {
     World::Recording recording;
-    World::RecordedPoint start, point;
+    World::State::Image view, internal;
 
-    if ( !recording.Open(saveFile) || !recording.Read(0, start, true) ||
-         !recording.Read(recording.LastResumable(recording.Steps()), point, true) )
+    if ( !recording.Open(saveFile) || !recording.ReadKeyframe(recording.Keyframes().back().Step, view, internal) )
     {
         ypa_log_out("Could not read the saved game %s\n", saveFile.c_str());
         return 0;
     }
 
-    if ( !World::State::Restore(this, point.View, point.Internal, true) )
+    if ( !World::State::Restore(this, view, internal, true) )
         return 0;
 
     if ( _GameShell && !_GameShell->DirectStart )
-        _recorder.StartFrom(this, SessionPath(), fmt::sprintf("%s at step %d", saveFile, point.Step), start, point);
+        _recorder.ContinueFrom(this, SessionPath(), recording, recording.Keyframes().back().Step);
 
     return 1;
 }
@@ -5981,23 +5980,23 @@ size_t NC_STACK_ypaworld::SaveGame(const std::string &saveFile)
     return _recorder.SaveTo(this, saveFile);
 }
 
-// Starts the level being played over, from where its recording starts
+// Starts the level being played over, from its recording's first keyframe
 bool NC_STACK_ypaworld::RestartLevel()
 {
     World::Recording recording;
-    World::RecordedPoint start;
+    World::State::Image view, internal;
     std::string session = SessionPath();
 
-    if ( !recording.Open(session) || !recording.Read(0, start, true) )
+    if ( !recording.Open(session) || !recording.ReadKeyframe(recording.FirstStep(), view, internal) )
     {
         ypa_log_out("Could not read %s to start the level again\n", session.c_str());
         return false;
     }
 
-    if ( !World::State::Restore(this, start.View, start.Internal, false) )
+    if ( !World::State::Restore(this, view, internal, false) )
         return false;
 
-    return _recorder.StartFrom(this, session, fmt::sprintf("level %d", _levelInfo.LevelID), start, start);
+    return _recorder.ContinueFrom(this, session, recording, recording.FirstStep());
 }
 
 // The rewind key: the level goes back to the latest step its recording keeps
@@ -6729,23 +6728,31 @@ size_t NC_STACK_ypaworld::AdvancedCreateLevel(TLevelLoadRequest *arg)
         // A won level played again goes on from where it was won, with the
         // campaign as it is now
         World::Recording recording;
-        World::RecordedPoint end;
+        World::State::Image view, internal;
 
-        loaded = recording.Open(won) && recording.Read(0, end, true) &&
-                 World::State::Restore(this, end.View, end.Internal, false);
-
-        if ( loaded )
+        if ( recording.Open(won) && recording.ReadKeyframe(recording.Keyframes().back().Step, view, internal) )
         {
-            InitBuddies();
+            loaded = World::State::Restore(this, view, internal, false);
 
-            _userRobo->_energy = _userRobo->_energy_max;
+            if ( loaded )
+            {
+                InitBuddies();
 
-            // A won training mission played again has nothing left to teach
-            _tutorialHints.Stop();
+                _userRobo->_energy = _userRobo->_energy_max;
+
+                // A won training mission played again has nothing left to teach
+                _tutorialHints.Stop();
+            }
+            else
+            {
+                ypa_log_out("Warning: could not start won level %d from %s\n", arg->lvlID, won.c_str());
+            }
         }
         else
         {
-            ypa_log_out("Warning: could not start won level %d from %s\n", arg->lvlID, won.c_str());
+            // As by an older build: the level starts as new
+            ypa_log_out("Warning: %s can't be read, so won level %d starts as new\n", won.c_str(), arg->lvlID);
+            loaded = CreateLevel(arg);
         }
     }
     else

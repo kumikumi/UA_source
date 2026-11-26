@@ -2,7 +2,6 @@
 #define WORLD_RECORDER_H_INCLUDED
 
 #include <cstdint>
-#include <deque>
 #include <map>
 #include <memory>
 #include <string>
@@ -45,49 +44,48 @@ struct KindLayout
 typedef std::unordered_map<uint8_t, KindLayout> KindLayouts; // Point into the schema
 KindLayouts MakeLayouts(const State::Schema &schema);
 
-// Where a recording stands after a step: its view, and its internal part if
-// the level can go on from it; and what a recording that goes on from there
-// needs: the steps up to it, each as written, and each object's versions
-struct RecordedPoint
+// A keyframe in a recording's file: its step, and where its chunk starts
+// and ends
+struct KeyframeAt
 {
     uint32_t Step = 0;
-    State::Image View, Internal;
-    std::vector<std::string> Steps;
-    ObjectsVersions ViewVersions, InternalVersions;
+    uint64_t Start = 0, End = 0;
 };
 
-// Records a level as it is played (--record FILE): the state it started
-// in, then what each simulation step changed of it, in the two parts of the
-// state (see World::State). Every step has what changed of the view, as the
-// game was drawn. Every BlockSteps steps, and the last step, also have what
-// changed of the internal part since the last such step: the level can go
-// on from them, exactly as it was. With --record-full, every step has it.
-// tool/recording.py reads recordings.
+class Recording;
+
+// Records a level as it is played (--record FILE): keyframes, each the whole
+// state of the level after a step (World::State: the view and the internal
+// part), and between them what each step changed of the view, as the game
+// was drawn. The level can go on from any keyframe, exactly as it was, and
+// the recording can be read from any keyframe on without what came before
+// it. Keyframes come where the recording starts, after every
+// KeyframeSteps-th step, where a game is saved and at the end; with
+// --record-full after every step. tool/recording.py reads recordings.
 //
-// One IFF FORM RPLY. Chunk headers are big-endian as in any IFF,
-// everything inside them little-endian:
+// The file: "UAREC", a zero byte and the u16 format version (3), then
+// chunks, each its 4-letter tag, u64 size and that many bytes. All of it is
+// little-endian.
 //
-//   INFO  u16 format version (2), u16 level, then zero-ended strings: how
-//         the level started ("level N", the saved game's file, or the
-//         recording and step it went on from), the platform and the
-//         compiler, and when the program was built
-//   SCHV  the view's fields of each kind of object, as
-//         State::WriteSchema writes them
+//   INFO  u16 level, then zero-ended strings: how the level started
+//         ("level N", or the saved game's or recording's file), the
+//         platform and the compiler, and when the program was built
+//   SCHV  the view's fields of each kind of object, as State::WriteSchema
+//         writes them
 //   SCHI  the internal part's
-//   STRV  the view before the first step, as State::Pack packs it: u32
-//         size unpacked, then zlib: i32 level, u32 objects, each u8 kind,
-//         u32 id, u32 size and its fields' bytes
-//   STRI  the internal part before it
-//   STEP  once for each block of steps, which ends at every BlockSteps-th
-//         step and where the recording, or a saved game in it, ends or goes
-//         on from: u32 size unpacked, then zlib (level 6): the steps, each
+//   KEYF  a keyframe: u32 step, u32 size unpacked, then zlib (level 6): the
+//         view and then the internal part, each as State::Serialize writes
+//         them: i32 level, u32 objects, each u8 kind, u32 id, u32 size and
+//         its fields' bytes
+//   STEP  the steps after a keyframe, up to the next one: u32 the first
+//         step, u32 steps, u32 size unpacked, then zlib (level 6): each step
 //           u32  its size in bytes, after this
-//           u8   1 when the level can go on from it, else 0
 //           ...  what changed of the view since the step before
 //           u16  messages shown, each i32 message id, i16 priority, u32
 //                unit id (0 for none), u16 length and the text
-//           ...  when the level can go on from it: what changed of the
-//                internal part since the last step it could
+//
+// INFO, SCHV and SCHI come first, then keyframes with the steps between
+// them: KEYF, STEP, KEYF, STEP ... KEYF.
 //
 // What changed: u32 objects, each u8 kind, u32 id and u8 what:
 //   0  gone
@@ -97,42 +95,42 @@ struct RecordedPoint
 //      guess of it. A float's guess is its last value moved on by as much
 //      as it moved at the object's change before (when both are finite), so
 //      that most of the XOR is zeros; any other field's guess is its last
-//      value.
+//      value. The guesses start over at each keyframe: an object's bytes
+//      before its first change after a keyframe are taken to be the same as
+//      at the keyframe.
 //
-// A recording cut short, as by a crash, has every block before the one
-// being recorded, and the FORM RPLY's size unwritten: it goes on from its
-// last step the level can go on from.
+// A recording cut short, as by a crash, ends with its last whole chunk: it
+// goes on from its last keyframe.
 //
 // A saved game is a recording up to the moment it was saved, and a won
-// level's end one without steps. In a campaign, every level is recorded
-// (NC_STACK_ypaworld::SessionPath); a saved game's level goes on recording
-// from where the saved game ends.
+// level's end a recording of one keyframe. In a campaign, every level is
+// recorded (NC_STACK_ypaworld::SessionPath); a saved game's level goes on
+// recording from where the saved game ends.
 //
-// A recording can go back to its last few steps that end a block (Rewind):
-// the file is cut there, and recording goes on from it. The state at those
-// steps is kept as it was recorded, a cache of what reading the recording
-// from its start would give.
+// A recording can go back to any of its keyframes (Rewind): the file is cut
+// after it, and recording goes on from it.
 class Recorder
 {
 public:
-    enum { BlockSteps = 600 }; // 10 s of game time at 60 steps a second
-    enum { RewindPoints = 6 }; // How many steps to go back to are kept
+    enum { KeyframeSteps = 600 }; // 10 s of game time at 60 steps a second
 
     Recorder();
     ~Recorder();
 
-    // Every step one the level can go on from (--record-full)
+    // A keyframe after every step (--record-full)
     void SetFull(bool full) { _full = full; }
 
-    // Starts the recording, before the level's first step. False, after
-    // logging why, when the file can't be written.
+    // Starts recording the level as it is now, which is the first keyframe.
+    // False, after logging why, when the file can't be written.
     bool Start(NC_STACK_ypaworld *world, const std::string &path, const std::string &startedFrom);
 
-    // The same for a level that goes on from a recording: the new one starts
-    // as that one did (start), with what it recorded up to where the level
-    // goes on from (point)
-    bool StartFrom(NC_STACK_ypaworld *world, const std::string &path, const std::string &startedFrom,
-                   const RecordedPoint &start, const RecordedPoint &point);
+    // Goes on recording a level that was set up from a keyframe of a
+    // recording (source): the recording at path is that one up to the
+    // keyframe, then what comes. path may be the source's own file, which is
+    // then cut after the keyframe. A recording made by a build whose state
+    // has other fields can't be gone on with: a new one starts at the
+    // keyframe.
+    bool ContinueFrom(NC_STACK_ypaworld *world, const std::string &path, const Recording &source, uint32_t step);
 
     // After every simulation step
     void Step(NC_STACK_ypaworld *world);
@@ -140,29 +138,30 @@ public:
     // A message the game shows
     void Message(const TInfoMessage &msg);
 
-    // Makes the last step one the level can go on from, writes it and
-    // closes the file. The file's path, or empty when nothing was recorded.
+    // Ends the recording with a keyframe of the level as it is now, and
+    // closes the file. Its path, or empty when nothing was recorded.
     std::string Stop(NC_STACK_ypaworld *world);
 
-    // A saved game: makes the last step one the level can go on from, and
-    // copies the recording so far to path, which then holds a whole one.
-    // Recording goes on.
+    // A saved game: a keyframe of the level as it is now, and the recording
+    // so far copied to path. Recording goes on.
     bool SaveTo(NC_STACK_ypaworld *world, const std::string &path);
 
-    // A recording of the state now, without steps, as of a won level's end
+    // A recording of the level as it is now, one keyframe, as of a won
+    // level's end
     static bool WriteState(NC_STACK_ypaworld *world, const std::string &path, const std::string &startedFrom);
 
-    // Goes back to the latest step kept to go back to that is at least
-    // minSteps before the last: the recording ends there and goes on from
-    // it, and view and internal are the state then. False when there's none.
+    // Goes back to the latest keyframe at least minSteps before the last
+    // step: the recording ends there and goes on from it, and view and
+    // internal are the state then. False when there's none.
     bool Rewind(uint32_t minSteps, State::Image &view, State::Image &internal);
 
     bool IsRecording() const { return _file != nullptr; }
-    uint32_t Step() const { return _step; } // The last step recorded
+    uint32_t Step() const { return _step; } // The last step recorded, as the world counts them
     const std::string &Path() const { return _path; }
 
 protected:
-    // Each object as it was last written, to write only what changed
+    // Each object of the view as it was last written, to write only what
+    // changed
     struct LastObject
     {
         ObjectVersions Versions;
@@ -171,102 +170,133 @@ protected:
 
     typedef std::unordered_map<uint64_t, LastObject> LastObjects;
 
-    // A step to go back to: where the file ends after it, and the objects as
-    // it left them
-    struct RewindPoint
+    // Packs what comes into one zlib stream, a piece at a time
+    struct Packer
     {
-        uint32_t Step = 0;
-        size_t FileSize = 0;
-        LastObjects View, Internal;
+        Packer();
+        ~Packer();
+
+        void Add(const void *data, size_t size);
+        std::string Finish(); // What was packed, and starts over
+        void Drop();          // Starts over
+
+        bool Started() const { return _stream != nullptr; }
+        uint64_t Unpacked() const { return _unpacked; }
+
+    protected:
+        void Deflate(const void *data, size_t size, int flush);
+
+        std::unique_ptr<z_stream_s> _stream;
+        std::string _packed;
+        uint64_t _unpacked = 0;
     };
 
-    bool Open(NC_STACK_ypaworld *world, const std::string &path, const std::string &startedFrom,
-              const State::Image &startView, const State::Image &startInternal);
+    bool Open(NC_STACK_ypaworld *world, const std::string &path, const std::string &startedFrom);
+    void Reset();
+    bool WriteChunk(const char *tag, const std::string &head, const std::string &data);
     std::string Changes(NC_STACK_ypaworld *world, State::Part part, const State::Schema &schema, const KindLayouts &layouts,
                         LastObjects &last);
-    void Remember(NC_STACK_ypaworld *world, State::Part part, LastObjects &last);
-    void MakeResumable(NC_STACK_ypaworld *world);
-    void FlushPending();
-    void AddStep(const std::string &step);
-    void Deflate(const void *data, size_t size, int flush);
-    void WriteBlock();
-    void EndForm();
-    void KeepRewindPoint();
-    static void MakeImage(int level, const LastObjects &objects, State::Image &image);
+    void Remember(NC_STACK_ypaworld *world);
+    void RememberImage(const State::Image &view);
+    void EndBlock();
+    void MakeKeyframe(NC_STACK_ypaworld *world);
+    void PackKeyframe(size_t bytes);
 
     std::unique_ptr<FSMgr::FileHandle> _file;
     std::string _path;
     int _level = 0;
     bool _full = false;
     State::Schema _viewSchema, _internalSchema;
-    KindLayouts _viewLayouts, _internalLayouts;
-    LastObjects _lastView, _lastInternal;
+    KindLayouts _viewLayouts;
+    LastObjects _lastView;
     uint32_t _step = 0;
-    uint32_t _stepsAdded = 0; // To the blocks
 
-    std::deque<RewindPoint> _rewindPoints; // The oldest first
+    std::vector<KeyframeAt> _keyframes; // In the file, in order
 
-    // The block's steps so far, packed as they come
-    std::unique_ptr<z_stream_s> _packer;
-    std::string _packed;
-    uint32_t _unpackedSize = 0;
-    int _blockSteps = 0;
+    // The steps since the last keyframe, packed as they come
+    Packer _steps;
+    uint32_t _blockStart = 0; // The first of them
+    uint32_t _blockSteps = 0;
+
+    // The last keyframe, packed a piece every step until it's written
+    Packer _keyPacker;
+    std::string _keyRaw;
+    size_t _keyAt = 0;
+    uint32_t _keyStep = 0;
+    bool _keyPending = false;
 
     std::string _messages; // Shown in the step under way
     uint16_t _messageCount = 0;
-
-    // The last step, written when the next comes or the recording ends, so
-    // that the end can make it one to go on from
-    bool _hasPending = false;
-    bool _pendingResumable = false;
-    std::string _pendingView, _pendingMessages, _pendingInternal;
 };
 
-// A recording read back
+// A recording read back. Only where its chunks are is read at first; the
+// rest when it's asked for.
 class Recording
 {
 public:
-    // Reads it. False, after logging why, when it isn't one.
+    // Finds its chunks. False, after logging why, when it isn't one.
     bool Open(const std::string &path);
 
+    const std::string &Path() const { return _path; }
     int Level() const { return _level; }
     const std::string &StartedFrom() const { return _startedFrom; }
-    uint32_t Steps() const { return _resumable.size(); }
-
-    // Whether the level can go on from after that step, 0 the start
-    bool IsResumable(uint32_t step) const { return step == 0 || (step <= _resumable.size() && _resumable[step - 1]); }
-
-    // The last step at or before that one the level can go on from
-    uint32_t LastResumable(uint32_t step) const;
-
-    // Reads it up to after that many steps, 0 for its start. With resume, the
-    // internal part too, which only steps the level can go on from have.
-    bool Read(uint32_t step, RecordedPoint &point, bool resume) const;
-
     const State::Schema &ViewSchema() const { return _viewSchema; }
+
+    // The steps it has, as the world counts them: its first keyframe's, and
+    // the last
+    uint32_t FirstStep() const { return _keyframes.empty() ? 0 : _keyframes.front().Step; }
+    uint32_t LastStep() const { return _lastStep; }
+
+    const std::vector<KeyframeAt> &Keyframes() const { return _keyframes; }
+
+    // The keyframe at that step, or the latest before it; NULL when there's
+    // none
+    const KeyframeAt *KeyframeAtOrBefore(uint32_t step) const;
+
+    // The state at a keyframe's step. False, after logging why, when it
+    // can't be read.
+    bool ReadKeyframe(uint32_t step, State::Image &view, State::Image &internal) const;
+
+    // Whether a build with these schemas can go on recording it
+    bool SameSchemas(const State::Schema &view, const State::Schema &internal) const;
 
 protected:
     friend class ViewReader;
 
+    // The steps after a keyframe, up to the next one
+    struct Block
+    {
+        uint32_t FirstStep = 0, Steps = 0;
+        uint64_t Start = 0, End = 0; // Of its chunk
+    };
+
+    // A block's steps, unpacked. False when they can't be read.
+    bool ReadBlock(size_t index, std::string &steps) const;
+
+    std::string _path;
     int _level = 0;
     std::string _startedFrom;
+    std::string _viewSchemaBytes, _internalSchemaBytes;
     State::Schema _viewSchema, _internalSchema;
-    KindLayouts _viewLayouts, _internalLayouts;
-    std::string _startView, _startInternal; // Packed
-    std::vector<std::string> _blocks;        // Packed
-    std::vector<bool> _resumable;            // Of each step
+    KindLayouts _viewLayouts;
+    std::vector<KeyframeAt> _keyframes;
+    std::vector<Block> _blocks;
+    uint32_t _lastStep = 0;
 };
 
-// Goes through a recording's views a step at a time: its start's (step 0),
-// then after each step's
+// Goes through a recording's views a step at a time, from a keyframe on
 class ViewReader
 {
 public:
     // The recording stays as long as this does
     explicit ViewReader(const Recording &recording) : _recording(recording) {}
 
-    // Back to the start. False when the recording can't be read.
+    // To the first keyframe. False when the recording can't be read.
     bool Rewind();
+
+    // To a keyframe. False when there's none at that step, or it can't be
+    // read.
+    bool Seek(uint32_t step);
 
     // On to the next step. False at the end, or where the recording can't
     // be read on (and then not AtEnd).
@@ -276,7 +306,7 @@ public:
     uint32_t Step() const { return _step; }
     const ObjectsVersions &View() const { return _view; }
 
-    // What the step changed; at the start, every object
+    // What the step changed; at a keyframe sought, every object
     const ChangedObjects &Changed() const { return _changed; }
 
 protected:

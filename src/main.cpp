@@ -831,11 +831,11 @@ struct DirectStart
 
 static DirectStart directStart;
 
-// Started from a recording: the step it went on from, and the recording's
-// start and steps up to there, for a recording that goes on from it
+// Started from a recording: the keyframe it went on from, for a recording
+// that goes on from it
 static bool resumedFromRecording = false;
 static uint32_t resumedStep = 0;
-static World::RecordedPoint resumedStart, resumedPoint;
+static World::Recording resumedRecording;
 
 // False, after saying why, when the command line starts a level in more
 // than one way, or names no level
@@ -1007,9 +1007,9 @@ static std::string TemporaryRecordingPath()
 static bool IsRecordingFile(const std::string &path)
 {
     FSMgr::FileHandle file(path, "rb");
-    char head[12];
+    char head[6];
 
-    return file.OK() && file.read(head, 12) == 12 && !memcmp(head, "FORM", 4) && !memcmp(head + 8, "RPLY", 4);
+    return file.OK() && file.read(head, 6) == 6 && !memcmp(head, "UAREC", 6);
 }
 
 // Whether the level or saved game the command line names is there
@@ -1043,37 +1043,34 @@ static bool CheckDirectStart()
     return true;
 }
 
-// Starts the level of a recording as it was after the step --step names, or
-// after the last it can go on from
+// Starts the level of a recording as it was at the keyframe --step names, or
+// at its last
 static bool StartFromRecording(const std::string &path)
 {
-    World::Recording recording;
+    World::Recording &recording = resumedRecording;
 
     if ( !recording.Open(path) )
         return false;
 
-    uint32_t step = directStart.HasStep ? directStart.Step : recording.LastResumable(recording.Steps());
+    uint32_t step = directStart.HasStep ? directStart.Step : recording.Keyframes().back().Step;
+    const World::KeyframeAt *at = recording.KeyframeAtOrBefore(step);
 
-    if ( step > recording.Steps() )
+    if ( step > recording.LastStep() )
     {
-        ypa_log_out("The recording %s has %d steps, not %d\n", path.c_str(), recording.Steps(), step);
+        ypa_log_out("The recording %s ends at step %d, before %d\n", path.c_str(), recording.LastStep(), step);
         return false;
     }
 
-    if ( !recording.IsResumable(step) )
+    if ( !at || at->Step != step )
     {
-        ypa_log_out("The level can't go on from step %d of %s, only from one every %d steps: the one before is %d\n",
-                    step, path.c_str(), (int)World::Recorder::BlockSteps, recording.LastResumable(step));
+        ypa_log_out("The level can't go on from step %d of %s, only from a keyframe, one every %d steps: the one before is %d\n",
+                    step, path.c_str(), (int)World::Recorder::KeyframeSteps, at ? at->Step : 0);
         return false;
     }
 
-    if ( !recording.Read(0, resumedStart, true) || !recording.Read(step, resumedPoint, true) )
-    {
-        ypa_log_out("The recording %s can't be read up to step %d\n", path.c_str(), step);
-        return false;
-    }
+    World::State::Image view, internal;
 
-    if ( !World::State::Restore(ypaworld, resumedPoint.View, resumedPoint.Internal, true) )
+    if ( !recording.ReadKeyframe(step, view, internal) || !World::State::Restore(ypaworld, view, internal, true) )
         return false;
 
     resumedFromRecording = true;
@@ -1121,9 +1118,16 @@ static bool StartDirectLevel()
 
     // In a window, the debriefing after a win has the level's events from
     // its recording: unless --record names one, it goes to a temporary file,
-    // not the profile
-    if ( !headless && recordFile.empty() && !ypaworld->_recorder.Start(ypaworld, TemporaryRecordingPath(), "the command line") )
-        ypa_log_out("The level isn't recorded, so its debriefing has no events\n");
+    // not the profile. A recording's level goes on with it.
+    if ( !headless && recordFile.empty() )
+    {
+        bool recording = resumedFromRecording ?
+                         ypaworld->_recorder.ContinueFrom(ypaworld, TemporaryRecordingPath(), resumedRecording, resumedStep) :
+                         ypaworld->_recorder.Start(ypaworld, TemporaryRecordingPath(), "the command line");
+
+        if ( !recording )
+            ypa_log_out("The level isn't recorded, so its debriefing has no events\n");
+    }
 
     GameScreenMode = GAME_SCREEN_MODE_GAME;
 
@@ -1325,20 +1329,14 @@ int main(int argc, char *argv[])
         // level
         if ( !recordFile.empty() )
         {
-            std::string from = directStart.SaveFile.empty() ? fmt::sprintf("level %d", directStart.Level) : directStart.SaveFile;
             bool recording;
 
             ypaworld->_recorder.SetFull(recordFull);
 
             if ( resumedFromRecording )
-            {
-                from += fmt::sprintf(" at step %d", resumedStep);
-                recording = ypaworld->_recorder.StartFrom(ypaworld, recordFile, from, resumedStart, resumedPoint);
-            }
+                recording = ypaworld->_recorder.ContinueFrom(ypaworld, recordFile, resumedRecording, resumedStep);
             else
-            {
-                recording = ypaworld->_recorder.Start(ypaworld, recordFile, from);
-            }
+                recording = ypaworld->_recorder.Start(ypaworld, recordFile, fmt::sprintf("level %d", directStart.Level));
 
             if ( !recording )
             {

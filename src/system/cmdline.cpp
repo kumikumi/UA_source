@@ -31,10 +31,11 @@ static const Option Options[] = {
                                 "win comes the debriefing, and then the game quits. Nothing is "
                                 "written to the player's profile, and the exit menu has no Save or "
                                 "Load"},
-    {"load",         "FILE",    "The same from where a saved game or a recording (--record) ends, "
-                                "such as SAVE/Unnamed2/0.sav, the saved game of the profile Unnamed2"},
-    {"step",         "N",       "With --load of a recording, go on from after its step N instead of "
-                                "the last the level can go on from"},
+    {"load",         "FILE",    "The same from the last keyframe of a saved game or a recording "
+                                "(--record), such as SAVE/Unnamed2/0.sav, the saved game of the "
+                                "profile Unnamed2"},
+    {"step",         "N",       "With --load, go on from the keyframe at step N instead, one of "
+                                "those every 600 steps"},
     {"headless",     NULL,      "Run the level --level or --load starts as fast as the machine can, "
                                 "with nothing shown, heard or read from the controls, until the "
                                 "level ends, the player's host station is destroyed or no enemy "
@@ -46,13 +47,13 @@ static const Option Options[] = {
                                 "kept and play them again. Reports whether every step came out the "
                                 "same, or the first fields that didn't"},
     {"record",       "FILE",    "Record the level that --level or --load starts, until it ends, into "
-                                "FILE: the state it starts in, then what every step changes of the "
-                                "game as drawn, and every 10 s of game time and at the end what the "
-                                "level can go on from. One --load starts from goes on from what it "
-                                "recorded up to there. tool/recording.py reads it; the format is in "
-                                "src/world/recorder.h"},
-    {"record-full",  NULL,      "With --record, the whole state at every step, so that the level "
-                                "can go on from any of them; much bigger"},
+                                "FILE: keyframes, the whole state the level can go on from, at its "
+                                "start, every 10 s of game time and at its end, and between them "
+                                "what every step changes of the game as drawn. One --load starts "
+                                "from goes on from what it recorded up to there. tool/recording.py "
+                                "reads it; the format is in src/world/recorder.h"},
+    {"record-full",  NULL,      "With --record, a keyframe at every step, so that the level can go "
+                                "on from any of them; much bigger"},
     {"bench",        NULL,      "Run the benchmark: level 21 drawn over and over from above, the frame "
                                 "times reported"},
     {"bench-level",  "N",       "The benchmark's level instead"},

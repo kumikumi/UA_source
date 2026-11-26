@@ -890,20 +890,28 @@ size_t FileHandle::write(const void *buf, size_t num)
     return sz;
 }
 
-size_t FileHandle::tell() const
+uint64_t FileHandle::tell() const
 {
     if (!hndl)
         return 0;
 
-    return ftell(hndl.get());
+#if defined(WIN32) && !defined(__WINE__)
+    return _ftelli64(hndl.get());
+#else
+    return ftello(hndl.get());
+#endif
 }
 
-int FileHandle::seek(long int offset, int origin)
+int FileHandle::seek(int64_t offset, int origin)
 {
     if (!hndl)
         return -100;
 
-    return fseek(hndl.get(), offset, origin);
+#if defined(WIN32) && !defined(__WINE__)
+    return _fseeki64(hndl.get(), offset, origin);
+#else
+    return fseeko(hndl.get(), offset, origin);
+#endif
 }
 
 void FileHandle::close()
@@ -917,7 +925,7 @@ void FileHandle::flush()
         fflush(hndl.get());
 }
 
-bool FileHandle::truncate(size_t size)
+bool FileHandle::truncate(uint64_t size)
 {
     if ( !hndl || fflush(hndl.get()) != 0 )
         return false;
@@ -930,7 +938,7 @@ bool FileHandle::truncate(size_t size)
         return false;
 #endif
 
-    return fseek(hndl.get(), size, SEEK_SET) == 0;
+    return seek(size, SEEK_SET) == 0;
 }
 
 char *FileHandle::gets(char *str, int num)

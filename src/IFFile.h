@@ -80,8 +80,8 @@ public:
     
     virtual bool eof() const override;
     virtual bool OK() const override;
-    virtual size_t tell() const override;
-    virtual int seek(long int offset, int origin) override;
+    virtual uint64_t tell() const override;
+    virtual int seek(int64_t offset, int origin) override;
 
     std::string readStr(int maxSz);
 

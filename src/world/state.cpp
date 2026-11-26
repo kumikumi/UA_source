@@ -944,7 +944,7 @@ uint64_t Hash(const Image &image)
     return h;
 }
 
-std::string Pack(const Image &image)
+std::string Serialize(const Image &image)
 {
     std::string raw;
 
@@ -964,33 +964,11 @@ std::string Pack(const Image &image)
         raw += obj.Data;
     }
 
-    uLongf packedSize = compressBound(raw.size());
-    std::string packed(packedSize + 4, '\0');
-    uint32_t rawSize = raw.size();
-    memcpy(&packed[0], &rawSize, 4);
-
-    if ( compress2((Bytef *)&packed[4], &packedSize, (const Bytef *)raw.data(), raw.size(), Z_BEST_SPEED) != Z_OK )
-        return std::string();
-
-    packed.resize(packedSize + 4);
-    return packed;
+    return raw;
 }
 
-bool Unpack(const std::string &packed, Image &image)
+bool Deserialize(const std::string &raw, size_t &pos, Image &image)
 {
-    if ( packed.size() < 4 )
-        return false;
-
-    uint32_t rawSize;
-    memcpy(&rawSize, packed.data(), 4);
-
-    std::string raw(rawSize, '\0');
-    uLongf size = rawSize;
-
-    if ( uncompress((Bytef *)&raw[0], &size, (const Bytef *)packed.data() + 4, packed.size() - 4) != Z_OK || size != rawSize )
-        return false;
-
-    size_t pos = 0;
     auto take = [&raw, &pos](void *data, size_t n)
     {
         if ( pos + n > raw.size() )
@@ -1019,7 +997,41 @@ bool Unpack(const std::string &packed, Image &image)
         image.Objects.push_back(std::move(obj));
     }
 
-    return pos == raw.size();
+    return true;
+}
+
+std::string Pack(const Image &image)
+{
+    std::string raw = Serialize(image);
+
+    uLongf packedSize = compressBound(raw.size());
+    std::string packed(packedSize + 4, '\0');
+    uint32_t rawSize = raw.size();
+    memcpy(&packed[0], &rawSize, 4);
+
+    if ( compress2((Bytef *)&packed[4], &packedSize, (const Bytef *)raw.data(), raw.size(), Z_BEST_SPEED) != Z_OK )
+        return std::string();
+
+    packed.resize(packedSize + 4);
+    return packed;
+}
+
+bool Unpack(const std::string &packed, Image &image)
+{
+    if ( packed.size() < 4 )
+        return false;
+
+    uint32_t rawSize;
+    memcpy(&rawSize, packed.data(), 4);
+
+    std::string raw(rawSize, '\0');
+    uLongf size = rawSize;
+
+    if ( uncompress((Bytef *)&raw[0], &size, (const Bytef *)packed.data() + 4, packed.size() - 4) != Z_OK || size != rawSize )
+        return false;
+
+    size_t pos = 0;
+    return Deserialize(raw, pos, image) && pos == raw.size();
 }
 
 size_t ElemSize(Type type)

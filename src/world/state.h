@@ -293,7 +293,14 @@ protected:
 // A hash of the whole state
 uint64_t Hash(const Image &image);
 
-// An image in one string, zlib-packed, and back
+// An image as bytes: i32 level, u32 objects, each u8 kind, u32 id, u32 size
+// and its fields' bytes. Deserialize reads one from pos on, and leaves pos
+// after it.
+std::string Serialize(const Image &image);
+bool Deserialize(const std::string &raw, size_t &pos, Image &image);
+
+// An image in one string, zlib-packed: u32 size unpacked, then those bytes
+// packed. And back.
 std::string Pack(const Image &image);
 bool Unpack(const std::string &packed, Image &image);
 
