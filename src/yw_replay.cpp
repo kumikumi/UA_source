@@ -8,6 +8,7 @@
 #include "log.h"
 #include "system/system.h"
 #include "world/playback.h"
+#include "ypagun.h"
 
 // The replay viewer: a recording played back in its level as it was drawn,
 // with a timeline at the bottom to go to any moment of it. It's looked at
@@ -266,7 +267,7 @@ bool NC_STACK_ypaworld::LookFromNextUnit(const World::Frame &frame)
 
         if ( !other || other->Owner != cam.UnitOwner || other->Status == BACT_STATUS_DEAD ||
              other->Status == BACT_STATUS_CREATE || other->Status == BACT_STATUS_BEAM || u.Type == BACT_TYPES_MISSLE ||
-             (u.Type == BACT_TYPES_GUN && frame.FindUnit(other->Parent) && frame.FindUnit(other->Parent)->Type == BACT_TYPES_ROBO) )
+             (u.Type == BACT_TYPES_GUN && other->GunFlags >= 0 && (other->GunFlags & NC_STACK_ypagun::GUN_FLAGS_ROBO)) )
             continue;
 
         if ( u.Id > cam.Unit )
