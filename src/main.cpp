@@ -1,7 +1,13 @@
 #define GLOBAL
 // Gives Windows GUI programs their WinMain entry point, as SDL2main did.
 #include <SDL3/SDL_main.h>
+#include <cstdio>
 #include <cstdlib>
+#if defined(_WIN32)
+#include <process.h>
+#else
+#include <unistd.h>
+#endif
 #include "system/fsmgr.h"
 #include "system/system.h"
 #include "env.h"
@@ -50,6 +56,10 @@
 
 int tmpSettingsSaved = 0;
 std::string buildDate;
+
+// Where a level started from the command line is recorded when --record
+// doesn't say, once it is (TemporaryRecordingPath)
+static std::string temporaryRecording;
 
 int tform_inited = 0;
 int audio_inited = 0;
@@ -750,6 +760,10 @@ void ShutdownGame()
         ypaworld->Delete();
     }
 
+    // Recorded only for the debriefing, which is over
+    if ( !temporaryRecording.empty() )
+        std::remove(temporaryRecording.c_str());
+
     deinit_globl_engines();
 }
 
@@ -1026,18 +1040,30 @@ static bool ReadDirectStart()
 }
 
 // Where a level started from the command line is recorded when --record
-// doesn't say
-static std::string TemporaryRecordingPath()
+// doesn't say: a file of this process's own, gone when the game quits, so
+// that games started at once don't write each other's
+static const std::string &TemporaryRecordingPath()
 {
-    const char *dir = getenv("TMPDIR");
+    if ( temporaryRecording.empty() )
+    {
+        const char *dir = getenv("TMPDIR");
 
-    if ( !dir )
-        dir = getenv("TEMP");
+        if ( !dir )
+            dir = getenv("TEMP");
 
-    if ( !dir )
-        dir = getenv("TMP");
+        if ( !dir )
+            dir = getenv("TMP");
 
-    return std::string(dir ? dir : "/tmp") + "/ua_source_level.rec";
+#if defined(_WIN32)
+        int pid = _getpid();
+#else
+        int pid = getpid();
+#endif
+
+        temporaryRecording = fmt::sprintf("%s/ua_source_level_%d.rec", dir ? dir : "/tmp", pid);
+    }
+
+    return temporaryRecording;
 }
 
 // Whether the level or saved game the command line names is there
