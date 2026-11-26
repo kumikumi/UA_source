@@ -57,6 +57,12 @@ static const Option Options[] = {
                                 "reads it; the format is in src/world/recorder.h"},
     {"record-full",  NULL,      "With --record, a keyframe at every step, so that the level can go "
                                 "on from any of them; much bigger"},
+    {"host",         "N",       "Host a network game of level N: the game opens at its lobby, "
+                                "without the intro, for the others to join"},
+    {"join",         "ADDRESS", "Join the network game hosted at ADDRESS, a name or an IP address "
+                                "(ADDRESS:PORT if the port isn't 61234), at its lobby"},
+    {"callsign",     "NAME",    "With --host or --join, play under this name, not the last one "
+                                "typed"},
     {"bench",        NULL,      "Run the benchmark: level 21 drawn over and over from above, the frame "
                                 "times reported"},
     {"bench-level",  "N",       "The benchmark's level instead"},

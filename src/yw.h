@@ -832,6 +832,7 @@ public:
 
     void GameShellUiHandleInput();
     void NetCallsignChosen();
+    bool StartNetworkGame(int hostLevel, const std::string &address, const std::string &callsign);
     void ConnectToServer(std::string connStr);
     void ShowToolTip(int id);
     void ExitFromNetworkToMain();

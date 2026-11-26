@@ -102,6 +102,19 @@ struct DirectStart
 
 static DirectStart directStart;
 
+// The network game the command line hosts or joins (--host, --join); the
+// lobby on from there is the menus' own
+struct NetStart
+{
+    int HostLevel = 0;
+    std::string JoinAddress;
+    std::string Callsign;
+
+    bool Active() const { return HostLevel || !JoinAddress.empty(); }
+};
+
+static NetStart netStart;
+
 // At most this many steps per frame. A machine that cannot keep up makes the
 // game run slower, instead of frames growing longer as they catch up.
 static const int32_t SimMaxStepsPerFrame = 4;
@@ -835,11 +848,12 @@ int yw_initGameWithSettings()
         profileIndex++;
     }
 
-    // Straight into a level from the command line: no intro
+    // Straight into a level or a network game from the command line: no
+    // intro
     return ypaworld->LoadSettings(settingsFileName,
                                   userdata.UserName,
                                   World::SDF_ALL,
-                                  true, !userdata.DirectStart) != 0;
+                                  true, !userdata.DirectStart && !netStart.Active()) != 0;
 }
 
 void ShutdownGame()
@@ -982,6 +996,78 @@ uint32_t maxTicks = 1000/60; // init on 60FPS
 static bool resumedFromRecording = false;
 static uint32_t resumedStep = 0;
 static World::Recording resumedRecording;
+
+// False, after saying why, when --host, --join or --callsign don't go
+// together with the rest
+static bool ReadNetStart()
+{
+    std::string value;
+
+    if ( System::CmdLine::Get("host", &value) )
+    {
+        char *end = NULL;
+        long level = std::strtol(value.c_str(), &end, 10);
+
+        if ( value.empty() || *end || level < 1 || level > 255 )
+        {
+            System::CmdLine::PrintError("--host " + value + ": not a level number");
+            return false;
+        }
+
+        netStart.HostLevel = level;
+    }
+
+    if ( System::CmdLine::Get("join", &netStart.JoinAddress) && netStart.JoinAddress.empty() )
+    {
+        System::CmdLine::PrintError("--join needs ADDRESS");
+        return false;
+    }
+
+    if ( netStart.HostLevel && !netStart.JoinAddress.empty() )
+    {
+        System::CmdLine::PrintError("--host and --join: give one");
+        return false;
+    }
+
+    if ( System::CmdLine::Get("callsign", &netStart.Callsign) && !netStart.Active() )
+    {
+        System::CmdLine::PrintError("--callsign needs --host or --join");
+        return false;
+    }
+
+    if ( netStart.Active() && (userdata.DirectStart || System::CmdLine::Has("headless")) )
+    {
+        System::CmdLine::PrintError("--host and --join open the menus; they don't go with --level, "
+                                    "--load, --replay, --bench or --headless");
+        return false;
+    }
+
+    return true;
+}
+
+// Hosts or joins the network game the command line asks for. If that fails,
+// the menus stay where it failed, after saying why.
+static void StartNetGame()
+{
+    if ( netStart.HostLevel )
+    {
+        const auto &regions = ypaworld->_globalMapRegions.MapRegions;
+
+        if ( netStart.HostLevel >= (int)regions.size() || regions[netStart.HostLevel].Status != TMapRegionInfo::STATUS_NETWORK )
+        {
+            System::CmdLine::PrintError(fmt::sprintf("level %d is not a network level", netStart.HostLevel));
+            return;
+        }
+    }
+
+    if ( !userdata.StartNetworkGame(netStart.HostLevel, netStart.JoinAddress, netStart.Callsign) )
+    {
+        if ( netStart.HostLevel )
+            System::CmdLine::PrintError(fmt::sprintf("can't host a game on port %d", Net::DEFAULT_PORT));
+        else
+            System::CmdLine::PrintError("can't join the game at " + netStart.JoinAddress);
+    }
+}
 
 // False, after saying why, when the command line starts a level in more
 // than one way, or names no level
@@ -1455,7 +1541,7 @@ int main(int argc, char *argv[])
 
     benchmark.ReadCommandLine();
 
-    if ( !ReadDirectStart() )
+    if ( !ReadDirectStart() || !ReadNetStart() )
         return 2;
     
     System::Init(headless);
@@ -1523,6 +1609,9 @@ int main(int argc, char *argv[])
             return 0;
         }
     }
+
+    if ( netStart.Active() )
+        StartNetGame();
 
     uint32_t ticks = 0;
 

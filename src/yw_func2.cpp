@@ -2220,6 +2220,35 @@ void UserData::NetCallsignChosen()
     }
 }
 
+// From the title menu to the lobby of the network game the command line
+// hosts (a level) or joins (an address), as if chosen in the menus
+bool UserData::StartNetworkGame(int hostLevel, const std::string &address, const std::string &callsign)
+{
+    GameShellUiOpenNetwork();
+
+    netSel = hostLevel ? 0 : 1;
+    yw_NetOKProvider();
+
+    if ( !callsign.empty() )
+        netName = callsign;
+
+    NetCallsignChosen();
+
+    if ( hostLevel )
+    {
+        netLevelID = hostLevel;
+        netLevelName = p_YW->GetLevelName(hostLevel);
+        netSel = 0;
+        AfterMapChoose();
+    }
+    else
+    {
+        ConnectToServer(address);
+    }
+
+    return netSelMode == NETSCREEN_INSESSION;
+}
+
 void UserData::ConnectToServer(std::string connStr){
     fmt::printf("Connectiong to: %s\n", connStr);
     if ( p_YW->_netDriver->Connect(connStr) )
