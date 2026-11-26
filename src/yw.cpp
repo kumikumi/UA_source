@@ -2825,16 +2825,8 @@ bool NC_STACK_ypaworld::CreateTitleControls(){
         btn_64arg.downCode = UIWidgets::MAIN_MENU_EVENT_IDS::ALL_DOWN;
         btn_64arg.button_id = UIWidgets::MAIN_MENU_WIDGET_IDS::BTN_MULTIPLAYER;
 
-        // Below the two, shown only when there's a level to go on with
         if ( _GameShell->titel_button->Add(&btn_64arg) )
         {
-            btn_64arg.ypos = _screenSize.y * 0.3708333333333334;
-            btn_64arg.caption = Locale::Text::Title(Locale::TITLE_CONTINUE);
-            btn_64arg.caption2.clear();
-            btn_64arg.upCode = UIWidgets::MAIN_MENU_EVENT_IDS::BTN_CONTINUE_UP;
-            btn_64arg.button_id = UIWidgets::MAIN_MENU_WIDGET_IDS::BTN_CONTINUE;
-            _GameShell->titel_button->Add(&btn_64arg);
-
             btn_64arg.xpos = _screenSize.x * 0.3328125;
             btn_64arg.ypos = _screenSize.y * 0.4333333333333334;
             btn_64arg.width = _screenSize.x / 3;
@@ -3004,8 +2996,16 @@ bool NC_STACK_ypaworld::CreateSubBarControls(){
                     btn_64arg.downCode = 1251;
                     btn_64arg.button_id = 1015;
 
+                    // Left of the two, shown only when there's a level to
+                    // go on with (Continue)
                     if ( _GameShell->sub_bar_button->Add(&btn_64arg) )
                     {
+                        btn_64arg.xpos = (_screenSize.x - 4 * subBarButtonWidth - 3 * buttonsSpace);
+                        btn_64arg.caption = Locale::Text::Title(Locale::TITLE_CONTINUE);
+                        btn_64arg.upCode = 1027;
+                        btn_64arg.button_id = 1009;
+                        _GameShell->sub_bar_button->Add(&btn_64arg);
+
                         btn_64arg.xpos = _screenSize.x - subBarButtonWidth;
                         btn_64arg.caption = Locale::Text::GlobMap(Locale::GLOBMAP_GOBACK);
                         btn_64arg.caption2.clear();
@@ -3035,6 +3035,10 @@ bool NC_STACK_ypaworld::CreateSubBarControls(){
         btnState.state = 0;
         _GameShell->sub_bar_button->Disable(&btnState);
     }
+
+    btnState.state = 0;
+    btnState.butID = 1009;
+    _GameShell->sub_bar_button->Disable(&btnState);
 
     btnState.state = 0;
     btnState.butID = 1014;

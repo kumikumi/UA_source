@@ -1237,7 +1237,7 @@ void UserData::ShowToolTip(int id)
         p_YW->SetShowingTooltip(Locale::TIP_MENU_HELP);
         break;
 
-    case UIWidgets::MAIN_MENU_WIDGET_IDS::BTN_CONTINUE:
+    case 1009:
         p_YW->SetShowingTooltip(Locale::TIP_MENU_CONTINUE);
         break;
 
@@ -2211,6 +2211,8 @@ void UserData::GameShellUiHandleInput()
     enableState.state = 0;
     enableState.butID = 1015;
     sub_bar_button->Disable(&enableState);
+    enableState.butID = 1009;
+    sub_bar_button->Disable(&enableState);
     enableState.butID = 1011;
     sub_bar_button->Disable(&enableState);
     enableState.butID = 1019;
@@ -2237,8 +2239,6 @@ void UserData::GameShellUiHandleInput()
     enableState.butID = UIWidgets::MAIN_MENU_WIDGET_IDS::BTN_HELP;
     titel_button->Disable(&enableState);
     enableState.butID = UIWidgets::MAIN_MENU_WIDGET_IDS::BTN_MULTIPLAYER;
-    titel_button->Disable(&enableState);
-    enableState.butID = UIWidgets::MAIN_MENU_WIDGET_IDS::BTN_CONTINUE;
     titel_button->Disable(&enableState);
 
     NC_STACK_button::WidgetPlacement placement;
@@ -2331,12 +2331,6 @@ void UserData::GameShellUiHandleInput()
 
         enableState.butID = UIWidgets::MAIN_MENU_WIDGET_IDS::BTN_MULTIPLAYER;
         titel_button->Enable(&enableState);
-
-        if ( UnfinishedLevel() )
-        {
-            enableState.butID = UIWidgets::MAIN_MENU_WIDGET_IDS::BTN_CONTINUE;
-            titel_button->Enable(&enableState);
-        }
     }
     else if ( EnvMode == ENVMODE_SINGLEPLAY || EnvMode == ENVMODE_TUTORIAL )
     {
@@ -2351,6 +2345,12 @@ void UserData::GameShellUiHandleInput()
         if ( sgmSaveExist == 1 )
         {
             enableState.butID = 1015;
+            sub_bar_button->Enable(&enableState);
+        }
+
+        if ( UnfinishedLevel() )
+        {
+            enableState.butID = 1009;
             sub_bar_button->Enable(&enableState);
         }
 
@@ -2501,10 +2501,7 @@ void UserData::GameShellUiHandleInput()
         {
             GameShellUiOpenNetwork();
         }
-        else if ( r.code == UIWidgets::MAIN_MENU_EVENT_IDS::BTN_CONTINUE_UP )
-        {
-            ContinueGame();
-        }
+
         else if ( r.code == UIWidgets::MAIN_MENU_EVENT_IDS::BTN_SINGLE_PLAYER_UP )
         {
             sub_bar_button->ShowScreen();
@@ -2615,6 +2612,10 @@ void UserData::GameShellUiHandleInput()
         case 1026:
             ShowSaveLoadMenu();
             diskEnterFromMapSelect = true;
+            break;
+
+        case 1027: // Continue
+            ContinueGame();
             break;
 
         default:
@@ -4847,11 +4848,8 @@ int UserData::UnfinishedLevel()
 // keyframe
 void UserData::ContinueGame()
 {
-    titel_button->HideScreen();
+    sub_bar_button->HideScreen();
     p_YW->_isNetGame = false;
-
-    // Back from the level, the level map
-    EnvMode = ENVMODE_SINGLEPLAY;
     envAction.action = EnvAction::ACTION_CONTINUE;
 }
 

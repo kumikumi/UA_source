@@ -69,8 +69,7 @@ namespace UIWidgets {
         BTN_LANGUAGE = 1008,
         BTN_MULTIPLAYER = 1016,
         BTN_HELP = 1017,
-        BTN_SINGLE_PLAYER = 1018,
-        BTN_CONTINUE = 1009
+        BTN_SINGLE_PLAYER = 1018
     };
     enum MAIN_MENU_EVENT_IDS{
         ALL_DOWN = 1251,
@@ -81,8 +80,7 @@ namespace UIWidgets {
         BTN_SAVE_LOAD_UP = 1001,
         BTN_LANGUAGE_UP = 1011,
         BTN_HELP_UP = 1025,
-        BTN_QUIT_UP = 1013,
-        BTN_CONTINUE_UP = 1027
+        BTN_QUIT_UP = 1013
     };
     enum NETWORK_MENU_WIDGET_IDS{
         TXT_MENU_TITLE = 1204,
