@@ -6670,6 +6670,9 @@ void NC_STACK_ypaworld::UpdateScreenSize()
 
     if ( _guiLoaded )
         RelayoutGameGui();
+
+    if ( _replay )
+        RelayoutReplay();
 }
 
 void NC_STACK_ypaworld::LoadScreenFonts()

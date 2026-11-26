@@ -2014,6 +2014,7 @@ public:
     void ShowGameShellPage();
     void RelayoutGameShell();
     void RelayoutGameGui();
+    void RelayoutReplay();
     virtual size_t ReloadLanguage();
     virtual void GetReloadRatios(TReloadRatios *arg);
 

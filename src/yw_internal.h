@@ -286,6 +286,7 @@ struct debrif_t1
 void HandleGuiInput(NC_STACK_ypaworld *yw, TInputState *inpt);
 void RoboMapFollowViewer(NC_STACK_ypaworld *yw);
 void RoboMapUpdateLayout(NC_STACK_ypaworld *yw);
+void RoboMapKeepOnScreen(NC_STACK_ypaworld *yw);
 void RoboMapZoom(NC_STACK_ypaworld *yw, int zoomDir);
 
 void UpdateGunList(NC_STACK_ypaworld *yw);
@@ -365,6 +366,7 @@ void DrawHudDestroyed(NC_STACK_ypaworld *yw, CmdStream *buf, bool hostStation);
 int WeaponReloadPercent(const World::TWeapProto &wpn, int sinceShot, int salveCounter);
 
 void LoadHud(NC_STACK_ypaworld *yw);
+void SetHudLayout(NC_STACK_ypaworld *yw);
 void FreeHud(NC_STACK_ypaworld *yw);
 
 // Where the HUD's radar is, from the screen's centre, as parts of its half

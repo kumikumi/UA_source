@@ -11579,6 +11579,15 @@ static void ClampToGuiArea(NC_STACK_ypaworld *yw, int16_t &x, int16_t &y, int16_
     h = hh;
 }
 
+// The map back on screen, as it is laid out anew. It keeps a second
+// rectangle for its minimise/maximise toggle.
+void RoboMapKeepOnScreen(NC_STACK_ypaworld *yw)
+{
+    ClampToGuiArea(yw, robo_map.x, robo_map.y, robo_map.w, robo_map.h, robo_map.minWidth, robo_map.minHeight);
+    ClampToGuiArea(yw, robo_map.altX, robo_map.altY, robo_map.altW, robo_map.altH,
+                   robo_map.minWidth, robo_map.minHeight);
+}
+
 // Lays the in-game GUI out for a new screen size, keeping the windows' state.
 void NC_STACK_ypaworld::RelayoutGameGui()
 {
@@ -11587,11 +11596,7 @@ void NC_STACK_ypaworld::RelayoutGameGui()
     SetBottomBarLayout(this);
     SetHudLayout(this);
     SetNetGameWindowLayout(this);
-
-    // The map keeps a second rectangle for its minimise/maximise toggle.
-    ClampToGuiArea(this, robo_map.x, robo_map.y, robo_map.w, robo_map.h, robo_map.minWidth, robo_map.minHeight);
-    ClampToGuiArea(this, robo_map.altX, robo_map.altY, robo_map.altW, robo_map.altH,
-                   robo_map.minWidth, robo_map.minHeight);
+    RoboMapKeepOnScreen(this);
 
     GuiList *windows[] = {&squadron_manager, &info_log, &exit_menu, &lstvw2, &gui_lstvw, &_viewDistanceWindow};
     for (GuiList *win : windows)

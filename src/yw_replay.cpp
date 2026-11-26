@@ -157,6 +157,23 @@ bool NC_STACK_ypaworld::StartReplay(const std::string &path, uint32_t startStep)
     return true;
 }
 
+// Lays the viewer out for a new screen size, its windows where they were
+// as far as they fit, as RelayoutGameGui does the game's
+void NC_STACK_ypaworld::RelayoutReplay()
+{
+    _downScreenBorder = _screenSize.y - LayOutReplayBar(this).Top;
+
+    SetHudLayout(this);
+    RoboMapKeepOnScreen(this);
+    _viewDistanceWindow.SetRect(this, -2, -2);
+
+    for (ReplayFactionWindow &window : _replayFactions)
+    {
+        if ( window.Created() )
+            window.SetRect(this, -2, -2);
+    }
+}
+
 void NC_STACK_ypaworld::CloseReplayWindows()
 {
     GuiWinDetach(&robo_map);
