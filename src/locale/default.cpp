@@ -665,6 +665,8 @@ std::array<std::string, ADV_MAX> DefaultStrings::Advanced = Common::ArrayInit<st
     {ADV_RLYEXIT, "REALLY EXIT MISSION ?"},
     {ADV_RLYSAVE, "REALLY SAVE GAME ?"},
     {ADV_RLYLOAD, "REALLY LOAD GAME ?"},
+    {ADV_CANTLOAD, "The mission could not be loaded."},
+    {ADV_CANTLOADWHY, "It may be from another version of the game."},
     {ADV_RLYRESTART, "REALLY RESTART MISSION ?"},
     {ADV_RLYHELP, "REALLY LAUNCH ONLINE HELP ?"}
 });

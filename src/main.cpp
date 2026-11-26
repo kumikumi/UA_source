@@ -111,6 +111,36 @@ static void ClearInputEvents(TInputState *inpt)
 // Runs the simulation steps that are due and draws a frame. frameTicks is the
 // real time since the last frame. timeFrozen holds the game nearly still, as
 // while waiting for network players.
+// A level that could not be loaded or started again: back to the level map,
+// saying so. The level is gone, but loading it may have read some of the
+// campaign's state: the profile, saved before, has it as it was. Returns
+// what the frame functions do: 0 to quit, when even the menus can't open.
+static int BackToLevelMap(bool continuing)
+{
+    ypaworld->_levelInfo.State = TLevelInfo::STATE_MENU;
+    userdata.IgnoreScoreSaving = true;
+    tmpSettingsSaved = 0;
+
+    if ( !ypaworld->LoadSettings(fmt::sprintf("%s/user.txt", userdata.UserName), userdata.UserName,
+                                 World::SDF_USER | World::SDF_SCORE | World::SDF_BUDDY | World::SDF_PROTO, false) ||
+         !ypaworld->OpenGameShell() )
+    {
+        ypaworld->DeinitGameShell();
+        return 0;
+    }
+
+    // A level left unfinished that can't be loaded isn't offered again
+    if ( continuing )
+        userdata.continueLevel = 0;
+
+    userdata.ShowConfirmDialog(4, Locale::Text::Advanced(Locale::ADV_CANTLOAD), Locale::Text::Advanced(Locale::ADV_CANTLOADWHY), 1);
+
+    GameScreenMode = GAME_SCREEN_MODE_MENU;
+    world_update_arg.TimeStamp = 0;
+    Input::Engine.QueryInput(&input_states);
+    return 1;
+}
+
 int ProcessGameplayFrame(int32_t frameTicks, bool timeFrozen)
 {
     bool draw = true;
@@ -328,7 +358,10 @@ int ProcessGameplayFrame(int32_t frameTicks, bool timeFrozen)
                 return 0;
         }
         else if ( !ypaworld->RestartLevel() )
+        {
             ypa_log_out("Warning, could not start the level again\n");
+            return BackToLevelMap(false);
+        }
 
         Input::Engine.QueryInput(&input_states);
     }
@@ -348,7 +381,10 @@ int ProcessGameplayFrame(int32_t frameTicks, bool timeFrozen)
         ypaworld->DeleteLevel();
 
         if ( !ypaworld->LoadGame( UserData::SaveGamePath(userdata.UserName) ) )
+        {
             ypa_log_out("Warning, load error\n");
+            return BackToLevelMap(false);
+        }
 
         Input::Engine.QueryInput(&input_states);
     }
@@ -412,8 +448,8 @@ int ProcessMenuFrame()
 
         // The saved game, or the level left unfinished, whose recording
         // goes on
-        std::string file = userdata.envAction.action == EnvAction::ACTION_LOAD ? UserData::SaveGamePath(userdata.UserName)
-                                                                                : UserData::SessionPath(userdata.UserName);
+        bool continuing = userdata.envAction.action == EnvAction::ACTION_CONTINUE;
+        std::string file = continuing ? UserData::SessionPath(userdata.UserName) : UserData::SaveGamePath(userdata.UserName);
 
         userdata.SaveSettings();
         ypaworld->CloseGameShell();
@@ -423,10 +459,8 @@ int ProcessMenuFrame()
 
         if ( !ypaworld->LoadGame(file) )
         {
-            ypa_log_out("Error while loading level (level %d, User %s\n", levelInfo.LevelID, userdata.UserName.c_str());
-
-            ypaworld->DeinitGameShell();
-            return 0;
+            ypa_log_out("Error while loading level (level %d, User %s)\n", levelInfo.LevelID, userdata.UserName.c_str());
+            return BackToLevelMap(continuing);
         }
         GameScreenMode = GAME_SCREEN_MODE_GAME;
         Input::Engine.QueryInput(&input_states);
