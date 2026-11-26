@@ -100,7 +100,7 @@ bool NC_STACK_ypaworld::StartReplay(const std::string &path, uint32_t startStep)
     // Set first: failing to set the level up deletes it only as a replay's
     _replay = std::move(replay);
 
-    if ( !LoadLevelData(_replay->GetRecording().Level()) )
+    if ( !LoadLevelData(_replay->GetRecording().Level(), RecordedLevel(_replay->GetRecording())) )
     {
         ypa_log_out("Could not set level %d up to watch %s\n", _replay->GetRecording().Level(), path.c_str());
         _replay.reset();

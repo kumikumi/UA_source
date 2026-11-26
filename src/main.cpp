@@ -1243,7 +1243,8 @@ static bool StartFromRecording(const std::string &path)
 
     World::State::Image view, internal;
 
-    if ( !recording.ReadKeyframe(step, view, internal) || !World::State::Restore(ypaworld, view, internal, true) )
+    if ( !recording.ReadKeyframe(step, view, internal) ||
+         !World::State::Restore(ypaworld, ypaworld->RecordedLevel(recording), view, internal, true) )
         return false;
 
     resumedFromRecording = true;
@@ -1361,6 +1362,7 @@ static std::string CheckResume(int32_t startTime, uint32_t step)
 {
     const uint32_t CheckSteps = 600;
     const int level = ypaworld->GetLevelInfo().LevelID;
+    const std::string description = ypaworld->_levelDescription;
 
     World::State::Image kept = World::State::Capture(ypaworld);
     const uint32_t keptTimeStamp = world_update_arg.TimeStamp;
@@ -1375,7 +1377,7 @@ static std::string CheckResume(int32_t startTime, uint32_t step)
 
     ypaworld->DeleteLevel();
 
-    if ( !World::State::Restore(ypaworld, kept) )
+    if ( !World::State::Restore(ypaworld, description, kept) )
         return fmt::sprintf("Level %d at step %d: can't start again from the kept state\n", level, step);
 
     world_update_arg.TimeStamp = keptTimeStamp;

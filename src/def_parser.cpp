@@ -182,7 +182,12 @@ bool Parser::ParseFile(const std::string &filename, HandlersList &callbacks, int
 
 bool Parser::ParseStringList(const Engine::StringList &slist, HandlersList &callbacks, int flags)
 {
-    Parser parser("StringList");
+    return ParseLines("StringList", slist, callbacks, flags);
+}
+
+bool Parser::ParseLines(const std::string &name, const Engine::StringList &slist, HandlersList &callbacks, int flags)
+{
+    Parser parser(name);
     parser._line = 0;
     parser._strlistIt = slist.cbegin();
     parser._strlistEnd = slist.cend();
@@ -190,7 +195,7 @@ bool Parser::ParseStringList(const Engine::StringList &slist, HandlersList &call
 
     int res = RESULT_SCOPE_END;
     while (res == RESULT_SCOPE_END)
-        res = parser.ParseRoutine("StringList", callbacks, flags);
+        res = parser.ParseRoutine(name, callbacks, flags);
 
     parser._file = NULL;
 
@@ -198,6 +203,22 @@ bool Parser::ParseStringList(const Engine::StringList &slist, HandlersList &call
         return false;
 
     return true;
+}
+
+// A text as a file of it is read: line by line, each with its end
+bool Parser::ParseText(const std::string &name, const std::string &text, HandlersList &callbacks, int flags)
+{
+    Engine::StringList lines;
+
+    for (size_t pos = 0; pos < text.size(); )
+    {
+        size_t end = text.find('\n', pos);
+        end = (end == std::string::npos) ? text.size() : end + 1;
+        lines.push_back(text.substr(pos, end - pos));
+        pos = end;
+    }
+
+    return ParseLines(name, lines, callbacks, flags);
 }
 
 long Parser::stol(const std::string& str, std::size_t* __idx, int __base)

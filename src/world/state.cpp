@@ -1574,14 +1574,15 @@ static bool HasWorld(const Image &image)
 
 // Reads the objects of the images, each of a part, in that order, into the
 // level loaded anew
-static bool RestoreParts(NC_STACK_ypaworld *world, const std::vector<std::pair<Part, const Image *>> &parts, bool campaign)
+static bool RestoreParts(NC_STACK_ypaworld *world, const std::string &level,
+                         const std::vector<std::pair<Part, const Image *>> &parts, bool campaign)
 {
     const Image &first = *parts.front().second;
 
     if ( !HasWorld(first) )
         return false;
 
-    if ( !world->LoadLevelData(first.Level) )
+    if ( !world->LoadLevelData(first.Level, level) )
     {
         ypa_log_out("State: can't load level %d\n", first.Level);
         return false;
@@ -1611,16 +1612,16 @@ static bool RestoreParts(NC_STACK_ypaworld *world, const std::vector<std::pair<P
     return true;
 }
 
-bool Restore(NC_STACK_ypaworld *world, const Image &image)
+bool Restore(NC_STACK_ypaworld *world, const std::string &level, const Image &image)
 {
-    return RestoreParts(world, {{PART_ALL, &image}}, true);
+    return RestoreParts(world, level, {{PART_ALL, &image}}, true);
 }
 
 // The view first: it has each unit's vehicle, which gives the unit its
 // prototype's models and guns that the internal part then fills in
-bool Restore(NC_STACK_ypaworld *world, const Image &view, const Image &internal, bool campaign)
+bool Restore(NC_STACK_ypaworld *world, const std::string &level, const Image &view, const Image &internal, bool campaign)
 {
-    return RestoreParts(world, {{PART_VIEW, &view}, {PART_INTERNAL, &internal}}, campaign);
+    return RestoreParts(world, level, {{PART_VIEW, &view}, {PART_INTERNAL, &internal}}, campaign);
 }
 
 InPlaceRestore::InPlaceRestore(NC_STACK_ypaworld *world, Image &&view, Image &&internal)

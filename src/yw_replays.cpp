@@ -117,6 +117,7 @@ void NC_STACK_ypaworld::KeepDebriefing()
     kept.PrimevalTypeMap = _lvlPrimevalTypeMap;
     kept.PrimevalOwnMap = _lvlPrimevalOwnMap;
     kept.LevelId = _levelInfo.LevelID;
+    kept.LevelDescription = _levelDescription;
     kept.PlayerOwner = _playerOwner;
     kept.OwnerMask = _levelInfo.OwnerMask;
     kept.UserMask = _levelInfo.UserMask;
@@ -134,6 +135,7 @@ bool NC_STACK_ypaworld::ResumeDebriefing()
     _lvlPrimevalTypeMap = kept.PrimevalTypeMap;
     _lvlPrimevalOwnMap = kept.PrimevalOwnMap;
     _levelInfo.LevelID = kept.LevelId;
+    _levelDescription = kept.LevelDescription;
     _playerOwner = kept.PlayerOwner;
     _levelInfo.OwnerMask = kept.OwnerMask;
     _levelInfo.UserMask = kept.UserMask;
@@ -310,6 +312,7 @@ void UserData::FindReplays()
             continue;
 
         replay.Level = recording.Level();
+        replay.LevelDescription = p_YW->RecordedLevel(recording);
         replay.Duration = (recording.LastStep() - recording.FirstStep()) * World::Recording::StepTicks;
         replay.Size = World::RecordingFileSize(replay.Path);
         replay.Date = ReplayDate(name);
@@ -401,7 +404,7 @@ void UserData::LoadReplayPreview()
 
     // Reading the level's description puts its maps in the world's, which
     // aren't the shell's
-    bool loaded = p_YW->LoadDebriefMap(&brf, replay.Level) && !p_YW->_lvlOwnMap.IsNull() &&
+    bool loaded = p_YW->LoadDebriefMap(&brf, replay.Level, replay.LevelDescription) && !p_YW->_lvlOwnMap.IsNull() &&
                   p_YW->_lvlOwnMap.Size() == brf.MapSize;
 
     World::History::LevelLayout level;

@@ -464,6 +464,7 @@ struct TReplayFile
     std::string Name;     // Of the file
     std::string Date;     // When it was saved, as its name has it
     int Level = 0;
+    std::string LevelDescription; // As RecordedLevel gives it
     int32_t Duration = 0; // Game time, in 1/1024 s
     uint64_t Size = 0;    // Of the file, in bytes
 };
@@ -1991,8 +1992,9 @@ public:
     // the definitions of gates and bombs) without its units; a unit of a
     // class, made as yw_createUnit does, or not counted (MakeUnitObject);
     // a unit's models, sounds and effects from its prototype; and what is
-    // worked out from the state once it is read
-    bool LoadLevelData(int levelId);
+    // worked out from the state once it is read. Of the level a description
+    // is of, as ReadLevelDescription and RecordedLevel give them.
+    bool LoadLevelData(int levelId, const std::string &description);
     NC_STACK_ypabact *NewUnitObject(int type);
     NC_STACK_ypabact *MakeUnitObject(int type);
     void GiveUnitAssets(NC_STACK_ypabact *unit);
@@ -2099,7 +2101,7 @@ public:
     virtual int getYW_invulnerable();
 
 protected:
-    int LevelCommonLoader(TLevelDescription *mapp, int levelID);
+    int LevelCommonLoader(TLevelDescription *mapp, int levelID, const std::string &description);
     void FFeedback_Init();
     void FFeedback_StopAll();
     void FFeedback_VehicleChanged();
@@ -2161,14 +2163,16 @@ public:
     bool ParseLevelHeader(TLevelDescription *mapp, const std::string &fname);
     void UpdateCampaignScreen();
     bool InitDebrief();
-    bool LoadDebriefMap(TBriefengScreen *brf, int levelId);
+    bool LoadDebriefMap(TBriefengScreen *brf, int levelId, const std::string &description);
     void KeepDebriefing();
     bool ResumeDebriefing();
     bool CreateReplaysControls();
     void DeleteReplaysControls();
     void FreeDebrief();
-    int ParseDebriefLevelDesc(TLevelDescription *mapproto, const std::string &filename);
-    int ParseLevelDescription(TLevelDescription *mapp, const std::string &fname);
+    int ParseDebriefLevelDesc(TLevelDescription *mapproto, int levelId, const std::string &description);
+    int ParseLevelDescription(TLevelDescription *mapp, int levelId, const std::string &description);
+    std::string ReadLevelDescription(int levelId) const;
+    std::string RecordedLevel(const World::Recording &recording) const;
     bool InitBriefing(int lvlid);
     void FreeBriefing();
     void FreeBriefDataSet();
@@ -2783,6 +2787,10 @@ public:
 
     TMapRegionsNet _globalMapRegions; // level selector
     TLevelInfo _levelInfo; // current level information
+
+    // The description of the level set up last, which its recording keeps:
+    // the text of its file, read by the script parsers
+    std::string _levelDescription;
     
     TBriefengScreen _briefScreen;
     
@@ -2804,6 +2812,7 @@ public:
         World::History::Replay History;
         Common::PlaneBytes PrimevalTypeMap, PrimevalOwnMap;
         int32_t LevelId = 0;
+        std::string LevelDescription;
         int8_t PlayerOwner = 0;
         int OwnerMask = 0, UserMask = 0;
     };

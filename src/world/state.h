@@ -264,12 +264,12 @@ Image Capture(NC_STACK_ypaworld *world, Part part = PART_ALL);
 // The fields of every kind of object in this build, in a part
 Schema MakeSchema(NC_STACK_ypaworld *world, Part part = PART_ALL);
 
-// Sets up the level the images are of, in the state they hold: the whole
-// state, or its view and internal part. The campaign's state too, with
-// campaign. False, after logging why, when it can't; the level is then
-// gone.
-bool Restore(NC_STACK_ypaworld *world, const Image &image);
-bool Restore(NC_STACK_ypaworld *world, const Image &view, const Image &internal, bool campaign);
+// Sets up the level the images are of, as its description has it, in the
+// state they hold: the whole state, or its view and internal part. The
+// campaign's state too, with campaign. False, after logging why, when it
+// can't; the level is then gone.
+bool Restore(NC_STACK_ypaworld *world, const std::string &level, const Image &image);
+bool Restore(NC_STACK_ypaworld *world, const std::string &level, const Image &view, const Image &internal, bool campaign);
 
 // The same for the level being played, in place, a slice at a time while
 // the game shows something else, as going back does: what the level is made

@@ -137,7 +137,7 @@ void LoadLevelPalette(NC_STACK_ypaworld *yw, TLevelDescription *mapp)
     }
 }
 
-int NC_STACK_ypaworld::LevelCommonLoader(TLevelDescription *mapp, int levelID)
+int NC_STACK_ypaworld::LevelCommonLoader(TLevelDescription *mapp, int levelID, const std::string &description)
 {
     int ok = 0;
 
@@ -158,6 +158,7 @@ int NC_STACK_ypaworld::LevelCommonLoader(TLevelDescription *mapp, int levelID)
     _nextCommandId = 1;
 
     _levelInfo.LevelID = levelID;
+    _levelDescription = description;
     _levelInfo.State = TLevelInfo::STATE_PLAYING;
     _levelInfo.OwnerMask = 0;
     _levelInfo.UserMask = 0;
@@ -239,7 +240,7 @@ int NC_STACK_ypaworld::LevelCommonLoader(TLevelDescription *mapp, int levelID)
 
     Common::Env.SetPrefix("rsrc", "data:");
 
-    if ( ParseLevelDescription(mapp, _globalMapRegions.MapRegions[_levelInfo.LevelID].MapDirectory) && mapp->IsOk() )
+    if ( ParseLevelDescription(mapp, levelID, _levelDescription) && mapp->IsOk() )
     {       
         _tutorialHints.Start(mapp->EventLoopID);
 

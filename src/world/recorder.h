@@ -78,6 +78,10 @@ enum RecordingEnd : uint8_t
 //   INFO  u16 level, then zero-ended strings: how the level started
 //         ("level N", or the saved game's or recording's file), the
 //         platform and the compiler, and when the program was built
+//   LEVL  the level's description, as its file has it: what the level is
+//         made of, so that it doesn't need its file. The game's scripts it
+//         includes come from the game's data, as its set and sky do.
+//         Recordings made before they had it take the level's file as it is.
 //   SCHV  the view's fields of each kind of object, as State::WriteSchema
 //         writes them
 //   SCHI  the internal part's
@@ -93,7 +97,7 @@ enum RecordingEnd : uint8_t
 //                unit id (0 for none), u16 length and the text
 //   END   (with a space) u8 how the level was left (RecordingEnd)
 //
-// INFO, SCHV and SCHI come first, then keyframes with the steps between
+// INFO, LEVL, SCHV and SCHI come first, then keyframes with the steps between
 // them: KEYF, STEP, KEYF, STEP ... KEYF, and END when the level was left.
 // A saved game, a recording still being made and one cut short have no
 // END: they're unfinished.
@@ -274,6 +278,7 @@ public:
 
     const std::string &Path() const { return _path; }
     int Level() const { return _level; }
+    const std::string &LevelDescription() const { return _levelDescription; } // Empty when it has none
     const std::string &StartedFrom() const { return _startedFrom; }
     const State::Schema &ViewSchema() const { return _viewSchema; }
 
@@ -313,6 +318,7 @@ protected:
 
     std::string _path;
     int _level = 0;
+    std::string _levelDescription;
     std::string _startedFrom;
     std::string _viewSchemaBytes, _internalSchemaBytes;
     State::Schema _viewSchema, _internalSchema;

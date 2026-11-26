@@ -83,6 +83,7 @@ private:
 public:
     static bool ParseFile(const std::string &filename, HandlersList &callbacks, int flags = 0);
     static bool ParseStringList(const Engine::StringList &slist, HandlersList &callbacks, int flags = 0);
+    static bool ParseText(const std::string &name, const std::string &text, HandlersList &callbacks, int flags = 0);
 
 public:
     /** Useable from handlers **/
@@ -95,6 +96,7 @@ public:
 
 private:
     Parser(const std::string &name) : _Name(name), _file(NULL), _line(0), _mode(MODE_NO) {};
+    static bool ParseLines(const std::string &name, const Engine::StringList &slist, HandlersList &callbacks, int flags);
     int ParseRoutine(const std::string &filename, HandlersList &callbacks, int flags);
     bool ParseNextLine(std::string *p1, std::string *p2);
     
@@ -112,6 +114,7 @@ private:
 /** Sort of sugar **/
 static constexpr auto &ParseFile = Parser::ParseFile;
 static constexpr auto &ParseStringList = Parser::ParseStringList;
+static constexpr auto &ParseText = Parser::ParseText;
 }
 
 #endif //DEFPARSER_H_INCLUDED

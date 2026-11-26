@@ -1545,7 +1545,7 @@ bool NC_STACK_ypaworld::InitBriefing(int lvlid)
 
     TLevelDescription &mproto = _briefScreen.Desc;
 
-    if ( !ParseLevelDescription(&mproto, _globalMapRegions.MapRegions[ lvlid ].MapDirectory) )
+    if ( !ParseLevelDescription(&mproto, lvlid, ReadLevelDescription(lvlid)) )
         goto ON_ERR;
 
     if ( !_briefScreen.Desc.IsOk() )
@@ -1648,7 +1648,7 @@ ON_ERR:
     return false;
 }
 
-int NC_STACK_ypaworld::ParseDebriefLevelDesc(TLevelDescription *mapproto, const std::string &filename)
+int NC_STACK_ypaworld::ParseDebriefLevelDesc(TLevelDescription *mapproto, int levelId, const std::string &description)
 {
     *mapproto = TLevelDescription();
 
@@ -1662,14 +1662,14 @@ int NC_STACK_ypaworld::ParseDebriefLevelDesc(TLevelDescription *mapproto, const 
         new World::Parsers::LevelSuperItemsParser(this),
     };
 
-    return ScriptParser::ParseFile(filename, parsers, ScriptParser::FLAG_NO_INCLUDE);
+    return ScriptParser::ParseText(fmt::sprintf("level %d", levelId), description, parsers, ScriptParser::FLAG_NO_INCLUDE);
 }
 
 // What a level's debriefing map is drawn with: the picture of its map, the
 // marks of its events, and the level's description with its maps, which go
 // to the world's (_lvlTypeMap...). False, after logging why, when there's no
 // picture.
-bool NC_STACK_ypaworld::LoadDebriefMap(TBriefengScreen *brf, int levelId)
+bool NC_STACK_ypaworld::LoadDebriefMap(TBriefengScreen *brf, int levelId, const std::string &description)
 {
     const std::array<std::string, 4> vGfxName
     {
@@ -1684,8 +1684,7 @@ bool NC_STACK_ypaworld::LoadDebriefMap(TBriefengScreen *brf, int levelId)
     for (size_t i = 0; i < vGfxName.size(); i++)
         brf->VectorGfx[i] = Nucleus::CInit<NC_STACK_sklt>({{NC_STACK_rsrc::RSRC_ATT_NAME, vGfxName[i]}});
 
-    if ( levelId <= 0 || levelId >= (int)_globalMapRegions.MapRegions.size() ||
-         !ParseDebriefLevelDesc(&brf->Desc, _globalMapRegions.MapRegions[levelId].MapDirectory) )
+    if ( description.empty() || !ParseDebriefLevelDesc(&brf->Desc, levelId, description) )
     {
         ypa_log_out("No description of level %d for its map\n", levelId);
         return false;
@@ -1737,7 +1736,7 @@ bool NC_STACK_ypaworld::InitDebrief()
     _briefScreen.OwnMap = _lvlPrimevalOwnMap;
     _briefScreen.TypMap = _lvlPrimevalTypeMap;
 
-    if ( !LoadDebriefMap(&_briefScreen, _levelInfo.LevelID) )
+    if ( !LoadDebriefMap(&_briefScreen, _levelInfo.LevelID, _levelDescription) )
         goto ON_ERR;
 
     Common::Env.SetPrefix("rsrc", "levels:");
@@ -1898,7 +1897,35 @@ void NC_STACK_ypaworld::UpdateCampaignScreen()
 }
 
 
-int NC_STACK_ypaworld::ParseLevelDescription(TLevelDescription *mapp, const std::string &fname)
+// The description of a level in the campaign or of a network game: the
+// text of its file. Empty when there's no such level or it can't be read.
+std::string NC_STACK_ypaworld::ReadLevelDescription(int levelId) const
+{
+    if ( levelId <= 0 || levelId >= (int)_globalMapRegions.MapRegions.size() )
+        return std::string();
+
+    std::unique_ptr<FSMgr::FileHandle> file(uaOpenFileAlloc(_globalMapRegions.MapRegions[levelId].MapDirectory, "rb"));
+    std::string text;
+    char buf[4096];
+    size_t got;
+
+    while ( file && (got = file->read(buf, sizeof(buf))) > 0 )
+        text.append(buf, got);
+
+    return text;
+}
+
+// A recording's level, as it keeps it; recorded before recordings kept
+// theirs, as its file has it now
+std::string NC_STACK_ypaworld::RecordedLevel(const World::Recording &recording) const
+{
+    if ( !recording.LevelDescription().empty() )
+        return recording.LevelDescription();
+
+    return ReadLevelDescription(recording.Level());
+}
+
+int NC_STACK_ypaworld::ParseLevelDescription(TLevelDescription *mapp, int levelId, const std::string &description)
 {
     *mapp = TLevelDescription();
     ScriptParser::HandlersList parsers
@@ -1918,7 +1945,7 @@ int NC_STACK_ypaworld::ParseLevelDescription(TLevelDescription *mapp, const std:
         new World::Parsers::LevelSuperItemsParser(this),
     };
 
-    return ScriptParser::ParseFile(fname, parsers, ScriptParser::FLAG_NO_SCOPE_SKIP);
+    return ScriptParser::ParseText(fmt::sprintf("level %d", levelId), description, parsers, ScriptParser::FLAG_NO_SCOPE_SKIP);
 }
 
 
@@ -2672,10 +2699,16 @@ void FreeSetData(NC_STACK_ypaworld *yw)
     }
 
     if ( yw->_colsubSkeleton )
+    {
         yw->_colsubSkeleton->Delete();
+        yw->_colsubSkeleton = NULL;
+    }
 
     if ( yw->_colcompSkeleton )
+    {
         yw->_colcompSkeleton->Delete();
+        yw->_colcompSkeleton = NULL;
+    }
 
     if ( yw->_tracyBitmap )
     {

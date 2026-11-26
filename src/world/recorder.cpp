@@ -650,6 +650,7 @@ bool Recorder::Open(NC_STACK_ypaworld *world, const std::string &path, const std
     }
 
     WriteChunk("INFO", std::string(), info);
+    WriteChunk("LEVL", std::string(), world->_levelDescription);
     WriteChunk("SCHV", std::string(), State::WriteSchema(_viewSchema));
     WriteChunk("SCHI", std::string(), State::WriteSchema(_internalSchema));
     return true;
@@ -1212,7 +1213,7 @@ bool Recording::Open(const std::string &path)
         uint64_t start = pos;
         pos += 12 + size;
 
-        if ( tag == "INFO" || tag == "SCHV" || tag == "SCHI" )
+        if ( tag == "INFO" || tag == "LEVL" || tag == "SCHV" || tag == "SCHI" )
         {
             std::string body(size, '\0');
             if ( size && file->read(&body[0], size) != size )
@@ -1228,6 +1229,10 @@ bool Recording::Open(const std::string &path)
                 _level = level;
                 _startedFrom = std::string(body.c_str() + 2);
                 haveInfo = true;
+            }
+            else if ( tag == "LEVL" )
+            {
+                _levelDescription = body;
             }
             else if ( tag == "SCHV" )
             {

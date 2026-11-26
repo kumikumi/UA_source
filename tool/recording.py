@@ -10,6 +10,7 @@ src/world/recorder.h; the state's fields in src/world/state.h).
   recording.py FILE --at STEP        the view after that step, object by
                                      object; --internal adds the internal part
                                      (only at keyframes)
+  recording.py FILE --level          the description of its level, as kept
 """
 import collections
 import math
@@ -207,6 +208,7 @@ class Recording:
             sys.exit("%s: a recording of format %d, not 3" % (path, version))
         self.keyframes, self.blocks, self.packed = [], [], collections.Counter()
         self.end = None  # How the level was left, when the recording says
+        self.level_description = None  # Recordings before they kept it have none
         total, p = os.path.getsize(path), 8
         while p + 12 <= total:
             self.file.seek(p)
@@ -219,12 +221,14 @@ class Recording:
             at = p + 12
             p += 12 + size
             self.packed[tag] += size
-            if tag in ("INFO", "SCHV", "SCHI"):
+            if tag in ("INFO", "LEVL", "SCHV", "SCHI"):
                 body = self.file.read(size)
                 if tag == "INFO":
                     self.level, = struct.unpack("<H", body[:2])
                     texts = [t.decode("latin-1") for t in body[2:].split(b"\0")[:4]]
                     self.started, self.platform, self.compiler, self.built = texts
+                elif tag == "LEVL":
+                    self.level_description = body
                 elif tag == "SCHV":
                     self.view_schema, self.view_schema_bytes = read_schema(body), body
                 else:
@@ -323,6 +327,8 @@ def field_values(schema, kind, data):
 def summary(rec):
     print("%s: level %d, from %s; recorded on %s with %s, built %s"
           % (rec.path, rec.level, rec.started, rec.platform, rec.compiler, rec.built))
+    print("its level's description: %d bytes" % len(rec.level_description) if rec.level_description is not None else
+          "no description of its level: the level's file is taken as it is")
     tally = collections.Counter()
     last_time = [0]
 
@@ -442,6 +448,11 @@ def show_at(rec, step, internal):
 def main(args):
     if len(args) == 1:
         summary(Recording(args[0]))
+    elif len(args) == 2 and args[1] == "--level":
+        rec = Recording(args[0])
+        if rec.level_description is None:
+            sys.exit("%s keeps no description of its level" % args[0])
+        sys.stdout.buffer.write(rec.level_description)
     elif len(args) == 2:
         compare(Recording(args[0]), Recording(args[1]))
     elif len(args) >= 3 and args[1] == "--at":

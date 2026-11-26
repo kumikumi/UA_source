@@ -5844,7 +5844,7 @@ size_t NC_STACK_ypaworld::CreateLevel(TLevelLoadRequest *arg)
     
     _particles.Clear();
 
-    if ( LevelCommonLoader(&mapp, arg->lvlID) )
+    if ( LevelCommonLoader(&mapp, arg->lvlID, ReadLevelDescription(arg->lvlID)) )
     {
         if ( LoadTypeMap(mapp.TypStr) )
         {
@@ -6079,7 +6079,7 @@ size_t NC_STACK_ypaworld::LoadGame(const std::string &saveFile)
         return 0;
     }
 
-    if ( !World::State::Restore(this, view, internal, true) )
+    if ( !World::State::Restore(this, RecordedLevel(recording), view, internal, true) )
         return 0;
 
     if ( _GameShell && !_GameShell->DirectStart )
@@ -6117,7 +6117,7 @@ bool NC_STACK_ypaworld::RestartLevel()
         return false;
     }
 
-    if ( !World::State::Restore(this, view, internal, false) )
+    if ( !World::State::Restore(this, RecordedLevel(recording), view, internal, false) )
         return false;
 
     return _recorder.ContinueFrom(this, session, recording, recording.FirstStep());
@@ -6317,8 +6317,13 @@ void NC_STACK_ypaworld::VisitState(World::State::Visitor &v)
     v.Kids("units", _unitsList);
 }
 
-bool NC_STACK_ypaworld::LoadLevelData(int levelId)
+bool NC_STACK_ypaworld::LoadLevelData(int levelId, const std::string &description)
 {
+    // Read from a file, it may be of no level at all, or of one with no
+    // description
+    if ( levelId <= 0 || levelId >= (int)_globalMapRegions.MapRegions.size() || description.empty() )
+        return false;
+
     _extraViewNumber = -1;
     _extraViewEnable = false;
 
@@ -6326,7 +6331,7 @@ bool NC_STACK_ypaworld::LoadLevelData(int levelId)
 
     _particles.Clear();
 
-    if ( !LevelCommonLoader(&mapp, levelId) || !LoadTypeMap(mapp.TypStr) || !LoadOwnerMap(mapp.OwnStr) ||
+    if ( !LevelCommonLoader(&mapp, levelId, description) || !LoadTypeMap(mapp.TypStr) || !LoadOwnerMap(mapp.OwnStr) ||
          !LoadHightMap(mapp.HgtStr) )
     {
         DeleteLevel();
@@ -6863,7 +6868,7 @@ size_t NC_STACK_ypaworld::AdvancedCreateLevel(TLevelLoadRequest *arg)
         World::State::Image view, internal;
 
         loaded = recording.Open(won) && recording.ReadKeyframe(recording.Keyframes().back().Step, view, internal) &&
-                 World::State::Restore(this, view, internal, false);
+                 World::State::Restore(this, RecordedLevel(recording), view, internal, false);
 
         if ( loaded )
         {
