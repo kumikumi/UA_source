@@ -2224,6 +2224,9 @@ void UserData::ConnectToServer(std::string connStr){
     fmt::printf("Connectiong to: %s\n", connStr);
     if ( p_YW->_netDriver->Connect(connStr) )
     {
+        // As the host knows us: another player may have had the name
+        netPlayerName = p_YW->_netDriver->GetMyName();
+
         if (p_YW->_netDriver->HasLobby())
         {
             netSelMode = NETSCREEN_SESSION_SELECT;

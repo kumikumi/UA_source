@@ -777,7 +777,10 @@ enum ADV
     ADV_REPLAYKEYS = 19,
     ADV_CANTSAVEREPLAY = 49,
 
-    ADV_MAX = 87
+    // Network games
+    ADV_CANTHOST = 88,
+
+    ADV_MAX = 89
 };
 
 }

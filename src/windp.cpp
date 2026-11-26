@@ -436,7 +436,12 @@ void UserData::AfterMapChoose()
         case 1:
         {
             std::string bff = fmt::sprintf("%d%s%s%s%s", netLevelID, "|", p_YW->_netDriver->GetMyName(), "|", p_YW->_buildDate);
-            p_YW->_netDriver->Host(bff, 4);
+
+            if ( !p_YW->_netDriver->Host(bff, p_YW->_globalMapRegions.MapRegions[ netLevelID ].RoboCount) )
+            {
+                ShowConfirmDialog(4, Locale::Text::Advanced(Locale::ADV_CANTHOST), "", 1);
+                return;
+            }
             
             p_YW->_isNetGame = true;
             netSel = -1;

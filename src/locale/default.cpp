@@ -694,7 +694,8 @@ std::array<std::string, ADV_MAX> DefaultStrings::Advanced = Common::ArrayInit<st
     {ADV_RLYDELETEREPLAY, "REALLY DELETE THIS REPLAY ?"},
     {ADV_CANTOPENREPLAY, "The replay could not be opened."},
     {ADV_REPLAYKEYS, "SPACE Pause   LEFT/RIGHT 10 s   UP/DOWN Speed   ESC Leave"},
-    {ADV_CANTSAVEREPLAY, "The replay could not be saved."}
+    {ADV_CANTSAVEREPLAY, "The replay could not be saved."},
+    {ADV_CANTHOST, "The network game could not be hosted. Is another one hosted on this computer?"}
 });
 
 }
