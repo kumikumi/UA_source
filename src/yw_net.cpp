@@ -1470,7 +1470,7 @@ size_t yw_handleNormMsg(NC_STACK_ypaworld *yw, windp_recvMsg *msg, std::string *
     case UAMSG_VHCLDATA_I:
     {
         uamessage_vhclData *vdMsg = (uamessage_vhclData *)msg->data;
-        szmsg = msg->_data.size();
+        szmsg = vdMsg->hdr.size;
 
         if ( yw->_GameShell->netPlayers[owner].DestroyFlags || (plr && plr->UpdateCountDown) || tv481 )
             break;
@@ -1494,7 +1494,7 @@ size_t yw_handleNormMsg(NC_STACK_ypaworld *yw, windp_recvMsg *msg, std::string *
     case UAMSG_VHCLDATA_E:
     {
         uamessage_vhclData *vdMsg = (uamessage_vhclData *)msg->data;
-        szmsg = msg->_data.size();
+        szmsg = vdMsg->hdr.size;
 
         if ( yw->_GameShell->netPlayers[owner].DestroyFlags || (plr && plr->UpdateCountDown) || tv481 )
             break;
