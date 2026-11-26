@@ -138,6 +138,29 @@ endif()
 # Recordings compress their blocks with zlib
 find_package(ZLIB REQUIRED)
 
+# Network games run on ENet 1.3.18 (enet/, MIT licence, from
+# github.com/lsalzman/enet), built here so no system package is needed
+add_library(enet STATIC
+	enet/callbacks.c
+	enet/compress.c
+	enet/host.c
+	enet/list.c
+	enet/packet.c
+	enet/peer.c
+	enet/protocol.c
+	enet/unix.c
+	enet/win32.c)
+target_include_directories(enet PUBLIC enet/include)
+
+if(WIN32)
+	target_link_libraries(enet PUBLIC ws2_32 winmm)
+elseif(NOT APPLE)
+	# What ENet's own build finds on any current Linux or BSD; on macOS its
+	# unix.c sets these itself
+	target_compile_definitions(enet PRIVATE HAS_POLL=1 HAS_FCNTL=1 HAS_INET_PTON=1 HAS_INET_NTOP=1
+		HAS_MSGHDR_FLAGS=1 HAS_SOCKLEN_T=1 HAS_GETADDRINFO=1 HAS_GETNAMEINFO=1)
+endif()
+
 # The SDL_GPU renderer's shaders are written in Slang (src/shaders) and
 # compiled when the game is built: to Metal Shading Language for macOS and to
 # SPIR-V for Vulkan. Without slangc, only the OpenGL renderer is built.
