@@ -103,9 +103,6 @@ def read_image(raw, p):
     return objects, p
 
 
-MAX_GUESSED = 256  # Changed fields bigger than this are stored as they are
-
-
 def to_f32(x):
     try:
         return struct.unpack("<f", struct.pack("<f", x))[0]
@@ -118,36 +115,29 @@ DIFFERENCED = {T_FIXED: ("I", 1 << 32), T_QUAT: ("H", 1 << 16)}
 
 
 def guess(field, last, before):
-    """What a changed field's bytes are written against, as the game guesses
-    it: a float, position or quaternion moved on by as much as it last moved,
-    else the last bytes. Computing a float's sum or difference in double and
-    rounding it gives the float result exactly."""
-    if before is not None and field.type in DIFFERENCED:
+    """What a changed field of the view is written against, as the game
+    guesses it: a float, position or quaternion moved on by as much as it
+    last moved, else the last bytes. Computing a float's sum or difference in
+    double and rounding it gives the float result exactly."""
+    if field.type in DIFFERENCED:
         fmt, wrap = DIFFERENCED[field.type]
         n = len(last) // ELEM_SIZE[field.type]
         v1s = struct.unpack("<%d%s" % (n, fmt), last)
         v0s = struct.unpack("<%d%s" % (n, fmt), before)
         return struct.pack("<%d%s" % (n, fmt), *[(2 * v1 - v0) % wrap for v1, v0 in zip(v1s, v0s)])
-    if before is None or field.type not in (T_F32, T_F64):
+    if field.type != T_F32:
         return last
-    fmt = "f" if field.type == T_F32 else "d"
-    n = len(last) // ELEM_SIZE[field.type]
-    v1s = struct.unpack("<%d%s" % (n, fmt), last)
-    v0s = struct.unpack("<%d%s" % (n, fmt), before)
+    n = len(last) // 4
     out = []
-    for v1, v0 in zip(v1s, v0s):
+    for v1, v0 in zip(struct.unpack("<%df" % n, last), struct.unpack("<%df" % n, before)):
         g = v1
         if math.isfinite(v1) and math.isfinite(v0):
-            moved = v1 - v0
-            if fmt == "f":
-                moved = to_f32(moved)
-            nxt = v1 + moved
-            if fmt == "f":
-                nxt = to_f32(nxt)
+            moved = to_f32(v1 - v0)
+            nxt = to_f32(v1 + moved)
             if math.isfinite(moved) and math.isfinite(nxt):
                 g = nxt
         out.append(g)
-    return struct.pack("<%d%s" % (n, fmt), *out)
+    return struct.pack("<%df" % n, *out)
 
 
 def decode(field, g, stored):
@@ -163,8 +153,9 @@ def decode(field, g, stored):
 
 
 def apply_changes(objects, schema, raw, p, tally=None, part=""):
-    """Applies what changed (objects: key -> [data, before]); returns where it
-    ended. tally, when given, counts the bytes of each field."""
+    """Applies what changed of the view, whose fields are all of a fixed size
+    (objects: key -> [data, before]); returns where it ended. tally, when
+    given, counts the bytes of each field."""
     count, = struct.unpack_from("<I", raw, p)
     p += 4
     for _ in range(count):
@@ -187,28 +178,16 @@ def apply_changes(objects, schema, raw, p, tally=None, part=""):
             p += 2
             fields = schema[kind]
             old, before = objects[key]
-            old_at, before_at = offsets(fields, old), offsets(fields, before)
-            out, field = bytearray(), 0
+            at = offsets(fields, old)
+            out = bytearray(old)
             for _ in range(n):
                 index, = struct.unpack_from("<H", raw, p)
                 p += 2
-                f = fields[index]
-                size = f.size(raw, p)
-                out += old[old_at[field]:old_at[index]]
-                if f.list or size > MAX_GUESSED:
-                    out += raw[p:p + size]
-                else:
-                    last = old[old_at[index]:old_at[index + 1]]
-                    prev = before[before_at[index]:before_at[index + 1]] if before_at else None
-                    if prev is not None and len(prev) != len(last):
-                        prev = None
-                    g = guess(f, last, prev)
-                    out += decode(f, g, raw[p:p + size])
+                f, start, end = fields[index], at[index], at[index + 1]
+                out[start:end] = decode(f, guess(f, old[start:end], before[start:end]), raw[p:p + end - start])
                 if tally is not None:
-                    tally[(part, "%s %s" % (kind_name(kind), f.name))] += size + 2
-                p += size
-                field = index + 1
-            out += old[old_at[field]:]
+                    tally[(part, "%s %s" % (kind_name(kind), f.name))] += end - start + 2
+                p += end - start
             objects[key] = [bytes(out), old]
     return p
 

@@ -106,13 +106,8 @@ static bool Unpacked(const std::string &packed, std::string &data)
 }
 
 
-// A float field's value guessed from its last two: the last, moved on by as
-// much as it last moved. The guess is what a change is XORed with, so the
-// closer it is, the more of the XOR is zeros. Written so that no compiler
-// fuses it into one rounding, and only with finite values, whose arithmetic
-// every platform does alike.
-// Whether a float or double is finite, by its exponent bits: no function
-// call per element in a build without optimization
+// Whether a float is finite, by its exponent bits: no function call per
+// element in a build without optimization
 static inline bool Finite(float v)
 {
     uint32_t bits;
@@ -120,41 +115,37 @@ static inline bool Finite(float v)
     return (bits & 0x7F800000) != 0x7F800000;
 }
 
-static inline bool Finite(double v)
-{
-    uint64_t bits;
-    memcpy(&bits, &v, 8);
-    return (bits & 0x7FF0000000000000ULL) != 0x7FF0000000000000ULL;
-}
+// The most bytes a field of the view can have: all of them are written
+// against a guess (MakeLayouts)
+static const size_t MaxField = 256;
 
-// The most bytes a field can have to be XORed with a guess; bigger ones are
-// written as they are
-static const size_t MaxGuessed = 256;
-
-template <class T>
-static void PredictElements(const char *last, const char *before, char *guess, size_t count)
+// Float fields' values guessed from their last two: the last, moved on by as
+// much as it last moved. Written so that no compiler fuses it into one
+// rounding, and only with finite values, whose arithmetic every platform
+// does alike.
+static void PredictFloats(const char *last, const char *before, char *guess, size_t count)
 {
     // Copied whole, as fields needn't be aligned: a copy a field, not one an
-    // element. Fields are at most MaxGuessed bytes.
-    T v1s[MaxGuessed / sizeof(T)], v0s[MaxGuessed / sizeof(T)];
-    memcpy(v1s, last, count * sizeof(T));
-    memcpy(v0s, before, count * sizeof(T));
+    // element
+    float v1s[MaxField / 4], v0s[MaxField / 4];
+    memcpy(v1s, last, count * 4);
+    memcpy(v0s, before, count * 4);
 
     for (size_t i = 0; i < count; i++)
     {
-        T v1 = v1s[i], v0 = v0s[i];
+        float v1 = v1s[i], v0 = v0s[i];
 
         if ( Finite(v1) && Finite(v0) )
         {
-            T moved = v1 - v0;
-            T next = v1 + moved;
+            float moved = v1 - v0;
+            float next = v1 + moved;
 
             if ( Finite(moved) && Finite(next) )
                 v1s[i] = next;
         }
     }
 
-    memcpy(guess, v1s, count * sizeof(T));
+    memcpy(guess, v1s, count * 4);
 }
 
 // The same for fixed-point positions and quaternions, whose arithmetic
@@ -162,7 +153,7 @@ static void PredictElements(const char *last, const char *before, char *guess, s
 template <class T>
 static void PredictIntegers(const char *last, const char *before, char *guess, size_t count)
 {
-    T v1s[MaxGuessed / sizeof(T)], v0s[MaxGuessed / sizeof(T)];
+    T v1s[MaxField / sizeof(T)], v0s[MaxField / sizeof(T)];
     memcpy(v1s, last, count * sizeof(T));
     memcpy(v0s, before, count * sizeof(T));
 
@@ -172,17 +163,16 @@ static void PredictIntegers(const char *last, const char *before, char *guess, s
     memcpy(guess, v1s, count * sizeof(T));
 }
 
-// What a field's new bytes are written against: the guess for floats,
-// positions and quaternions, else the last bytes
+// What a field's new bytes are written against: floats, positions and
+// quaternions guessed from their last two values, anything else its last
+// value
 static void Guess(const State::FieldInfo &field, const char *last, const char *before, size_t size, char *guess)
 {
-    if ( before && field.ElemType == State::T_F32 )
-        PredictElements<float>(last, before, guess, size / 4);
-    else if ( before && field.ElemType == State::T_F64 )
-        PredictElements<double>(last, before, guess, size / 8);
-    else if ( before && field.ElemType == State::T_FIXED )
+    if ( field.ElemType == State::T_F32 )
+        PredictFloats(last, before, guess, size / 4);
+    else if ( field.ElemType == State::T_FIXED )
         PredictIntegers<uint32_t>(last, before, guess, size / 4);
-    else if ( before && field.ElemType == State::T_QUAT )
+    else if ( field.ElemType == State::T_QUAT )
         PredictIntegers<uint16_t>(last, before, guess, size / 2);
     else
         memcpy(guess, last, size);
@@ -244,58 +234,31 @@ static void Decode(const State::FieldInfo &field, const char *guess, const char 
     }
 }
 
-// The bytes of a field before the last change, when they fit
-static const char *BeforeBytes(const State::FieldInfo &field, const std::string &before,
-                               const std::vector<size_t> &beforeOffsets, bool beforeFits, size_t i, size_t size)
-{
-    if ( !beforeFits || field.List || beforeOffsets[i + 1] - beforeOffsets[i] != size )
-        return NULL;
-
-    return before.data() + beforeOffsets[i];
-}
-
 // What changed of an object: its fields that differ from the last bytes,
-// written as the format says. beforeOffsets is NULL when the bytes before
-// don't fit the fields.
-static void PutChangedFields(std::string &out, const std::vector<State::FieldInfo> &fields, const ObjectVersions &old,
-                             const std::vector<size_t> &oldOffsets, const std::string &newData,
-                             const std::vector<size_t> &newOffsets, const std::vector<size_t> *beforeOffsets)
+// written as the format says
+static void PutChangedFields(std::string &out, const KindLayout &layout, const ObjectVersions &old, const std::string &data)
 {
+    const std::vector<State::FieldInfo> &fields = *layout.Fields;
     size_t countAt = out.size();
     uint16_t count = 0;
     Put16(out, 0);
 
-    char guess[MaxGuessed];
+    char guess[MaxField];
 
     for (size_t i = 0; i < fields.size(); i++)
     {
-        size_t oldSize = oldOffsets[i + 1] - oldOffsets[i];
-        size_t newSize = newOffsets[i + 1] - newOffsets[i];
-        const char *o = old.Data.data() + oldOffsets[i];
-        const char *n = newData.data() + newOffsets[i];
+        size_t at = layout.Offsets[i], size = layout.Offsets[i + 1] - at;
+        const char *last = old.Data.data() + at;
 
-        if ( oldSize == newSize && !memcmp(o, n, newSize) )
+        if ( !memcmp(last, data.data() + at, size) )
             continue;
 
         Put16(out, i);
+        Guess(fields[i], last, old.Before.data() + at, size, guess);
 
-        if ( fields[i].List || newSize > sizeof(guess) )
-        {
-            out.append(n, newSize);
-        }
-        else
-        {
-            const char *before = NULL;
-            if ( beforeOffsets && (*beforeOffsets)[i + 1] - (*beforeOffsets)[i] == newSize )
-                before = old.Before.data() + (*beforeOffsets)[i];
-
-            Guess(fields[i], o, before, newSize, guess);
-
-            size_t at = out.size();
-            out.resize(at + newSize);
-            Encode(fields[i], guess, n, newSize, &out[at]);
-        }
-
+        size_t outAt = out.size();
+        out.resize(outAt + size);
+        Encode(fields[i], guess, data.data() + at, size, &out[outAt]);
         count++;
     }
 
@@ -307,9 +270,8 @@ static void PutChangedFields(std::string &out, const std::vector<State::FieldInf
 static const char *ApplyChanges(std::map<uint64_t, ObjectVersions> &objects, const KindLayouts &layouts,
                                 const char *p, const char *end, ChangedObjects *changed = NULL)
 {
-    std::vector<size_t> offsets, beforeOffsets;
     std::string scratch;
-    char guess[MaxGuessed];
+    char guess[MaxField];
 
     if ( p + 4 > end )
         return NULL;
@@ -336,17 +298,27 @@ static const char *ApplyChanges(std::map<uint64_t, ObjectVersions> &objects, con
 
             if ( changed )
                 changed->emplace_back(key, nullptr);
+
+            continue;
         }
-        else if ( what == 1 )
+
+        auto lit = layouts.find(kind);
+        if ( lit == layouts.end() )
+            return NULL;
+
+        const KindLayout &layout = lit->second;
+        size_t size = layout.Offsets.back();
+
+        if ( what == 1 )
         {
-            uint32_t size;
+            uint32_t dataSize;
             if ( p + 4 > end )
                 return NULL;
 
-            memcpy(&size, p, 4);
+            memcpy(&dataSize, p, 4);
             p += 4;
 
-            if ( p + size > end )
+            if ( dataSize != size || p + size > end )
                 return NULL;
 
             ObjectVersions &obj = objects[key];
@@ -356,132 +328,56 @@ static const char *ApplyChanges(std::map<uint64_t, ObjectVersions> &objects, con
 
             if ( changed )
                 changed->emplace_back(key, &obj);
-        }
-        else
-        {
-            auto lit = layouts.find(kind);
-            auto oit = objects.find(key);
 
-            if ( lit == layouts.end() || oit == objects.end() || p + 2 > end )
+            continue;
+        }
+
+        auto oit = objects.find(key);
+        if ( oit == objects.end() || p + 2 > end )
+            return NULL;
+
+        ObjectVersions &obj = oit->second;
+        const std::vector<State::FieldInfo> &fields = *layout.Fields;
+
+        if ( changed )
+            changed->emplace_back(key, &obj);
+
+        uint16_t n;
+        memcpy(&n, p, 2);
+        p += 2;
+
+        // In place: the last bytes become the ones before, and the changed
+        // fields are written over them; the guesses need the bytes before
+        // the last too, which go to the scratch buffer
+        scratch.swap(obj.Before);
+        obj.Before.assign(obj.Data);
+
+        for (uint16_t i = 0; i < n; i++)
+        {
+            uint16_t index;
+            if ( p + 2 > end )
                 return NULL;
 
-            const KindLayout &layout = lit->second;
-            const std::vector<State::FieldInfo> &fields = *layout.Fields;
-            ObjectVersions &obj = oit->second;
-
-            if ( changed )
-                changed->emplace_back(key, &obj);
-
-            uint16_t n;
-            memcpy(&n, p, 2);
+            memcpy(&index, p, 2);
             p += 2;
 
-            if ( layout.Fixed )
-            {
-                // In place: the last bytes become the ones before, and the
-                // changed fields are written over them; the guesses need the
-                // bytes before the last too, which go to the scratch buffer
-                size_t size = layout.Offsets.back();
-                if ( obj.Data.size() != size )
-                    return NULL;
-
-                scratch.swap(obj.Before);
-                obj.Before.assign(obj.Data);
-                bool beforeFits = scratch.size() == size;
-
-                for (uint16_t i = 0; i < n; i++)
-                {
-                    uint16_t index;
-                    if ( p + 2 > end )
-                        return NULL;
-
-                    memcpy(&index, p, 2);
-                    p += 2;
-
-                    if ( index >= fields.size() )
-                        return NULL;
-
-                    size_t at = layout.Offsets[index];
-                    size_t fieldSize = layout.Offsets[index + 1] - at;
-
-                    if ( p + fieldSize > end )
-                        return NULL;
-
-                    char *dst = &obj.Data[at];
-
-                    if ( fieldSize > sizeof(guess) )
-                    {
-                        memcpy(dst, p, fieldSize);
-                    }
-                    else
-                    {
-                        Guess(fields[index], obj.Before.data() + at, beforeFits ? scratch.data() + at : NULL, fieldSize, guess);
-                        Decode(fields[index], guess, p, fieldSize, dst);
-                    }
-
-                    p += fieldSize;
-                }
-
-                continue;
-            }
-
-            if ( !State::FieldOffsets(fields, obj.Data, offsets) )
+            if ( index >= fields.size() )
                 return NULL;
 
-            const std::string &old = obj.Data;
-            bool beforeFits = State::FieldOffsets(fields, obj.Before, beforeOffsets);
+            size_t at = layout.Offsets[index];
+            size_t fieldSize = layout.Offsets[index + 1] - at;
 
-            std::string updated;
-            size_t field = 0;
+            if ( p + fieldSize > end )
+                return NULL;
 
-            for (uint16_t i = 0; i < n; i++)
-            {
-                uint16_t index;
-                if ( p + 2 > end )
-                    return NULL;
-
-                memcpy(&index, p, 2);
-                p += 2;
-
-                if ( index >= fields.size() || index < field )
-                    return NULL;
-
-                updated.append(old, offsets[field], offsets[index] - offsets[field]);
-
-                size_t size = State::FieldSize(fields[index], p, end - p);
-                if ( !size )
-                    return NULL;
-
-                if ( fields[index].List || size > sizeof(guess) )
-                {
-                    updated.append(p, size);
-                }
-                else
-                {
-                    if ( offsets[index + 1] - offsets[index] != size )
-                        return NULL;
-
-                    Guess(fields[index], old.data() + offsets[index],
-                          BeforeBytes(fields[index], obj.Before, beforeOffsets, beforeFits, index, size), size, guess);
-
-                    char value[MaxGuessed];
-                    Decode(fields[index], guess, p, size, value);
-                    updated.append(value, size);
-                }
-
-                p += size;
-                field = index + 1;
-            }
-
-            updated.append(old, offsets[field], old.size() - offsets[field]);
-            obj.Before = std::move(obj.Data);
-            obj.Data = std::move(updated);
+            Guess(fields[index], obj.Before.data() + at, scratch.data() + at, fieldSize, guess);
+            Decode(fields[index], guess, p, fieldSize, &obj.Data[at]);
+            p += fieldSize;
         }
     }
 
     return p;
 }
-
 
 
 // Recordings' files
@@ -669,8 +565,27 @@ bool Recorder::WriteChunk(const char *tag, const std::string &head, const std::s
            _file->write(data.data(), data.size()) == data.size();
 }
 
+// This build's fields of the view and the internal part. False, after
+// logging why, when the view's can't be written as changes.
+bool Recorder::SetSchemas(NC_STACK_ypaworld *world)
+{
+    _viewSchema = State::MakeSchema(world, State::PART_VIEW);
+    _internalSchema = State::MakeSchema(world, State::PART_INTERNAL);
+
+    if ( !MakeLayouts(_viewSchema, _viewLayouts) )
+    {
+        ypa_log_out("Recording: the view has a list or a field over %d bytes, which can't be recorded\n", (int)MaxField);
+        return false;
+    }
+
+    return true;
+}
+
 bool Recorder::Open(NC_STACK_ypaworld *world, const std::string &path, const std::string &startedFrom)
 {
+    if ( !SetSchemas(world) )
+        return false;
+
     FSMgr::FileHandle *file = OpenFile(path, "wb");
 
     if ( !file )
@@ -703,10 +618,6 @@ bool Recorder::Open(NC_STACK_ypaworld *world, const std::string &path, const std
         info += text;
         info.push_back('\0');
     }
-
-    _viewSchema = State::MakeSchema(world, State::PART_VIEW);
-    _internalSchema = State::MakeSchema(world, State::PART_INTERNAL);
-    _viewLayouts = MakeLayouts(_viewSchema);
 
     WriteChunk("INFO", std::string(), info);
     WriteChunk("SCHV", std::string(), State::WriteSchema(_viewSchema));
@@ -756,10 +667,10 @@ bool Recorder::ContinueFrom(NC_STACK_ypaworld *world, const std::string &path, c
         return false;
     }
 
-    State::Schema viewSchema = State::MakeSchema(world, State::PART_VIEW);
-    State::Schema internalSchema = State::MakeSchema(world, State::PART_INTERNAL);
+    if ( !SetSchemas(world) )
+        return false;
 
-    if ( !source.SameSchemas(viewSchema, internalSchema) )
+    if ( !source.SameSchemas(_viewSchema, _internalSchema) )
     {
         ypa_log_out("Recording: %s was recorded by a build whose state differs, so a new recording starts at step %d\n",
                     source.Path().c_str(), step);
@@ -795,9 +706,6 @@ bool Recorder::ContinueFrom(NC_STACK_ypaworld *world, const std::string &path, c
     _file.reset(file);
     _file->seek(0, SEEK_END);
     _level = source.Level();
-    _viewSchema = viewSchema;
-    _internalSchema = internalSchema;
-    _viewLayouts = MakeLayouts(_viewSchema);
     _step = step;
     _blockStart = step + 1;
 
@@ -822,48 +730,47 @@ bool Recorder::WriteState(NC_STACK_ypaworld *world, const std::string &path, con
     return true;
 }
 
-// Where each kind's fields start, when all of them have a fixed size, as
-// in the view: worked out once
-KindLayouts MakeLayouts(const State::Schema &schema)
+// Where each kind's fields start: worked out once. Only kinds of fields of
+// a fixed size, at most MaxField bytes, can be written as changes, as all
+// of the view's are; false when there are others.
+bool MakeLayouts(const State::Schema &schema, KindLayouts &layouts)
 {
-    KindLayouts layouts;
+    layouts.clear();
 
     for ( const auto &it : schema )
     {
         KindLayout &layout = layouts[it.first];
         layout.Fields = &it.second;
-        layout.Fixed = true;
         layout.Offsets.push_back(0);
 
         for ( const State::FieldInfo &f : it.second )
         {
-            if ( f.List )
-            {
-                layout.Fixed = false;
-                layout.Offsets.clear();
-                break;
-            }
+            size_t size = State::ElemSize(f.ElemType) * f.Count;
 
-            layout.Offsets.push_back(layout.Offsets.back() + State::ElemSize(f.ElemType) * f.Count);
+            if ( f.List || size > MaxField )
+                return false;
+
+            layout.Offsets.push_back(layout.Offsets.back() + size);
         }
     }
 
-    return layouts;
+    return true;
 }
 
-std::string Recorder::Changes(NC_STACK_ypaworld *world, State::Part part, const State::Schema &schema,
-                              const KindLayouts &layouts, LastObjects &last)
+// What changed of the view since the last step
+std::string Recorder::Changes(NC_STACK_ypaworld *world)
 {
     // The count of changes first, filled in at the end
     std::string changes(4, '\0');
     uint32_t changeCount = 0;
     size_t seen = 0;
-    std::vector<size_t> oldOffsets, newOffsets, beforeOffsets;
+    LastObjects &last = _lastView;
 
-    State::ForEachObject(world, part, [&](uint8_t kind, uint32_t id, const std::string &data)
+    State::ForEachObject(world, State::PART_VIEW, [&](uint8_t kind, uint32_t id, const std::string &data)
     {
         uint64_t key = ObjectKey(kind, id);
         auto it = last.find(key);
+        seen++;
 
         if ( it == last.end() )
         {
@@ -873,7 +780,6 @@ std::string Recorder::Changes(NC_STACK_ypaworld *world, State::Part part, const 
             Put32(changes, data.size());
             changes += data;
             changeCount++;
-            seen++;
 
             last[key] = LastObject{{data, data}, _step};
             return;
@@ -881,61 +787,19 @@ std::string Recorder::Changes(NC_STACK_ypaworld *world, State::Part part, const 
 
         LastObject &obj = it->second;
         obj.SeenStep = _step;
-        seen++;
 
         if ( obj.Versions.Data == data )
             return;
 
         Put8(changes, kind);
         Put32(changes, id);
-
-        auto lit = layouts.find(kind);
-        bool fits = false;
-        const std::vector<size_t> *before = NULL;
-
-        if ( lit != layouts.end() )
-        {
-            const KindLayout &layout = lit->second;
-
-            if ( layout.Fixed )
-            {
-                size_t size = layout.Offsets.back();
-                fits = obj.Versions.Data.size() == size && data.size() == size;
-
-                if ( fits )
-                {
-                    if ( obj.Versions.Before.size() == size )
-                        before = &layout.Offsets;
-
-                    Put8(changes, 2);
-                    PutChangedFields(changes, *layout.Fields, obj.Versions, layout.Offsets, data, layout.Offsets, before);
-                }
-            }
-            else if ( State::FieldOffsets(*layout.Fields, obj.Versions.Data, oldOffsets) &&
-                      State::FieldOffsets(*layout.Fields, data, newOffsets) )
-            {
-                fits = true;
-
-                if ( State::FieldOffsets(*layout.Fields, obj.Versions.Before, beforeOffsets) )
-                    before = &beforeOffsets;
-
-                Put8(changes, 2);
-                PutChangedFields(changes, *layout.Fields, obj.Versions, oldOffsets, data, newOffsets, before);
-            }
-        }
-
-        if ( !fits )
-        {
-            // Bytes that don't fit the fields, which shouldn't be: in full
-            Put8(changes, 1);
-            Put32(changes, data.size());
-            changes += data;
-        }
-
+        Put8(changes, 2);
+        PutChangedFields(changes, _viewLayouts.at(kind), obj.Versions, data);
         changeCount++;
+
         obj.Versions.Before.swap(obj.Versions.Data);
         obj.Versions.Data.assign(data);
-    }, &schema);
+    }, &_viewSchema);
 
     // The objects gone, in order of kind and id
     if ( seen < last.size() )
@@ -972,7 +836,7 @@ void Recorder::Step(NC_STACK_ypaworld *world)
     Cut();
     _step++;
 
-    std::string step = Changes(world, State::PART_VIEW, _viewSchema, _viewLayouts, _lastView);
+    std::string step = Changes(world);
     Put16(step, _messageCount);
     step += _messages;
     _messages.clear();
@@ -1388,13 +1252,13 @@ bool Recording::Open(const std::string &path)
     }
 
     if ( !haveInfo || !State::ReadSchema(_viewSchemaBytes, _viewSchema) || _viewSchema.empty() ||
-         !State::ReadSchema(_internalSchemaBytes, _internalSchema) || _keyframes.empty() )
+         !MakeLayouts(_viewSchema, _viewLayouts) || !State::ReadSchema(_internalSchemaBytes, _internalSchema) ||
+         _keyframes.empty() )
     {
         ypa_log_out("%s is not a whole recording\n", path.c_str());
         return false;
     }
 
-    _viewLayouts = MakeLayouts(_viewSchema);
     return true;
 }
 

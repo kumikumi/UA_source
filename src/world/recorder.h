@@ -32,17 +32,16 @@ typedef std::map<uint64_t, ObjectVersions> ObjectsVersions; // By kind << 32 | i
 // (NULL)
 typedef std::vector<std::pair<uint64_t, const ObjectVersions *>> ChangedObjects;
 
-// A kind's fields, and where they start when they're all of a fixed size,
-// as all of the view's are
+// A kind's fields, and where each starts, then their end: all of them of a
+// fixed size, as the view's are
 struct KindLayout
 {
     const std::vector<State::FieldInfo> *Fields = NULL;
-    bool Fixed = false;
     std::vector<size_t> Offsets;
 };
 
 typedef std::unordered_map<uint8_t, KindLayout> KindLayouts; // Point into the schema
-KindLayouts MakeLayouts(const State::Schema &schema);
+bool MakeLayouts(const State::Schema &schema, KindLayouts &layouts);
 
 // A keyframe in a recording's file: its step, and where its chunk starts
 // and ends
@@ -99,12 +98,12 @@ enum RecordingEnd : uint8_t
 // A saved game, a recording still being made and one cut short have no
 // END: they're unfinished.
 //
-// What changed: u32 objects, each u8 kind, u32 id and u8 what:
+// What changed, of the view, whose fields are all of a fixed size and at
+// most 256 bytes: u32 objects, each u8 kind, u32 id and u8 what:
 //   0  gone
 //   1  new: u32 size, then its fields' bytes
-//   2  changed: u16 fields, each its u16 index, then its new bytes: a list
-//      or a field of over 256 bytes as it is, any other field against a
-//      guess of it. The guess of a float, a fixed-point position or a
+//   2  changed: u16 fields, each its u16 index, then its new bytes against
+//      a guess of them. The guess of a float, a fixed-point position or a
 //      quaternion (State::T_FIXED, T_QUAT) is its last value moved on by as
 //      much as it moved at the object's change before (floats when both are
 //      finite); any other field's is its last value. Positions and
@@ -218,11 +217,11 @@ protected:
         uint64_t _unpacked = 0;
     };
 
+    bool SetSchemas(NC_STACK_ypaworld *world);
     bool Open(NC_STACK_ypaworld *world, const std::string &path, const std::string &startedFrom);
     void Reset();
     bool WriteChunk(const char *tag, const std::string &head, const std::string &data);
-    std::string Changes(NC_STACK_ypaworld *world, State::Part part, const State::Schema &schema, const KindLayouts &layouts,
-                        LastObjects &last);
+    std::string Changes(NC_STACK_ypaworld *world);
     void Remember(NC_STACK_ypaworld *world);
     void RememberImage(const State::Image &view);
     void EndBlock();
