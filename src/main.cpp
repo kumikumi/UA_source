@@ -487,8 +487,10 @@ static int StartReplayViewer()
     return 1;
 }
 
-static int ProcessReplayFrame()
+// Played on by the real time alone, as the game stepped
+static int ProcessReplayFrame(int32_t frameTicks)
 {
+    world_update_arg.DTime = frameTicks;
     ypaworld->ReplayFrame(&world_update_arg);
 
     // Started from the command line (--replay), the game quits
@@ -663,7 +665,7 @@ int ProcessNextFrame()
     }
     else if ( GameScreenMode == GAME_SCREEN_MODE_REPLAY )
     {
-        return ProcessReplayFrame();
+        return ProcessReplayFrame(frameTicks);
     }
     return 1;
 }
