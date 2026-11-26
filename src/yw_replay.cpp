@@ -103,6 +103,7 @@ bool NC_STACK_ypaworld::StartReplay(const std::string &path, uint32_t startStep)
     {
         ypa_log_out("Could not set level %d up to watch %s\n", _replay->GetRecording().Level(), path.c_str());
         _replay.reset();
+        _levelInfo.State = TLevelInfo::STATE_MENU;
         return false;
     }
 
