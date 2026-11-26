@@ -424,9 +424,6 @@ uint32_t ReplayFactionWindow::UnitAt(const Row &row, int px) const
     if ( row.RowKind != Row::SQUAD )
         return row.Units[0];
 
-    if ( row.RowKind != Row::SQUAD )
-        return 0;
-
     if ( px >= _cmdrIconX && px < _cmdrIconX + _iconWidth )
         return row.Units[0];
 
