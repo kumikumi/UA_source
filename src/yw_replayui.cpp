@@ -27,6 +27,16 @@ static std::string FactionName(uint8_t owner)
     }
 }
 
+std::string ReplayTime(int32_t ticks)
+{
+    int seconds = std::max(ticks, 0) / 1024;
+
+    if ( seconds >= 3600 )
+        return fmt::sprintf("%d:%02d:%02d", seconds / 3600, seconds / 60 % 60, seconds % 60);
+
+    return fmt::sprintf("%d:%02d", seconds / 60, seconds % 60);
+}
+
 void FillScreenBox(const NC_STACK_ypaworld *yw, int x, int y, int w, int h)
 {
     int cx = yw->_screenSize.x / 2;

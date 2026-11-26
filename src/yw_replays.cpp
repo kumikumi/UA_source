@@ -312,7 +312,7 @@ void UserData::FindReplays()
 
         replay.Level = recording.Level();
         replay.LevelDescription = p_YW->RecordedLevel(recording);
-        replay.Duration = (recording.LastStep() - recording.FirstStep()) * World::Recording::StepTicks;
+        replay.Duration = (recording.LastStep() - recording.FirstStep()) * World::CVStepTicks;
         replay.Size = World::RecordingFileSize(replay.Path);
         replay.Date = ReplayDate(name);
         replays.push_back(replay);
@@ -546,7 +546,7 @@ static void DrawReplaysList(NC_STACK_ypaworld *yw, UserData *usr)
             const char *texts[4];
             std::string name = (replay.Level > 0 && replay.Level < (int)yw->_globalMapRegions.MapRegions.size()) ?
                                yw->GetLevelName(replay.Level) : fmt::sprintf("%d", replay.Level);
-            std::string length = fmt::sprintf("%d:%02d", replay.Duration / 1024 / 60, replay.Duration / 1024 % 60);
+            std::string length = ReplayTime(replay.Duration);
             std::string size = FileSizeText(replay.Size);
             texts[0] = name.c_str();
             texts[1] = replay.Date.c_str();

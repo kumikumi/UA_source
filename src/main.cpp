@@ -102,16 +102,6 @@ struct DirectStart
 
 static DirectStart directStart;
 
-// The game advances in fixed steps, so how units behave does not depend on
-// the frame rate. 60 steps per second is the rate the port ran at while it
-// was capped to 60 fps. The original game had no fixed step: each frame
-// advanced it by the time the frame took, plus one tick, at whatever frame
-// rate the machine managed.
-static const int32_t SimStepsPerSecond = 60;
-
-// Step length in timer ticks (1/1024 s): 17 at 60 steps per second.
-static const int32_t SimStepTicks = 1024 / SimStepsPerSecond;
-
 // At most this many steps per frame. A machine that cannot keep up makes the
 // game run slower, instead of frames growing longer as they catch up.
 static const int32_t SimMaxStepsPerFrame = 4;
@@ -207,17 +197,17 @@ int ProcessGameplayFrame(int32_t frameTicks, bool timeFrozen)
         input_states = TInputState();
         Input::Engine.QueryEvents(&input_states);
 
-        if ( frameTicks > SimMaxStepsPerFrame * SimStepTicks )
-            frameTicks = SimStepTicks;
+        if ( frameTicks > SimMaxStepsPerFrame * World::CVStepTicks )
+            frameTicks = World::CVStepTicks;
 
-        ypaworld->PlayRewind((double)frameTicks / SimStepTicks);
+        ypaworld->PlayRewind((double)frameTicks / World::CVStepTicks);
 
         // Back there, the next step comes at once, to draw on from there
-        simPendingTicks = ypaworld->IsRewinding() ? 0 : SimStepTicks;
+        simPendingTicks = ypaworld->IsRewinding() ? 0 : World::CVStepTicks;
     }
     else
     {
-        int32_t stepTicks = SimStepTicks;
+        int32_t stepTicks = World::CVStepTicks;
 
         if ( timeFrozen )
         {
@@ -239,15 +229,15 @@ int ProcessGameplayFrame(int32_t frameTicks, bool timeFrozen)
 
             simPendingTicks += frameTicks;
 
-            if ( simPendingTicks > SimMaxStepsPerFrame * SimStepTicks )
-                simPendingTicks = SimMaxStepsPerFrame * SimStepTicks;
+            if ( simPendingTicks > SimMaxStepsPerFrame * World::CVStepTicks )
+                simPendingTicks = SimMaxStepsPerFrame * World::CVStepTicks;
 
             // A level is not drawn before its first step, nor before a step
             // has placed the camera again after it was restored
             if ( ypaworld->_framesElapsed == 0 )
-                simPendingTicks = SimStepTicks;
-            else if ( !ypaworld->ReadyToDraw() && simPendingTicks < SimStepTicks )
-                simPendingTicks = SimStepTicks;
+                simPendingTicks = World::CVStepTicks;
+            else if ( !ypaworld->ReadyToDraw() && simPendingTicks < World::CVStepTicks )
+                simPendingTicks = World::CVStepTicks;
         }
 
         while ( simPendingTicks >= stepTicks )
@@ -1346,11 +1336,11 @@ static std::string HeadlessOutcome(int32_t startTime)
 static void HeadlessStep()
 {
     input_states = TInputState();
-    input_states.Period = SimStepTicks;
+    input_states.Period = World::CVStepTicks;
 
     world_update_arg.Input = &input_states;
-    world_update_arg.DTime = SimStepTicks;
-    world_update_arg.TimeStamp += SimStepTicks;
+    world_update_arg.DTime = World::CVStepTicks;
+    world_update_arg.TimeStamp += World::CVStepTicks;
 
     ypaworld->SimulationStep(&world_update_arg);
 }

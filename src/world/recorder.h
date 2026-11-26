@@ -271,8 +271,6 @@ protected:
 class Recording
 {
 public:
-    enum { StepTicks = 17 }; // Game time a step takes, in 1/1024 s: 60 steps a second
-
     // Finds its chunks. False, after logging why, when it isn't one.
     bool Open(const std::string &path);
 

@@ -15,6 +15,9 @@
 class NC_STACK_ypaworld;
 struct TInputState;
 
+// Game time, in 1/1024 s, as minutes and seconds, or hours too
+std::string ReplayTime(int32_t ticks);
+
 // A box filled with the pen's colour, in pixels from the top left
 void FillScreenBox(const NC_STACK_ypaworld *yw, int x, int y, int w, int h);
 

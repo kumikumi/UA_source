@@ -1,6 +1,7 @@
 #include <algorithm>
 
 #include "../log.h"
+#include "consts.h"
 #include "playback.h"
 
 namespace World
@@ -24,7 +25,7 @@ bool Playback::Open(const std::string &path)
     // viewer's interface shows too
     _maker.reset(new FrameMaker(_recording.ViewSchema(), true));
     _reader.reset(new ViewReader(_recording));
-    _duration = (LastStep() - FirstStep()) * Recording::StepTicks;
+    _duration = (LastStep() - FirstStep()) * CVStepTicks;
     return true;
 }
 

@@ -34,17 +34,6 @@ static const double FreeCameraEase = 6.0;
 static const double FreeCameraTurn = 0.004;
 static const double FreeCameraClearance = 60.0;
 
-// Game time as minutes and seconds, or hours too
-static std::string ReplayTime(int32_t ticks)
-{
-    int seconds = std::max(ticks, 0) / 1024;
-
-    if ( seconds >= 3600 )
-        return fmt::sprintf("%d:%02d:%02d", seconds / 3600, seconds / 60 % 60, seconds % 60);
-
-    return fmt::sprintf("%d:%02d", seconds / 60, seconds % 60);
-}
-
 // Where on the screen the timeline is, in pixels from the top left: a row
 // of text with the ways to look at the right, the track, and the keys
 struct ReplayBar
@@ -732,7 +721,7 @@ void NC_STACK_ypaworld::DrawReplayControls()
 
     // Where it's at of how long it is and how fast it plays, the ways to
     // look's names, and the keys
-    int32_t now = (int32_t)((_replayPosition - replay.FirstStep()) * World::Recording::StepTicks);
+    int32_t now = (int32_t)((_replayPosition - replay.FirstStep()) * World::CVStepTicks);
     std::string state;
 
     if ( _replayPaused )
@@ -984,7 +973,7 @@ void NC_STACK_ypaworld::ReplayFrame(TUpdateArgs *arg)
 
     if ( playing )
     {
-        _replayPosition += (double)arg->DTime / World::Recording::StepTicks * ReplaySpeeds[_replaySpeed];
+        _replayPosition += (double)arg->DTime / World::CVStepTicks * ReplaySpeeds[_replaySpeed];
 
         if ( _replayPosition >= _replay->LastStep() )
         {
