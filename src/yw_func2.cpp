@@ -2187,6 +2187,39 @@ int IsValidFileNameChar(char ch)
 
 
 
+// The call sign typed (or the one before, if nothing was): the host chooses
+// the level next, the others the address to join
+void UserData::NetCallsignChosen()
+{
+    if ( !netName.empty() )
+    {
+        netPlayerName = netName;
+        netName = "";
+    }
+
+    p_YW->_netDriver->SetWantedName(netPlayerName);
+
+    switch ( p_YW->_netDriver->GetMode() )
+    {
+        case 1:
+            isHost = true;
+            netSel = -1;
+            network_listvw.firstShownEntries = 0;
+            netSelMode = NETSCREEN_CHOOSE_MAP;
+            p_YW->GuiWinOpen( &network_listvw );
+            break;
+
+        case 2:
+            netSelMode = NETSCREEN_ENTER_IP;
+            netName = "";
+            netNameCurPos = 0;
+            break;
+
+        default:
+            break;
+    }
+}
+
 void UserData::ConnectToServer(std::string connStr){
     fmt::printf("Connectiong to: %s\n", connStr);
     if ( p_YW->_netDriver->Connect(connStr) )
@@ -3744,33 +3777,7 @@ void UserData::GameShellUiHandleInput()
         case NETSCREEN_ENTER_NAME:
             if ( r.code == 1200 )
             {
-                if ( !netName.empty() )
-                {
-                    netPlayerName = netName;
-                    netName = "";
-                }
-                p_YW->_netDriver->SetWantedName(netPlayerName);
-                switch ( p_YW->_netDriver->GetMode() )
-                {
-                    case 1:
-                        isHost = true;
-                        netSel = -1;
-                        network_listvw.firstShownEntries = 0;
-                        netSelMode = NETSCREEN_CHOOSE_MAP;
-                        p_YW->GuiWinOpen( &network_listvw );
-                        break;
-
-                    case 2:
-                    {
-                        netSelMode = NETSCREEN_ENTER_IP;
-                        netName = "";
-                        netNameCurPos = 0;
-                    }
-                        break;
-
-                    default:
-                        break;
-                }
+                NetCallsignChosen();
             }
             else if ( r.code == 1201 )
             {
@@ -4060,33 +4067,7 @@ void UserData::GameShellUiHandleInput()
 
                 case NETSCREEN_ENTER_NAME:
                     if ( !netName.empty() )
-                    {
-                        netPlayerName = netName;
-                        netName = "";
-
-                        p_YW->_netDriver->SetWantedName(netPlayerName);
-                        switch ( p_YW->_netDriver->GetMode() )
-                        {
-                            case 1:
-                                isHost = true;
-                                netSel = -1;
-                                network_listvw.firstShownEntries = 0;
-                                netSelMode = NETSCREEN_CHOOSE_MAP;
-                                p_YW->GuiWinOpen( &network_listvw );
-                                break;
-
-                            case 2:
-                            {
-                                netSelMode = NETSCREEN_ENTER_IP;
-                                netName = "";
-                                netNameCurPos = 0;
-                            }
-                                break;
-
-                            default:
-                                break;
-                        }
-                    }
+                        NetCallsignChosen();
                     break;
                 
                 case NETSCREEN_ENTER_IP:

@@ -831,6 +831,7 @@ public:
     void ExitFromLanguageMenu();
 
     void GameShellUiHandleInput();
+    void NetCallsignChosen();
     void ConnectToServer(std::string connStr);
     void ShowToolTip(int id);
     void ExitFromNetworkToMain();
