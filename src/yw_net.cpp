@@ -21,7 +21,6 @@ extern char **ypaworld__string_pointers;
 
 
 bool SPEED_DOWN_NET = false;
-static uamessage_vhclDataI vhcldata_interpolate;
 uint32_t HNDL_MSG[108];
 
 const int netDebug_NUM = 4000;
@@ -191,125 +190,99 @@ NC_STACK_ypabact * NetGetBactByID(NC_STACK_ypabact *host, uint32_t id)
     return NULL;
 }
 
-void yw_netBakeVhcl(NC_STACK_ypabact *bact, uamessage_vhclDataI *dat, int id)
+void yw_netBakeVhcl(NC_STACK_ypabact *bact, vhcldata *out)
 {
-    if ( id >= 1024 )
-    {
-        log_netlog("Vehicle Buffer overflow!!! more than 500 vehicles\n");
-        return;
-    }
+    *out = vhcldata();
 
-    vhcldata *common = &dat->data[id];
-
-    common->pos_x = (int32_t)bact->_position.x / 2;
-    common->pos_y = (int32_t)bact->_position.y / 2;
-    common->pos_z = (int32_t)bact->_position.z / 2;
+    out->pos = bact->_position;
 
     if ( bact->getBACT_viewer() && (bact->_status_flg & BACT_STFLAG_LAND) )
-    {
-        float len = bact->_viewer_overeof - bact->_overeof;
-        common->pos_y += (int32_t)len / 2;
-    }
+        out->pos.y += bact->_viewer_overeof - bact->_overeof;
 
     if ( bact->_bact_type == BACT_TYPES_GUN )
     {
-        common->pos_x = (int32_t)bact->_old_pos.x / 2;
-        common->pos_y = (int32_t)bact->_old_pos.y / 2;
-        common->pos_z = (int32_t)bact->_old_pos.z / 2;
-
-        common->specialinfo |= vhcldata::SI_YPAGUN;
-    }
-    else
-    {
-        common->specialinfo &= ~vhcldata::SI_YPAGUN;
+        out->pos = bact->_old_pos;
+        out->specialinfo |= vhcldata::SI_YPAGUN;
     }
 
-    vec3d out = bact->_rotation.GetEuler();
+    vec3d angles = bact->_rotation.GetEuler();
 
-    common->roll = out.x * C_127_2PI;
-    common->pitch = out.y * C_127_2PI;
-    common->yaw = out.z * C_127_2PI;
+    out->roll = angles.x * C_127_2PI;
+    out->pitch = angles.y * C_127_2PI;
+    out->yaw = angles.z * C_127_2PI;
 
-    common->specialinfo &= ~vhcldata::SI_UNK;
-    common->ident = bact->_gid;
+    out->ident = bact->_gid;
+
+    if ( out->ident < 0xFFFF )
+        log_netlog("\n+++ CVD: i send nonsens! (ident %d)\n", out->ident);
 
     if ( bact->_status_flg & BACT_STFLAG_NORENDER )
-        common->specialinfo |= vhcldata::SI_NORENDER;
-    else
-        common->specialinfo &= ~vhcldata::SI_NORENDER;
+        out->specialinfo |= vhcldata::SI_NORENDER;
 
     if ( bact->_status_flg & BACT_STFLAG_LAND )
-        common->specialinfo |= vhcldata::SI_LAND;
-    else
-        common->specialinfo &= ~vhcldata::SI_LAND;
+        out->specialinfo |= vhcldata::SI_LAND;
 
     if ( bact->_bact_type == BACT_TYPES_ROBO )
-        common->specialinfo |= vhcldata::SI_ROBO;
-    else
-        common->specialinfo &= ~vhcldata::SI_ROBO;
+        out->specialinfo |= vhcldata::SI_ROBO;
 
     if ( bact->_status_flg & BACT_STFLAG_DSETTED )
-        common->specialinfo |= vhcldata::SI_DSETTED;
-    else
-        common->specialinfo &= ~vhcldata::SI_DSETTED;
+        out->specialinfo |= vhcldata::SI_DSETTED;
 
     bact->_status_flg &= ~BACT_STFLAG_DSETTED;
 
-    common->energy = bact->_energy;
-    common->vp = 0;
+    out->energy = bact->_energy;
 }
 
-bool yw_prepareVHCLData(NC_STACK_ypaworld *yw, uamessage_vhclDataI *dat)
+// Where the player's host station and all its units are, in as many
+// messages as they need
+void yw_netSendVhclData(NC_STACK_ypaworld *yw)
 {
-    NC_STACK_ypabact *fndRobo = NULL;
+    NC_STACK_ypabact *robo = NULL;
 
-    for( NC_STACK_ypabact* &robo : yw->_unitsList)
+    for( NC_STACK_ypabact* &bact : yw->_unitsList)
     {
-        if ( yw->_userRobo == robo )
+        if ( yw->_userRobo == bact )
         {
-            fndRobo = robo;
+            robo = bact;
             break;
         }
     }
 
-    if ( !fndRobo )
+    if ( !robo )
     {
         log_netlog("CollectVehicleData: My Robo doesn't exist!\n");
-        return false;
+        return;
     }
 
-    yw_netBakeVhcl(fndRobo, dat, 0);
-    dat->owner = fndRobo->_owner;
+    std::vector<NC_STACK_ypabact *> units;
+    units.push_back(robo);
 
-    int num = 1;
-
-    for( NC_STACK_ypabact* &comm : fndRobo->_kidList )
+    for( NC_STACK_ypabact* &comm : robo->_kidList )
     {
-        if (num >= 1023)
-            break;
-
-        yw_netBakeVhcl(comm, dat, num);
-        num++;
+        units.push_back(comm);
 
         for( NC_STACK_ypabact* &unit : comm->_kidList )
-        {
-            if ( num >= 1023 )
-                break;
-            yw_netBakeVhcl(unit, dat, num);
-
-            num++;
-        }
+            units.push_back(unit);
     }
 
-    dat->hdr.number = num;
+    static uamessage_vhclDataI msg;
+    msg.msgID = UAMSG_VHCLDATA_I;
+    msg.owner = robo->_owner;
+    msg.tstamp = yw->_timeStamp;
+    msg.hdr.diffTime = yw->_timeStamp - yw->_netUpdateTimeStamp;
 
-    for(int i = 0; i < dat->hdr.number; i++)
+    for( size_t first = 0; first < units.size(); first += VHCLDATA_PER_MSG )
     {
-        if ( dat->data[i].ident < 0xFFFF )
-            log_netlog("\n+++ CVD: i send nonsens! (ident %d)\n", dat->data[i].ident);
-    }
+        size_t count = std::min(units.size() - first, (size_t)VHCLDATA_PER_MSG);
 
-    return true;
+        for( size_t i = 0; i < count; i++ )
+            yw_netBakeVhcl(units[first + i], &msg.data[i]);
+
+        msg.hdr.number = count;
+        msg.hdr.size = (char *)&msg.data[count] - (char *)&msg;
+
+        yw->NetBroadcastMessage(&msg, msg.hdr.size, false);
+    }
 }
 
 void yw_cleanPlayer(NC_STACK_ypaworld *yw, const std::string &name, uint8_t owner, uint8_t mode)
@@ -351,18 +324,13 @@ void NC_STACK_ypaworld::yw_netApplyVhclDataI(NC_STACK_ypabact *bact, uamessage_v
 {
     if ( id < dat->hdr.number )
     {
-        vec3d newPos;
-        newPos.x = 2 * dat->data[id].pos_x;
-        newPos.y = 2 * dat->data[id].pos_y;
-        newPos.z = 2 * dat->data[id].pos_z;
+        vec3d newPos = dat->data[id].pos;
 
         if ( newPos.x < 0.0 || newPos.x > bact->_wrldSize.x || newPos.z > 0.0 || newPos.z < bact->_wrldSize.y )
             log_netlog(
-                "\n+++ EVD: impossible position x %7.2f(%d) z %7.2f(%d) of object %d\n",
+                "\n+++ EVD: impossible position x %7.2f z %7.2f of object %d\n",
                 newPos.x,
-                dat->data[id].pos_x,
                 newPos.z,
-                dat->data[id].pos_z,
                 bact->_gid);
 
         float dtime = dat->hdr.diffTime * 0.001;
@@ -589,19 +557,22 @@ void yw_netSendUpdate(NC_STACK_ypaworld *yw, uint8_t owner, const char *recvID)
         return;
     }
 
-    int numb = 1;
+    int numb = 0;
 
-    yw_netAddVhclUpdData(updinf.data, 1, bhost);
+    // Leaves room for the end mark
+    auto add = [&](uint8_t type, NC_STACK_ypabact *bact)
+    {
+        if ( numb >= UPDATE_MAX - 1 )
+            return;
+
+        yw_netAddVhclUpdData(&updinf.data[numb], type, bact);
+        numb++;
+    };
+
+    add(1, bhost);
 
     for(NC_STACK_ypamissile* &miss : bhost->_missiles_list )
-    {
-        yw_netAddVhclUpdData(&updinf.data[numb], 4, miss);
-
-        numb++;
-
-        if ( numb >= 1023 )
-            break;
-    }
+        add(4, miss);
 
     for(NC_STACK_ypabact* &comnd : bhost->_kidList)
     {
@@ -614,46 +585,22 @@ void yw_netSendUpdate(NC_STACK_ypaworld *yw, uint8_t owner, const char *recvID)
                 isrobogun = gn->IsRoboGun();
         }
 
-        if ( isrobogun )
-            yw_netAddVhclUpdData(&updinf.data[numb], 5, comnd);
-        else
-            yw_netAddVhclUpdData(&updinf.data[numb], 2, comnd);
-
-        numb++;
-
-        if ( numb >= 1023 )
-            break;
+        add(isrobogun ? 5 : 2, comnd);
 
         for(NC_STACK_ypamissile* &miss : comnd->_missiles_list)
-        {
-            yw_netAddVhclUpdData(&updinf.data[numb], 4, miss);
-
-            numb++;
-
-            if ( numb >= 1023 )
-                break;
-        }
+            add(4, miss);
 
         for(NC_STACK_ypabact* &slv : comnd->_kidList)
         {
-            yw_netAddVhclUpdData(&updinf.data[numb], 3, slv);
-
-            numb++;
-
-            if ( numb >= 1023 )
-                break;
+            add(3, slv);
 
             for(NC_STACK_ypamissile* &miss : slv->_missiles_list)
-            {
-                yw_netAddVhclUpdData(&updinf.data[numb], 4, miss);
-
-                numb++;
-
-                if ( numb >= 1023 )
-                    break;
-            }
+                add(4, miss);
         }
     }
+
+    if ( numb >= UPDATE_MAX - 1 )
+        log_netlog("\n+++ UPD: More than %d units and missiles, the update leaves some out\n", UPDATE_MAX - 1);
 
     updinf.data[numb].type = 0;
     numb++;
@@ -686,7 +633,7 @@ bool yw_netRecvUpdate(NC_STACK_ypaworld *yw, uamessage_update *msg, int owner)
         World::RefBactList::iterator hostLstIt;
         NC_STACK_ypabact *lastBct = NULL;
 
-        while ( msg->data[id].type != 0 )
+        while ( id < UPDATE_MAX && msg->data[id].type != 0 )
         {
             TUnitSpawn newVhcl;
             TUnitSpawn newMiss;
@@ -1293,7 +1240,23 @@ size_t yw_handleNormMsg(NC_STACK_ypaworld *yw, windp_recvMsg *msg, std::string *
     case UAMSG_VHCLDATA_I:
     {
         uamessage_vhclData *vdMsg = (uamessage_vhclData *)msg->data;
+        size_t left = msg->_data.size() - ((uint8_t *)msg->data - msg->_data.data());
+
+        if ( left < sizeof(uamessage_vhclData) )
+        {
+            log_netlog("\n+++ VD: Broken vehicle data from %s\n", msg->senderName.c_str());
+            break;
+        }
+
         szmsg = vdMsg->hdr.size;
+        size_t expected = (char *)&((uamessage_vhclDataI *)vdMsg)->data[vdMsg->hdr.number] - (char *)vdMsg;
+
+        if ( vdMsg->hdr.number > VHCLDATA_PER_MSG || szmsg != expected || szmsg > left )
+        {
+            log_netlog("\n+++ VD: Broken vehicle data from %s\n", msg->senderName.c_str());
+            szmsg = 0;
+            break;
+        }
 
         if ( yw->_GameShell->netPlayers[owner].DestroyFlags || (plr && plr->UpdateCountDown) || tv481 )
             break;
@@ -2907,19 +2870,7 @@ void yw_HandleNetMsg(NC_STACK_ypaworld *yw)
 
     if ( yw->_timeStamp - yw->_netUpdateTimeStamp > upd_time && usr->netProblem != 1 )
     {
-        uamessage_vhclDataI *vhcldata = &vhcldata_interpolate;
-        vhcldata->msgID = UAMSG_VHCLDATA_I;
-        vhcldata->tstamp = yw->_timeStamp;
-
-        if ( yw_prepareVHCLData(yw, vhcldata) )
-        {
-            vhcldata->hdr.size = ((char *)&vhcldata->data[ vhcldata->hdr.number ]) - ((char *)vhcldata);
-
-            vhcldata->hdr.diffTime = yw->_timeStamp - yw->_netUpdateTimeStamp;
-
-            yw->NetBroadcastMessage(vhcldata, vhcldata->hdr.size, false);
-        }
-
+        yw_netSendVhclData(yw);
         yw->_netUpdateTimeStamp = yw->_timeStamp;
     }
 

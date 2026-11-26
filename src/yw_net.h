@@ -129,10 +129,7 @@ struct uamessage_setState: uamessage_base
 
 struct vhcldata
 {
-    int16_t pos_x = 0;
-    int16_t pos_y = 0;
-    int16_t pos_z = 0;
-    int16_t vp = 0;
+    vec3f pos;
     int8_t roll = 0;
     int8_t pitch = 0;
     int8_t yaw = 0;
@@ -163,9 +160,13 @@ struct uamessage_vhclData : uamessage_base
     vhcldatahdr hdr;
 };
 
+// As many units as fit a packet; a host station with more sends more
+// messages
+constexpr int VHCLDATA_PER_MSG = 48;
+
 struct uamessage_vhclDataI : uamessage_vhclData
 {
-    vhcldata data[1024];
+    vhcldata data[VHCLDATA_PER_MSG];
 };
 
 struct uamessage_dead : uamessage_base
@@ -293,11 +294,14 @@ struct vhclUpdData
     vec3d pos;
 };
 
+// A host station's units and their missiles, and an empty one to end them
+constexpr int UPDATE_MAX = 4096;
+
 struct uamessage_update : uamessage_base
 {
     uint32_t sz = 0;
     uint32_t num = 0;
-    vhclUpdData data[1024];
+    vhclUpdData data[UPDATE_MAX];
 };
 
 struct uamessage_impulse : uamessage_base
