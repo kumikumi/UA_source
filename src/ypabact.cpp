@@ -3220,11 +3220,20 @@ size_t NC_STACK_ypabact::LaunchMissile(TMissileLaunch *arg)
         if ( !(wproto._weaponFlags & 0x12) )
             wobj->_fly_dir_length *= 0.2;
 
-        wobj->_rotation.SetZ( wobj->_fly_dir );
+        // It faces where it flies, its side as near the launcher's as that
+        // allows: its axes at right angles and of unit length
+        vec3d forward = vec3d::Normalise( wobj->_fly_dir );
+        vec3d up = forward * _rotation.AxisX();
 
-        wobj->_rotation.SetX( _rotation.AxisX() );
+        // Fired along the launcher's side: up as near the launcher's
+        if ( up.length() < 0.001 )
+            up = _rotation.AxisY() - forward * forward.dot( _rotation.AxisY() );
 
-        wobj->_rotation.SetY( wobj->_rotation.AxisZ() * wobj->_rotation.AxisX() );
+        up.normalise();
+
+        wobj->_rotation.SetZ( forward );
+        wobj->_rotation.SetY( up );
+        wobj->_rotation.SetX( up * forward );
 
         if ( i == 0 )
         {
