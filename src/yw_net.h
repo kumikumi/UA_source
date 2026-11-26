@@ -25,7 +25,7 @@ enum UAMSG
     UAMSG_NEWWEAPON = UAMSG_BASE + 4,
     UAMSG_SETSTATE = UAMSG_BASE + 5,
     UAMSG_VHCLDATA_I = UAMSG_BASE + 6,
-    UAMSG_VHCLDATA_E = UAMSG_BASE + 7,
+    // +7 was vehicle data for extrapolating, which nothing used
 
     UAMSG_DEAD = UAMSG_BASE + 9,
     UAMSG_VHCLENERGY = UAMSG_BASE + 10,
@@ -151,11 +151,6 @@ struct vhcldata
     };
 };
 
-struct vhcldataE : vhcldata
-{
-    vec3d speed;
-};
-
 struct vhcldatahdr
 {
     uint16_t number = 0;
@@ -171,11 +166,6 @@ struct uamessage_vhclData : uamessage_base
 struct uamessage_vhclDataI : uamessage_vhclData
 {
     vhcldata data[1024];
-};
-
-struct uamessage_vhclDataE : uamessage_vhclData
-{
-    vhcldataE data[1024];
 };
 
 struct uamessage_dead : uamessage_base

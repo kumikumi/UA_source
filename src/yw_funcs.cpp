@@ -375,7 +375,6 @@ int yw_InitNetwork(NC_STACK_ypaworld *yw)
         return 0;
     }
 
-    yw->_netInterpolate = true;
 
     yw->_netTcpAddress.clear();
 

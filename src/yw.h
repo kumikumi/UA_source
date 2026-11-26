@@ -56,7 +56,6 @@ struct TSectorDesc;
 struct map_event;
 struct uamessage_base;
 struct uamessage_vhclData;
-struct uamessage_vhclDataE;
 struct uamessage_vhclDataI;
 
 
@@ -2230,9 +2229,8 @@ public:
     
     //PRT - Position Robo Target
     
-    void yw_processVhclDataMsgs(uamessage_vhclData *msg, NC_STACK_ypabact *host_node);
+    void yw_processVhclDataMsgs(uamessage_vhclDataI *msg, NC_STACK_ypabact *host_node);
     NC_STACK_ypabact * yw_getHostByOwner(uint8_t owner);
-    void yw_netApplyVhclDataE(NC_STACK_ypabact *bact, uamessage_vhclDataE *dat, int id, uint32_t timestamp);
     void yw_netApplyVhclDataI(NC_STACK_ypabact *bact, uamessage_vhclDataI *dat, int id, uint32_t timestamp);
     void NetRemove(NC_STACK_ypabact *bct);
     void NetReleaseMissiles(NC_STACK_ypabact *bact);
@@ -2880,7 +2878,6 @@ public:
     bool _netInfoOverkill = false;
 
     int32_t _netStartTimer = 0;
-    bool _netInterpolate = false;
     
     std::string _netTcpAddress; // your tcp address string (for printing)
 

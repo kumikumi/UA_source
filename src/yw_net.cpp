@@ -22,10 +22,7 @@ extern char **ypaworld__string_pointers;
 
 bool SPEED_DOWN_NET = false;
 static uamessage_vhclDataI vhcldata_interpolate;
-static uamessage_vhclDataE vhcldata_exact;
 uint32_t HNDL_MSG[108];
-
-float maxSpeed = 0.0;
 
 const int netDebug_NUM = 4000;
 int netDebug_CREATE_CNT = 0;
@@ -194,49 +191,19 @@ NC_STACK_ypabact * NetGetBactByID(NC_STACK_ypabact *host, uint32_t id)
     return NULL;
 }
 
-void yw_netBakeVhcl(NC_STACK_ypabact *bact, uamessage_vhclData *dat, int id, int interpolate)
+void yw_netBakeVhcl(NC_STACK_ypabact *bact, uamessage_vhclDataI *dat, int id)
 {
-    vhcldata *common = NULL;
-    vhcldataE *extended = NULL;
-
     if ( id >= 1024 )
     {
         log_netlog("Vehicle Buffer overflow!!! more than 500 vehicles\n");
         return;
     }
 
-    if ( interpolate )
-    {
-        uamessage_vhclDataI *datI = static_cast<uamessage_vhclDataI *>(dat);
-        if (datI)
-        {
-            common = &datI->data[id];
-        }
-    }
-    else
-    {
-        uamessage_vhclDataE *datE = static_cast<uamessage_vhclDataE *>(dat);
-        if (datE)
-        {
-            common = &datE->data[id];
-            extended = &datE->data[id];
-        }
-    }
-
-    if (!common)
-    {
-        log_netlog("yw_netBakeVhcl ERROR #1\n");
-        return;
-    }
+    vhcldata *common = &dat->data[id];
 
     common->pos_x = (int32_t)bact->_position.x / 2;
     common->pos_y = (int32_t)bact->_position.y / 2;
     common->pos_z = (int32_t)bact->_position.z / 2;
-
-    if ( !interpolate && extended)
-    {
-        extended->speed = bact->_fly_dir * bact->_fly_dir_length;
-    }
 
     if ( bact->getBACT_viewer() && (bact->_status_flg & BACT_STFLAG_LAND) )
     {
@@ -292,7 +259,7 @@ void yw_netBakeVhcl(NC_STACK_ypabact *bact, uamessage_vhclData *dat, int id, int
     common->vp = 0;
 }
 
-bool yw_prepareVHCLData(NC_STACK_ypaworld *yw, uamessage_vhclData *dat)
+bool yw_prepareVHCLData(NC_STACK_ypaworld *yw, uamessage_vhclDataI *dat)
 {
     NC_STACK_ypabact *fndRobo = NULL;
 
@@ -311,7 +278,7 @@ bool yw_prepareVHCLData(NC_STACK_ypaworld *yw, uamessage_vhclData *dat)
         return false;
     }
 
-    yw_netBakeVhcl(fndRobo, dat, 0, yw->_netInterpolate);
+    yw_netBakeVhcl(fndRobo, dat, 0);
     dat->owner = fndRobo->_owner;
 
     int num = 1;
@@ -321,14 +288,14 @@ bool yw_prepareVHCLData(NC_STACK_ypaworld *yw, uamessage_vhclData *dat)
         if (num >= 1023)
             break;
 
-        yw_netBakeVhcl(comm, dat, num, yw->_netInterpolate);
+        yw_netBakeVhcl(comm, dat, num);
         num++;
 
         for( NC_STACK_ypabact* &unit : comm->_kidList )
         {
             if ( num >= 1023 )
                 break;
-            yw_netBakeVhcl(unit, dat, num, yw->_netInterpolate);
+            yw_netBakeVhcl(unit, dat, num);
 
             num++;
         }
@@ -336,17 +303,11 @@ bool yw_prepareVHCLData(NC_STACK_ypaworld *yw, uamessage_vhclData *dat)
 
     dat->hdr.number = num;
 
-    if (yw->_netInterpolate )
+    for(int i = 0; i < dat->hdr.number; i++)
     {
-        uamessage_vhclDataI *datI = static_cast<uamessage_vhclDataI *>(dat);
-        for(int i = 0; i < datI->hdr.number; i++)
-        {
-            if ( datI->data[i].ident < 0xFFFF )
-                log_netlog("\n+++ CVD: i send nonsens! (ident %d)\n", datI->data[i].ident);
-        }
+        if ( dat->data[i].ident < 0xFFFF )
+            log_netlog("\n+++ CVD: i send nonsens! (ident %d)\n", dat->data[i].ident);
     }
-    else
-        log_netlog("\n+++ CVD: Extrapolating ????\n");
 
     return true;
 }
@@ -444,156 +405,18 @@ void NC_STACK_ypaworld::yw_netApplyVhclDataI(NC_STACK_ypabact *bact, uamessage_v
     }
 }
 
-void NC_STACK_ypaworld::yw_netApplyVhclDataE(NC_STACK_ypabact *bact, uamessage_vhclDataE *dat, int id, uint32_t timestamp)
+void NC_STACK_ypaworld::yw_processVhclDataMsgs(uamessage_vhclDataI *msg, NC_STACK_ypabact *host_node)
 {
-    if ( dat->hdr.number > id )
-    {
-        int32_t tmstmp = timestamp - bact->_lastFrmStamp;
-        if ( tmstmp > 2 )
-        {
-            bact->_old_pos = bact->_position;
-
-            bact->_position.x = 2 * dat->data[id].pos_x;
-            bact->_position.y = 2 * dat->data[id].pos_y;
-            bact->_position.z = 2 * dat->data[id].pos_z;
-
-            vec3d newSpeed = dat->data[id].speed;
-
-            float dtime = tmstmp * 0.001;
-
-            bact->_netDSpeed = (newSpeed - bact->_fly_dir * bact->_fly_dir_length) / dtime;
-
-            float spd = bact->_netDSpeed.length();
-
-            if ( spd > maxSpeed )
-            {
-                if ( bact->_bact_type != BACT_TYPES_MISSLE )
-                {
-                    log_netlog("d_speed max: %10.5f / class %d dof.v old %10.5f with net_time %4.3f\n", spd, bact->_bact_type, bact->_fly_dir_length, dtime);
-                    maxSpeed = spd;
-                }
-            }
-
-            if ( spd > 400.0 )
-            {
-                // TODO(multiplayer): Scales the speed change to length 4, not 400. Probably meant
-                // 400.0 / spd, the limit tested above.
-                bact->_netDSpeed *= 4.0 / spd;
-            }
-
-            if ( bact->_bact_type != BACT_TYPES_GUN && bact->_bact_type != BACT_TYPES_ROBO )
-            {
-                bact->_fly_dir_length = newSpeed.length();
-
-                if ( bact->_fly_dir_length > 0.001 )
-                {
-                    bact->_fly_dir = newSpeed / bact->_fly_dir_length;
-                }
-            }
-            else
-            {
-                bact->_fly_dir = (bact->_position - bact->_old_pos) / (dtime * 6.0);
-
-                bact->_fly_dir_length = bact->_fly_dir.length();
-                if ( bact->_fly_dir_length > 0.001 )
-                {
-                    bact->_fly_dir = bact->_fly_dir / bact->_fly_dir_length;
-                }
-
-                if ( bact->_bact_type == BACT_TYPES_ROBO )
-                {
-                    bact->_fly_dir.z = 0;
-                    bact->_fly_dir.x = 0;
-                }
-
-                bact->_netDSpeed = vec3d(0.0, 0.0, 0.0);
-            }
-
-            if ( dat->data[id].specialinfo & vhcldata::SI_DSETTED )
-            {
-                bact->_old_pos = bact->_position;
-                bact->_fly_dir_length = 0;
-            }
-
-            vec3d rot;
-            rot.x = dat->data[id].roll * C_2PI_127;
-            rot.y = dat->data[id].pitch * C_2PI_127;
-            rot.z = dat->data[id].yaw * C_2PI_127;
-
-            mat3x3 out = mat3x3::Euler(rot);
-
-            bact->_netDRot = (out - bact->_netRotation) / dtime;
-
-            bact->_rotation = out;
-            bact->_netRotation = out;
-
-            if ( dat->data[id].specialinfo & vhcldata::SI_NORENDER )
-                bact->_status_flg |= BACT_STFLAG_NORENDER;
-
-            if ( dat->data[id].specialinfo & vhcldata::SI_LAND )
-                bact->_status_flg |= BACT_STFLAG_LAND;
-            else
-                bact->_status_flg &= ~BACT_STFLAG_LAND;
-
-            bact->_lastFrmStamp = timestamp;
-
-            if ( bact->_status_flg & BACT_STFLAG_LAND )
-            {
-                TRayIntersection groundRay;
-                groundRay.stPos = bact->_position;
-                groundRay.vect = bact->_rotation.AxisY() * 200.0;
-                groundRay.flags = 0;
-
-                IntersectRay(&groundRay);
-
-                if ( groundRay.isect )
-                    bact->_position = groundRay.isectPos - bact->_rotation.AxisY() * bact->_overeof;
-            }
-
-            bact->_energy = dat->data[id].energy;
-        }
-    }
-}
-
-void NC_STACK_ypaworld::yw_processVhclDataMsgs(uamessage_vhclData *msg, NC_STACK_ypabact *host_node)
-{
-    uamessage_vhclDataI *datI = NULL;
-    uamessage_vhclDataE *datE = NULL;
-
-    if (_netInterpolate)
-        datI = static_cast<uamessage_vhclDataI *>(msg);
-    else
-        datE = static_cast<uamessage_vhclDataE *>(msg);
-
-    if (!datI && !datE)
-    {
-        log_netlog("yw_processVhclDataMsgs ERROR #1\n");
-        return;
-    }
-
-
     for(int i = msg->hdr.number - 1; i >= 0; i--)
     {
-        NC_STACK_ypabact *bact = NULL;
+        uint32_t ident = msg->data[i].ident;
 
-        uint32_t ident = 0;
-
-        if (datI)
-            ident = datI->data[i].ident;
-        else
-            ident = datE->data[i].ident;
-
-        bact = NetGetBactByID(host_node, ident);
+        NC_STACK_ypabact *bact = NetGetBactByID(host_node, ident);
 
         if ( !bact )
             log_netlog("+++ EVD: Haven't found vehicle ident %d  from owner %d (%dsec)\n", ident, host_node->_owner, _timeStamp / 1000);
         else
-        {
-            if ( _netInterpolate )
-                yw_netApplyVhclDataI(bact, datI, i, _timeStamp);
-            else
-                yw_netApplyVhclDataE(bact, datE, i, _timeStamp);
-        }
+            yw_netApplyVhclDataI(bact, msg, i, _timeStamp);
     }
 }
 
@@ -1475,43 +1298,12 @@ size_t yw_handleNormMsg(NC_STACK_ypaworld *yw, windp_recvMsg *msg, std::string *
         if ( yw->_GameShell->netPlayers[owner].DestroyFlags || (plr && plr->UpdateCountDown) || tv481 )
             break;
 
-        if ( yw->_netInterpolate )
-        {
-            NC_STACK_ypabact *host_node = yw->yw_getHostByOwner(vdMsg->owner);
+        NC_STACK_ypabact *host_node = yw->yw_getHostByOwner(vdMsg->owner);
 
-            if ( host_node )
-                yw->yw_processVhclDataMsgs(vdMsg, host_node);
-            else
-                log_netlog("\n+++ VD: Havent found robo with owner %d (%ds)\n", vdMsg->owner, yw->_timeStamp / 1000);
-        }
+        if ( host_node )
+            yw->yw_processVhclDataMsgs(static_cast<uamessage_vhclDataI *>(vdMsg), host_node);
         else
-        {
-            log_netlog("\n+++ VD: An extrapolate-Program gets interpolate data!!!\n");
-        }
-    }
-    break;
-
-    case UAMSG_VHCLDATA_E:
-    {
-        uamessage_vhclData *vdMsg = (uamessage_vhclData *)msg->data;
-        szmsg = vdMsg->hdr.size;
-
-        if ( yw->_GameShell->netPlayers[owner].DestroyFlags || (plr && plr->UpdateCountDown) || tv481 )
-            break;
-
-        if ( yw->_netInterpolate )
-        {
-            log_netlog("\n+++ VD: An interpolate-Program gets extrapolate data!!!\n");
-        }
-        else
-        {
-            NC_STACK_ypabact *host_node = yw->yw_getHostByOwner(vdMsg->owner);
-
-            if ( host_node )
-                yw->yw_processVhclDataMsgs(vdMsg, host_node);
-            else
-                log_netlog("\n+++ VD: Havent found robo with owner %d (%ds)\n", vdMsg->owner, yw->_timeStamp / 1000);
-        }
+            log_netlog("\n+++ VD: Havent found robo with owner %d (%ds)\n", vdMsg->owner, yw->_timeStamp / 1000);
     }
     break;
 
@@ -3115,26 +2907,13 @@ void yw_HandleNetMsg(NC_STACK_ypaworld *yw)
 
     if ( yw->_timeStamp - yw->_netUpdateTimeStamp > upd_time && usr->netProblem != 1 )
     {
-        uamessage_vhclData *vhcldata;
-        if ( yw->_netInterpolate )
-        {
-            vhcldata = &vhcldata_interpolate;
-            vhcldata_interpolate.msgID = UAMSG_VHCLDATA_I;
-        }
-        else
-        {
-            vhcldata = &vhcldata_exact;
-            vhcldata_exact.msgID = UAMSG_VHCLDATA_E;
-        }
-
+        uamessage_vhclDataI *vhcldata = &vhcldata_interpolate;
+        vhcldata->msgID = UAMSG_VHCLDATA_I;
         vhcldata->tstamp = yw->_timeStamp;
 
         if ( yw_prepareVHCLData(yw, vhcldata) )
         {
-            if ( yw->_netInterpolate )
-                vhcldata->hdr.size = ((char *)&vhcldata_interpolate.data[ vhcldata->hdr.number ]) - ((char *)vhcldata);
-            else
-                vhcldata->hdr.size = ((char *)&vhcldata_exact.data[ vhcldata->hdr.number ]) - ((char *)vhcldata);
+            vhcldata->hdr.size = ((char *)&vhcldata->data[ vhcldata->hdr.number ]) - ((char *)vhcldata);
 
             vhcldata->hdr.diffTime = yw->_timeStamp - yw->_netUpdateTimeStamp;
 

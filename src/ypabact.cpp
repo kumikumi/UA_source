@@ -4846,7 +4846,6 @@ void NC_STACK_ypabact::Renew()
     _lastFrmStamp = 0;
     _netDRot = mat3x3();
     _netRotation = mat3x3();
-    _netDSpeed = vec3d();
 
     _scale_start = 0.0;
     _scale_speed = 0.0;
@@ -6986,7 +6985,7 @@ void NC_STACK_ypabact::NetUpdate(update_msg *upd)
 
     _clock += upd->frameTime;
 
-    NetPredictMotion(upd);
+    NetInterpolateMotion(upd);
 
     for ( NC_STACK_ypamissile* misl : Utils::IterateListCopy<NC_STACK_ypamissile *>(_missiles_list) )
     {
@@ -7014,13 +7013,6 @@ void NC_STACK_ypabact::NetUpdate(update_msg *upd)
     SFXEngine::SFXe.UpdateSoundCarrier(&_soundcarrier);
 }
 
-void NC_STACK_ypabact::NetPredictMotion(update_msg *upd)
-{
-    if (_world->_netInterpolate)
-        NetInterpolateMotion(upd);
-    else
-        NetExtrapolateMotion(upd);
-}
 
 void NC_STACK_ypabact::Release()
 {
@@ -7551,72 +7543,6 @@ void NC_STACK_ypabact::NetInterpolateMotion(update_msg *upd)
         _position += _fly_dir * (_fly_dir_length * ftime * 6.0);
 
         CorrectPositionInLevelBox(NULL);
-    }
-}
-
-void NC_STACK_ypabact::NetExtrapolateMotion(update_msg *upd)
-{
-    float ftime = upd->frameTime * 0.001;
-    float stupd = (upd->gTime - _lastFrmStamp) * 0.001;
-
-    if ( stupd > 0.0 )
-    {
-        _rotation += _netDRot * ftime;
-
-        vec3d axis = _rotation.AxisX();
-
-        if (axis.normalise() > 0.0001)
-            _rotation.SetX( axis );
-        else
-            _rotation.SetX( vec3d::OX(1.0) );
-
-        axis = _rotation.AxisY();
-
-        if (axis.normalise() > 0.0001)
-            _rotation.SetY( axis );
-        else
-            _rotation.SetY( vec3d::OY(1.0) );
-
-        axis = _rotation.AxisZ();
-
-        if (axis.normalise() > 0.0001)
-            _rotation.SetZ( axis );
-        else
-            _rotation.SetZ( vec3d::OZ(1.0) );
-
-        vec3d spd = _fly_dir * _fly_dir_length + _netDSpeed * stupd;
-
-        bool hgun = false;
-        if (_bact_type == BACT_TYPES_GUN)
-        {
-            NC_STACK_ypagun *guno = dynamic_cast<NC_STACK_ypagun *>(this);
-            if (guno)
-            {
-                hgun = guno->IsRoboGun();
-            }
-        }
-
-        // TODO(multiplayer): Probably a decompile slip. This replaces the
-        // position with one step's movement, so a remote unit would jump near
-        // the map origin; NetInterpolateMotion moves with "+=". Check against
-        // the original before relying on network play.
-        if (_bact_type != BACT_TYPES_GUN || hgun)
-            _position = spd * ftime * 6.0;
-
-        CorrectPositionInLevelBox(NULL);
-
-        if ( _status_flg & BACT_STFLAG_LAND )
-        {
-            TRayIntersection ray;
-            ray.stPos = _position;
-            ray.vect = _rotation.AxisY() * 200.0;
-            ray.flags = 0;
-
-            _world->IntersectRay(&ray);
-
-            if ( ray.isect )
-                _position = ray.isectPos - _rotation.AxisY() * _overeof;
-        }
     }
 }
 

@@ -416,13 +416,11 @@ public:
     virtual void CorrectPositionOnLand();
     virtual void CorrectPositionInLevelBox(void *);
     virtual void NetUpdate(update_msg *arg);
-    virtual void NetPredictMotion(update_msg *arg);
     virtual void Release();
     virtual size_t SetStateInternal(setState_msg *arg);
     virtual void ChangeSectorEnergy(TSectorDamage *arg);
     virtual void DeadTimeUpdate(update_msg *arg);
     virtual void NetInterpolateMotion(update_msg *arg);
-    virtual void NetExtrapolateMotion(update_msg *arg);
     virtual size_t PathFinder(TPathRequest *arg);
     virtual size_t SetPath(TPathRequest *arg);
     
@@ -709,7 +707,6 @@ public:
     uint32_t _lastFrmStamp;
     mat3x3 _netDRot;
     mat3x3 _netRotation;
-    vec3d _netDSpeed;
     float _scale_start;
     float _scale_speed;
     float _scale_accel;
