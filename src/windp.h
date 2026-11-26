@@ -5,21 +5,8 @@
 #include "nucleas.h"
 #include "network.h"
 #include "lstvw.h"
-#include "netlib/zndNet.h"
+#include "net/session.h"
 
-
-struct ProviderStruct
-{
-    std::string name;
-    int type;
-    //guid or other
-
-    void clear()
-    {
-        name = "";
-        type = 0;
-    }
-};
 
 struct windp_getNameMsg
 {
@@ -153,15 +140,14 @@ public:
     std::string GetPlayerName(uint32_t index) const;
     bool IsPlayer(const std::string &name) const;
 
+    // Guaranteed messages arrive once and in order; the others may be lost
+    // and are dropped rather than delivered after newer ones
     bool Send(void *data, size_t dataSize, const std::string &recvID, bool garantee);
     bool Broadcast(void *data, size_t dataSize, bool garantee);
-    size_t QueueBroadcast(void *data, size_t dataSize, bool garantee);
-    
-    size_t BroadcastLowLevel(void *data, size_t dataSize, bool garantee);
-    size_t SendLowLevel(void *data, size_t dataSize, const std::string &recvID, bool garantee);
     
     bool Recv(windp_recvMsg *recv);
     
+    // Sends what is queued; returns the bytes sent since the last call
     size_t FlushBroadcastBuffer();
 
     virtual size_t GetCaps(IDVPair *stak);
@@ -175,23 +161,15 @@ public:
     virtual void   SetVersion(const std::string &arg);
     virtual size_t GetProvType();
 
-    virtual size_t GetStats(int *);
+    // Round trip (ms), packet loss (%), packets sent and received, KB sent
+    // and received
+    void GetStats(int *stats);
 
-    NC_STACK_windp() {
-        _clear();
-        //memset(&wdp_intern, 0, sizeof(wdp_intern));
-    };
-    virtual ~NC_STACK_windp() {};
+    NC_STACK_windp() {};
+    virtual ~NC_STACK_windp() { Reset(NULL); };
     
     virtual const std::string ClassName() const {
         return __ClassName;
-    };
-
-    enum
-    {
-        MSG_T_UNKNOWN = 0,
-        MSG_T_PLAYER = 1,
-        MSG_T_ALL = 2
     };
 
     enum
@@ -204,78 +182,22 @@ public:
     enum
     {
         CONF_CONN_WAIT = 5000,
-        CONF_USERS_GET_TIME = 1000,
-        CONF_SESS_GET_TIME = 1000,
-        
-        CONF_SEND_SIZE = 1024,
     };
-
-    bool init();
-    void deinit();
 
 protected:
-    enum
-    {
-        MAX_PROVIDERS = 2, //64,
-    };
-
-    void _clear();
-    
-    void ReloadUsersList();
-    void ReloadSessionsList();
-    uint64_t GetUserID(const std::string &name);
-    std::string GetUserName(uint64_t id);
-    void UpdateOwnPlayerIndex();
-
+    const std::vector<Net::Player> &Players() const;
 
     //Data
 public:
     static constexpr const char * __ClassName = "windp.class";
 
-    ProviderStruct providers[MAX_PROVIDERS];
-
-    int connType;
-
-    ZNDNet::ZNDClient *zcli;
-    ZNDNet::ZNDSingle *zhost;
-    ZNDNet::ZNDNet    *zcon;
-    bool _hasLobby;
-    uint64_t    _myID;
+protected:
+    int connType = 0;
+    Net::Session *_session = NULL;
     std::string _myName;
-    ZNDNet::UserInfoVect _rawUsers;
-    int32_t _myIndex = -1;
-    ZNDNet::SessionInfoVect _rawSessions;
-    uint32_t _nextUsersGet;
-    uint32_t _nextSessionsGet;
-    uint64_t _sesID;
-    std::string _sesName;
-    /*  _DWORD dword1504;
-      IDirectPlay3 *dplay3;
-      int providerID;
-      int connType;
-      int num_sessions;
-      windp_t2 sessions[64];
-      int act_sess;
-      windp_t2 own_sess;
-      int sess_joined;
-      int sess_created;*/
     std::string version_ident;
-    int version_check;
-    /*windp_t3 players[4];
-    int num_players;*/
-    char *norm_block;
-    //char *big_block;
-    int norm_size;
-    /*int big_size;
-    int guaranteed;*/
-    std::vector<uint8_t> broadcastBuff;
-    int broadcastBuff_off = 0;
-    
-    int guaranteed_md;
-    /*nlist recv_list;
-    nlist send_list;
-    HANDLE mevent;*/
-    int debug;
+    bool version_check = false;
+    uint64_t _flushedBytes = 0;
 };
 
 #endif // WINDP_H_INCLUDED

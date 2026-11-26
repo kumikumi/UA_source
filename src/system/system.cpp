@@ -1,6 +1,5 @@
 #include <string>
 #include <list>
-#include <SDL3_net/SDL_net.h>
 #include "../fmtlib/printf.h"
 
 #include "system.h"
@@ -229,8 +228,6 @@ void Init(bool headless)
     TTF_Init();
 
     ScanFonts();
-
-    NET_Init();
 }
 
 void OpenWindow(SDL_PropertiesID props)
@@ -267,8 +264,6 @@ SDL_Window *GetWindow()
 
 void Deinit()
 {
-    NET_Quit();
-
     FontsList.clear();
 
     if (window)

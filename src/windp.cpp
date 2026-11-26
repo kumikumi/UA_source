@@ -10,107 +10,28 @@
 #include "system/inivals.h"
 #include "locale/locale.h"
 
-const char *SERV_STR = "UA:SOURCE TEST NETWORK";
-
 size_t NC_STACK_windp::Init(IDVList &stak)
 {
     if ( !NC_STACK_network::Init(stak))
         return 0;
 
-    if (!init())
-    {
-        Delete();
-        return 0;
-    }
-
     System::IniConf::ReadFromNucleusIni();
-    guaranteed_md = System::IniConf::NetGmode.Get<int>();
     version_check = System::IniConf::NetVersionCheck.Get<bool>();
-    debug = System::IniConf::GameDebug.Get<bool>();
     return 1;
-}
-
-void NC_STACK_windp::_clear()
-{
-    for(int i = 0; i < MAX_PROVIDERS; i++)
-        providers[i].clear();
-
-    connType = 0;
-    
-    _hasLobby = false;
-    _myName = "";
-    
-    _nextUsersGet = 0;
-    _nextSessionsGet = 0;
-    
-    _sesID = 0;
-    _sesName = "";
-
-    version_ident = "";
-    version_check = 0;
-
-    norm_block = NULL;
-
-    norm_size = 0;
-
-    guaranteed_md = 0;
-
-    debug = 0;
-
-    zcli = NULL;
-    zhost = NULL;
-    zcon = NULL;
-}
-
-bool NC_STACK_windp::init()
-{
-    _clear();
-
-    norm_block = (char *)malloc(0x10000);
-    if (!norm_block)
-    {
-        deinit();
-        return false;
-    }
-
-    norm_size = 0x10000;
-
-    broadcastBuff.resize(CONF_SEND_SIZE);
-
-    if (broadcastBuff.empty())
-    {
-        deinit();
-        return false;
-    }
-
-    return true;
-}
-
-void NC_STACK_windp::deinit()
-{
-
 }
 
 size_t NC_STACK_windp::Deinit()
 {
+    Reset(NULL);
     return NC_STACK_nucleus::Deinit();
 }
 
 
 size_t NC_STACK_windp::SetMode(bool hosting)
 {
-    if (hosting)
-    {
-        connType = 1;
-        zhost = new ZNDNet::ZNDSingle(SERV_STR);
-        zcon = zhost;
-    }
-    else
-    {
-        connType = 2;
-        zcli = new ZNDNet::ZNDClient(SERV_STR);
-        zcon = zcli;
-    }
+    Reset(NULL);
+    connType = hosting ? 1 : 2;
+    _session = new Net::Session;
     return 1;
 }
 
@@ -133,94 +54,36 @@ bool NC_STACK_windp::Connect(const std::string &connString)
 {
     if (connType != 2)
         return false;
-    
-    ZNDNet::IPaddress server;
-    if ( !ZNDNet::ResolveHost(&server, connString.c_str(), 61234) )
-        return false;
-    
-    zcli->Start(_myName, server);
-    
-    uint32_t deadTime = SDL_GetTicks() + CONF_CONN_WAIT;
-    bool waitConn = true;
-    
-    while (waitConn)
+
+    Net::JoinResult result = _session->Join(connString, _myName, version_ident, CONF_CONN_WAIT);
+
+    if ( result != Net::JOIN_OK )
     {
-        SDL_Delay(5);
-
-        if (SDL_GetTicks() > deadTime)
-        {
-            zcli->Stop();
-            return false;
-        }
-        
-        for(ZNDNet::Event *evt = zcli->Events_PopSystem(); evt != NULL; evt = zcli->Events_PopSystem())
-        {
-            switch( evt->type )
-            {
-                case ZNDNet::EVENT_CONNECTED:
-                    {
-                        ZNDNet::EventNameID *dat = (ZNDNet::EventNameID *)evt;
-                        _myName = dat->name;
-                        _hasLobby = dat->value == 1 ? true : false;
-                        _myID = dat->id;
-                        
-                        if (_hasLobby)
-                            waitConn = false;
-                    }
-                    break;
-                
-                case ZNDNet::EVENT_SESSION_JOIN:
-                {
-                    ZNDNet::EventNameID *dat = (ZNDNet::EventNameID *)evt;
-                    _sesID = dat->id;
-                    _sesName = dat->name;
-                    waitConn = false;
-                }
-                break;
-
-                case ZNDNet::EVENT_DISCONNECT:
-                case ZNDNet::EVENT_CONNERR:
-                    {
-                        zcli->Stop();
-                        return false;
-                    }
-                    break;
-                    
-                default:
-                    break;
-            }
-            delete evt;
-        }
+        log_netlog("Couldn't join the game at %s: %s\n", connString.c_str(),
+                   result == Net::JOIN_BAD_ADDRESS ? "no such address" :
+                   result == Net::JOIN_FULL ? "it is full" :
+                   result == Net::JOIN_CLOSED ? "it doesn't take players now" :
+                   result == Net::JOIN_OTHER_VERSION ? "it runs another version" : "no answer");
+        return false;
     }
-    
-    ReloadUsersList();
-    ReloadSessionsList();
-    
+
+    _myName = _session->MyName();
     return true;
 }
 
 bool NC_STACK_windp::IsConnected()
 {
-    if (connType != 2)
-        return false;
-    
-    return zcli->GetStatus() == ZNDNet::NetUser::STATUS_CONNECTED;
+    return connType == 2 && _session && _session->IsOpen();
 }
 
 bool NC_STACK_windp::HasLobby()
 {
-    if (!IsConnected())
-        return false;
-    
-    return _hasLobby;
+    return false;
 }
 
 bool NC_STACK_windp::IsJoined()
 {
-    if (connType != 2)
-        return false;
-    
-    return zcon->GetMySesID() != 0;
+    return IsConnected();
 }
 
 
@@ -228,11 +91,14 @@ bool NC_STACK_windp::Host(const std::string &gameName, int playerNum)
 {
     if (connType != 1)
         return false;
-    
-    zhost->Start(_myName, 61234, gameName, playerNum);
-    _myID = zhost->GetMyID();
-    
-    ReloadUsersList();
+
+    if ( !_session->Host(_myName, Net::DEFAULT_PORT, gameName, playerNum, version_ident, version_check) )
+    {
+        log_netlog("Couldn't host a game on port %d\n", Net::DEFAULT_PORT);
+        return false;
+    }
+
+    _myName = _session->MyName();
     return true;
 }
 
@@ -240,344 +106,232 @@ bool NC_STACK_windp::Host(const std::string &gameName, int playerNum)
 
 size_t NC_STACK_windp::EnumSessions(IDVPair *stak)
 {
-    //ask sessions
-    printf("%s\n", __PRETTY_FUNCTION__);
     return 0;
 }
 
 size_t NC_STACK_windp::GetSessionName(windp_getNameMsg *sessName)
 {
-    if (sessName->id < _rawSessions.size())
-    {
-        sessName->name = _rawSessions.at(sessName->id).name;
-        return 1;
-    }
     return 0;
 }
 
 std::string NC_STACK_windp::GetCurrentSessionName()
 {
-    return _sesName;
+    return _session ? _session->SessionName() : std::string();
 }
 
 size_t NC_STACK_windp::JoinSession(const std::string &sessName)
 {
-    //join session
-    printf("%s\n", __PRETTY_FUNCTION__);
     return 0;
 }
 
 size_t NC_STACK_windp::CreateSession(windp_openSessionMsg *osm)
 {
-    //open session
-    printf("%s\n", __PRETTY_FUNCTION__);
     return 0;
 }
 
 size_t NC_STACK_windp::GetSessionData(IDVPair *stak)
 {
-    //get session
-    printf("%s\n", __PRETTY_FUNCTION__);
     return 0;
 }
 
 size_t NC_STACK_windp::CloseSession(IDVPair *stak)
 {
-    //close session
-    if (connType == 1)
-    {
-        if (zhost)
-            zhost->CloseSession(0);
-    }
-    printf("%s\n", __PRETTY_FUNCTION__);
+    // Ends the game for everyone
+    if ( _session && _session->IsHost() )
+        _session->Close();
+
     return 0;
 }
 
 size_t NC_STACK_windp::GetSessionStatus()
 {
-    if (!zcon)
-        return SESSION_STATUS_NONE;
-
     return SESSION_STATUS_NONE;
 }
 
 size_t NC_STACK_windp::SetSessionName(const char *sessName)
 {
-    //set session name
-    printf("%s\n", __PRETTY_FUNCTION__);
     return 0;
 }
 
 size_t NC_STACK_windp::CreatePlayer(windp_createPlayerMsg *cp)
 {
-    //create player
-    printf("%s\n", __PRETTY_FUNCTION__);
     return 0;
 }
 
 size_t NC_STACK_windp::DeletePlayer(const char *playerName)
 {
-    //destroy player
-    printf("%s\n", __PRETTY_FUNCTION__);
     return 0;
 }
 
 
+const std::vector<Net::Player> &NC_STACK_windp::Players() const
+{
+    static const std::vector<Net::Player> none;
+    return _session ? _session->Players() : none;
+}
+
 bool NC_STACK_windp::GetPlayerData(uint32_t index, TDPPlayerData *out) const
 {
-    //get player data
-    if (index >= _rawUsers.size())
-        return 0;
-    
-    const ZNDNet::UserInfo &usr = _rawUsers.at(index);
-    out->name = usr.name;
-    out->flags = usr.ID == _myID ? TDPPlayerData::NPD_ITSME : 0;
+    const std::vector<Net::Player> &players = Players();
+
+    if (index >= players.size())
+        return false;
+
+    out->name = players[index].Name;
+    out->flags = players[index].Id == _session->MyId() ? TDPPlayerData::NPD_ITSME : 0;
     out->Index = index;
-    return 1;
+    return true;
 }
 
 std::vector<TDPPlayerData> NC_STACK_windp::GetPlayersData() const
 {
-    std::vector<TDPPlayerData> tmp;
-    tmp.resize( _rawUsers.size() );
-    
-    for(uint32_t i = 0; i < _rawUsers.size(); i++)
-    {
-        TDPPlayerData &p = tmp[i];
-        const ZNDNet::UserInfo &usr = _rawUsers.at(i);
-        p.Index = i;
-        p.name = usr.name;
-        p.flags = usr.ID == _myID ? TDPPlayerData::NPD_ITSME : 0;
-    }
+    std::vector<TDPPlayerData> tmp( Players().size() );
+
+    for(uint32_t i = 0; i < tmp.size(); i++)
+        GetPlayerData(i, &tmp[i]);
+
     return tmp;
 }
 
 int32_t NC_STACK_windp::GetMyIndex() const
 {
-    return _myIndex;
+    const std::vector<Net::Player> &players = Players();
+
+    for(size_t i = 0; i < players.size(); i++)
+    {
+        if (players[i].Id == _session->MyId())
+            return i;
+    }
+
+    return -1;
 }
 
 std::string NC_STACK_windp::GetPlayerName(uint32_t index) const
 {
-    if (index >= _rawUsers.size())
+    const std::vector<Net::Player> &players = Players();
+
+    if (index >= players.size())
         return std::string();
-    return _rawUsers.at(index).name;
+
+    return players[index].Name;
 }
 
 int32_t NC_STACK_windp::GetPlayerIndex(const std::string &name) const
 {
-    for(uint32_t i = 0; i < _rawUsers.size(); i++)
+    const std::vector<Net::Player> &players = Players();
+
+    for(size_t i = 0; i < players.size(); i++)
     {
-        if ( !StriCmp(_rawUsers[i].name, name) )
+        if ( !StriCmp(players[i].Name, name) )
             return i;
     }
+
     return -1;
 }
 
 bool NC_STACK_windp::IsPlayer(const std::string &name) const
 {
-    for(const ZNDNet::UserInfo &p : _rawUsers)
-    {
-        if ( !StriCmp(p.name, name) )
-            return true;
-    }
-    return false;
+    return GetPlayerIndex(name) != -1;
+}
+
+uint32_t NC_STACK_windp::GetPlayerCount() const
+{
+    return Players().size();
 }
 
 
 bool NC_STACK_windp::Broadcast(void *data, size_t dataSize, bool garantee)
 {
-    return QueueBroadcast(data, dataSize, garantee);
+    if ( !_session )
+        return false;
+
+    _session->Broadcast(data, dataSize, garantee ? Net::RELIABLE : Net::LATEST);
+    return true;
 }
 
 bool NC_STACK_windp::Send(void *data, size_t dataSize, const std::string &recvID, bool garantee)
 {
-    FlushBroadcastBuffer();
-    
-    return SendLowLevel(data, dataSize, recvID, garantee);
-}
+    int32_t index = GetPlayerIndex(recvID);
 
-size_t NC_STACK_windp::QueueBroadcast(void *data, size_t dataSize, bool garantee)
-{
-    if (!zcon)
-        return 0;
-    
-    if ( broadcastBuff_off + dataSize > broadcastBuff.size() )
-        FlushBroadcastBuffer();
+    if ( index == -1 )
+        return false;
 
-    if ( dataSize > broadcastBuff.size() )
-        return BroadcastLowLevel(data, dataSize, garantee);
-
-    std::memcpy( broadcastBuff.data() + broadcastBuff_off, data, dataSize );
-    broadcastBuff_off += dataSize;
-
-    return dataSize;
-}
-
-size_t NC_STACK_windp::BroadcastLowLevel(void *data, size_t dataSize, bool garantee)
-{
-    if (!zcon)
-        return 0;
-    
-    zcon->BroadcastData(data, dataSize, (garantee ? ZNDNet::PKT_FLAG_GARANT : 0));
-    
-    return dataSize;
-}
-
-size_t NC_STACK_windp::SendLowLevel(void *data, size_t dataSize, const std::string &recvID, bool garantee)
-{
-    if (!zcon)
-        return 0;
-
-    uint64_t id = GetUserID(recvID);
-    if (!id)
-        return 0;
-
-    zcon->SendData(id, data, dataSize, (garantee ? ZNDNet::PKT_FLAG_GARANT : 0));
- 
-    return dataSize;
+    _session->Send(Players()[index].Id, data, dataSize, garantee ? Net::RELIABLE : Net::LATEST);
+    return true;
 }
 
 bool NC_STACK_windp::Recv(windp_recvMsg *recv)
 {
-    ZNDNet::Event *evt = zcon->Events_Pop(); 
-    
-    if (!evt)
-        return false;
-    
-    recv->msgType = RECVMSG_NONE;
-    
-    bool continueRecv = true;
-    
-    switch( evt->type )
-    {
-        case ZNDNet::EVENT_SESSION_LIST:
-        {
-            if (zcli)
-                zcli->GetSessions(_rawSessions);
-        }
-        break;
-        
-        case ZNDNet::EVENT_SESSION_JOIN:
-        {
-            ZNDNet::EventNameID *dat = (ZNDNet::EventNameID *)evt;
-            _sesID = dat->id;
-            _sesName = dat->name;
-        }
-        break;
-        
-        case ZNDNet::EVENT_USER_ADD:
-        {
-            ZNDNet::EventNameID *dat = (ZNDNet::EventNameID *)evt;
-            zcon->GetUsers(_rawUsers);
-            UpdateOwnPlayerIndex();
-            
-            recv->msgType = RECVMSG_CREATEPLAYER;
-            recv->senderName = dat->name;
-        }
-        break;
+    Net::Event evt;
 
-        case ZNDNet::EVENT_USER_LEAVE:
-        {
-            ZNDNet::EventNameID *dat = (ZNDNet::EventNameID *)evt;
-            zcon->GetUsers(_rawUsers); 
-            UpdateOwnPlayerIndex();
-            
+    if ( !_session || !_session->Poll(&evt) )
+        return false;
+
+    recv->msgType = RECVMSG_NONE;
+
+    switch( evt.type )
+    {
+        case Net::Event::PLAYER_JOINED:
+            recv->msgType = RECVMSG_CREATEPLAYER;
+            recv->senderName = evt.Name;
+            break;
+
+        case Net::Event::PLAYER_LEFT:
             recv->msgType = RECVMSG_DESTROYPLAYER;
-            recv->senderName = dat->name;
-        }
-        break;
-        
-        case ZNDNet::EVENT_DATA:
-        {
-            ZNDNet::EventData *dat = (ZNDNet::EventData *)evt;
-            
+            recv->senderName = evt.Name;
+            break;
+
+        case Net::Event::DATA:
             recv->msgType = RECVMSG_NORMAL;
-            recv->_data.assign(dat->data, dat->data + dat->size);
+            recv->_data = std::move(evt.Data);
             recv->data = recv->_data.data();
             recv->size = recv->_data.size();
-            recv->senderName = GetUserName(dat->from);
-            recv->cast = dat->cast;
-        }
-        break;
-        
-        case ZNDNet::EVENT_USER_LIST:
-        {
-            zcon->GetUsers(_rawUsers);   
-            UpdateOwnPlayerIndex();
-        }
-        break;
-
-        case ZNDNet::EVENT_DISCONNECT:
-        case ZNDNet::EVENT_CONNERR:
-        {
-            zcon->Stop();
-            continueRecv = false;
-        }
-        break;
-
-        default:
+            recv->senderName = evt.Name;
+            recv->cast = evt.Broadcast ? 1 : 0;
             break;
+
+        case Net::Event::CLOSED:
+            log_netlog("The connection to the host is gone\n");
+            return false;
     }
-    delete evt;
-    
-    return continueRecv;
+
+    return true;
 }
 
 size_t NC_STACK_windp::FlushBroadcastBuffer()
 {
-    // flush buffer
-    if (broadcastBuff_off == 0)
+    if ( !_session )
         return 0;
-    
-    size_t ret = BroadcastLowLevel(broadcastBuff.data(), broadcastBuff_off, true);
 
-    if ( ret )
-        broadcastBuff_off = 0;
+    _session->Flush();
 
-    return ret;
+    // What went out since the last time, for the statistics
+    uint64_t sent = _session->GetStats().BytesSent;
+    size_t delta = sent >= _flushedBytes ? sent - _flushedBytes : 0;
+    _flushedBytes = sent;
+    return delta;
 }
 
 size_t NC_STACK_windp::GetCaps(IDVPair *stak)
 {
-    // get caps info
-    printf("%s\n", __PRETTY_FUNCTION__);
     return 0;
 }
 
-size_t NC_STACK_windp::LockSession(int *arg)
+size_t NC_STACK_windp::LockSession(int *lock)
 {
-    // lock session
-    printf("%s\n", __PRETTY_FUNCTION__);
-    return 0;
+    // Locked, the host turns away new players
+    if ( _session && _session->IsHost() )
+        _session->SetJoinable(*lock == 0);
+
+    return 1;
 }
 
 size_t NC_STACK_windp::Reset(IDVPair *stak)
 {
-    if (zcli)
-    {
-        zcli->SendDisconnect();
-        zcli->Stop();
-        delete zcli;
-    }
-    else if (zhost)
-    {
-        zhost->CloseSession(0);
-        zhost->Stop();
-        delete zhost;
-    }
-    
-    zcon = NULL;
-    zcli = NULL;
-    zhost = NULL;
-    // reset
-    printf("%s\n", __PRETTY_FUNCTION__);
+    delete _session;
+    _session = NULL;
+    _flushedBytes = 0;
     return 0;
-}
-
-uint32_t NC_STACK_windp::GetPlayerCount() const
-{
-    return _rawUsers.size();
 }
 
 bool NC_STACK_windp::GetRemoteStart(TRemoteStartInfo *arg)
@@ -587,99 +341,46 @@ bool NC_STACK_windp::GetRemoteStart(TRemoteStartInfo *arg)
     arg->isClient = false;
     arg->isHoster = false;
 
-    if (!zcon)
+    if ( !_session || !_session->IsOpen() )
         return true;
 
-    if (zcon == zhost)
-    {
+    if ( _session->IsHost() )
         arg->isHoster = true;
-        return true;
-    }
-
-    if (zcon == zcli)
-    {
+    else
         arg->isClient = true;
-        return true;
-    }
 
-    return 1;
+    return true;
 }
 
 size_t NC_STACK_windp::GetLocalName(IDVPair *stak)
 {
-    //ask local machine
-    printf("%s\n", __PRETTY_FUNCTION__);
     return 0;
 }
 
 void NC_STACK_windp::SetVersion(const std::string &ver)
 {
-    //set session ident
     version_ident = ver;
 }
 
 size_t NC_STACK_windp::GetProvType()
 {
-    // get provider type
-    printf("%s\n", __PRETTY_FUNCTION__);
     return connType;
 }
 
-size_t NC_STACK_windp::GetStats(int *stak)
+void NC_STACK_windp::GetStats(int *stats)
 {
-    // diagnos
-    printf("%s\n", __PRETTY_FUNCTION__);
-    return 0;
+    Net::Session::Stats s;
+
+    if ( _session )
+        s = _session->GetStats();
+
+    stats[0] = s.RoundTrip;
+    stats[1] = s.PacketLoss;
+    stats[2] = s.PacketsSent;
+    stats[3] = s.PacketsReceived;
+    stats[4] = s.BytesSent / 1024;
+    stats[5] = s.BytesReceived / 1024;
 }
-
-
-void NC_STACK_windp::ReloadUsersList()
-{
-    if (connType > 0 && zcon && SDL_GetTicks() > _nextUsersGet)
-    {
-        _nextUsersGet = SDL_GetTicks() + CONF_USERS_GET_TIME;
-        zcon->GetUsers(_rawUsers);
-        UpdateOwnPlayerIndex();
-    }
-}
-
-void NC_STACK_windp::UpdateOwnPlayerIndex()
-{
-    for(_myIndex = 0; _myIndex < (int32_t)_rawUsers.size(); _myIndex++)
-    {
-        if (_rawUsers[_myIndex].ID == _myID)
-            return;
-    }
-    
-    _myIndex = -1;
-}
-
-void NC_STACK_windp::ReloadSessionsList()
-{
-    if (connType > 0 && zcli && SDL_GetTicks() > _nextSessionsGet)
-    {
-        _nextSessionsGet = SDL_GetTicks() + CONF_SESS_GET_TIME;
-        zcli->GetSessions(_rawSessions);
-    }
-}
-
-
-uint64_t NC_STACK_windp::GetUserID(const std::string &name)
-{
-    for(const ZNDNet::UserInfo& inf : _rawUsers)
-        if (name.compare(inf.name) == 0)
-            return inf.ID;
-    return 0;
-}
-
-std::string NC_STACK_windp::GetUserName(uint64_t id)
-{
-    for(const ZNDNet::UserInfo& inf : _rawUsers)
-        if (inf.ID == id)
-            return inf.name;
-    return "";
-}
-
 
 
 

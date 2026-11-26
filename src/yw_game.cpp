@@ -3914,30 +3914,27 @@ void NC_STACK_ypaworld::debug_info_draw(TInputState *inpt)
 
                 if ( _netDriver )
                 {
-                    int netStats[7];
+                    int netStats[6];
                     _netDriver->GetStats(netStats);
 
                     FontUA::next_line(&dbg_txt);
 
-                    DebugInfoPrintf(this, &dbg_txt, buf_sprintf, "thread send list now: %d", netStats[0]);
+                    DebugInfoPrintf(this, &dbg_txt, buf_sprintf, "round trip: %d ms", netStats[0]);
                     FontUA::next_line(&dbg_txt);
 
-                    DebugInfoPrintf(this, &dbg_txt, buf_sprintf, "thread recv list now: %d", netStats[1]);
+                    DebugInfoPrintf(this, &dbg_txt, buf_sprintf, "packet loss: %d%%", netStats[1]);
                     FontUA::next_line(&dbg_txt);
 
-                    DebugInfoPrintf(this, &dbg_txt, buf_sprintf, "thread send list max: %d", netStats[3]);
+                    DebugInfoPrintf(this, &dbg_txt, buf_sprintf, "packets sent: %d", netStats[2]);
                     FontUA::next_line(&dbg_txt);
 
-                    DebugInfoPrintf(this, &dbg_txt, buf_sprintf, "thread recv list max: %d", netStats[2]);
+                    DebugInfoPrintf(this, &dbg_txt, buf_sprintf, "packets received: %d", netStats[3]);
                     FontUA::next_line(&dbg_txt);
 
-                    DebugInfoPrintf(this, &dbg_txt, buf_sprintf, "send call now: %d", netStats[4]);
+                    DebugInfoPrintf(this, &dbg_txt, buf_sprintf, "kb sent: %d", netStats[4]);
                     FontUA::next_line(&dbg_txt);
 
-                    DebugInfoPrintf(this, &dbg_txt, buf_sprintf, "send call max: %d", netStats[5]);
-                    FontUA::next_line(&dbg_txt);
-
-                    DebugInfoPrintf(this, &dbg_txt, buf_sprintf, "send bugs: %d", netStats[6]);
+                    DebugInfoPrintf(this, &dbg_txt, buf_sprintf, "kb received: %d", netStats[5]);
                     FontUA::next_line(&dbg_txt);
                 }
             }

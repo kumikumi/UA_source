@@ -34,16 +34,8 @@ set(SOURCES
 	lstvw.cpp
 	main.cpp
 	IFFile.cpp
+	net/session.cpp
 	network.cpp
-	netlib/client.cpp
-	netlib/client_threads.cpp
-	netlib/server.cpp
-	netlib/server_session.cpp
-	netlib/server_threads.cpp
-	netlib/single.cpp
-	netlib/single_threads.cpp
-	netlib/udp.cpp
-	netlib/zndNet.cpp
 	nucleas.cpp
 	obj3d.cpp
 	particle.cpp
@@ -110,7 +102,6 @@ find_package(PkgConfig REQUIRED)
 find_package(SDL3 REQUIRED CONFIG COMPONENTS SDL3)
 find_package(SDL3_image REQUIRED CONFIG)
 find_package(SDL3_ttf REQUIRED CONFIG)
-find_package(SDL3_net REQUIRED CONFIG)
 
 pkg_search_module(VORBISFILE REQUIRED vorbisfile)
 link_directories(${VORBISFILE_LIBRARY_DIRS})
@@ -261,7 +252,7 @@ endif()
 target_link_libraries(UA_source SDL3::SDL3
 							 SDL3_image::SDL3_image
 							 SDL3_ttf::SDL3_ttf
-							 SDL3_net::SDL3_net
+							 enet
 							 ${OPENGL_LIBRARIES}
 							 ${VORBISFILE_LIBRARIES}
 							 ${OPENAL_LIBRARY}

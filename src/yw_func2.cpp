@@ -4166,10 +4166,14 @@ void UserData::GameShellUiHandleInput()
                 char * clpbrd = SDL_GetClipboardText();
                 if (clpbrd)
                 {
-                    ZNDNet::IPaddress tmp;
-                    if (ZNDNet::ResolveHost(&tmp, clpbrd, 0))
+                    // An address is one word; joining finds out whether it is one
+                    std::string addr = clpbrd;
+                    addr.erase(0, addr.find_first_not_of(" \t\r\n"));
+                    addr.erase(addr.find_last_not_of(" \t\r\n") + 1);
+
+                    if (!addr.empty() && addr.size() < 64 && addr.find_first_of(" \t\r\n") == std::string::npos)
                     {
-                        netName = clpbrd;
+                        netName = addr;
                         netNameCurPos = netName.size();
                     }
                     SDL_free(clpbrd);
