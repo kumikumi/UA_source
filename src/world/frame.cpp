@@ -180,6 +180,7 @@ FrameMaker::Field FrameMaker::Find(const State::Schema &schema, uint8_t kind, co
         {
             out.Offset = offset;
             out.Size = size;
+            out.Type = f.ElemType;
             out.Found = true;
             return out;
         }
@@ -249,6 +250,30 @@ void FrameMaker::Add(Frame &frame, std::vector<Frame::Sector> &sectors, uint8_t 
             memcpy(v, data.data() + f.Offset, size);
     };
 
+    // A unit's position and rotation, which the view has in fixed point and
+    // as a quaternion
+    auto getPosition = [&data](const Field &f, vec3f &v)
+    {
+        int32_t fixed[3];
+
+        if ( f.Found && f.Type == State::T_FIXED && f.Size == sizeof(fixed) && f.Offset + f.Size <= data.size() )
+        {
+            memcpy(fixed, data.data() + f.Offset, sizeof(fixed));
+            v = State::PositionFromView(fixed);
+        }
+    };
+
+    auto getRotation = [&data](const Field &f, mat3x3f &m)
+    {
+        int16_t quat[4];
+
+        if ( f.Found && f.Type == State::T_QUAT && f.Size == sizeof(quat) && f.Offset + f.Size <= data.size() )
+        {
+            memcpy(quat, data.data() + f.Offset, sizeof(quat));
+            m = State::RotationFromView(quat);
+        }
+    };
+
     if ( kind == State::KIND_WORLD )
     {
         get(_time, &frame.Time, sizeof(frame.Time));
@@ -301,8 +326,8 @@ void FrameMaker::Add(Frame &frame, std::vector<Frame::Sector> &sectors, uint8_t 
         u.Type = kind - State::KIND_UNIT;
         get(f.Vehicle, &u.Vehicle, sizeof(u.Vehicle));
         get(f.StatusFlags, &u.StatusFlags, sizeof(u.StatusFlags));
-        get(f.Position, &u.Position, sizeof(u.Position));
-        get(f.Rotation, &u.Rotation, sizeof(u.Rotation));
+        getPosition(f.Position, u.Position);
+        getRotation(f.Rotation, u.Rotation);
         get(f.Scale, &u.Scale, sizeof(u.Scale));
         get(f.Look, &u.Look, sizeof(u.Look));
 
@@ -318,8 +343,8 @@ void FrameMaker::Add(Frame &frame, std::vector<Frame::Sector> &sectors, uint8_t 
                 continue;
 
             get(f.ExtraScale[i], &e.Scale, sizeof(e.Scale));
-            get(f.ExtraPos[i], &e.Position, sizeof(e.Position));
-            get(f.ExtraRotation[i], &e.Rotation, sizeof(e.Rotation));
+            getPosition(f.ExtraPos[i], e.Position);
+            getRotation(f.ExtraRotation[i], e.Rotation);
             frame.Extras.push_back(e);
         }
     }

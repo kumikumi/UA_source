@@ -17,6 +17,7 @@ namespace History
 struct ViewField
 {
     size_t Offset = 0, Size = 0;
+    State::Type Type = State::T_U8;
     bool Found = false;
 };
 
@@ -36,6 +37,7 @@ static ViewField FindField(const State::Schema &schema, uint8_t kind, const char
         {
             out.Offset = offset;
             out.Size = size;
+            out.Type = f.ElemType;
             out.Found = true;
             return out;
         }
@@ -228,7 +230,8 @@ bool Replay::Open(NC_STACK_ypaworld *world, const std::string &path)
     p->UnitKiller = FindField(schema, anyUnit, "killer");
     p->UnitPosition = FindField(schema, anyUnit, "position");
 
-    if ( !p->Time.Found || !p->SectorOwner.Found || !p->UnitStatus.Found || !p->UnitPosition.Found )
+    if ( !p->Time.Found || !p->SectorOwner.Found || !p->UnitStatus.Found || !p->UnitPosition.Found ||
+         p->UnitPosition.Type != State::T_FIXED || p->UnitPosition.Size != 12 )
     {
         ypa_log_out("%s lacks what the level's history is found from\n", path.c_str());
         return false;
@@ -404,10 +407,11 @@ void Replay::Player::FindEvents()
             uint8_t owner = Get<uint8_t>(data, UnitOwner);
             uint8_t status = Get<uint8_t>(data, UnitStatus);
             int32_t flags = Get<int32_t>(data, UnitFlags);
-            float pos[3];
-            memcpy(pos, data.data() + UnitPosition.Offset, sizeof(pos));
-            uint8_t mapX = pos[0] * 256.0 / WorldSize.x;
-            uint8_t mapY = pos[2] * 256.0 / WorldSize.y;
+            int32_t fixed[3];
+            memcpy(fixed, data.data() + UnitPosition.Offset, sizeof(fixed));
+            vec3f pos = State::PositionFromView(fixed);
+            uint8_t mapX = pos.x * 256.0 / WorldSize.x;
+            uint8_t mapY = pos.z * 256.0 / WorldSize.y;
 
             auto sit = Statuses.find(id);
 

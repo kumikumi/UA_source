@@ -57,7 +57,20 @@ enum Type : uint8_t
     T_F64,
     T_UNIT,   // u32: a unit's id, 0 for none
     T_SECTOR, // i32: a sector's index, y * map width + x, -1 for none
+    T_FIXED,  // i32: a length in 1/FixedScale world units, as the view has
+              // positions
+    T_QUAT,   // i16: a rotation as a unit quaternion, w, x, y and z each
+              // times QuatScale, w not below 0, as the view has rotations
 };
+
+// Positions in the view, in fixed point: f32 has no more than that 32768 to
+// 65536 world units away from the map's corner, where the far side of a
+// map over 27 sectors wide is
+const double FixedScale = 256.0;
+
+// Rotations in the view: a quaternion's elements as 16-bit integers, off by
+// at most about 0.002 degrees
+const double QuatScale = 32767.0;
 
 struct FieldInfo
 {
@@ -108,7 +121,11 @@ enum Role
     INTERNAL,     // The internal part
     VIEW,         // The view: exact, but doubles as the 32-bit floats they're
                   // drawn as
-    VIEW_ROUNDED, // The view as 32-bit floats, and the internal part exact
+    VIEW_ROUNDED,  // The view as 32-bit floats, and the internal part exact
+    VIEW_POSITION, // A position: the view in fixed point (T_FIXED), and the
+                   // internal part exact
+    VIEW_ROTATION, // A rotation: the view as a quaternion (T_QUAT), and the
+                   // internal part exact
 };
 
 // Which part of the state a visitor goes through
@@ -289,6 +306,13 @@ protected:
     size_t _part = 0, _object = 0;
     bool _failed = false;
 };
+
+// A position and a rotation as the view has them, and back as they are
+// drawn. A rotation must be one, with no scaling, shearing or mirroring.
+void ToView(const vec3d &position, int32_t out[3]);
+void ToView(const mat3x3 &rotation, int16_t out[4]);
+vec3f PositionFromView(const int32_t position[3]);
+mat3x3f RotationFromView(const int16_t rotation[4]);
 
 // A hash of the whole state
 uint64_t Hash(const Image &image);

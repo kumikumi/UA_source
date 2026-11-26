@@ -117,11 +117,12 @@ public:
     void End(Frame &frame, std::vector<Frame::Sector> &sectors, const Frame *before) const;
 
 protected:
-    // Where a field of a kind's view is, and how big it is
+    // Where a field of a kind's view is, how big it is and of what type
     struct Field
     {
         size_t Offset = 0;
         size_t Size = 0;
+        State::Type Type = State::T_U8;
         bool Found = false;
     };
 

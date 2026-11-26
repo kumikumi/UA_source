@@ -4931,8 +4931,8 @@ void NC_STACK_ypabact::VisitView(World::State::Visitor &v)
     v.Field("secondaryType", _secndTtype, World::State::VIEW);
     v.Target("secondary", _secndTtype, _secndT, World::State::VIEW);
 
-    v.Field("position", _position, World::State::VIEW_ROUNDED);
-    v.Field("rotation", _rotation, World::State::VIEW_ROUNDED);
+    v.Field("position", _position, World::State::VIEW_POSITION);
+    v.Field("rotation", _rotation, World::State::VIEW_ROTATION);
     v.Field("scale", _scale, World::State::VIEW_ROUNDED);
 
     uint8_t look = ModelIndex(_current_vp);
@@ -4953,8 +4953,8 @@ void NC_STACK_ypabact::VisitView(World::State::Visitor &v)
         uint8_t model = ModelIndex(ex.model);
 
         v.Field(extraNames[i][0], ex.scale, World::State::VIEW);
-        v.Field(extraNames[i][1], ex.pos, World::State::VIEW_ROUNDED);
-        v.Field(extraNames[i][2], ex.rotate, World::State::VIEW_ROUNDED);
+        v.Field(extraNames[i][1], ex.pos, World::State::VIEW_POSITION);
+        v.Field(extraNames[i][2], ex.rotate, World::State::VIEW_ROTATION);
         v.Field(extraNames[i][3], ex.flags, World::State::VIEW);
         v.Field(extraNames[i][4], model, World::State::VIEW);
 

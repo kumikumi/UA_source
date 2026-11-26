@@ -157,16 +157,91 @@ static void PredictElements(const char *last, const char *before, char *guess, s
     memcpy(guess, v1s, count * sizeof(T));
 }
 
-// What a field's new bytes are XORed with: the guess for floats, else the
-// last bytes
+// The same for fixed-point positions and quaternions, whose arithmetic
+// wraps around: T is unsigned, of the elements' size
+template <class T>
+static void PredictIntegers(const char *last, const char *before, char *guess, size_t count)
+{
+    T v1s[MaxGuessed / sizeof(T)], v0s[MaxGuessed / sizeof(T)];
+    memcpy(v1s, last, count * sizeof(T));
+    memcpy(v0s, before, count * sizeof(T));
+
+    for (size_t i = 0; i < count; i++)
+        v1s[i] = v1s[i] + (T)(v1s[i] - v0s[i]);
+
+    memcpy(guess, v1s, count * sizeof(T));
+}
+
+// What a field's new bytes are written against: the guess for floats,
+// positions and quaternions, else the last bytes
 static void Guess(const State::FieldInfo &field, const char *last, const char *before, size_t size, char *guess)
 {
     if ( before && field.ElemType == State::T_F32 )
         PredictElements<float>(last, before, guess, size / 4);
     else if ( before && field.ElemType == State::T_F64 )
         PredictElements<double>(last, before, guess, size / 8);
+    else if ( before && field.ElemType == State::T_FIXED )
+        PredictIntegers<uint32_t>(last, before, guess, size / 4);
+    else if ( before && field.ElemType == State::T_QUAT )
+        PredictIntegers<uint16_t>(last, before, guess, size / 2);
     else
         memcpy(guess, last, size);
+}
+
+// How a field's new bytes are written against their guess, and read back:
+// positions and quaternions as their difference from it, which is small
+// when the guess is close; anything else XORed with it, which is mostly
+// zeros then
+template <class T>
+static void Subtract(const char *a, const char *b, char *out, size_t count)
+{
+    for (size_t i = 0; i < count; i++)
+    {
+        T x, y;
+        memcpy(&x, a + i * sizeof(T), sizeof(T));
+        memcpy(&y, b + i * sizeof(T), sizeof(T));
+        x -= y;
+        memcpy(out + i * sizeof(T), &x, sizeof(T));
+    }
+}
+
+template <class T>
+static void Add(const char *a, const char *b, char *out, size_t count)
+{
+    for (size_t i = 0; i < count; i++)
+    {
+        T x, y;
+        memcpy(&x, a + i * sizeof(T), sizeof(T));
+        memcpy(&y, b + i * sizeof(T), sizeof(T));
+        x += y;
+        memcpy(out + i * sizeof(T), &x, sizeof(T));
+    }
+}
+
+static void Encode(const State::FieldInfo &field, const char *guess, const char *bytes, size_t size, char *out)
+{
+    if ( field.ElemType == State::T_FIXED )
+        Subtract<uint32_t>(bytes, guess, out, size / 4);
+    else if ( field.ElemType == State::T_QUAT )
+        Subtract<uint16_t>(bytes, guess, out, size / 2);
+    else
+    {
+        for (size_t b = 0; b < size; b++)
+            out[b] = guess[b] ^ bytes[b];
+    }
+}
+
+static void Decode(const State::FieldInfo &field, const char *guess, const char *stored, size_t size, char *out)
+{
+    if ( field.ElemType == State::T_FIXED )
+        Add<uint32_t>(guess, stored, out, size / 4);
+    else if ( field.ElemType == State::T_QUAT )
+        Add<uint16_t>(guess, stored, out, size / 2);
+    else
+    {
+        for (size_t b = 0; b < size; b++)
+            out[b] = guess[b] ^ stored[b];
+    }
 }
 
 // The bytes of a field before the last change, when they fit
@@ -218,10 +293,7 @@ static void PutChangedFields(std::string &out, const std::vector<State::FieldInf
 
             size_t at = out.size();
             out.resize(at + newSize);
-            char *dst = &out[at];
-
-            for (size_t b = 0; b < newSize; b++)
-                dst[b] = guess[b] ^ n[b];
+            Encode(fields[i], guess, n, newSize, &out[at]);
         }
 
         count++;
@@ -344,9 +416,7 @@ static const char *ApplyChanges(std::map<uint64_t, ObjectVersions> &objects, con
                     else
                     {
                         Guess(fields[index], obj.Before.data() + at, beforeFits ? scratch.data() + at : NULL, fieldSize, guess);
-
-                        for (size_t b = 0; b < fieldSize; b++)
-                            dst[b] = guess[b] ^ p[b];
+                        Decode(fields[index], guess, p, fieldSize, dst);
                     }
 
                     p += fieldSize;
@@ -394,8 +464,9 @@ static const char *ApplyChanges(std::map<uint64_t, ObjectVersions> &objects, con
                     Guess(fields[index], old.data() + offsets[index],
                           BeforeBytes(fields[index], obj.Before, beforeOffsets, beforeFits, index, size), size, guess);
 
-                    for (size_t b = 0; b < size; b++)
-                        updated.push_back(guess[b] ^ p[b]);
+                    char value[MaxGuessed];
+                    Decode(fields[index], guess, p, size, value);
+                    updated.append(value, size);
                 }
 
                 p += size;

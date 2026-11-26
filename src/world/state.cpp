@@ -1,5 +1,7 @@
 #include <algorithm>
 #include <array>
+#include <cmath>
+#include <cstdint>
 #include <cstring>
 #include <set>
 #include <unordered_set>
@@ -118,12 +120,31 @@ void Visitor::Field(const char *name, vec2d &v, Role role)  { Doubles(name, &v.x
 void Visitor::Field(const char *name, vec3d &v, Role role)
 {
     static_assert(sizeof(vec3d) == 24, "vec3d is three doubles");
+
+    // The view's, which is never read back: the internal part has it exact
+    if ( Rounds(role) && role == VIEW_POSITION )
+    {
+        int32_t fixed[3];
+        ToView(v, fixed);
+        Raw(name, T_FIXED, 3, fixed, sizeof(fixed));
+        return;
+    }
+
     Doubles(name, &v.x, 3, role);
 }
 
 void Visitor::Field(const char *name, mat3x3 &v, Role role)
 {
     static_assert(sizeof(mat3x3) == 72, "mat3x3 is nine doubles");
+
+    if ( Rounds(role) && role == VIEW_ROTATION )
+    {
+        int16_t quat[4];
+        ToView(v, quat);
+        Raw(name, T_QUAT, 4, quat, sizeof(quat));
+        return;
+    }
+
     Doubles(name, &v.m00, 9, role);
 }
 
@@ -944,6 +965,118 @@ uint64_t Hash(const Image &image)
     return h;
 }
 
+void ToView(const vec3d &position, int32_t out[3])
+{
+    const double xyz[3] = {position.x, position.y, position.z};
+
+    for (int i = 0; i < 3; i++)
+    {
+        double v = xyz[i] * FixedScale;
+
+        if ( !(v > INT32_MIN && v < INT32_MAX) ) // Or not a number
+            v = 0.0;
+
+        out[i] = std::lround(v);
+    }
+}
+
+void ToView(const mat3x3 &m, int16_t out[4])
+{
+    // None, as an extra model's when it has none: no quaternion either
+    if ( m.m00 == 0.0 && m.m01 == 0.0 && m.m02 == 0.0 && m.m10 == 0.0 && m.m11 == 0.0 && m.m12 == 0.0 &&
+         m.m20 == 0.0 && m.m21 == 0.0 && m.m22 == 0.0 )
+    {
+        out[0] = out[1] = out[2] = out[3] = 0;
+        return;
+    }
+
+    // The largest of the quaternion's elements is worked out first, from the
+    // diagonal, for the others to be divided by
+    double w, x, y, z;
+    double trace = m.m00 + m.m11 + m.m22;
+
+    if ( trace > 0.0 )
+    {
+        double s = std::sqrt(trace + 1.0) * 2.0;
+        w = 0.25 * s;
+        x = (m.m21 - m.m12) / s;
+        y = (m.m02 - m.m20) / s;
+        z = (m.m10 - m.m01) / s;
+    }
+    else if ( m.m00 > m.m11 && m.m00 > m.m22 )
+    {
+        double s = std::sqrt(1.0 + m.m00 - m.m11 - m.m22) * 2.0;
+        w = (m.m21 - m.m12) / s;
+        x = 0.25 * s;
+        y = (m.m01 + m.m10) / s;
+        z = (m.m02 + m.m20) / s;
+    }
+    else if ( m.m11 > m.m22 )
+    {
+        double s = std::sqrt(1.0 + m.m11 - m.m00 - m.m22) * 2.0;
+        w = (m.m02 - m.m20) / s;
+        x = (m.m01 + m.m10) / s;
+        y = 0.25 * s;
+        z = (m.m12 + m.m21) / s;
+    }
+    else
+    {
+        double s = std::sqrt(1.0 + m.m22 - m.m00 - m.m11) * 2.0;
+        w = (m.m10 - m.m01) / s;
+        x = (m.m02 + m.m20) / s;
+        y = (m.m12 + m.m21) / s;
+        z = 0.25 * s;
+    }
+
+    double length = std::sqrt(w * w + x * x + y * y + z * z);
+
+    if ( !(length > 0.0) ) // Or not a number
+    {
+        out[0] = QuatScale;
+        out[1] = out[2] = out[3] = 0;
+        return;
+    }
+
+    // q and -q are the same rotation
+    double scale = (w < 0.0 ? -QuatScale : QuatScale) / length;
+    out[0] = std::lround(w * scale);
+    out[1] = std::lround(x * scale);
+    out[2] = std::lround(y * scale);
+    out[3] = std::lround(z * scale);
+}
+
+vec3f PositionFromView(const int32_t position[3])
+{
+    return vec3f(position[0] / FixedScale, position[1] / FixedScale, position[2] / FixedScale);
+}
+
+mat3x3f RotationFromView(const int16_t rotation[4])
+{
+    double w = rotation[0], x = rotation[1], y = rotation[2], z = rotation[3];
+    double length = std::sqrt(w * w + x * x + y * y + z * z);
+
+    // None
+    if ( !(length > 0.0) )
+        return mat3x3f();
+
+    w /= length;
+    x /= length;
+    y /= length;
+    z /= length;
+
+    mat3x3f m;
+    m.m00 = 1.0 - 2.0 * (y * y + z * z);
+    m.m01 = 2.0 * (x * y - z * w);
+    m.m02 = 2.0 * (x * z + y * w);
+    m.m10 = 2.0 * (x * y + z * w);
+    m.m11 = 1.0 - 2.0 * (x * x + z * z);
+    m.m12 = 2.0 * (y * z - x * w);
+    m.m20 = 2.0 * (x * z - y * w);
+    m.m21 = 2.0 * (y * z + x * w);
+    m.m22 = 1.0 - 2.0 * (x * x + y * y);
+    return m;
+}
+
 std::string Serialize(const Image &image)
 {
     std::string raw;
@@ -1045,6 +1178,7 @@ size_t ElemSize(Type type)
 
     case T_I16:
     case T_U16:
+    case T_QUAT:
         return 2;
 
     case T_I32:
@@ -1052,6 +1186,7 @@ size_t ElemSize(Type type)
     case T_F32:
     case T_UNIT:
     case T_SECTOR:
+    case T_FIXED:
         return 4;
 
     case T_F64:
@@ -1225,6 +1360,8 @@ static std::string ShowValue(const FieldInfo &f, const std::string &bytes)
         case T_UNIT: { uint32_t x; memcpy(&x, p, 4); s += fmt::sprintf("#%u", x); break; }
         case T_F32: { float x; memcpy(&x, p, 4); s += fmt::sprintf("%.9g", x); break; }
         case T_F64: { double x; memcpy(&x, p, 8); s += fmt::sprintf("%.17g", x); break; }
+        case T_FIXED: { int32_t x; memcpy(&x, p, 4); s += fmt::sprintf("%.9g", x / FixedScale); break; }
+        case T_QUAT: { int16_t x; memcpy(&x, p, 2); s += fmt::sprintf("%.6f", x / QuatScale); break; }
         }
     }
 

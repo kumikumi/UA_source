@@ -18,9 +18,10 @@ import struct
 import sys
 import zlib
 
-ELEM_SIZE = {1: 1, 2: 1, 3: 1, 4: 2, 5: 2, 6: 4, 7: 4, 8: 4, 9: 8, 10: 4, 11: 4}
-ELEM_FORMAT = {1: "B", 2: "b", 3: "B", 4: "h", 5: "H", 6: "i", 7: "I", 8: "f", 9: "d", 10: "I", 11: "i"}
-T_F32, T_F64, T_UNIT = 8, 9, 10
+ELEM_SIZE = {1: 1, 2: 1, 3: 1, 4: 2, 5: 2, 6: 4, 7: 4, 8: 4, 9: 8, 10: 4, 11: 4, 12: 4, 13: 2}
+ELEM_FORMAT = {1: "B", 2: "b", 3: "B", 4: "h", 5: "H", 6: "i", 7: "I", 8: "f", 9: "d", 10: "I", 11: "i", 12: "i", 13: "h"}
+T_F32, T_F64, T_UNIT, T_FIXED, T_QUAT = 8, 9, 10, 12, 13
+FIXED_SCALE, QUAT_SCALE = 256.0, 32767.0  # Positions and quaternions in the view
 KIND_NAMES = {1: "world", 2: "sector", 3: "bomb", 4: "vehicle", 5: "weapon", 6: "building", 7: "campaign"}
 UNIT_TYPES = {1: "unit", 2: "tank", 3: "host station", 4: "missile", 6: "flyer", 7: "ufo", 8: "car", 9: "gun"}
 
@@ -46,8 +47,17 @@ class Field:
         start = 2 if self.list else 0
         n = (len(raw) - start) // ELEM_SIZE[self.type]
         values = struct.unpack_from("<%d%s" % (n, ELEM_FORMAT[self.type]), raw, start)
-        text = ["#%d" % v if self.type == T_UNIT else ("%.9g" % v if self.type in (T_F32, T_F64) else str(v))
-                for v in values[:12]]
+        def one(v):
+            if self.type == T_UNIT:
+                return "#%d" % v
+            if self.type in (T_F32, T_F64):
+                return "%.9g" % v
+            if self.type == T_FIXED:
+                return "%.9g" % (v / FIXED_SCALE)
+            if self.type == T_QUAT:
+                return "%.6f" % (v / QUAT_SCALE)
+            return str(v)
+        text = [one(v) for v in values[:12]]
         return " ".join(text) + (" ..." if n > 12 else "")
 
 
@@ -103,11 +113,21 @@ def to_f32(x):
         return math.inf
 
 
+# Positions and quaternions: unsigned, as their arithmetic wraps around
+DIFFERENCED = {T_FIXED: ("I", 1 << 32), T_QUAT: ("H", 1 << 16)}
+
+
 def guess(field, last, before):
-    """What a changed field's bytes are XORed with, as the game guesses it:
-    a float moved on by as much as it last moved, else the last bytes.
-    Computing a float's sum or difference in double and rounding it gives the
-    float result exactly."""
+    """What a changed field's bytes are written against, as the game guesses
+    it: a float, position or quaternion moved on by as much as it last moved,
+    else the last bytes. Computing a float's sum or difference in double and
+    rounding it gives the float result exactly."""
+    if before is not None and field.type in DIFFERENCED:
+        fmt, wrap = DIFFERENCED[field.type]
+        n = len(last) // ELEM_SIZE[field.type]
+        v1s = struct.unpack("<%d%s" % (n, fmt), last)
+        v0s = struct.unpack("<%d%s" % (n, fmt), before)
+        return struct.pack("<%d%s" % (n, fmt), *[(2 * v1 - v0) % wrap for v1, v0 in zip(v1s, v0s)])
     if before is None or field.type not in (T_F32, T_F64):
         return last
     fmt = "f" if field.type == T_F32 else "d"
@@ -128,6 +148,18 @@ def guess(field, last, before):
                 g = nxt
         out.append(g)
     return struct.pack("<%d%s" % (n, fmt), *out)
+
+
+def decode(field, g, stored):
+    """A changed field's new bytes: positions and quaternions are the guess
+    plus what's stored, anything else the guess XORed with it."""
+    if field.type in DIFFERENCED:
+        fmt, wrap = DIFFERENCED[field.type]
+        n = len(g) // ELEM_SIZE[field.type]
+        a = struct.unpack("<%d%s" % (n, fmt), g)
+        b = struct.unpack("<%d%s" % (n, fmt), stored)
+        return struct.pack("<%d%s" % (n, fmt), *[(x + y) % wrap for x, y in zip(a, b)])
+    return bytes(a ^ b for a, b in zip(g, stored))
 
 
 def apply_changes(objects, schema, raw, p, tally=None, part=""):
@@ -171,7 +203,7 @@ def apply_changes(objects, schema, raw, p, tally=None, part=""):
                     if prev is not None and len(prev) != len(last):
                         prev = None
                     g = guess(f, last, prev)
-                    out += bytes(a ^ b for a, b in zip(g, raw[p:p + size]))
+                    out += decode(f, g, raw[p:p + size])
                 if tally is not None:
                     tally[(part, "%s %s" % (kind_name(kind), f.name))] += size + 2
                 p += size

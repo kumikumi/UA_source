@@ -91,13 +91,16 @@ class Recording;
 //   0  gone
 //   1  new: u32 size, then its fields' bytes
 //   2  changed: u16 fields, each its u16 index, then its new bytes: a list
-//      or a field of over 256 bytes as it is, any other field XORed with a
-//      guess of it. A float's guess is its last value moved on by as much
-//      as it moved at the object's change before (when both are finite), so
-//      that most of the XOR is zeros; any other field's guess is its last
-//      value. The guesses start over at each keyframe: an object's bytes
-//      before its first change after a keyframe are taken to be the same as
-//      at the keyframe.
+//      or a field of over 256 bytes as it is, any other field against a
+//      guess of it. The guess of a float, a fixed-point position or a
+//      quaternion (State::T_FIXED, T_QUAT) is its last value moved on by as
+//      much as it moved at the object's change before (floats when both are
+//      finite); any other field's is its last value. Positions and
+//      quaternions are written as their difference from the guess, wrapping
+//      around, everything else XORed with it: either is mostly zeros when
+//      the guess is close. The guesses start over at each keyframe: an
+//      object's bytes before its first change after a keyframe are taken to
+//      be the same as at the keyframe.
 //
 // A recording cut short, as by a crash, ends with its last whole chunk: it
 // goes on from its last keyframe.
