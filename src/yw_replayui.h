@@ -28,6 +28,8 @@ struct ReplayCamera
     Mode CameraMode = ORIGINAL;
     uint32_t Unit = 0;     // Manual: the unit looked from, and its owner
     uint8_t UnitOwner = 0;
+    uint32_t Player = 0;   // The unit the player saw from in the frame
+                           // drawn last
     vec3d Position;        // Where it was drawn from last
     mat3x3 Rotation = mat3x3::Ident();
     vec3d Velocity;        // Free: in world units a second

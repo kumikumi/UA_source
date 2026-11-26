@@ -290,7 +290,7 @@ void NC_STACK_ypaworld::SetReplayCameraMode(ReplayCamera::Mode mode, const World
     {
         // The unit last looked from, or the player's
         if ( !frame || !frame->FindUnit(cam.Unit) )
-            cam.Unit = frame ? frame->Viewer : 0;
+            cam.Unit = cam.Player;
 
         LookFromUnit(cam.Unit);
         return;
@@ -386,6 +386,7 @@ void NC_STACK_ypaworld::FlyReplayCamera(TInputState *inpt)
 void NC_STACK_ypaworld::PlaceReplayCamera(World::Frame &frame)
 {
     ReplayCamera &cam = _replayCamera;
+    cam.Player = frame.Viewer;
 
     switch ( cam.CameraMode )
     {
