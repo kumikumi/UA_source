@@ -4840,20 +4840,22 @@ void NC_STACK_yparobo::Die()
 
         NC_STACK_ypabact *userHost = _world->getYW_userHostStation();
 
-        if ( this == userHost )
+        // Only a host station destroyed is reported, not one cleaned away
+        // with the rest of the level's units, as when it ends or goes back
+        if ( _status_flg & BACT_STFLAG_CLEAN )
         {
-            if ( !(_status_flg & BACT_STFLAG_CLEAN) )
-            {
-                TRoboMessage msg;
-                msg.msgID = 12;
-                msg.param1 = 0;
-                msg.param3 = 0;
-                msg.param2 = 0;
-                msg.unit = this;
-                msg.priority = 100;
+        }
+        else if ( this == userHost )
+        {
+            TRoboMessage msg;
+            msg.msgID = 12;
+            msg.param1 = 0;
+            msg.param3 = 0;
+            msg.param2 = 0;
+            msg.unit = this;
+            msg.priority = 100;
 
-                placeMessage(&msg);
-            }
+            placeMessage(&msg);
         }
         else
         {
