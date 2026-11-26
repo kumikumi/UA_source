@@ -347,6 +347,16 @@ void LayoutClippedTileString(TileMap *tyle, CmdStream *cur, const std::string &s
 char VehicleTypeIcon(NC_STACK_ypaworld *yw, int vehicle);
 char SquadStatusIcon(uint8_t status, int32_t statusFlags, uint8_t primaryType, uint8_t secondaryType);
 
+// A squad's row as the squad manager lays it out in a list entryWidth wide,
+// the replay's faction windows too: the icon of what the squad does, its
+// commander's icon and its units' (units, the commander's first, at most
+// SquadRowMaxUnits of them), on the chosen squad's background when chosen,
+// and over the icon at hoveredX, unless that's 0, the energy glyph of the
+// unit under the pointer
+enum { SquadRowMaxUnits = 57 }; // 60 icons with what it does and two gaps
+void LayoutSquadRow(NC_STACK_ypaworld *yw, CmdStream *cur, int entryWidth, char status, const std::string &units,
+                    bool chosen, int hoveredX, uint8_t hoveredEnergy);
+
 
 typedef void ( *wis_color_func)(NC_STACK_ypaworld *, float, float, float, float, SDL_Color *, SDL_Color *);
 

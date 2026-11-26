@@ -38,8 +38,9 @@ static void FillBox(const NC_STACK_ypaworld *yw, int x, int y, int w, int h)
 }
 
 // The units of a frame by who they belong to: host stations' commanders and
-// commanders' squads, in the order of their ids, as far as they're listed:
-// neither guns nor missiles, and none dead, beaming or still being made
+// commanders' squads, in the order of their ids, as far as the squad manager
+// lists them: neither guns nor missiles, none dead or beaming, and of a
+// squad's units none still being made
 struct FrameSquads
 {
     std::map<uint32_t, std::vector<size_t>> Kids; // By parent, indices of Units
@@ -55,7 +56,11 @@ struct FrameSquads
                  u.Type == BACT_TYPES_ROBO )
                 continue;
 
-            if ( info->Status == BACT_STATUS_DEAD || info->Status == BACT_STATUS_BEAM || info->Status == BACT_STATUS_CREATE )
+            const World::Frame::Unit *parent = frame.FindUnit(info->Parent);
+            bool commander = parent && parent->Type == BACT_TYPES_ROBO;
+
+            if ( info->Status == BACT_STATUS_DEAD || info->Status == BACT_STATUS_BEAM ||
+                 (info->Status == BACT_STATUS_CREATE && !commander) )
                 continue;
 
             Kids[info->Parent].push_back(i);
@@ -378,10 +383,11 @@ void ReplayFactionWindow::LayoutText(NC_STACK_ypaworld *yw, const Row &row, int 
 void ReplayFactionWindow::LayoutSquad(NC_STACK_ypaworld *yw, const World::Frame &frame, const Row &row, uint32_t viewed)
 {
     bool blink = yw->_replayClock / 300 & 1;
-    int hoveredX = -1;
-    const World::Frame::UnitInfo *hovered = NULL;
-
-    std::string icons;
+    const World::Frame::Unit *cmdr = frame.FindUnit(row.Units[0]);
+    const World::Frame::UnitInfo *cmdrInfo = frame.FindInfo(row.Units[0]);
+    int hoveredX = 0;
+    uint8_t hoveredEnergy = 0;
+    std::string units;
 
     for (size_t i = 0; i < row.Units.size(); i++)
     {
@@ -391,45 +397,22 @@ void ReplayFactionWindow::LayoutSquad(NC_STACK_ypaworld *yw, const World::Frame 
         if ( !unit || !info )
             continue;
 
-        if ( i == 0 )
-        {
-            icons += SquadStatusIcon(info->Status, unit->StatusFlags, info->PrimaryType, info->SecondaryType);
-            icons += '@';
-        }
-
-        icons += unit->Id == viewed && blink ? '!' : VehicleTypeIcon(yw, unit->Vehicle);
-
-        if ( i == 0 )
-            icons += '@';
+        units += unit->Id == viewed && blink ? '!' : VehicleTypeIcon(yw, unit->Vehicle);
 
         if ( unit->Id == _hovered )
         {
             hoveredX = i == 0 ? _cmdrIconX : _kidIconsX + (int)(i - 1) * _iconWidth;
-            hovered = info;
+            hoveredEnergy = EnergyGlyph(info->Energy, info->EnergyMax);
         }
 
-        if ( icons.size() >= 60 )
+        if ( units.size() >= SquadRowMaxUnits )
             break;
     }
 
-    FontUA::select_tileset(&itemBlock, 0);
-    FontUA::store_u8(&itemBlock, '{');
-    FontUA::op17(&itemBlock, entryWidth - yw->_fontBorderW);
-    FontUA::store_u8(&itemBlock, ' ');
-    FontUA::store_u8(&itemBlock, '}');
-    FontUA::add_xpos(&itemBlock, -(entryWidth - 2 * yw->_fontBorderW + 1));
+    char status = cmdr && cmdrInfo ? SquadStatusIcon(cmdrInfo->Status, cmdr->StatusFlags, cmdrInfo->PrimaryType,
+                                                     cmdrInfo->SecondaryType) : 97;
 
-    FontUA::select_tileset(&itemBlock, 28);
-    LayoutClippedTileString(yw->_guiTiles[28], &itemBlock, icons, entryWidth - 2 * yw->_fontBorderW, 64);
-
-    if ( hovered && hoveredX >= 0 && hoveredX < entryWidth - _iconWidth - yw->_fontBorderW )
-    {
-        FontUA::add_xpos(&itemBlock, -(entryWidth - 2 * yw->_fontBorderW));
-        FontUA::add_xpos(&itemBlock, hoveredX);
-        FontUA::store_u8(&itemBlock, EnergyGlyph(hovered->Energy, hovered->EnergyMax));
-    }
-
-    FontUA::next_line(&itemBlock);
+    LayoutSquadRow(yw, &itemBlock, entryWidth, status, units, false, hoveredX, hoveredEnergy);
 }
 
 uint32_t ReplayFactionWindow::UnitAt(const Row &row, int px) const

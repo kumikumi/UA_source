@@ -5324,89 +5324,92 @@ char SquadStatusIcon(uint8_t status, int32_t statusFlags, uint8_t primaryType, u
     return 97;
 }
 
+void LayoutSquadRow(NC_STACK_ypaworld *yw, CmdStream *cur, int entryWidth, char status, const std::string &units,
+                    bool chosen, int hoveredX, uint8_t hoveredEnergy)
+{
+    std::string icons{status, '@'};
+
+    if ( !units.empty() )
+    {
+        icons += units[0];
+        icons += '@';
+        icons.append(units, 1, std::string::npos);
+    }
+
+    int inner = entryWidth - 2 * yw->_fontBorderW;
+
+    FontUA::select_tileset(cur, 0);
+    FontUA::store_u8(cur, 123);
+
+    FontUA::select_tileset(cur, chosen ? 9 : 0);
+    FontUA::op17(cur, entryWidth - yw->_fontBorderW);
+    FontUA::store_u8(cur, 32);
+
+    FontUA::select_tileset(cur, 0);
+    FontUA::store_u8(cur, 125);
+
+    FontUA::add_xpos(cur, -(inner + 1));
+
+    FontUA::select_tileset(cur, 28);
+
+    LayoutClippedTileString(yw->_guiTiles[28], cur, icons, inner, 64);
+
+    if ( hoveredX && entryWidth - yw->_guiTiles[28]->map[65].w - yw->_fontBorderW > hoveredX )
+    {
+        FontUA::add_xpos(cur, -inner);
+        FontUA::add_xpos(cur, hoveredX);
+
+        FontUA::store_u8(cur, hoveredEnergy);
+    }
+
+    FontUA::next_line(cur);
+}
+
 void SquadManagerLayoutSquad(NC_STACK_ypaworld *yw, NC_STACK_ypabact *bact, CmdStream *cur)
 {
-    std::string pv;
-    
-    int hoverIconX = 0;
     NC_STACK_ypabact *hoverUnit = NULL;
 
     if ( yw->_guiActFlags & 0x20 )
         hoverUnit = yw->_bactOnMouse;
 
-    pv += GetSquadStatusIcon(bact);
-    pv += '@'; //64
-
     int ttt = (yw->_timeStamp / 300) & 1;
 
-    if ( bact == yw->_userUnit && ttt )
-        pv += '!'; //33
-    else if ( yw->_lastMsgSender == bact && ttt )
-        pv += '"'; //34
-    else
-        pv += GetVehicleTypeIcon(yw, bact);
+    // The one steered and the last to report blink
+    auto icon = [yw, ttt](NC_STACK_ypabact *unit)
+    {
+        if ( unit == yw->_userUnit && ttt )
+            return '!';
+        else if ( unit == yw->_lastMsgSender && ttt )
+            return '"';
+        else
+            return GetVehicleTypeIcon(yw, unit);
+    };
 
-    pv += '@'; //64
-
-    if ( bact == hoverUnit )
-        hoverIconX = squadron_manager.cmdrIconX;
-
+    std::string units(1, icon(bact));
+    int hoverIconX = bact == hoverUnit ? squadron_manager.cmdrIconX : 0;
     int iconX = squadron_manager.kidIconsX;
 
     for ( NC_STACK_ypabact* &kid : bact->_kidList )
     {
         if ( kid->_status != BACT_STATUS_DEAD && kid->_status != BACT_STATUS_CREATE && kid->_status != BACT_STATUS_BEAM )
         {
-            if ( kid == yw->_userUnit && ttt )
-                pv += '!'; //33
-            else if ( kid == yw->_lastMsgSender && ttt )
-                pv += '"'; //34
-            else
-                pv += GetVehicleTypeIcon(yw, kid); 
+            units += icon(kid);
 
             if ( kid == hoverUnit )
                 hoverIconX = iconX;
 
             iconX += squadron_manager.iconWidth;
 
-            if ( pv.size() >= 60 )
+            if ( units.size() >= SquadRowMaxUnits )
                 break;
         }
     }
 
-    int bgTileset;
-    if ( yw->_activeCmdrRemapIndex == -1 || bact != yw->_cmdrsRemap[ yw->_activeCmdrRemapIndex ] || bzda.activeMode & 0x20 )
-        bgTileset = 0;
-    else
-        bgTileset = 9;
+    bool chosen = yw->_activeCmdrRemapIndex != -1 && bact == yw->_cmdrsRemap[ yw->_activeCmdrRemapIndex ] &&
+                  !(bzda.activeMode & 0x20);
 
-    FontUA::select_tileset(cur, 0);
-    FontUA::store_u8(cur, 123);
-
-    FontUA::select_tileset(cur, bgTileset);
-    FontUA::op17(cur, squadron_manager.entryWidth - yw->_fontBorderW);
-    FontUA::store_u8(cur, 32);
-
-    FontUA::select_tileset(cur, 0);
-    FontUA::store_u8(cur, 125);
-
-    FontUA::add_xpos(cur, -(squadron_manager.entryWidth - 2 * yw->_fontBorderW + 1));
-
-    FontUA::select_tileset(cur, 28);
-
-    LayoutClippedTileString(yw->_guiTiles[28], cur, pv, squadron_manager.entryWidth - 2 * yw->_fontBorderW, 64);
-    if ( hoverIconX )
-    {
-        if ( squadron_manager.entryWidth - squadron_manager.iconWidth - yw->_fontBorderW > hoverIconX )
-        {
-            FontUA::add_xpos(cur, -(squadron_manager.entryWidth - 2 * yw->_fontBorderW));
-            FontUA::add_xpos(cur, hoverIconX);
-
-            FontUA::store_u8(cur, EnergyGlyph(hoverUnit->_energy, hoverUnit->_energy_max));
-        }
-    }
-
-    FontUA::next_line(cur);
+    LayoutSquadRow(yw, cur, squadron_manager.entryWidth, GetSquadStatusIcon(bact), units, chosen, hoverIconX,
+                   hoverUnit ? EnergyGlyph(hoverUnit->_energy, hoverUnit->_energy_max) : 0);
 }
 
 void SquadManagerLayoutFooter(NC_STACK_ypaworld *yw, CmdStream *cur)
