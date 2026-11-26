@@ -39,6 +39,7 @@
 #include "world/recorder.h"
 #include "world/state.h"
 #include "world/frame.h"
+#include "world/playback.h"
 #include "locale/locale.h"
 
 
@@ -68,7 +69,7 @@ namespace UIWidgets {
         BTN_QUIT = 1007,
         BTN_LANGUAGE = 1008,
         BTN_MULTIPLAYER = 1016,
-        BTN_HELP = 1017,
+        BTN_REPLAYS = 1017,
         BTN_SINGLE_PLAYER = 1018
     };
     enum MAIN_MENU_EVENT_IDS{
@@ -79,7 +80,7 @@ namespace UIWidgets {
         BTN_OPTIONS_UP = 1005,
         BTN_SAVE_LOAD_UP = 1001,
         BTN_LANGUAGE_UP = 1011,
-        BTN_HELP_UP = 1025,
+        BTN_REPLAYS_UP = 1025,
         BTN_QUIT_UP = 1013
     };
     enum NETWORK_MENU_WIDGET_IDS{
@@ -434,7 +435,7 @@ enum
     ENVMODE_SELLOCALE = 7,
     ENVMODE_ABOUT = 8,
     ENVMODE_SELPLAYER = 9,
-    ENVMODE_HELP = 10
+    ENVMODE_REPLAYS = 10
 };
 
 struct EnvAction
@@ -446,12 +447,27 @@ struct EnvAction
         ACTION_PLAY     = 2,
         ACTION_LOAD     = 3,
         ACTION_NETPLAY  = 4,
-        ACTION_CONTINUE = 5  // The level left unfinished (UnfinishedLevel)
+        ACTION_CONTINUE = 5, // The level left unfinished (UnfinishedLevel)
+        ACTION_VIEW_REPLAY = 6 // UserData::replayToView, in the replay viewer
     };
 
     int8_t action = ACTION_NONE;
     int32_t params[5] = {0};
 };
+
+// A replay kept in the profile's replays folder, as the replays page lists
+// it
+struct TReplayFile
+{
+    std::string Path;
+    std::string Name;     // Of the file
+    std::string Date;     // When it was saved, as its name has it
+    int Level = 0;
+    int32_t Duration = 0; // Game time, in 1/1024 s
+    uint64_t Size = 0;    // Of the file, in bytes
+};
+
+struct TReplayPreview;
 
 class UserData
 {
@@ -617,6 +633,20 @@ public:
     int8_t aboutDlgKeyCount;
 
     NC_STACK_button *network_button;
+
+    // The replays page (yw_replays.cpp): the profile's replays, newest
+    // first, the one chosen, and its map, drawn in an area of the page
+    NC_STACK_button *replays_button = NULL;
+    GuiList replays_listvw;
+    std::vector<TReplayFile> replays;
+    int replaysSelected = 0;
+    TReplayPreview *replayPreview = NULL;
+    Common::Rect replaysMapArea;
+
+    // The replay the viewer is to show (EnvAction::ACTION_VIEW_REPLAY), and
+    // whether the debriefing it was started from shows again after
+    std::string replayToView;
+    bool replayFromDebriefing = false;
     GuiList network_listvw;
 
     int16_t netListY;
@@ -842,6 +872,18 @@ public:
     int UnfinishedLevel();
     void ContinueGame();
     void LookForSavedGamesAgain();
+
+    // The profile's replays, and the page that lists them
+    static std::string ReplaysPath(const std::string &username);
+    void FindReplays();
+    void ShowReplays();
+    void CloseReplays();
+    void ReplaysUiHandleInput();
+    void ViewSelectedReplay();
+    void DeleteSelectedReplay();
+    void LoadReplayPreview();
+    void FreeReplayPreview();
+    void SaveDebriefReplay();
     
     bool IsWindowedFlag()
     {
@@ -1377,6 +1419,11 @@ struct TBriefengScreen
     baseRender_msg ObjRenderParams;
 
     bool ZoomFromGate = false;
+
+    // The debriefing comes back as it ends, as from watching the replay
+    bool Instant = false;
+
+    Common::Point MapSize; // Of the level's map the debriefing shows
     
     std::array<NC_STACK_sklt *, 4> VectorGfx = Common::ArrayInit<NC_STACK_sklt *, 4>(NULL);
     Common::PlaneBytes OwnMap;
@@ -1454,6 +1501,8 @@ struct TBriefengScreen
 
         ObjRenderParams = baseRender_msg();
         ZoomFromGate = false;
+        Instant = false;
+        MapSize = Common::Point();
 
         //_owner = 0;
         ReplayedTime = 0;
@@ -1906,6 +1955,14 @@ public:
     void DrawRewindNotice();
     void SaveWonState();
 
+    // The replay viewer: a recording played back in its level, which is set
+    // up from the recording's first keyframe, drawn from its frames and never
+    // stepped (yw_replay.cpp)
+    bool StartReplay(const std::string &path, uint32_t startStep = 0);
+    void ReplayFrame(TUpdateArgs *arg);
+    bool LeavingReplay() const { return _replayLeave; }
+    void EndReplay();
+
     // The world's own state, field by field: see World::State
     void VisitState(World::State::Visitor &v);
 
@@ -2077,6 +2134,11 @@ public:
     bool ParseLevelHeader(TLevelDescription *mapp, const std::string &fname);
     void UpdateCampaignScreen();
     bool InitDebrief();
+    bool LoadDebriefMap(TBriefengScreen *brf, int levelId);
+    void KeepDebriefing();
+    bool ResumeDebriefing();
+    bool CreateReplaysControls();
+    void DeleteReplaysControls();
     void FreeDebrief();
     int ParseDebriefLevelDesc(TLevelDescription *mapproto, const std::string &filename);
     int ParseLevelDescription(TLevelDescription *mapp, const std::string &fname);
@@ -2117,7 +2179,7 @@ public:
     bool MakeFramesBack(double ms, uint32_t wantFrom);
     bool FrameAt(double step, World::Frame &out) const;
     void PlaceDrawnCamera(const World::Frame &frame);
-    void RenderGame(TUpdateArgs *arg, const World::Frame &frame, bool live);
+    void RenderGame(TUpdateArgs *arg, const World::Frame &frame, bool withInterface, bool particles);
     void CheckSectorVisibility(Common::Point sect, TRenderingSector *sct, const World::Frame &frame, baseRender_msg *rndrParams);
     void RenderSector(TRenderingSector *sct, const World::Frame &frame, baseRender_msg *rndrParams);
     void RenderUnit(const World::Frame &frame, const World::Frame::Unit &unit, baseRender_msg *arg);
@@ -2638,6 +2700,21 @@ public:
 
     double _drawnStep = 0.0; // The step drawn last, or how far between two
 
+    // The replay being watched (StartReplay): the step drawn or how far
+    // between two, whether it's paused, how fast it plays (an index of
+    // ReplaySpeeds), whether the timeline is being dragged and whether it's
+    // to be left
+    std::unique_ptr<World::Playback> _replay;
+    double _replayPosition = 0.0;
+    bool _replayPaused = false;
+    int _replaySpeed = 0;
+    bool _replayDragging = false;
+    bool _replayLeave = false;
+
+    void HandleReplayInput(TInputState *inpt);
+    void ToggleReplayPause();
+    void DrawReplayControls();
+
     // Whether the level has stepped since it was set up: the interface shows
     // it as a step leaves it
     bool _stepped = false;
@@ -2659,6 +2736,26 @@ public:
     // The last level's history, played from its recording by the debriefing
     // and counted by the score
     World::History::Replay _history;
+
+    // The recording the debriefing shows, empty when there's none; its size,
+    // and whether it was kept as a replay
+    std::string _debriefRecording;
+    uint64_t _debriefRecordingSize = 0;
+    bool _debriefReplaySaved = false;
+
+    // What the debriefing shows of the world, kept while its replay is
+    // watched (KeepDebriefing), as setting the replay's level up reads over
+    // it
+    struct TKeptDebriefing
+    {
+        World::History::Replay History;
+        Common::PlaneBytes PrimevalTypeMap, PrimevalOwnMap;
+        int32_t LevelId = 0;
+        int8_t PlayerOwner = 0;
+        int OwnerMask = 0, UserMask = 0;
+    };
+
+    std::unique_ptr<TKeptDebriefing> _keptDebriefing;
     
     int32_t _stoudsonWaveVehicleId = 0;
     int32_t _stoudsonCenterVehicleId = 0; // Not used :-/

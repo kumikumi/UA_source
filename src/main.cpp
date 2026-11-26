@@ -68,7 +68,8 @@ int input_inited = 0;
 enum GAME_SCREEN_MODE {
     GAME_SCREEN_MODE_UNKNOWN = 0,
     GAME_SCREEN_MODE_MENU = 1,
-    GAME_SCREEN_MODE_GAME = 2
+    GAME_SCREEN_MODE_GAME = 2,
+    GAME_SCREEN_MODE_REPLAY = 3 // The replay viewer
 };
 
 GAME_SCREEN_MODE GameScreenMode;
@@ -87,6 +88,19 @@ static bool recordFull = false; // --record-full
 static uint32_t checkResumeStep = 0; // --check-resume
 
 static bool StartDirectLevel();
+
+// The level the command line starts the game in: --level, --load or the
+// benchmark's, or the replay it shows (--replay). Nothing of it is written to the player's profile.
+struct DirectStart
+{
+    int Level = 0;        // Started as new
+    std::string SaveFile; // Or from this saved game or recording
+    bool HasStep = false; // --step: from after this step of the recording
+    uint32_t Step = 0;
+    std::string ReplayFile; // --replay: this recording in the replay viewer
+};
+
+static DirectStart directStart;
 
 // The game advances in fixed steps, so how units behave does not depend on
 // the frame rate. 60 steps per second is the rate the port ran at while it
@@ -412,6 +426,95 @@ int ProcessGameplayFrame(int32_t frameTicks, bool timeFrozen)
     return 1;
 }
 
+// Back from the replay viewer to where it was started from: the debriefing,
+// shown as it ends, or the replays page. The campaign's state that setting
+// the replay's level up read over is read back, as after a level. Saying so
+// when the replay couldn't be watched. Returns what the frame functions do.
+static int BackFromReplay(bool failed)
+{
+    GameScreenMode = GAME_SCREEN_MODE_UNKNOWN;
+
+    if ( !failed )
+        ypaworld->EndReplay();
+
+    if ( !userdata.DirectStart &&
+         !ypaworld->LoadSettings("settings.tmp", userdata.UserName, World::SDF_BUDDY | World::SDF_PROTO | World::SDF_USER, false) )
+        return 0;
+
+    if ( !ypaworld->OpenGameShell() )
+    {
+        ypaworld->DeinitGameShell();
+        return 0;
+    }
+
+    if ( userdata.replayFromDebriefing && !ypaworld->ResumeDebriefing() )
+        ypa_log_out("Could not show the debriefing again\n");
+
+    if ( failed )
+        userdata.ShowConfirmDialog(4, Locale::Text::Advanced(Locale::ADV_CANTOPENREPLAY), "", 1);
+
+    GameScreenMode = GAME_SCREEN_MODE_MENU;
+    world_update_arg.TimeStamp = 0;
+    Input::Engine.QueryInput(&input_states);
+    return 1;
+}
+
+// Leaves the menus for the replay viewer (EnvAction::ACTION_VIEW_REPLAY)
+static int StartReplayViewer()
+{
+    if ( !userdata.DirectStart )
+    {
+        userdata.SaveSettings();
+
+        if ( !userdata.SaveBuildProtoState() )
+            return 0;
+    }
+
+    if ( userdata.replayFromDebriefing )
+        ypaworld->KeepDebriefing();
+
+    ypaworld->CloseGameShell();
+    GameScreenMode = GAME_SCREEN_MODE_UNKNOWN;
+
+    if ( !ypaworld->StartReplay(userdata.replayToView) )
+    {
+        ypa_log_out("Could not watch the replay %s\n", userdata.replayToView.c_str());
+        return BackFromReplay(true);
+    }
+
+    GameScreenMode = GAME_SCREEN_MODE_REPLAY;
+    Input::Engine.QueryInput(&input_states);
+    return 1;
+}
+
+static int ProcessReplayFrame()
+{
+    ypaworld->ReplayFrame(&world_update_arg);
+
+    // Started from the command line (--replay), the game quits
+    if ( ypaworld->LeavingReplay() )
+        return directStart.ReplayFile.empty() ? BackFromReplay(false) : 0;
+
+    return 1;
+}
+
+// --replay: the recording in the replay viewer, at --step's step
+static bool StartDirectReplay()
+{
+    ypaworld->CloseGameShell();
+    GameScreenMode = GAME_SCREEN_MODE_UNKNOWN;
+
+    if ( !ypaworld->StartReplay(directStart.ReplayFile, directStart.HasStep ? directStart.Step : 0) )
+    {
+        ypa_log_out("Could not watch the replay the command line names\n");
+        return false;
+    }
+
+    GameScreenMode = GAME_SCREEN_MODE_REPLAY;
+    Input::Engine.QueryInput(&input_states);
+    return true;
+}
+
 int ProcessMenuFrame()
 {
     userdata.GlobalTime = world_update_arg.TimeStamp;
@@ -427,6 +530,8 @@ int ProcessMenuFrame()
     
     if ( userdata.envAction.action == EnvAction::ACTION_QUIT )
         return 0;
+    else if ( userdata.envAction.action == EnvAction::ACTION_VIEW_REPLAY )
+        return StartReplayViewer();
     else if ( userdata.envAction.action == EnvAction::ACTION_PLAY )
     {
         userdata.SaveSettings();
@@ -555,6 +660,10 @@ int ProcessNextFrame()
     else if ( GameScreenMode == GAME_SCREEN_MODE_GAME )
     {
         return ProcessGameplayFrame(frameTicks, timeFrozen);
+    }
+    else if ( GameScreenMode == GAME_SCREEN_MODE_REPLAY )
+    {
+        return ProcessReplayFrame();
     }
     return 1;
 }
@@ -750,6 +859,11 @@ void ShutdownGame()
             ypaworld->DeleteLevel();
             ypaworld->DeinitGameShell();
         }
+        else if ( GameScreenMode == GAME_SCREEN_MODE_REPLAY )
+        {
+            ypaworld->EndReplay();
+            ypaworld->DeinitGameShell();
+        }
         else if ( GameScreenMode == GAME_SCREEN_MODE_MENU )
         {
             userdata.SaveSettings();
@@ -870,17 +984,6 @@ int InitGame()
 
 uint32_t maxTicks = 1000/60; // init on 60FPS
 
-// The level the command line starts the game in: --level, --load or the
-// benchmark's. Nothing of it is written to the player's profile.
-struct DirectStart
-{
-    int Level = 0;        // Started as new
-    std::string SaveFile; // Or from this saved game or recording
-    bool HasStep = false; // --step: from after this step of the recording
-    uint32_t Step = 0;
-};
-
-static DirectStart directStart;
 
 // Started from a recording: the keyframe it went on from, for a recording
 // that goes on from it
@@ -932,14 +1035,25 @@ static bool ReadDirectStart()
             return false;
         }
 
-        if ( directStart.SaveFile.empty() )
+        if ( directStart.SaveFile.empty() && !System::CmdLine::Has("replay") )
         {
-            System::CmdLine::PrintError("--step needs --load of a recording");
+            System::CmdLine::PrintError("--step needs --load or --replay of a recording");
             return false;
         }
 
         directStart.HasStep = true;
         directStart.Step = step;
+    }
+
+    if ( System::CmdLine::Get("replay", &directStart.ReplayFile) )
+    {
+        if ( directStart.ReplayFile.empty() )
+        {
+            System::CmdLine::PrintError("--replay needs FILE");
+            return false;
+        }
+
+        ways++;
     }
 
     if ( benchmark.IsActive() )
@@ -950,7 +1064,7 @@ static bool ReadDirectStart()
 
     if ( ways > 1 )
     {
-        System::CmdLine::PrintError("--level, --load and --bench each start a level; give one");
+        System::CmdLine::PrintError("--level, --load, --replay and --bench each start a level; give one");
         return false;
     }
 
@@ -958,7 +1072,7 @@ static bool ReadDirectStart()
 
     headless = System::CmdLine::Has("headless");
 
-    if ( headless && (!userdata.DirectStart || benchmark.IsActive()) )
+    if ( headless && (!userdata.DirectStart || benchmark.IsActive() || !directStart.ReplayFile.empty()) )
     {
         System::CmdLine::PrintError("--headless needs --level or --load");
         return false;
@@ -1012,7 +1126,7 @@ static bool ReadDirectStart()
             return false;
         }
 
-        if ( !userdata.DirectStart || benchmark.IsActive() )
+        if ( !userdata.DirectStart || benchmark.IsActive() || !directStart.ReplayFile.empty() )
         {
             System::CmdLine::PrintError("--record needs --level or --load");
             return false;
@@ -1066,16 +1180,17 @@ static const std::string &TemporaryRecordingPath()
     return temporaryRecording;
 }
 
-// Whether the level or saved game the command line names is there
+// Whether the level, saved game or replay the command line names is there
 static bool CheckDirectStart()
 {
-    if ( !directStart.SaveFile.empty() )
+    if ( !directStart.SaveFile.empty() || !directStart.ReplayFile.empty() )
     {
+        const std::string &file = directStart.SaveFile.empty() ? directStart.ReplayFile : directStart.SaveFile;
         World::Recording recording;
 
-        if ( !recording.Open(directStart.SaveFile) )
+        if ( !recording.Open(file) )
         {
-            System::CmdLine::PrintError(directStart.SaveFile + " is no saved game or recording");
+            System::CmdLine::PrintError(file + " is no saved game or recording");
             return false;
         }
 
@@ -1373,7 +1488,7 @@ int main(int argc, char *argv[])
         else
             ypaworld->SetWindowed( !benchmark.IsActive() && userdata.IsWindowedFlag() );
 
-        if ( !CheckDirectStart() || !StartDirectLevel() )
+        if ( !CheckDirectStart() || !(directStart.ReplayFile.empty() ? StartDirectLevel() : StartDirectReplay()) )
         {
             ShutdownGame();
             GFX::Engine.Deinit();

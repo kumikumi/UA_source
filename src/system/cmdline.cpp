@@ -35,7 +35,10 @@ static const Option Options[] = {
                                 "(--record), such as SAVE/Unnamed2/0.sav, the saved game of the "
                                 "profile Unnamed2"},
     {"step",         "N",       "With --load, go on from the keyframe at step N instead, one of "
-                                "those every 600 steps"},
+                                "those every 600 steps; with --replay, start watching at step N"},
+    {"replay",       "FILE",    "Watch a recording in the replay viewer, without the menus or the "
+                                "intro, such as a replay saved in SAVE/Unnamed2/replays. The game "
+                                "quits when the viewer is left"},
     {"headless",     NULL,      "Run the level --level or --load starts as fast as the machine can, "
                                 "with nothing shown, heard or read from the controls, until the "
                                 "level ends, the player's host station is destroyed or no enemy "

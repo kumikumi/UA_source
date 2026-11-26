@@ -1898,9 +1898,9 @@ void NC_STACK_ypaworld::RenderFillers(baseRender_msg *arg, int diameter)
     }
 }
 
-// Draws a frame of the world. Live, as the game goes on, with the interface
-// over it, and with particles: not when going back.
-void NC_STACK_ypaworld::RenderGame(TUpdateArgs *arg, const World::Frame &frame, bool live)
+// Draws a frame of the world, with the interface over it as the game goes
+// on, and with particles: not when going back.
+void NC_STACK_ypaworld::RenderGame(TUpdateArgs *arg, const World::Frame &frame, bool withInterface, bool particles)
 {
     uint64_t sceneStart = System::PerfStats::Now();
 
@@ -1923,7 +1923,7 @@ void NC_STACK_ypaworld::RenderGame(TUpdateArgs *arg, const World::Frame &frame, 
     rndrs.frameTime = arg->DTime;
     rndrs.globTime = frame.Time;
     rndrs.adeCount = 0;
-    rndrs.emitParticles = live;
+    rndrs.emitParticles = particles;
 
     rndrs.minZ = 1.0;
 
@@ -2047,7 +2047,7 @@ void NC_STACK_ypaworld::RenderGame(TUpdateArgs *arg, const World::Frame &frame, 
     // TODO(bug): The interface's markers, map icons and lines are placed from
     // the units as the last step left them, not from the frame, so they can
     // lag the world drawn by up to one step.
-    if ( live )
+    if ( withInterface )
     {
         System::PerfStats::Timer perf(System::PerfStats::SEC_GUI);
         uint32_t tpm = profiler_begin();

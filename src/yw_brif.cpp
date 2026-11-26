@@ -1187,6 +1187,14 @@ void DebriefStartHistoryReplay(NC_STACK_ypaworld *yw, TInputState *struc, TBrief
     brf->StatsIngame.fill(World::TPlayerStatus());
     
     brf->Upgrades.clear();
+
+    // As it ends, at once and quietly; played again, as it goes
+    if ( brf->Instant )
+    {
+        DebriefPlayHistory(yw, brf, yw->_history, UINT32_MAX, false);
+        brf->StartTime = brf->CurrTime - brf->ReplayedTime;
+        brf->Instant = false;
+    }
 }
 
 // A sector taken, marked for a while after
@@ -1200,8 +1208,8 @@ void yw_DebriefDrawConquest(NC_STACK_ypaworld *yw, TBriefengScreen *brf, const W
         {
             if ( brf->VectorGfx[3] )
             {
-                float sectorW = brf->MapBlitEnd.Width() / (float)yw->_mapSize.x;
-                float sectorH = brf->MapBlitEnd.Height() / (float)yw->_mapSize.y;
+                float sectorW = brf->MapBlitEnd.Width() / (float)brf->MapSize.x;
+                float sectorH = brf->MapBlitEnd.Height() / (float)brf->MapSize.y;
 
                 float posX = (float)e.SectorX * sectorW + brf->MapBlitEnd.left + sectorW * 0.5;
                 float posY = (float)e.SectorY * sectorH + brf->MapBlitEnd.top + sectorH * 0.5;
@@ -1253,8 +1261,8 @@ void yw_DebriefDrawKill(NC_STACK_ypaworld *yw, TBriefengScreen *brf, const World
                     sizeFactor = 1.0;
             }
 
-            float scaleX = ((mapW / (float)yw->_mapSize.x) / 2.0) * sizeFactor;
-            float scaleY = ((mapH / (float)yw->_mapSize.y) / 2.0) * sizeFactor;
+            float scaleX = ((mapW / (float)brf->MapSize.x) / 2.0) * sizeFactor;
+            float scaleY = ((mapH / (float)brf->MapSize.y) / 2.0) * sizeFactor;
 
             yw_RenderVector2D(yw, brf->VectorGfx[1]->GetSkelet(), posX, posY, 1.0, 0.0, 0.0, 1.0, scaleX, scaleY, yw->GetColor(e.Owner), NULL, NULL);
         }
@@ -1282,8 +1290,8 @@ void yw_DebriefDrawCreation(NC_STACK_ypaworld *yw, TBriefengScreen *brf, const W
             else if ( sizeFactor < 0.0 )
                 sizeFactor = 0.0;
 
-            float scaleX = ((mapW / (float)yw->_mapSize.x) / 8.0) * sizeFactor;
-            float scaleY = ((mapH / (float)yw->_mapSize.y) / 8.0) * sizeFactor;
+            float scaleX = ((mapW / (float)brf->MapSize.x) / 8.0) * sizeFactor;
+            float scaleY = ((mapH / (float)brf->MapSize.y) / 8.0) * sizeFactor;
 
             yw_RenderVector2D(yw, brf->VectorGfx[1]->GetSkelet(), posX, posY, 1.0, 0.0, 0.0, 1.0, scaleX, scaleY, yw->GetColor(e.Owner), NULL, NULL);
         }
@@ -1309,9 +1317,9 @@ void yw_DebriefAddTechUpgrade(NC_STACK_ypaworld *yw, TBriefengScreen *brf, const
     }
 }
 
-// An event the replay of the level's history has come to: counted, heard,
-// and the map changed by it
-void yw_DebriefEventReached(NC_STACK_ypaworld *yw, TBriefengScreen *brf, const World::History::Event &e)
+// An event the replay of the level's history has come to: counted, heard
+// when heard is, and the map changed by it
+void yw_DebriefEventReached(NC_STACK_ypaworld *yw, TBriefengScreen *brf, const World::History::Event &e, bool heard)
 {
     World::History::AddScore(e, brf->StatsIngame);
 
@@ -1341,33 +1349,35 @@ void yw_DebriefEventReached(NC_STACK_ypaworld *yw, TBriefengScreen *brf, const W
         break;
     }
 
-    if ( sound >= 0 && yw->_GameShell )
+    if ( heard && sound >= 0 && yw->_GameShell )
         SFXEngine::SFXe.startSound(&yw->_GameShell->samples1_info, sound);
 }
 
 void yw_DebriefRenderSectorsOwners(NC_STACK_ypaworld *yw, TBriefengScreen *brf)
 {
-    float sectorW = brf->MapBlitEnd.Width() / (float)yw->_mapSize.x;
-    float sectorH = brf->MapBlitEnd.Height() / (float)yw->_mapSize.y;
+    const Common::Point &size = brf->MapSize;
+    float sectorW = brf->MapBlitEnd.Width() / (float)size.x;
+    float sectorH = brf->MapBlitEnd.Height() / (float)size.y;
 
     float crossHalfW = sectorW / 10.0;
     float crossHalfH = sectorH / 10.0;
 
     float centerY = brf->MapBlitEnd.top + sectorH * 0.5;
 
-    for (int yy = 0; yy < yw->_mapSize.y; yy++)
+    for (int yy = 0; yy < size.y && yy < (int)brf->OwnMap.Height(); yy++)
     {
         float centerX = brf->MapBlitEnd.left + sectorW * 0.5;
         
         uint8_t *ownmap = brf->OwnMap.Line(yy);
 
-        for (int xx = 0; xx < yw->_mapSize.x; xx++)
+        for (int xx = 0; xx < size.x && xx < (int)brf->OwnMap.Width(); xx++)
         {
             int owner = *ownmap;
 
             if ( owner != 0 )
             {
-                if ( yw->IsGamePlaySector( {xx, yy} ) )
+                // Not the border
+                if ( xx > 0 && yy > 0 && xx < size.x - 1 && yy < size.y - 1 )
                 {
                     Common::FLine hLine;
                     Common::FLine vLine;
@@ -1989,6 +1999,43 @@ void yw_DebriefTechUpgradesTable(NC_STACK_ypaworld *yw, TBriefengScreen *brf, Cm
         yw_DebriefTechUpgradeLine(yw, brf, upg, in,  (yw->_screenSize.x / 2) * 0.984375 );
 }
 
+// A level's history played from its recording over its map up to a time:
+// the events newly come to counted, and heard when heard is, and those of a
+// while before marked
+void DebriefPlayHistory(NC_STACK_ypaworld *yw, TBriefengScreen *brf, World::History::Replay &history, uint32_t time, bool heard)
+{
+    history.PlayUntil(time);
+    brf->ReplayedTime = history.Time();
+
+    const std::vector<World::History::Event> &events = history.Events();
+
+    for (size_t i = brf->EventsReplayed; i < events.size(); i++)
+        yw_DebriefEventReached(yw, brf, events[i], heard);
+
+    brf->EventsReplayed = events.size();
+
+    for ( const World::History::Event &e : events )
+    {
+        switch ( e.What )
+        {
+        case World::History::Event::CONQUEST:
+            yw_DebriefDrawConquest(yw, brf, e, time);
+            break;
+
+        case World::History::Event::KILL:
+            yw_DebriefDrawKill(yw, brf, e, time);
+            break;
+
+        case World::History::Event::CREATION:
+            yw_DebriefDrawCreation(yw, brf, e, time);
+            break;
+
+        default:
+            break;
+        }
+    }
+}
+
 void yw_DebriefRunDebrief(NC_STACK_ypaworld *yw, TInputState *struc, TBriefengScreen *brf)
 {
     CmdStream cmdbuf;
@@ -2007,38 +2054,7 @@ void yw_DebriefRunDebrief(NC_STACK_ypaworld *yw, TInputState *struc, TBriefengSc
 
     if ( brf->Stage == TBriefengScreen::STAGE_PLAYER_RN )
     {
-        // The level's history played from its recording up to the replay's
-        // time: the events newly come to counted and heard
-        yw->_history.PlayUntil(dtime);
-        brf->ReplayedTime = yw->_history.Time();
-
-        const std::vector<World::History::Event> &events = yw->_history.Events();
-
-        for (size_t i = brf->EventsReplayed; i < events.size(); i++)
-            yw_DebriefEventReached(yw, brf, events[i]);
-
-        brf->EventsReplayed = events.size();
-
-        for ( const World::History::Event &e : events )
-        {
-            switch ( e.What )
-            {
-            case World::History::Event::CONQUEST:
-                yw_DebriefDrawConquest(yw, brf, e, dtime);
-                break;
-
-            case World::History::Event::KILL:
-                yw_DebriefDrawKill(yw, brf, e, dtime);
-                break;
-
-            case World::History::Event::CREATION:
-                yw_DebriefDrawCreation(yw, brf, e, dtime);
-                break;
-
-            default:
-                break;
-            }
-        }
+        DebriefPlayHistory(yw, brf, yw->_history, dtime, true);
 
         if ( yw->_history.AtEnd() )
         {
@@ -2098,6 +2114,12 @@ void yw_debriefUpdate(NC_STACK_ypaworld *yw, TInputState *inpt)
     {
     case TBriefengScreen::STAGE_LOADED:
         DebriefStartMapScaling(yw, inpt, brf);
+
+        if ( brf->Instant )
+        {
+            brf->MapBlitParams.srcRect = Common::FRect(-1.0, -1.0, 1.0, 1.0);
+            brf->Stage = TBriefengScreen::STAGE_SCALEEND;
+        }
         break;
 
     case TBriefengScreen::STAGE_SCALING:

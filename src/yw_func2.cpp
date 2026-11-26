@@ -1228,7 +1228,10 @@ void UserData::ShowToolTip(int id)
         p_YW->SetShowingTooltip(Locale::TIP_MENU_NETSCREEN);
         break;
 
-    case UIWidgets::MAIN_MENU_WIDGET_IDS::BTN_HELP:
+    case UIWidgets::MAIN_MENU_WIDGET_IDS::BTN_REPLAYS:
+        p_YW->SetShowingTooltip(Locale::TIP_MENU_REPLAYS);
+        break;
+
     case 1052:
     case 1107:
     case 1167:
@@ -1238,6 +1241,26 @@ void UserData::ShowToolTip(int id)
 
     case 1009:
         p_YW->SetShowingTooltip(Locale::TIP_MENU_CONTINUE);
+        break;
+
+    case 1022:
+        p_YW->SetShowingTooltip(Locale::TIP_MENU_VIEWREPLAY);
+        break;
+
+    case 1023:
+        p_YW->SetShowingTooltip(Locale::TIP_MENU_SAVEREPLAY);
+        break;
+
+    case 1401:
+        p_YW->SetShowingTooltip(Locale::TIP_MENU_REPLAYVIEW);
+        break;
+
+    case 1402:
+        p_YW->SetShowingTooltip(Locale::TIP_MENU_REPLAYDELETE);
+        break;
+
+    case 1403:
+        p_YW->SetShowingTooltip(Locale::TIP_MENU_TOMAIN);
         break;
 
     case UIWidgets::MAIN_MENU_WIDGET_IDS::BTN_SINGLE_PLAYER:
@@ -1995,19 +2018,34 @@ printf("%s, %d\n",__FILE__, __LINE__);
     }
 }
 
+// Deletes what a folder of the game's has, the folders in it too, as a
+// profile's replays
 void DeleteDirContents(const std::string &path)
 {
+    std::vector<std::pair<std::string, bool>> entries; // Each name, and whether it's a folder
     FSMgr::DirIter dir = uaOpenDir(path);
-    if ( dir )
-    {
-        FSMgr::iNode *node;
+    FSMgr::iNode *node;
 
-        while ( dir.getNext(&node) )
+    while ( dir && dir.getNext(&node) )
+    {
+        std::string name = node->getName();
+
+        if ( name != "." && name != ".." )
+            entries.emplace_back(name, node->getType() == FSMgr::iNode::NTYPE_DIR);
+    }
+
+    for ( const auto &entry : entries )
+    {
+        std::string entryPath = fmt::sprintf("%s/%s", path, entry.first);
+
+        if ( entry.second )
         {
-            // TODO(bug): The || sends every subdirectory except . and .. to uaDeleteFile too,
-            // which cannot remove it. Probably meant && (or the file test alone).
-            if ( node->getType() == FSMgr::iNode::NTYPE_FILE || (node->getName().compare(".") && node->getName().compare("..")) )
-                uaDeleteFile(fmt::sprintf("%s/%s", path, node->getName()));
+            DeleteDirContents(entryPath);
+            uaDeleteDir(entryPath);
+        }
+        else
+        {
+            uaDeleteFile(entryPath);
         }
     }
 }
@@ -2211,6 +2249,10 @@ void UserData::GameShellUiHandleInput()
     sub_bar_button->Disable(&enableState);
     enableState.butID = 1009;
     sub_bar_button->Disable(&enableState);
+    enableState.butID = 1022;
+    sub_bar_button->Disable(&enableState);
+    enableState.butID = 1023;
+    sub_bar_button->Disable(&enableState);
     enableState.butID = 1011;
     sub_bar_button->Disable(&enableState);
     enableState.butID = 1019;
@@ -2234,7 +2276,7 @@ void UserData::GameShellUiHandleInput()
     titel_button->Disable(&enableState);
     enableState.butID = UIWidgets::MAIN_MENU_WIDGET_IDS::BTN_SINGLE_PLAYER;
     titel_button->Disable(&enableState);
-    enableState.butID = UIWidgets::MAIN_MENU_WIDGET_IDS::BTN_HELP;
+    enableState.butID = UIWidgets::MAIN_MENU_WIDGET_IDS::BTN_REPLAYS;
     titel_button->Disable(&enableState);
     enableState.butID = UIWidgets::MAIN_MENU_WIDGET_IDS::BTN_MULTIPLAYER;
     titel_button->Disable(&enableState);
@@ -2285,6 +2327,29 @@ void UserData::GameShellUiHandleInput()
             sub_bar_button->setXYWidth(&placement);
 
             sub_bar_button->SetText(1019, Locale::Text::Advanced(Locale::ADV_CONTINUE));
+
+            // The level's replay, to watch or keep
+            if ( !p_YW->_debriefRecording.empty() )
+            {
+                enableState.butID = 1022;
+                sub_bar_button->Enable(&enableState);
+
+                enableState.butID = 1023;
+                sub_bar_button->Enable(&enableState);
+
+                if ( p_YW->_debriefReplaySaved )
+                {
+                    sub_bar_button->SetText(1023, Locale::Text::Title(Locale::TITLE_REPLAYSAVED));
+                    enableState.state = 1;
+                    sub_bar_button->Disable(&enableState);
+                    enableState.state = 0;
+                }
+                else
+                {
+                    sub_bar_button->SetText(1023, fmt::sprintf("%s (%s)", Locale::Text::Title(Locale::TITLE_SAVEREPLAY),
+                                                               FileSizeText(p_YW->_debriefRecordingSize)));
+                }
+            }
         }
 
         enableState.butID = 1019;
@@ -2295,9 +2360,11 @@ void UserData::GameShellUiHandleInput()
         disk_button->HideScreen();
         locale_button->HideScreen();
         network_button->HideScreen();
+        replays_button->HideScreen();
 
         p_YW->GuiWinClose( &input_listview );
         p_YW->GuiWinClose( &disk_listvw );
+        p_YW->GuiWinClose( &replays_listvw );
         p_YW->GuiWinClose( &local_listvw );
         p_YW->GuiWinClose( &network_listvw );
     }
@@ -2321,7 +2388,7 @@ void UserData::GameShellUiHandleInput()
         enableState.butID = UIWidgets::MAIN_MENU_WIDGET_IDS::BTN_QUIT;
         titel_button->Enable(&enableState);
 
-        enableState.butID = UIWidgets::MAIN_MENU_WIDGET_IDS::BTN_HELP;
+        enableState.butID = UIWidgets::MAIN_MENU_WIDGET_IDS::BTN_REPLAYS;
         titel_button->Enable(&enableState);
 
         enableState.butID = UIWidgets::MAIN_MENU_WIDGET_IDS::BTN_SINGLE_PLAYER;
@@ -2396,6 +2463,9 @@ void UserData::GameShellUiHandleInput()
             case 6:
                 CreateNewProfile();
                 break;
+            case 7:
+                DeleteSelectedReplay();
+                break;
             default:
                 break;
             }
@@ -2442,6 +2512,9 @@ void UserData::GameShellUiHandleInput()
                 break;
             case 6:
                 CreateNewProfile();
+                break;
+            case 7:
+                DeleteSelectedReplay();
                 break;
             default:
                 break;
@@ -2506,9 +2579,9 @@ void UserData::GameShellUiHandleInput()
 
             EnvMode = ENVMODE_SINGLEPLAY;
         }
-        else if ( r.code == UIWidgets::MAIN_MENU_EVENT_IDS::BTN_HELP_UP )
+        else if ( r.code == UIWidgets::MAIN_MENU_EVENT_IDS::BTN_REPLAYS_UP )
         {
-            p_YW->_helpURL = Locale::Text::Help(Locale::HELP_MAIN);
+            ShowReplays();
         }
     }
 
@@ -2611,6 +2684,16 @@ void UserData::GameShellUiHandleInput()
 
         case 1027: // Continue
             ContinueGame();
+            break;
+
+        case 1028: // View Replay
+            replayToView = p_YW->_debriefRecording;
+            replayFromDebriefing = true;
+            envAction.action = EnvAction::ACTION_VIEW_REPLAY;
+            break;
+
+        case 1029: // Save Replay
+            SaveDebriefReplay();
             break;
 
         default:
@@ -3002,6 +3085,9 @@ void UserData::GameShellUiHandleInput()
     if ( _settingsChangeOptions & OPT_CHG_AITIMELINE )
         confAITimeline = slider->value * 60000;
     video_button->SetText(1182, AITimelineText(confAITimeline));
+
+    if ( EnvMode == ENVMODE_REPLAYS )
+        ReplaysUiHandleInput();
 
     if ( EnvMode == ENVMODE_SELPLAYER ) //Load/Save
     {

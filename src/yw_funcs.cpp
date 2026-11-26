@@ -1665,7 +1665,11 @@ int NC_STACK_ypaworld::ParseDebriefLevelDesc(TLevelDescription *mapproto, const 
     return ScriptParser::ParseFile(filename, parsers, ScriptParser::FLAG_NO_INCLUDE);
 }
 
-bool NC_STACK_ypaworld::InitDebrief()
+// What a level's debriefing map is drawn with: the picture of its map, the
+// marks of its events, and the level's description with its maps, which go
+// to the world's (_lvlTypeMap...). False, after logging why, when there's no
+// picture.
+bool NC_STACK_ypaworld::LoadDebriefMap(TBriefengScreen *brf, int levelId)
 {
     const std::array<std::string, 4> vGfxName
     {
@@ -1674,8 +1678,44 @@ bool NC_STACK_ypaworld::InitDebrief()
         "wireless/db_death.sklt",
         "wireless/db_sec.sklt"
     };
+
+    Common::Env.SetPrefix("rsrc", "data:");
+
+    for (size_t i = 0; i < vGfxName.size(); i++)
+        brf->VectorGfx[i] = Nucleus::CInit<NC_STACK_sklt>({{NC_STACK_rsrc::RSRC_ATT_NAME, vGfxName[i]}});
+
+    if ( levelId <= 0 || levelId >= (int)_globalMapRegions.MapRegions.size() ||
+         !ParseDebriefLevelDesc(&brf->Desc, _globalMapRegions.MapRegions[levelId].MapDirectory) )
+    {
+        ypa_log_out("No description of level %d for its map\n", levelId);
+        return false;
+    }
+
     TBkgPicInfo *mapImg = NULL;
-    
+
+    if ( !brf->Desc.Dbmaps.empty() )
+        mapImg = &brf->Desc.Dbmaps[0];
+    else if ( !brf->Desc.Mbmaps.empty() )
+        mapImg = &brf->Desc.Mbmaps[0];
+
+    if ( !mapImg || mapImg->PicName.empty() )
+    {
+        ypa_log_out("No map picture for level %d\n", levelId);
+        return false;
+    }
+
+    Common::Env.SetPrefix("rsrc", "mbpix:");
+
+    brf->MbmapImg = Utils::ProxyLoadImage( {
+        {NC_STACK_rsrc::RSRC_ATT_NAME, mapImg->PicName},
+        {NC_STACK_bitmap::BMD_ATT_CONVCOLOR, (int32_t)1}});
+
+    brf->MapSize = _lvlTypeMap.Size();
+    return brf->MbmapImg != NULL;
+}
+
+bool NC_STACK_ypaworld::InitDebrief()
+{
     _briefScreen.Clear();
     
     _particles.Clear();
@@ -1694,30 +1734,10 @@ bool NC_STACK_ypaworld::InitDebrief()
 
     _levelInfo.State = TLevelInfo::STATE_DEBRIEFING;
 
-    Common::Env.SetPrefix("rsrc", "data:");
-
-    for (size_t i = 0; i < vGfxName.size(); i++)
-        _briefScreen.VectorGfx[i] = Nucleus::CInit<NC_STACK_sklt>({{NC_STACK_rsrc::RSRC_ATT_NAME, vGfxName[i]}});
-
-    
     _briefScreen.OwnMap = _lvlPrimevalOwnMap;
     _briefScreen.TypMap = _lvlPrimevalTypeMap;
 
-    if ( !ParseDebriefLevelDesc(&_briefScreen.Desc, _globalMapRegions.MapRegions[_levelInfo.LevelID].MapDirectory) )
-        goto ON_ERR;
-
-    if (_briefScreen.Desc.Dbmaps.empty())
-    {
-        if (!_briefScreen.Desc.Mbmaps.empty())
-            mapImg = &_briefScreen.Desc.Mbmaps[0];
-    }
-    else
-    {
-        if (!_briefScreen.Desc.Dbmaps.empty())
-            mapImg = &_briefScreen.Desc.Dbmaps[0];
-    }
-
-    if ( !mapImg || mapImg->PicName.empty() )
+    if ( !LoadDebriefMap(&_briefScreen, _levelInfo.LevelID) )
         goto ON_ERR;
 
     Common::Env.SetPrefix("rsrc", "levels:");
@@ -1726,14 +1746,6 @@ bool NC_STACK_ypaworld::InitDebrief()
         _briefScreen.BriefingMapImg = Utils::ProxyLoadImage( {
             {NC_STACK_rsrc::RSRC_ATT_NAME, _globalMapRegions.debrief_map[0].PicName},
             {NC_STACK_bitmap::BMD_ATT_CONVCOLOR, (int32_t)1}});
-
-    Common::Env.SetPrefix("rsrc", "mbpix:");
-
-    _briefScreen.MbmapImg = Utils::ProxyLoadImage( {
-        {NC_STACK_rsrc::RSRC_ATT_NAME, mapImg->PicName},
-        {NC_STACK_bitmap::BMD_ATT_CONVCOLOR, (int32_t)1}});
-    if ( !_briefScreen.MbmapImg )
-        goto ON_ERR;
 
     SetMapSize(_lvlTypeMap.Size());
 
@@ -2615,6 +2627,10 @@ void DrawGameShellControls(NC_STACK_ypaworld *yw, UserData *usr)
     case ENVMODE_SELPLAYER:
         usr->disk_button->Draw();
         ypaworld_func158__saveload_list_draw(yw, usr);
+        break;
+
+    case ENVMODE_REPLAYS:
+        DrawReplaysPage(yw, usr);
         break;
 
     default:

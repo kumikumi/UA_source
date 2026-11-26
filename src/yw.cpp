@@ -784,7 +784,7 @@ void NC_STACK_ypaworld::RenderFrame(TUpdateArgs *arg, float stepFraction)
         if ( FrameAt(_drawnStep, frame) )
         {
             GFX::Engine.SetAnimationTime(frame.Time);
-            RenderGame(arg, frame, !_rewinding && _stepped);
+            RenderGame(arg, frame, !_rewinding && _stepped, !_rewinding && _stepped);
 
             if ( _rewinding )
                 DrawRewindNotice();
@@ -2074,6 +2074,13 @@ void NC_STACK_ypaworld::FindUnitOnRay(TUnitRayQuery *arg)
 
 void NC_STACK_ypaworld::DeleteLevel()
 {
+    // A replay's level wasn't played: it only goes
+    if ( _replay )
+    {
+        FreeLevel();
+        return;
+    }
+
     // The recording already went back: so does the level
     if ( _rewinding )
         EndRewind();
@@ -2149,6 +2156,11 @@ void NC_STACK_ypaworld::DeleteLevel()
 
     if ( _prepareDebrief && !recorded.empty() )
         _history.Open(this, recorded);
+
+    // A single-player level's, to watch or keep as a replay
+    _debriefRecording = (_prepareDebrief && !_isNetGame) ? recorded : std::string();
+    _debriefRecordingSize = _debriefRecording.empty() ? 0 : World::RecordingFileSize(_debriefRecording);
+    _debriefReplaySaved = false;
 
     NC_STACK_bitmap *disk = loadDisk_screen(this);
 
@@ -2578,7 +2590,7 @@ void LoadGameShellBkgImages(NC_STACK_ypaworld *yw, int mode)
         case ENVMODE_SELLOCALE:
         case ENVMODE_ABOUT:
         case ENVMODE_SELPLAYER:
-        case ENVMODE_HELP:
+        case ENVMODE_REPLAYS:
             menu_map  = yw->_globalMapRegions.menu_map[bestSet].PicName;
             rollover_map = yw->_globalMapRegions.settings_map[bestSet].PicName;
             break;
@@ -2873,12 +2885,12 @@ bool NC_STACK_ypaworld::CreateTitleControls(){
                             btn_64arg.xpos = _screenSize.x * 0.3328125;
                             btn_64arg.ypos = _screenSize.y * 0.7166666666666667;
                             btn_64arg.width = _screenSize.x / 3;
-                            btn_64arg.caption = Locale::Text::Title(Locale::TITLE_HELP);
+                            btn_64arg.caption = Locale::Text::Title(Locale::TITLE_REPLAYS);
                             btn_64arg.caption2.clear();
                             btn_64arg.pressedCode = 0;
                             btn_64arg.downCode = UIWidgets::MAIN_MENU_EVENT_IDS::ALL_DOWN;
-                            btn_64arg.button_id = UIWidgets::MAIN_MENU_WIDGET_IDS::BTN_HELP;
-                            btn_64arg.upCode = UIWidgets::MAIN_MENU_EVENT_IDS::BTN_HELP_UP;
+                            btn_64arg.button_id = UIWidgets::MAIN_MENU_WIDGET_IDS::BTN_REPLAYS;
+                            btn_64arg.upCode = UIWidgets::MAIN_MENU_EVENT_IDS::BTN_REPLAYS_UP;
 
                             if ( _GameShell->titel_button->Add(&btn_64arg) )
                             {
@@ -3005,6 +3017,19 @@ bool NC_STACK_ypaworld::CreateSubBarControls(){
                         btn_64arg.button_id = 1009;
                         _GameShell->sub_bar_button->Add(&btn_64arg);
 
+                        // The debriefing's, in the middle
+                        btn_64arg.xpos = subBarButtonWidth + buttonsSpace;
+                        btn_64arg.caption = Locale::Text::Title(Locale::TITLE_VIEWREPLAY);
+                        btn_64arg.upCode = 1028;
+                        btn_64arg.button_id = 1022;
+                        _GameShell->sub_bar_button->Add(&btn_64arg);
+
+                        btn_64arg.xpos = 2 * (buttonsSpace + subBarButtonWidth);
+                        btn_64arg.caption = Locale::Text::Title(Locale::TITLE_SAVEREPLAY);
+                        btn_64arg.upCode = 1029;
+                        btn_64arg.button_id = 1023;
+                        _GameShell->sub_bar_button->Add(&btn_64arg);
+
                         btn_64arg.xpos = _screenSize.x - subBarButtonWidth;
                         btn_64arg.caption = Locale::Text::GlobMap(Locale::GLOBMAP_GOBACK);
                         btn_64arg.caption2.clear();
@@ -3037,6 +3062,12 @@ bool NC_STACK_ypaworld::CreateSubBarControls(){
 
     btnState.state = 0;
     btnState.butID = 1009;
+    _GameShell->sub_bar_button->Disable(&btnState);
+
+    btnState.butID = 1022;
+    _GameShell->sub_bar_button->Disable(&btnState);
+
+    btnState.butID = 1023;
     _GameShell->sub_bar_button->Disable(&btnState);
 
     btnState.state = 0;
@@ -5364,6 +5395,7 @@ bool NC_STACK_ypaworld::CreateGameShellControls()
     if (!this->CreateLocaleControls()) return false;
     printf("Creating CreateAboutControls\n");
     if (!this->CreateAboutControls()) return false;
+    if (!this->CreateReplaysControls()) return false;
     
 
     netMenuWidth = menuWidth - _fontVBScrollW;
@@ -5440,6 +5472,8 @@ void NC_STACK_ypaworld::DeleteGameShellControls()
         _GameShell->locale_button = NULL;
     }
 
+    DeleteReplaysControls();
+
     if ( _GameShell->about_button )
     {
         _GameShell->about_button->HideScreen();
@@ -5500,6 +5534,9 @@ void NC_STACK_ypaworld::ShowGameShellPage()
         break;
     case ENVMODE_ABOUT:
         _GameShell->ShowAbout();
+        break;
+    case ENVMODE_REPLAYS:
+        _GameShell->ShowReplays();
         break;
     }
 }

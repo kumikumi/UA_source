@@ -67,6 +67,9 @@ int SetupFillerModels(NC_STACK_ypaworld *yw, NC_STACK_base *base);
 
 
 void DrawGameShellControls(NC_STACK_ypaworld *yw, UserData *usr);
+void DrawReplaysPage(NC_STACK_ypaworld *yw, UserData *usr);
+void FormatListItem(NC_STACK_ypaworld *yw, GuiList *lstvw, CmdStream *out, const std::string &txt);
+std::string FileSizeText(uint64_t bytes);
 
 void DeleteDirContents(const std::string &path);
 
@@ -325,6 +328,8 @@ void draw_splashScreen(NC_STACK_ypaworld *yw, NC_STACK_bitmap *splashScreen);
 
 void yw_RenderVector2D(NC_STACK_ypaworld *yw, UAskeleton::Data *wire, float posX, float posY, float m00, float m01, float m10, float m11, float scaleX, float scaleY, SDL_Color coloooor, wis_color_func color_func, wis_color_func color_func2, bool aspectCorrection = false);
 void yw_debriefUpdate(NC_STACK_ypaworld *yw, TInputState *inpt);
+void yw_DebriefRenderSectorsOwners(NC_STACK_ypaworld *yw, TBriefengScreen *brf);
+void DebriefPlayHistory(NC_STACK_ypaworld *yw, TBriefengScreen *brf, World::History::Replay &history, uint32_t time, bool heard);
 
 int ConfirmDialogGetState();
 void OpenExitTrainingDialog(NC_STACK_ypaworld *yw);

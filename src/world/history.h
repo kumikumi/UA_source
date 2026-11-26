@@ -57,6 +57,19 @@ struct Event
 // What it scores: a kill for the killer's owner, anything else for its owner
 void AddScore(const Event &event, std::array<TPlayerStatus, CVFractionsCount> &stats);
 
+// What of a level its history is found with: its map's size, each sector's
+// owner as the level starts (the border's nobody's) and each tech upgrade's
+// sector and kind
+struct LevelLayout
+{
+    Common::Point MapSize;
+    std::vector<uint8_t> StartOwners;
+    std::vector<std::pair<Common::Point, uint8_t>> TechUpgrades;
+
+    // The level as it is now, as it ends
+    static LevelLayout Of(NC_STACK_ypaworld *world);
+};
+
 // A level's history, played from its recording's view up to a time: the
 // events found so far, in the order they happened. The debriefing plays it
 // as it goes, and the score counts the whole of it.
@@ -65,10 +78,13 @@ class Replay
 public:
     Replay();
     ~Replay();
+    Replay(Replay &&);
+    Replay &operator=(Replay &&);
 
     // Reads the level's recording, as the level ends, with what of the level
     // it needs, and rewinds. False, after logging why, when it can't.
     bool Open(NC_STACK_ypaworld *world, const std::string &path);
+    bool Open(const std::string &path, const LevelLayout &level);
     void Close();
     bool IsOpen() const { return _player != nullptr; }
 

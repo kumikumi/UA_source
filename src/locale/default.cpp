@@ -61,9 +61,15 @@ std::array<std::string, TITLE_MAX> DefaultStrings::Titles = Common::ArrayInit<st
     {TITLE_SETTINGS, "SETTINGS"},
     {TITLE_PROFILE, "PLAYER"},
     {TITLE_LOCALE, "LOCALE"},
-    {TITLE_HELP, "HELP"},
     {TITLE_QUIT, "QUIT"},
-    {TITLE_CONTINUE, "Continue"}
+    {TITLE_CONTINUE, "Continue"},
+    {TITLE_REPLAYS, "Replays"},
+    {TITLE_VIEWREPLAY, "View Replay"},
+    {TITLE_SAVEREPLAY, "Save Replay"},
+    {TITLE_REPLAYSAVED, "Replay Saved"},
+    {TITLE_VIEW, "View"},
+    {TITLE_NOREPLAYS, "No replays saved yet. Save one from a debriefing."},
+    {TITLE_REPLAYPAUSED, "PAUSED"}
 });
 
 
@@ -359,6 +365,11 @@ std::array<std::string, TIP_MAX> DefaultStrings::Tooltips = Common::ArrayInit<st
     {TIP_MENU_GOTOLOADSAVE, "GOTO LOAD/SAVE SCREEN"},
     {TIP_MENU_SELRENDERER, "Select a Renderer in the Drop-Down List"},
     {TIP_MENU_CONTINUE, "Continue the Level You Left Unfinished"},
+    {TIP_MENU_REPLAYS, "Watch the Replays You Saved"},
+    {TIP_MENU_VIEWREPLAY, "Watch the Level as It Was Played"},
+    {TIP_MENU_SAVEREPLAY, "Keep the Level's Replay, to Watch It Later"},
+    {TIP_MENU_REPLAYVIEW, "Watch the Selected Replay"},
+    {TIP_MENU_REPLAYDELETE, "Delete the Selected Replay"},
     {TIP_MENU_SENDMSG, "SEND THIS MESSAGE"},
     {TIP_MENU_ALTJOY, "USE ALTERNATE JOYSTICK MODEL"},
     {TIP_MOUSECAPTURED, "880 == MOUSE CONTROL MODE ACTIVE (PRESS RMB TO DEACTIVATE)"},
@@ -668,7 +679,11 @@ std::array<std::string, ADV_MAX> DefaultStrings::Advanced = Common::ArrayInit<st
     {ADV_CANTLOAD, "The mission could not be loaded."},
     {ADV_CANTLOADWHY, "It may be from another version of the game."},
     {ADV_RLYRESTART, "REALLY RESTART MISSION ?"},
-    {ADV_RLYHELP, "REALLY LAUNCH ONLINE HELP ?"}
+    {ADV_RLYHELP, "REALLY LAUNCH ONLINE HELP ?"},
+    {ADV_RLYDELETEREPLAY, "REALLY DELETE THIS REPLAY ?"},
+    {ADV_CANTOPENREPLAY, "The replay could not be opened."},
+    {ADV_REPLAYKEYS, "SPACE Pause   LEFT/RIGHT 10 s   UP/DOWN Speed   ESC Leave"},
+    {ADV_CANTSAVEREPLAY, "The replay could not be saved."}
 });
 
 }

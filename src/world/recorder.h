@@ -267,6 +267,8 @@ protected:
 class Recording
 {
 public:
+    enum { StepTicks = 17 }; // Game time a step takes, in 1/1024 s: 60 steps a second
+
     // Finds its chunks. False, after logging why, when it isn't one.
     bool Open(const std::string &path);
 
@@ -320,6 +322,13 @@ protected:
     uint32_t _lastStep = 0;
     RecordingEnd _end = END_UNFINISHED;
 };
+
+// Copies a recording, as to keep a level's. False, after logging why, when
+// it can't.
+bool CopyRecording(const std::string &from, const std::string &to);
+
+// The size of a recording's file, in bytes; 0 when it can't be read
+uint64_t RecordingFileSize(const std::string &path);
 
 // Goes through a recording's views a step at a time, from a keyframe on
 class ViewReader

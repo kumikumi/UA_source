@@ -200,10 +200,35 @@ static const uint8_t UnitKinds[] = {State::KIND_UNIT + BACT_TYPES_BACT, State::K
                                     State::KIND_UNIT + BACT_TYPES_UFO, State::KIND_UNIT + BACT_TYPES_CAR,
                                     State::KIND_UNIT + BACT_TYPES_GUN, State::KIND_UNIT + BACT_TYPES_MISSLE};
 
+LevelLayout LevelLayout::Of(NC_STACK_ypaworld *world)
+{
+    LevelLayout level;
+    level.MapSize = world->_mapSize;
+    level.StartOwners.assign(world->_cells.size(), 0);
+
+    for (size_t i = 0; i < level.StartOwners.size() && i < world->_lvlPrimevalOwnMap.size(); i++)
+    {
+        if ( world->_cells.At(i).IsGamePlaySector() )
+            level.StartOwners[i] = world->_lvlPrimevalOwnMap(i);
+    }
+
+    for ( const TMapGem &g : world->_techUpgrades )
+        level.TechUpgrades.emplace_back(g.CellId, g.Type);
+
+    return level;
+}
+
 Replay::Replay() {}
 Replay::~Replay() {}
+Replay::Replay(Replay &&) = default;
+Replay &Replay::operator=(Replay &&) = default;
 
 bool Replay::Open(NC_STACK_ypaworld *world, const std::string &path)
+{
+    return Open(path, LevelLayout::Of(world));
+}
+
+bool Replay::Open(const std::string &path, const LevelLayout &level)
 {
     Close();
 
@@ -237,19 +262,10 @@ bool Replay::Open(NC_STACK_ypaworld *world, const std::string &path)
         return false;
     }
 
-    // The level, while it is still there
-    p->MapWidth = world->_mapSize.x;
-    p->WorldSize = World::SectorIDToPos2(world->_mapSize);
-    p->StartOwners.assign(world->_cells.size(), 0);
-
-    for (size_t i = 0; i < p->StartOwners.size() && i < world->_lvlPrimevalOwnMap.size(); i++)
-    {
-        if ( world->_cells.At(i).IsGamePlaySector() )
-            p->StartOwners[i] = world->_lvlPrimevalOwnMap(i);
-    }
-
-    for ( const TMapGem &g : world->_techUpgrades )
-        p->TechUpgrades.emplace_back(g.CellId, g.Type);
+    p->MapWidth = level.MapSize.x;
+    p->WorldSize = World::SectorIDToPos2(level.MapSize);
+    p->StartOwners = level.StartOwners;
+    p->TechUpgrades = level.TechUpgrades;
 
     p->Reader.reset(new ViewReader(p->Rec));
     _player = std::move(p);

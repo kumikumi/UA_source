@@ -419,6 +419,36 @@ static bool CopyFile(const std::string &from, const std::string &to, uint64_t si
     return true;
 }
 
+uint64_t RecordingFileSize(const std::string &path)
+{
+    std::unique_ptr<FSMgr::FileHandle> file(OpenFile(path, "rb"));
+
+    if ( !file || file->seek(0, SEEK_END) != 0 )
+        return 0;
+
+    return file->tell();
+}
+
+bool CopyRecording(const std::string &from, const std::string &to)
+{
+    uint64_t size = RecordingFileSize(from);
+
+    if ( !size )
+    {
+        ypa_log_out("Could not read %s to copy it\n", from.c_str());
+        return false;
+    }
+
+    if ( !CopyFile(from, to, size) )
+    {
+        ypa_log_out("Could not copy %s to %s\n", from.c_str(), to.c_str());
+        uaDeleteFile(to);
+        return false;
+    }
+
+    return true;
+}
+
 // Reads a chunk's bytes, after its tag and size, from where it starts
 static bool ReadChunk(FSMgr::FileHandle &file, uint64_t start, uint64_t end, std::string &data)
 {

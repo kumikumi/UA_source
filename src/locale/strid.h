@@ -92,9 +92,15 @@ enum TITLE
     TITLE_SETTINGS = 4,
     TITLE_PROFILE  = 5,
     TITLE_LOCALE   = 6,
-    TITLE_HELP     = 7,
     TITLE_QUIT     = 8,
     TITLE_CONTINUE = 9,
+    TITLE_REPLAYS  = 10,     // The main menu's, where Help was, and its page
+    TITLE_VIEWREPLAY = 11,   // The debriefing's
+    TITLE_SAVEREPLAY = 12,
+    TITLE_REPLAYSAVED = 13,
+    TITLE_VIEW     = 14,     // The replays page's
+    TITLE_NOREPLAYS = 15,
+    TITLE_REPLAYPAUSED = 16, // The replay viewer's
     
     TITLE_MAX
 };
@@ -388,6 +394,11 @@ enum TIP
     TIP_UNITLIMIT           = 81,
     TIP_MENU_SELRENDERER    = 82, // Was the 3D device, 75
     TIP_MENU_CONTINUE       = 83,
+    TIP_MENU_REPLAYS        = 51,
+    TIP_MENU_VIEWREPLAY     = 55,
+    TIP_MENU_SAVEREPLAY     = 56,
+    TIP_MENU_REPLAYVIEW     = 57,
+    TIP_MENU_REPLAYDELETE   = 58,
     
     TIP_MENU_WINDOWED       = 85,
     
@@ -746,7 +757,14 @@ enum ADV
     ADV_RLYLOAD = 82,
     ADV_RLYRESTART = 83,
     ADV_RLYHELP = 86,
-    ADV_MAX
+
+    // The replays
+    ADV_RLYDELETEREPLAY = 10,
+    ADV_CANTOPENREPLAY = 18,
+    ADV_REPLAYKEYS = 19,
+    ADV_CANTSAVEREPLAY = 49,
+
+    ADV_MAX = 87
 };
 
 }

@@ -75,6 +75,7 @@ set(SOURCES
 	world/history.cpp
 	world/parsers.cpp
 	world/nparticle.cpp
+	world/playback.cpp
 	world/protos.cpp
 	world/recorder.cpp
 	world/state.cpp
@@ -89,6 +90,8 @@ set(SOURCES
 	yw_game.cpp
 	yw_game_ui.cpp
 	yw_net.cpp
+	yw_replay.cpp
+	yw_replays.cpp
 	yw_save.cpp
 	ypabact.cpp
 	ypacar.cpp
