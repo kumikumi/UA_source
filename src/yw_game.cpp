@@ -2524,6 +2524,19 @@ void NC_STACK_ypaworld::CountUnitsPerOwner()
 }
 
 
+// How much of what the power under its host stations gives a faction gets:
+// its sectors against half the power of its power stations, 0 without any,
+// and over 1 when they don't power that many sectors
+float NC_STACK_ypaworld::ReloadRatio(int sectors, int stationPower)
+{
+    stationPower /= 2;
+
+    if ( stationPower <= 0 )
+        return 0.0;
+
+    return (float)std::max(sectors, 0) / (float)stationPower;
+}
+
 void UpdateReloadRatios(NC_STACK_ypaworld *yw)
 {
     int ownerPower[8];
@@ -2541,50 +2554,27 @@ void UpdateReloadRatios(NC_STACK_ypaworld *yw)
 
     for (int i = 0; i < 8; i++)
     {
-        ownerPower[i] /= 2;
+        yw->_reloadRatioClamped[i] = NC_STACK_ypaworld::ReloadRatio(yw->_countSectorsPerOwner[i], ownerPower[i]);
+        yw->_reloadRatioPositive[i] = yw->_reloadRatioClamped[i];
 
-        if ( ownerPower[i] <= 0 )
+        if ( yw->_isNetGame && yw->_levelUnitLimitType == 1 )
         {
-            yw->_reloadRatioPositive[i] = 0;
-            yw->_reloadRatioClamped[i] = 0;
-        }
-        else
-        {
-            int sectorCount = yw->_countSectorsPerOwner[i];
+            // TODO(bug): Every owner i is penalised by the local player's unit count, and
+            // penalty is an int, so it stays 0 until it reaches 1 and then wipes
+            // out the 0..1 reload ratio.
+            int unitsOverLimit = yw->_countUnitsPerOwner[yw->_userRobo->_owner] - yw->_levelUnitLimit;
 
-            if ( sectorCount < 0 )
-                sectorCount = 0;
-
-            yw->_reloadRatioClamped[i] = (float)sectorCount / (float)ownerPower[i];
-            yw->_reloadRatioPositive[i] = (float)sectorCount / (float)ownerPower[i];
-
-            if ( yw->_isNetGame )
+            if ( unitsOverLimit > 0 )
             {
-                if ( yw->_levelUnitLimitType == 1 )
-                {
-                    // TODO(bug): Every owner i is penalised by the local player's unit count, and
-                    // penalty is an int, so it stays 0 until it reaches 1 and then wipes
-                    // out the 0..1 reload ratio.
-                    int unitsOverLimit = yw->_countUnitsPerOwner[yw->_userRobo->_owner] - yw->_levelUnitLimit;
+                int penalty = (float)yw->_levelUnitLimitArg * 0.01 * (float)unitsOverLimit;
 
-                    if ( unitsOverLimit > 0 )
-                    {
-                        int penalty = (float)yw->_levelUnitLimitArg * 0.01 * (float)unitsOverLimit;
-
-                        yw->_reloadRatioClamped[i] -= penalty;
-                        yw->_reloadRatioPositive[i] -= penalty;
-                    }
-                }
+                yw->_reloadRatioClamped[i] -= penalty;
+                yw->_reloadRatioPositive[i] -= penalty;
             }
-
-            if ( yw->_reloadRatioClamped[i] > 1.0 )
-                yw->_reloadRatioClamped[i] = 1.0;
-            else if ( yw->_reloadRatioClamped[i] < 0.0 )
-                yw->_reloadRatioClamped[i] = 0;
-
-            if ( yw->_reloadRatioPositive[i] < 0.0 )
-                yw->_reloadRatioPositive[i] = 0;
         }
+
+        yw->_reloadRatioClamped[i] = std::min(std::max(yw->_reloadRatioClamped[i], 0.0f), 1.0f);
+        yw->_reloadRatioPositive[i] = std::max(yw->_reloadRatioPositive[i], 0.0f);
     }
 }
 
@@ -4174,14 +4164,17 @@ static const int PerfOverlayLines = 5;
 void NC_STACK_ypaworld::DrawPerfOverlay(TInputState *inpt)
 {
     // F10 goes from nothing to the numbers, then the numbers with the view
-    // distance window, and back to nothing.
+    // distance window, and back to nothing. The window is there with a
+    // level's interface, or in the replay viewer.
+    bool haveWindow = _guiLoaded || _replay;
+
     if ( inpt->KbdLastHit == Input::KC_F10 )
     {
         if ( !_showPerfOverlay )
         {
             _showPerfOverlay = true;
         }
-        else if ( _guiLoaded && _viewDistanceWindow.IsClosed() )
+        else if ( haveWindow && _viewDistanceWindow.IsClosed() )
         {
             TileMap *font = GFX::Engine.GetTileset(15);
             _viewDistanceWindow.Open(this, 16 + (PerfOverlayLines + 1) * font->h);
@@ -4190,7 +4183,7 @@ void NC_STACK_ypaworld::DrawPerfOverlay(TInputState *inpt)
         {
             _showPerfOverlay = false;
 
-            if ( _guiLoaded )
+            if ( haveWindow )
                 _viewDistanceWindow.Close(this);
         }
     }

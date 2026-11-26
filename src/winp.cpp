@@ -747,6 +747,7 @@ void NC_STACK_winp::QueryPointer(TClickBoxInf *arg)
 
     arg->move.ScreenPos = _mPos;
     _mMove = _mMoveQuery;
+    arg->moved = _mMove;
     
     _mMoveQuery = Common::Point();
 

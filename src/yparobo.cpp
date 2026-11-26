@@ -5210,6 +5210,21 @@ void NC_STACK_yparobo::Renew()
     _roboTimeScale = _world->GetAITimeline();
 }
 
+void NC_STACK_yparobo::VisitView(World::State::Visitor &v)
+{
+    NC_STACK_ypabact::VisitView(v);
+
+    // Its batteries and what it takes in, as the energy panel shows them
+    v.Field("energyLife", _roboEnergyLife, World::State::VIEW);
+    v.Field("energyMove", _roboEnergyMove, World::State::VIEW);
+    v.Field("fillMode", _roboFillMode, World::State::VIEW);
+    v.Field("energyLoadFlags", _roboEnergyLoadFlags, World::State::VIEW);
+    v.Field("energyLossFlags", _roboEnergyLossFlags, World::State::VIEW);
+    v.Field("energyReloadPS", _roboEnergyReloadPS, World::State::VIEW);
+    v.Field("buildSpare", _roboBuildSpare, World::State::VIEW);
+    v.Field("vehicleSpare", _roboVehicleSpare, World::State::VIEW);
+}
+
 void NC_STACK_yparobo::VisitInternal(World::State::Visitor &v)
 {
     NC_STACK_ypabact::VisitInternal(v);
@@ -5337,14 +5352,6 @@ void NC_STACK_yparobo::VisitInternal(World::State::Visitor &v)
     v.Field("buildingDuty", _roboBuildingDuty);
     v.Field("testEnemyTime", _roboTestEnemyTime);
 
-    v.Field("energyLife", _roboEnergyLife);
-    v.Field("energyMove", _roboEnergyMove);
-    v.Field("fillMode", _roboFillMode);
-    v.Field("energyLoadFlags", _roboEnergyLoadFlags);
-    v.Field("energyLossFlags", _roboEnergyLossFlags);
-    v.Field("energyReloadPS", _roboEnergyReloadPS);
-    v.Field("buildSpare", _roboBuildSpare);
-    v.Field("vehicleSpare", _roboVehicleSpare);
     v.Field("beamTimePre", _roboBeamTimePre);
     v.Field("beamPos", _roboBeamPos);
     v.Field("beamFXTime", _roboBeamFXTime);

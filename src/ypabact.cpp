@@ -4931,6 +4931,22 @@ void NC_STACK_ypabact::VisitView(World::State::Visitor &v)
     v.Field("secondaryType", _secndTtype, World::State::VIEW);
     v.Target("secondary", _secndTtype, _secndT, World::State::VIEW);
 
+    // What the HUD shows of it: its armour, where its target is, and how
+    // far its weapon has reloaded since its last shot by its clock. The
+    // clock is kept as the game time it started at, which stays the same
+    // as both go on.
+    v.Field("shield", _shield, World::State::VIEW);
+    v.Field("primaryPos", _primTpos, World::State::VIEW_ROUNDED);
+
+    int32_t clockStart = _world->_timeStamp - _clock;
+    v.Field("clockStart", clockStart, World::State::VIEW);
+
+    if ( v.Reads(World::State::VIEW) )
+        _clock = _world->_timeStamp - clockStart;
+
+    v.Field("weaponTime", _weapon_time, World::State::VIEW);
+    v.Field("salveCounter", _salve_counter, World::State::VIEW);
+
     v.Field("position", _position, World::State::VIEW_POSITION);
     v.Field("rotation", _rotation, World::State::VIEW_ROTATION);
     v.Field("scale", _scale, World::State::VIEW_ROUNDED);
@@ -4971,12 +4987,10 @@ void NC_STACK_ypabact::VisitInternal(World::State::Visitor &v)
     v.Kids("kids", _kidList);
     v.Field("soundFlags", _soundFlags);
     v.Field("reloadConst", _reload_const);
-    v.Field("shield", _shield);
     v.Field("radar", _radar);
 
     v.Field("primaryCommand", _primT_cmdID);
     v.Field("secondaryCommand", _secndT_cmdID);
-    v.Field("primaryPos", _primTpos);
     v.Field("secondaryPos", _sencdTpos);
 
     v.Field("adistSector", _adist_sector);
@@ -5022,7 +5036,6 @@ void NC_STACK_ypabact::VisitInternal(World::State::Visitor &v)
     v.Field("overeof", _overeof);
     v.Field("viewerOvereof", _viewer_overeof);
 
-    v.Field("clock", _clock);
     v.Field("aiTime1", _AI_time1);
     v.Field("aiTime2", _AI_time2);
     v.Field("searchTime1", _search_time1);
@@ -5044,7 +5057,6 @@ void NC_STACK_ypabact::VisitInternal(World::State::Visitor &v)
     v.Field("mgun", _mgun);
     v.Field("numWeapons", _num_weapons);
     v.Missiles("missiles", _missiles_list);
-    v.Field("weaponTime", _weapon_time);
     v.Field("firePos", _fire_pos);
     v.Field("gunAngle", _gun_angle);
     v.Field("gunAngleUser", _gun_angle_user);
@@ -5052,7 +5064,6 @@ void NC_STACK_ypabact::VisitInternal(World::State::Visitor &v)
     v.Field("gunRadius", _gun_radius);
     v.Field("gunPower", _gun_power);
     v.Field("mgunTime", _mgun_time);
-    v.Field("salveCounter", _salve_counter);
     v.Field("killAfterShot", _kill_after_shot);
     v.Field("headingSpeed", _heading_speed);
 
@@ -5758,10 +5769,7 @@ size_t NC_STACK_ypabact::FireMinigun(TMinigunShot *arg)
 
 void NC_STACK_ypabact::UpdateVisor(NC_STACK_ypabact *bact2, int noWeaponSight)
 {
-    THudVisor hudi;
-
-    float sightX;
-    float sightY;
+    THudVisor hudi = Sights(_mgun, _weapon, _weapon_flags, -_gun_leftright, -_gun_angle_user, noWeaponSight);
 
     if ( bact2 )
     {
@@ -5772,63 +5780,64 @@ void NC_STACK_ypabact::UpdateVisor(NC_STACK_ypabact *bact2, int noWeaponSight)
 
         vec3d viewPos = corrected.Transform(toTarget);
 
+        float sightX = 0.0;
+        float sightY = 0.0;
+
         if ( viewPos.z != 0.0 )
         {
             sightX = viewPos.x / viewPos.z;
             sightY = viewPos.y / viewPos.z;
         }
-        else
-        {
-            sightY = 0.0;
-            sightX = 0.0;
-        }
 
         hudi.target = bact2;
-    }
-    else
-    {
-        sightX = -_gun_leftright;
-        sightY = -_gun_angle_user;
 
-        hudi.target = NULL;
+        // A guided weapon's sight goes to its target
+        if ( hudi.weaponSight == 4 )
+        {
+            hudi.weaponX = sightX;
+            hudi.weaponY = sightY;
+        }
     }
 
-    if ( _mgun == -1 )
+    _world->SetHudVisor(&hudi);
+}
+
+THudVisor NC_STACK_ypabact::Sights(int mgun, int weapon, int weaponFlags, float gunX, float gunY, bool noWeaponSight)
+{
+    THudVisor hudi;
+
+    if ( mgun == -1 )
     {
         hudi.mgunSight = 0;
     }
     else
     {
         hudi.mgunSight = 1;
-        hudi.mgunX = -_gun_leftright;
-        hudi.mgunY = -_gun_angle_user;
+        hudi.mgunX = gunX;
+        hudi.mgunY = gunY;
     }
 
-    if ( _weapon == -1 || noWeaponSight )
-    {
+    if ( weapon == -1 || noWeaponSight )
         hudi.weaponSight = 0;
-    }
+    else if ( weaponFlags & 4 )
+        hudi.weaponSight = 4;
+    else if ( !(weaponFlags & 2) )
+        hudi.weaponSight = 2;
     else
-    {
-        if ( _weapon_flags & 4 )
-        {
-            hudi.weaponSight = 4;
-            hudi.weaponX = sightX;
-            hudi.weaponY = sightY;
-        }
-        else
-        {
-            if ( (_weapon_flags & 4) || !(_weapon_flags & 2) )
-                hudi.weaponSight = 2;
-            else
-                hudi.weaponSight = 3;
+        hudi.weaponSight = 3;
 
-            hudi.weaponX = -_gun_leftright;
-            hudi.weaponY = -_gun_angle_user;
-        }
+    if ( hudi.weaponSight )
+    {
+        hudi.weaponX = gunX;
+        hudi.weaponY = gunY;
     }
 
-    _world->SetHudVisor(&hudi);
+    return hudi;
+}
+
+bool NC_STACK_ypabact::NoWeaponSight(int weaponFlags)
+{
+    return !(weaponFlags & 2) && !(weaponFlags & 0x10);
 }
 
 size_t NC_STACK_ypabact::UserTargeting(TAimQuery *arg)
@@ -5843,7 +5852,7 @@ size_t NC_STACK_ypabact::UserTargeting(TAimQuery *arg)
     else
         weaponRadius = _world->GetWeaponsProtos().at(_weapon).radius;
 
-    int noWeaponSight = !(_weapon_flags & 2) && !(_weapon_flags & 0x10);
+    int noWeaponSight = NoWeaponSight(_weapon_flags);
 
     if ( _weapon != -1 && !noWeaponSight )
     {

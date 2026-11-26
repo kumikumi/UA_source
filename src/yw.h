@@ -27,6 +27,7 @@
 #include "lstvw.h"
 #include "listnode.h"
 #include "yw_viewdist.h"
+#include "yw_replayui.h"
 
 #include "world/consts.h"
 #include "world/protos.h"
@@ -1591,7 +1592,7 @@ struct THudState
     int color_fx = 0;
     int switch_time = 0;
     int target_time = 0;
-    NC_STACK_ypabact *target = NULL;
+    const void *target = NULL;    // What the sight last locked on to
     int pulse_period = 0;
     float pulse_phase = 0.0;
     float bar_width = 0.0;
@@ -1608,6 +1609,26 @@ struct THudState
     float cl2_b = 0.0;
 };
 
+
+// What the HUD shows of the unit looked from: the player's, as the game
+// has it (HudSubjectOf), or one of a replay's frame
+struct THudSubject
+{
+    int Vehicle = 0;
+    vec3d Position;
+    mat3x3 Rotation = mat3x3::Ident(); // Of the view: the compass turns with it
+    int Energy = 0;
+    int EnergyMax = 1;
+    int Shield = 0;
+    int ReloadPercent = 100;           // Of its weapon
+    bool HasParent = false;            // Its host station, or its commander
+    vec3d ParentPos;
+    bool HasTarget = false;            // Its squad's target, when it leads one
+    vec3d TargetPos;
+    uint8_t SectorOwner = 0;           // Of the sector it's in
+    THudVisor Visor;                   // Its sights, and what they lock on to
+    vec3d VisorTargetPos;
+};
 
 struct TMFWinStatus
 {
@@ -1992,6 +2013,10 @@ public:
     void RelayoutGameGui();
     virtual size_t ReloadLanguage();
     virtual void GetReloadRatios(TReloadRatios *arg);
+
+    // What a faction gets of the power under its host stations, unclamped:
+    // its sectors against the power of its power stations
+    static float ReloadRatio(int sectors, int stationPower);
     virtual void HandleRoboDestroyed(TRoboDestroyed *arg);
     virtual size_t CreateNetLevel(TLevelLoadRequest *arg);
     virtual void FFeedback_Play(TFFeedbackEffect *arg);
@@ -2099,6 +2124,8 @@ public:
     void GuiWinToFront(GuiBase *);
     void GuiWinOpen(GuiBase *);
     void GuiWinClose(GuiBase *);
+    void HandleGuiWindows(TInputState *inpt);
+    void DrawGuiWindows();
 
 
     SDL_Color GetColor(int color_id);
@@ -2711,9 +2738,35 @@ public:
     bool _replayDragging = false;
     bool _replayLeave = false;
 
+    // How it's looked at, the windows of its factions by owner and its
+    // map, and whether they and the HUD are shown
+    ReplayCamera _replayCamera;
+    std::array<ReplayFactionWindow, 8> _replayFactions;
+    ReplayMapScene _replayScene;   // Of the frame drawn, for the game's map
+    uint32_t _replayHovered = 0;   // The unit under the pointer
+    uint32_t _replayPressed = 0;   // And when the button went down
+    bool _replayWindowsShown = true;
+    bool _replayHudShown = true;
+    int32_t _replayClock = 0; // Real time the viewer has run, for what blinks
+    Common::Point _replayBorders; // The windows' upper and lower borders before
+
     void HandleReplayInput(TInputState *inpt);
     void ToggleReplayPause();
     void DrawReplayControls();
+
+    void SetReplayCameraMode(ReplayCamera::Mode mode, const World::Frame *frame);
+    void LookFromUnit(uint32_t unit);
+    bool LookFromNextUnit(const World::Frame &frame);
+    void HandleReplayWindows(TInputState *inpt, const World::Frame &frame);
+    uint32_t ReplayUnitInWorld(const Common::Point &mouse, const World::Frame &frame) const;
+    void FlyReplayCamera(TInputState *inpt);
+    void PlaceReplayCamera(World::Frame &frame);
+    uint32_t ReplayViewedUnit(const World::Frame &frame) const;
+    void UpdateReplayWindows(const World::Frame &frame);
+    void DrawReplayWindows();
+    void DrawReplayHud(const World::Frame &frame);
+    void CloseReplayWindows();
+    World::Frame _replayFrame; // The last drawn, for the input of the next
 
     // Whether the level has stepped since it was set up: the interface shows
     // it as a step leaves it

@@ -6,11 +6,15 @@
 #include "yw_internal.h"
 #include "font.h"
 #include "log.h"
+#include "system/system.h"
 #include "world/playback.h"
 
 // The replay viewer: a recording played back in its level as it was drawn,
-// from where the player looked, with a timeline at the bottom to go to any
-// moment of it
+// with a timeline at the bottom to go to any moment of it. It's looked at
+// from where the player looked, from any unit, or from a camera flown
+// freely; each faction's units and its host stations' energy are listed in
+// a window of its own, as the squadron manager lists the player's, and the
+// map shows the level.
 
 // How fast it can play, times real time
 static const std::array<double, 7> ReplaySpeeds = {0.25, 0.5, 1.0, 2.0, 4.0, 8.0, 16.0};
@@ -18,6 +22,16 @@ static const int ReplayNormalSpeed = 2;
 
 // The arrow keys skip that far, in steps: 10 s
 static const double ReplaySkipSteps = 600.0;
+
+// The free camera: how fast it flies, in world units a second, and with
+// shift held; how soon it gets to that speed and stops again, as the share
+// of the way it goes in a second; how far the mouse turns it, in radians a
+// point; how far above the ground it stays
+static const double FreeCameraSpeed = 1500.0;
+static const double FreeCameraFastSpeed = 6000.0;
+static const double FreeCameraEase = 6.0;
+static const double FreeCameraTurn = 0.004;
+static const double FreeCameraClearance = 60.0;
 
 // Game time as minutes and seconds, or hours too
 static std::string ReplayTime(int32_t ticks)
@@ -28,6 +42,46 @@ static std::string ReplayTime(int32_t ticks)
         return fmt::sprintf("%d:%02d:%02d", seconds / 3600, seconds / 60 % 60, seconds % 60);
 
     return fmt::sprintf("%d:%02d", seconds / 60, seconds % 60);
+}
+
+// Where on the screen the timeline is, in pixels from the top left: a row
+// of text with the ways to look at the right, the track, and the keys
+struct ReplayBar
+{
+    int Top = 0;           // Of the panel, which goes to the bottom
+    int TextY = 0;
+    int TrackX0 = 0, TrackX1 = 0, TrackY = 0;
+    int KeysY = 0;
+    int Pad = 0;
+    std::array<int, 3> ModeX {}, ModeW {}; // The ways to look's buttons
+};
+
+static const std::array<Locale::TITLE, 3> ReplayModeTitles = {
+    Locale::TITLE_REPLAYORIGINAL, Locale::TITLE_REPLAYMANUAL, Locale::TITLE_REPLAYFREE
+};
+
+static ReplayBar LayOutReplayBar(NC_STACK_ypaworld *yw)
+{
+    ReplayBar bar;
+    bar.Pad = std::max(4, yw->_fontH / 2);
+    bar.Top = yw->_screenSize.y - (3 * yw->_fontH + 4 * bar.Pad);
+    bar.TextY = bar.Top + bar.Pad;
+    bar.TrackY = bar.TextY + yw->_fontH + bar.Pad + yw->_fontH / 2;
+    bar.KeysY = bar.TrackY + yw->_fontH / 2 + bar.Pad;
+    bar.TrackX0 = 2 * bar.Pad;
+    bar.TrackX1 = yw->_screenSize.x - 2 * bar.Pad;
+
+    TileMap *font = yw->_guiTiles[15];
+    int right = bar.TrackX1;
+
+    for (int i = 2; i >= 0; i--)
+    {
+        bar.ModeW[i] = font->GetWidth(Locale::Text::Title(ReplayModeTitles[i])) + 2 * bar.Pad;
+        bar.ModeX[i] = right - bar.ModeW[i];
+        right = bar.ModeX[i] - bar.Pad;
+    }
+
+    return bar;
 }
 
 // Sets the level of a recording up to watch it, from a step on. Only what
@@ -57,40 +111,90 @@ bool NC_STACK_ypaworld::StartReplay(const std::string &path, uint32_t startStep)
     _replaySpeed = ReplayNormalSpeed;
     _replayDragging = false;
     _replayLeave = false;
+    _replayCamera = ReplayCamera();
+    _replayFrame = World::Frame();
+    _replayWindowsShown = true;
+    _replayHudShown = true;
+    _replayClock = 0;
     _cameraShake = mat3x3::Ident();
+    _cameraOverridden = false;
     _particles.Clear();
+
+    // Windows stay clear of the timeline
+    _replayBorders = Common::Point(_upScreenBorder, _downScreenBorder);
+    _upScreenBorder = 0;
+    _downScreenBorder = _screenSize.y - LayOutReplayBar(this).Top;
+
+    LoadHud(this);
+
+    // The game's own map, of the frames shown: at the top right, a third
+    // of the screen wide, following where the camera is, without the help
+    // the game has
+    _replayHovered = 0;
+    _replayPressed = 0;
+    _replayScene.Set(this, &_replayFrame, 0, vec3d(), mat3x3::Ident(), 0);
+
+    CreateRoboMap(this, &_replayScene);
+    robo_map.flags &= ~GuiBase::FLAG_WITH_HELP;
+    robo_map.lockViewer = 1;
+    robo_map.zoomLevel = 3;
+    RoboMapZoom(this, 0);
+    robo_map.w = std::max((int)robo_map.minWidth, _screenSize.x / 3);
+    robo_map.h = std::max((int)robo_map.minHeight, _screenSize.y * 2 / 5);
+    robo_map.x = _screenSize.x - robo_map.w;
+    robo_map.y = _upScreenBorder;
+
+    GuiWinAttach(&robo_map);
+    GuiWinOpen(&robo_map);
+
+    // How far the world is drawn, with F10 as in a level
+    _viewDistanceWindow.Create(this);
+    GuiWinAttach(&_viewDistanceWindow);
 
     GFX::Engine.SetCursor(1, 0);
     return true;
 }
 
+void NC_STACK_ypaworld::CloseReplayWindows()
+{
+    GuiWinDetach(&robo_map);
+
+    _viewDistanceWindow.Close(this);
+    GuiWinDetach(&_viewDistanceWindow);
+    _viewDistanceWindow.Free();
+
+    for (ReplayFactionWindow &window : _replayFactions)
+    {
+        if ( window.Created() )
+        {
+            GuiWinDetach(&window);
+            window.Free();
+        }
+
+        window = ReplayFactionWindow();
+    }
+
+    _guiDragging = false;
+    _guiDragElement = NULL;
+}
+
 // The level goes, as a replay's: nothing of it was played
 void NC_STACK_ypaworld::EndReplay()
 {
+    SDL_SetWindowRelativeMouseMode(System::GetWindow(), false);
+
+    CloseReplayWindows();
+    FreeHud(this);
+
+    _upScreenBorder = _replayBorders.x;
+    _downScreenBorder = _replayBorders.y;
+
+    _cameraOverridden = false;
+    _replayFrame = World::Frame();
+
     FreeLevel();
     _replay.reset();
     _levelInfo.State = TLevelInfo::STATE_MENU;
-}
-
-// Where on the screen the timeline is, in pixels from the top left
-struct ReplayBar
-{
-    int Top = 0;           // Of the panel, which goes to the bottom
-    int TextY = 0;
-    int TrackX0 = 0, TrackX1 = 0, TrackY = 0;
-    int Pad = 0;
-};
-
-static ReplayBar LayOutReplayBar(const NC_STACK_ypaworld *yw)
-{
-    ReplayBar bar;
-    bar.Pad = std::max(4, yw->_fontH / 2);
-    bar.Top = yw->_screenSize.y - (2 * yw->_fontH + 3 * bar.Pad);
-    bar.TextY = bar.Top + bar.Pad;
-    bar.TrackY = bar.TextY + yw->_fontH + bar.Pad + yw->_fontH / 2;
-    bar.TrackX0 = 2 * bar.Pad;
-    bar.TrackX1 = yw->_screenSize.x - 2 * bar.Pad;
-    return bar;
 }
 
 // The step at a point of the track
@@ -110,14 +214,337 @@ void NC_STACK_ypaworld::ToggleReplayPause()
     _replayPaused = !_replayPaused;
 }
 
+// The unit the HUD is of and the windows blink: the player's in the
+// original view, the one looked from, or none flying freely
+uint32_t NC_STACK_ypaworld::ReplayViewedUnit(const World::Frame &frame) const
+{
+    switch ( _replayCamera.CameraMode )
+    {
+    case ReplayCamera::ORIGINAL:
+        return frame.Viewer;
+
+    case ReplayCamera::MANUAL:
+        return _replayCamera.Unit;
+
+    default:
+        return 0;
+    }
+}
+
+// From a unit on, wherever it goes; once it's gone, from where it was
+void NC_STACK_ypaworld::LookFromUnit(uint32_t unit)
+{
+    if ( !unit )
+        return;
+
+    SDL_SetWindowRelativeMouseMode(System::GetWindow(), false);
+
+    _replayCamera.CameraMode = ReplayCamera::MANUAL;
+    _replayCamera.Unit = unit;
+    _replayCamera.Looking = false;
+    _hud.switch_time = _replayClock;
+}
+
+// Once the unit looked from is dead or gone, the next of its faction by id
+// that isn't, a host station's guns and missiles left out. False when it
+// isn't gone or there's none.
+bool NC_STACK_ypaworld::LookFromNextUnit(const World::Frame &frame)
+{
+    ReplayCamera &cam = _replayCamera;
+    const World::Frame::UnitInfo *info = frame.FindInfo(cam.Unit);
+
+    if ( (info && info->Status != BACT_STATUS_DEAD) || !cam.UnitOwner )
+        return false;
+
+    uint32_t first = 0;
+
+    for (size_t i = 0; i < frame.Units.size(); i++)
+    {
+        const World::Frame::Unit &u = frame.Units[i];
+        const World::Frame::UnitInfo *other = frame.InfoAt(i);
+
+        if ( !other || other->Owner != cam.UnitOwner || other->Status == BACT_STATUS_DEAD ||
+             other->Status == BACT_STATUS_CREATE || other->Status == BACT_STATUS_BEAM || u.Type == BACT_TYPES_MISSLE ||
+             (u.Type == BACT_TYPES_GUN && frame.FindUnit(other->Parent) && frame.FindUnit(other->Parent)->Type == BACT_TYPES_ROBO) )
+            continue;
+
+        if ( u.Id > cam.Unit )
+        {
+            LookFromUnit(u.Id);
+            return true;
+        }
+
+        if ( !first )
+            first = u.Id;
+    }
+
+    LookFromUnit(first);
+    return first != 0;
+}
+
+void NC_STACK_ypaworld::SetReplayCameraMode(ReplayCamera::Mode mode, const World::Frame *frame)
+{
+    ReplayCamera &cam = _replayCamera;
+
+    if ( mode == ReplayCamera::MANUAL )
+    {
+        // The unit last looked from, or the player's
+        if ( !frame || !frame->FindUnit(cam.Unit) )
+            cam.Unit = frame ? frame->Viewer : 0;
+
+        LookFromUnit(cam.Unit);
+        return;
+    }
+
+    if ( mode == ReplayCamera::FREE && cam.CameraMode != ReplayCamera::FREE )
+    {
+        // Off from where it looks now, level
+        vec3d forward = cam.Rotation.AxisZ();
+        cam.Yaw = std::atan2(forward.x, forward.z);
+        cam.Pitch = std::asin(std::max(-1.0, std::min(1.0, -forward.y)));
+        cam.Pitch = std::max(-1.5, std::min(1.5, cam.Pitch));
+        cam.Velocity = vec3d();
+    }
+
+    if ( mode != ReplayCamera::FREE )
+        SDL_SetWindowRelativeMouseMode(System::GetWindow(), false);
+
+    cam.CameraMode = mode;
+    cam.Looking = false;
+    _hud.switch_time = _replayClock;
+}
+
+// The free camera flies with W, A, S and D, down and up with Q and E,
+// faster with shift, easing into its speed and out of it, and turns with
+// the mouse while the right button is held
+void NC_STACK_ypaworld::FlyReplayCamera(TInputState *inpt)
+{
+    ReplayCamera &cam = _replayCamera;
+    double dt = _frameTime / 1024.0;
+    TClickBoxInf &click = inpt->ClickInf;
+
+    bool looking = (click.flag & TClickBoxInf::FLAG_RM_HOLD) && (cam.Looking || !click.selected_btn);
+
+    if ( looking != cam.Looking )
+    {
+        cam.Looking = looking;
+        SDL_SetWindowRelativeMouseMode(System::GetWindow(), looking);
+    }
+    else if ( looking )
+    {
+        cam.Yaw += click.moved.x * FreeCameraTurn;
+        cam.Pitch -= click.moved.y * FreeCameraTurn;
+        cam.Pitch = std::max(-1.5, std::min(1.5, cam.Pitch));
+    }
+
+    // Up is towards -y; the rotation's rows go right, down and forward
+    vec3d forward(std::sin(cam.Yaw) * std::cos(cam.Pitch), -std::sin(cam.Pitch), std::cos(cam.Yaw) * std::cos(cam.Pitch));
+    vec3d right = vec3d::OY(1.0) * forward;
+    right.normalise();
+    vec3d down = forward * right;
+
+    cam.Rotation = mat3x3::Basis(right, down, forward);
+
+    auto held = [](int16_t key) { return Input::Engine.KeyMatrix.at(key).down; };
+
+    vec3d want;
+
+    if ( held(Input::KC_W) )
+        want += forward;
+    if ( held(Input::KC_S) )
+        want -= forward;
+    if ( held(Input::KC_D) )
+        want += right;
+    if ( held(Input::KC_A) )
+        want -= right;
+    if ( held(Input::KC_E) )
+        want -= vec3d::OY(1.0);
+    if ( held(Input::KC_Q) )
+        want += vec3d::OY(1.0);
+
+    if ( want.normalise() > 0.0 )
+        want *= held(Input::KC_SHIFT) ? FreeCameraFastSpeed : FreeCameraSpeed;
+
+    cam.Velocity += (want - cam.Velocity) * (1.0 - std::exp(-dt * FreeCameraEase));
+    cam.Position += cam.Velocity * dt;
+
+    // Over the map, and above its ground
+    cam.Position.x = std::max(0.0, std::min(cam.Position.x, (double)_mapSize.x * World::CVSectorLength));
+    cam.Position.z = std::min(0.0, std::max(cam.Position.z, -(double)_mapSize.y * World::CVSectorLength));
+
+    Common::Point sector = World::PositionToSectorID(cam.Position);
+
+    if ( IsSector(sector) && cam.Position.y > _cells(sector).height - FreeCameraClearance )
+    {
+        cam.Position.y = _cells(sector).height - FreeCameraClearance;
+        cam.Velocity.y = std::min(cam.Velocity.y, 0.0);
+    }
+}
+
+// Where the frame is drawn from, as the way to look has it, and the unit
+// not drawn as it's looked from
+void NC_STACK_ypaworld::PlaceReplayCamera(World::Frame &frame)
+{
+    ReplayCamera &cam = _replayCamera;
+
+    switch ( cam.CameraMode )
+    {
+    case ReplayCamera::ORIGINAL:
+        cam.Position = vec3d(frame.CameraPosition);
+        cam.Rotation = mat3x3(frame.CameraRotation);
+        _cameraOverridden = false;
+        return;
+
+    case ReplayCamera::MANUAL:
+        if ( const World::Frame::Unit *unit = frame.FindUnit(cam.Unit) )
+        {
+            if ( const World::Frame::UnitInfo *info = frame.FindInfo(cam.Unit) )
+                cam.UnitOwner = info->Owner;
+
+            cam.Position = vec3d(unit->Position);
+            cam.Rotation = mat3x3(unit->Rotation);
+
+            // A host station is looked from its bridge
+            if ( unit->Type == BACT_TYPES_ROBO && unit->Vehicle < _vhclProtos.size() && _vhclProtos[unit->Vehicle].RoboProto )
+                cam.Position += cam.Rotation.Transpose().Transform(_vhclProtos[unit->Vehicle].RoboProto->viewer);
+        }
+
+        frame.Viewer = cam.Unit;
+        break;
+
+    default:
+        frame.Viewer = 0;
+        break;
+    }
+
+    OverrideCamera(cam.Position, cam.Rotation);
+}
+
+// The unit under the pointer in the world as it was last drawn: the one
+// drawn nearest it, within its size; 0 for none
+uint32_t NC_STACK_ypaworld::ReplayUnitInWorld(const Common::Point &mouse, const World::Frame &frame) const
+{
+    mat3x3 corrected = _replayCamera.Rotation;
+    GFX::Engine.matrixAspectCorrection(corrected, false);
+
+    float mouseX = 2.0 * mouse.x / _screenSize.x - 1.0;
+    float mouseY = 2.0 * mouse.y / _screenSize.y - 1.0;
+
+    uint32_t viewed = ReplayViewedUnit(frame);
+    uint32_t best = 0;
+    float bestDist = 0.0;
+
+    for (size_t i = 0; i < frame.Units.size(); i++)
+    {
+        const World::Frame::Unit &u = frame.Units[i];
+        const World::Frame::UnitInfo *info = frame.InfoAt(i);
+
+        if ( u.Id == viewed || u.Type == BACT_TYPES_MISSLE || (u.StatusFlags & BACT_STFLAG_NORENDER) || !info ||
+             info->Status == BACT_STATUS_DEAD || info->Status == BACT_STATUS_CREATE || info->Status == BACT_STATUS_BEAM )
+            continue;
+
+        vec3d view = corrected.Transform(vec3d(u.Position) - _replayCamera.Position);
+
+        if ( view.z < 30.0 )
+            continue;
+
+        float radius = u.Vehicle < _vhclProtos.size() ? std::max(_vhclProtos[u.Vehicle].radius, 30.0f) : 50.0f;
+        float reach = std::max(radius / (float)view.z, 0.03f);
+        float dist = std::hypot(view.x / view.z - mouseX, view.y / view.z - mouseY);
+
+        if ( dist < reach && (!best || dist < bestDist) )
+        {
+            best = u.Id;
+            bestDist = dist;
+        }
+    }
+
+    return best;
+}
+
+// The windows: dragged, closed, scrolled and resized as the game's, and the
+// map clicked while flying freely moves the camera there. Then what's under
+// the pointer: a unit in a faction's window, on the map or in the world,
+// which a double click looks from. The double click comes as the button
+// goes up the second time, the pointer where it pressed it.
+void NC_STACK_ypaworld::HandleReplayWindows(TInputState *inpt, const World::Frame &frame)
+{
+    TClickBoxInf &click = inpt->ClickInf;
+
+    if ( !(click.flag & TClickBoxInf::FLAG_OK) )
+        return;
+
+    HandleGuiWindows(inpt);
+    _viewDistanceWindow.HandleInput(this, inpt);
+
+    uint32_t hovered = 0;
+
+    for (ReplayFactionWindow &window : _replayFactions)
+    {
+        if ( !window.Created() )
+            continue;
+
+        // Dragged, it stays where it's put
+        if ( _guiDragging && _guiDragElement == &window )
+            window.Moved = true;
+
+        window.HandleInput(this, inpt);
+
+        if ( window.Hovered() )
+            hovered = window.Hovered();
+    }
+
+    RoboMap_InputHandle(this, inpt);
+
+    bool onMap = robo_map.IsOpen() && click.selected_btn == &robo_map && click.selected_btnID == 17;
+    MapScene::Unit mapUnit;
+
+    if ( onMap && RoboMapUnitAt(this, &click, mapUnit) )
+        hovered = mapUnit.Id;
+
+    if ( onMap && _replayCamera.CameraMode == ReplayCamera::FREE && (click.flag & TClickBoxInf::FLAG_LM_DOWN) )
+    {
+        vec2d at = RoboMapWorldAt(&click);
+        _replayCamera.Position.x = at.x;
+        _replayCamera.Position.z = at.y;
+        _replayCamera.Velocity = vec3d();
+    }
+
+    if ( !click.selected_btn && click.move.ScreenPos.y < LayOutReplayBar(this).Top && !_replayDragging && !_replayCamera.Looking )
+        hovered = ReplayUnitInWorld(click.move.ScreenPos, frame);
+
+    _replayHovered = hovered;
+
+    if ( click.flag & TClickBoxInf::FLAG_LM_DOWN )
+        _replayPressed = hovered;
+
+    if ( click.flag & TClickBoxInf::FLAG_DBL_CLICK )
+    {
+        LookFromUnit(hovered ? hovered : _replayPressed);
+        _replayPressed = 0;
+    }
+
+    // As the game shows what a click would select
+    if ( !_replayCamera.Looking )
+        GFX::Engine.SetCursor(hovered ? 2 : 1, 0);
+}
+
 void NC_STACK_ypaworld::HandleReplayInput(TInputState *inpt)
 {
+    // The windows tell anew what they're about
+    ClearTooltip();
+
     const World::Playback &replay = *_replay;
     ReplayBar bar = LayOutReplayBar(this);
     const Common::Point &mouse = inpt->ClickInf.move.ScreenPos;
+    bool overWindow = inpt->ClickInf.selected_btn != NULL;
+
+    HandleReplayWindows(inpt, _replayFrame);
 
     // The track: clicked or held, it goes there
-    if ( (inpt->ClickInf.flag & TClickBoxInf::FLAG_LM_DOWN) && mouse.y >= bar.TextY + _fontH )
+    bool down = (inpt->ClickInf.flag & TClickBoxInf::FLAG_LM_DOWN) && !overWindow;
+
+    if ( down && mouse.y >= bar.TextY + _fontH && mouse.y < bar.KeysY )
         _replayDragging = true;
 
     if ( _replayDragging )
@@ -127,10 +554,23 @@ void NC_STACK_ypaworld::HandleReplayInput(TInputState *inpt)
         if ( !(inpt->ClickInf.flag & TClickBoxInf::FLAG_LM_HOLD) || (inpt->ClickInf.flag & TClickBoxInf::FLAG_LM_UP) )
             _replayDragging = false;
     }
-    else if ( (inpt->ClickInf.flag & TClickBoxInf::FLAG_LM_DOWN) && mouse.y >= bar.Top )
+    else if ( down && mouse.y >= bar.Top )
     {
-        // Above the track, it pauses and plays
-        ToggleReplayPause();
+        // A way to look's button, or anywhere else above the track to
+        // pause and play
+        bool onButton = false;
+
+        for (int i = 0; i < 3; i++)
+        {
+            if ( mouse.y < bar.TextY + _fontH && mouse.x >= bar.ModeX[i] && mouse.x < bar.ModeX[i] + bar.ModeW[i] )
+            {
+                SetReplayCameraMode((ReplayCamera::Mode)i, &_replayFrame);
+                onButton = true;
+            }
+        }
+
+        if ( !onButton && mouse.y < bar.TextY + _fontH )
+            ToggleReplayPause();
     }
 
     switch ( inpt->KbdLastHit )
@@ -140,6 +580,14 @@ void NC_STACK_ypaworld::HandleReplayInput(TInputState *inpt)
         break;
 
     case Input::KC_SPACE:
+        // As in the game, once the unit looked from is gone: to the next
+        // of its faction
+        if ( _replayCamera.CameraMode == ReplayCamera::MANUAL && LookFromNextUnit(_replayFrame) )
+            break;
+
+        ToggleReplayPause();
+        break;
+
     case Input::KC_PAUSE:
         ToggleReplayPause();
         break;
@@ -168,12 +616,53 @@ void NC_STACK_ypaworld::HandleReplayInput(TInputState *inpt)
         _replayPosition = replay.LastStep();
         break;
 
+    case Input::KC_1:
+        SetReplayCameraMode(ReplayCamera::ORIGINAL, &_replayFrame);
+        break;
+
+    case Input::KC_2:
+        SetReplayCameraMode(ReplayCamera::MANUAL, &_replayFrame);
+        break;
+
+    case Input::KC_3:
+        SetReplayCameraMode(ReplayCamera::FREE, &_replayFrame);
+        break;
+
+    case Input::KC_M:
+        if ( robo_map.IsOpen() )
+            GuiWinClose(&robo_map);
+        else
+            GuiWinOpen(&robo_map);
+        break;
+
+    case Input::KC_U:
+        _replayWindowsShown = !_replayWindowsShown;
+
+        for (ReplayFactionWindow &window : _replayFactions)
+        {
+            if ( !window.Created() )
+                continue;
+
+            if ( _replayWindowsShown )
+                GuiWinOpen(&window);
+            else
+                GuiWinClose(&window);
+        }
+        break;
+
+    case Input::KC_H:
+        _replayHudShown = !_replayHudShown;
+        break;
+
     default:
         break;
     }
 
     _replayPosition = std::max(_replayPosition, (double)replay.FirstStep());
     _replayPosition = std::min(_replayPosition, (double)replay.LastStep());
+
+    if ( _replayCamera.CameraMode == ReplayCamera::FREE )
+        FlyReplayCamera(inpt);
 }
 
 // A box filled with the pen's colour, in pixels from the top left
@@ -184,6 +673,15 @@ static void FillScreenBox(const NC_STACK_ypaworld *yw, int x, int y, int w, int 
 
     for (int row = y; row < y + h; row++)
         GFX::Engine.DrawLineCentered(Common::Line(x - cx, row - cy, x + w - 1 - cx, row - cy));
+}
+
+// Text from a point on, in the timeline's font
+static void ReplayText(NC_STACK_ypaworld *yw, CmdStream *cmds, int x, int y, int width, int flags, const std::string &text)
+{
+    FontUA::set_xpos(cmds, x);
+    FontUA::set_ypos(cmds, y);
+    FontUA::copy_position(cmds);
+    FontUA::add_txt(cmds, width, flags, text);
 }
 
 void NC_STACK_ypaworld::DrawReplayControls()
@@ -211,7 +709,19 @@ void NC_STACK_ypaworld::DrawReplayControls()
     GFX::Engine.SetPen( SDL_Color{240, 240, 240, 255} );
     FillScreenBox(this, at - knobW / 2, bar.TrackY - knobH / 2, knobW, knobH);
 
-    // Where it's at of how long it is, how fast it plays, and the keys
+    // The ways to look, the one looked with lit
+    for (int i = 0; i < 3; i++)
+    {
+        if ( i == _replayCamera.CameraMode )
+            GFX::Engine.SetPen( SDL_Color{230, 160, 40, 255} );
+        else
+            GFX::Engine.SetPen( SDL_Color{48, 48, 64, 255} );
+
+        FillScreenBox(this, bar.ModeX[i], bar.TextY - bar.Pad / 2, bar.ModeW[i], _fontH + bar.Pad);
+    }
+
+    // Where it's at of how long it is and how fast it plays, the ways to
+    // look's names, and the keys
     int32_t now = (int32_t)((_replayPosition - replay.FirstStep()) * World::Recording::StepTicks);
     std::string state;
 
@@ -225,33 +735,232 @@ void NC_STACK_ypaworld::DrawReplayControls()
     const SDL_Color &txt = _iniColors[World::COLOR_TEXT_HUD];
 
     CmdStream cmds;
-    cmds.reserve(512);
+    cmds.reserve(1024);
 
     FontUA::select_tileset(&cmds, 15);
     FontUA::set_txtColor(&cmds, txt.r, txt.g, txt.b);
 
-    FontUA::set_xpos(&cmds, bar.TrackX0);
-    FontUA::set_ypos(&cmds, bar.TextY);
-    FontUA::copy_position(&cmds);
-    FontUA::add_txt(&cmds, _screenSize.x / 2, 1, left);
+    ReplayText(this, &cmds, bar.TrackX0, bar.TextY, bar.ModeX[0] - bar.TrackX0, 1, left);
 
-    FontUA::set_xpos(&cmds, _screenSize.x / 2);
-    FontUA::set_ypos(&cmds, bar.TextY);
-    FontUA::copy_position(&cmds);
-    FontUA::add_txt(&cmds, bar.TrackX1 - _screenSize.x / 2, 1 | 2, Locale::Text::Advanced(Locale::ADV_REPLAYKEYS));
+    for (int i = 0; i < 3; i++)
+    {
+        if ( i == _replayCamera.CameraMode )
+            FontUA::set_txtColor(&cmds, 16, 16, 24);
+        else
+            FontUA::set_txtColor(&cmds, txt.r, txt.g, txt.b);
+
+        ReplayText(this, &cmds, bar.ModeX[i], bar.TextY, bar.ModeW[i], 1 | 2, Locale::Text::Title(ReplayModeTitles[i]));
+    }
+
+    FontUA::set_txtColor(&cmds, txt.r, txt.g, txt.b);
+
+    // The replay's keys at the left, the way to look's at the right
+    std::string keys = Locale::Text::Advanced(Locale::ADV_REPLAYKEYS);
+    std::string modeKeys = Locale::Text::HUD(_replayCamera.CameraMode == ReplayCamera::FREE ? Locale::HUDSTR_REPLAYFREEKEYS
+                                                                                              : Locale::HUDSTR_REPLAYVIEWKEYS);
+    int half = (bar.TrackX1 - bar.TrackX0) / 2;
+
+    ReplayText(this, &cmds, bar.TrackX0, bar.KeysY, half, 1, keys);
+    ReplayText(this, &cmds, bar.TrackX0 + half, bar.KeysY, bar.TrackX1 - bar.TrackX0 - half, 1 | 2, modeKeys);
 
     FontUA::set_end(&cmds);
     GFX::Engine.ProcessDrawSeq(cmds);
 }
 
+// The windows as of a frame: a faction's opens the first time it has a
+// host station; until moved, they're stacked down the left side in the
+// order of their owners, as tall as their rows
+void NC_STACK_ypaworld::UpdateReplayWindows(const World::Frame &frame)
+{
+    uint32_t viewed = ReplayViewedUnit(frame);
+
+    for (size_t i = 0; i < frame.Units.size(); i++)
+    {
+        const World::Frame::UnitInfo *info = frame.InfoAt(i);
+
+        if ( frame.Units[i].Type != BACT_TYPES_ROBO || !info || info->Owner == 0 || info->Owner >= _replayFactions.size() )
+            continue;
+
+        ReplayFactionWindow &window = _replayFactions[info->Owner];
+
+        if ( window.Created() )
+            continue;
+
+        window.Create(this, info->Owner);
+        GuiWinAttach(&window);
+
+        if ( _replayWindowsShown )
+            GuiWinOpen(&window);
+    }
+
+    int top = _upScreenBorder;
+    int left = 0;
+    int columnWidth = 0;
+    int bottom = _screenSize.y - _downScreenBorder;
+
+    for (ReplayFactionWindow &window : _replayFactions)
+    {
+        if ( !window.Created() || window.IsClosed() )
+            continue;
+
+        if ( !window.Moved )
+        {
+            int least = _fontH + window.upperVborder + window.lowerVborder + window.minShownEntries * window.entryHeight;
+
+            if ( top + least > bottom && top > _upScreenBorder )
+            {
+                top = _upScreenBorder;
+                left += columnWidth;
+                columnWidth = 0;
+            }
+
+            window.SetRect(this, left, top);
+        }
+
+        window.Update(this, frame, viewed);
+
+        if ( !window.Moved )
+        {
+            top = window.y + window.h;
+            columnWidth = std::max(columnWidth, (int)window.w);
+        }
+    }
+
+    // The map, as the game keeps it up
+    RoboMapFollowViewer(this);
+    RoboMapUpdateLayout(this);
+}
+
+// Each window, and what its text doesn't draw over it, the front one last
+void NC_STACK_ypaworld::DrawReplayWindows()
+{
+    for (GuiBase *window : _guiActive)
+    {
+        if ( window->IsClosed() )
+            continue;
+
+        GFX::Engine.ProcessDrawSeq(window->cmdCommands, &window->cmdInclude);
+
+        if ( window->postDraw )
+            window->postDraw(this);
+
+        for (ReplayFactionWindow &faction : _replayFactions)
+        {
+            if ( window == &faction )
+                faction.DrawExtras(this);
+        }
+    }
+}
+
+// The HUD of the unit looked from, as the game shows the player's: none in
+// a host station, and a blinking line once it's gone
+void NC_STACK_ypaworld::DrawReplayHud(const World::Frame &frame)
+{
+    uint32_t viewed = ReplayViewedUnit(frame);
+    const World::Frame::Unit *unit = frame.FindUnit(viewed);
+    const World::Frame::UnitInfo *info = frame.FindInfo(viewed);
+
+    CmdStream buf;
+    buf.reserve(1024);
+
+    // Flown freely, hidden, or gone back to before it was made: nothing to
+    // show of it
+    if ( !viewed || !_replayHudShown || (!unit && (frame.Units.empty() || viewed > frame.Units.back().Id)) )
+        ;
+    else if ( !unit || !info || info->Status == BACT_STATUS_DEAD )
+    {
+        const World::Frame::UnitInfo *robo = frame.FindInfo(frame.UserRobo);
+        DrawHudDestroyed(this, &buf, (unit && unit->Type == BACT_TYPES_ROBO) || (robo && robo->Status == BACT_STATUS_DEAD &&
+                                     _replayCamera.CameraMode == ReplayCamera::ORIGINAL));
+    }
+    else if ( unit->Type != BACT_TYPES_ROBO && unit->Vehicle < _vhclProtos.size() )
+    {
+        const World::TVhclProto &vhcl = _vhclProtos[unit->Vehicle];
+
+        THudSubject subject;
+        subject.Vehicle = unit->Vehicle;
+        subject.Position = vec3d(unit->Position);
+        subject.Rotation = _replayCamera.Rotation;
+        subject.Energy = info->Energy;
+        subject.EnergyMax = std::max(info->EnergyMax, 1);
+        subject.Shield = info->Shield >= 0 ? info->Shield : vhcl.shield;
+
+        if ( vhcl.weapon != -1 && vhcl.weapon < (int)_weaponProtos.size() )
+        {
+            int clock = frame.Time - info->ClockStart;
+            subject.ReloadPercent = WeaponReloadPercent(_weaponProtos.at(vhcl.weapon), clock - info->WeaponTime, info->SalveCounter);
+        }
+
+        const World::Frame::Unit *parent = frame.FindUnit(info->Parent);
+
+        if ( parent )
+        {
+            subject.HasParent = true;
+            subject.ParentPos = vec3d(parent->Position);
+
+            // A commander shows where its squad goes
+            if ( parent->Type == BACT_TYPES_ROBO )
+            {
+                if ( info->PrimaryType == BACT_TGT_TYPE_CELL )
+                {
+                    subject.HasTarget = true;
+                    subject.TargetPos = vec3d(info->PrimaryPos);
+                }
+                else if ( info->PrimaryType == BACT_TGT_TYPE_UNIT )
+                {
+                    if ( const World::Frame::Unit *target = frame.FindUnit(info->Primary) )
+                    {
+                        subject.HasTarget = true;
+                        subject.TargetPos = vec3d(target->Position);
+                    }
+                }
+            }
+        }
+
+        Common::Point sector = World::PositionToSectorID(unit->Position.x, unit->Position.z);
+
+        const World::Frame::Sector *under = IsSector(sector) ? frame.SectorAt(sector.y * _mapSize.x + sector.x) : NULL;
+
+        if ( under )
+            subject.SectorOwner = under->Owner;
+
+        int weaponFlags = vhcl.weapon != -1 && vhcl.weapon < (int)_weaponProtos.size() ? _weaponProtos.at(vhcl.weapon)._weaponFlags : 0;
+        subject.Visor = NC_STACK_ypabact::Sights(vhcl.mgun, vhcl.weapon, weaponFlags, 0.0, 0.0,
+                                                 NC_STACK_ypabact::NoWeaponSight(weaponFlags));
+
+        yw_RenderHUDRadare(this);
+        DrawHudOf(this, &buf, subject);
+    }
+
+    // The marks over units, as the game's: what's under the pointer, and
+    // with the enemy indicator what's around
+    MapScene::Unit hovered;
+
+    if ( _replayScene.Hovered(hovered) )
+    {
+        yw_RenderCursorOverUnit(this, hovered);
+        yw_RenderUnitLifeBar(this, &buf, hovered);
+    }
+
+    if ( _replayHudShown && unit )
+        yw_RenderOverlayCursors(this, &buf);
+
+    FontUA::set_end(&buf);
+    GFX::Engine.ProcessDrawSeq(buf);
+
+    GFX::Engine.SetClipNormalized( Common::FRect(-1.0, -1.0, 1.0, 1.0) );
+}
+
 // A frame of the replay: the controls, then the replay drawn at where it's
-// at, played on by the frame's time unless paused or held
+// at, played on by the frame's time unless paused or held, from where the
+// way to look has it, with the windows and the HUD over it
 void NC_STACK_ypaworld::ReplayFrame(TUpdateArgs *arg)
 {
     if ( arg->DTime > 0 )
         _FPS = 1024 / arg->DTime;
 
     _frameTime = arg->DTime;
+    _replayClock += arg->DTime;
 
     // Nothing of it is heard
     SFXEngine::SFXe.BeginSoundFrame(1, vec3d(0.0, 50000.0, 0.0), vec3d(0.0), mat3x3::Ident());
@@ -294,9 +1003,31 @@ void NC_STACK_ypaworld::ReplayFrame(TUpdateArgs *arg)
                 it++;
         }
 
+        PlaceReplayCamera(frame);
+        _replayFrame = std::move(frame);
+
+        // What the game's map and the marks over units show, and where
+        // they're seen from
+        _replayScene.Set(this, &_replayFrame, ReplayViewedUnit(_replayFrame), _replayCamera.Position, _replayCamera.Rotation,
+                         _replayHovered);
+        _viewerPosition = _replayCamera.Position;
+        _viewerRotation = _replayCamera.Rotation;
+
         // Smoke and sparks come as it plays on, at speeds they keep up with
-        GFX::Engine.SetAnimationTime(frame.Time);
-        RenderGame(arg, frame, false, playing && ReplaySpeeds[_replaySpeed] <= 2.0);
+        GFX::Engine.SetAnimationTime(_replayFrame.Time);
+        RenderGame(arg, _replayFrame, false, playing && ReplaySpeeds[_replaySpeed] <= 2.0);
+
+        // The interface animates in the viewer's own time, paused or not
+        int32_t gameTime = _timeStamp;
+        _timeStamp = _replayClock;
+
+        // The HUD over the windows: they'd hide its bars
+        UpdateReplayWindows(_replayFrame);
+        DrawReplayWindows();
+        DrawReplayHud(_replayFrame);
+        draw_tooltip(this);
+
+        _timeStamp = gameTime;
     }
     else
     {
@@ -305,6 +1036,7 @@ void NC_STACK_ypaworld::ReplayFrame(TUpdateArgs *arg)
     }
 
     DrawReplayControls();
+    DrawPerfOverlay(arg->Input);
 
     GFX::Engine.EndFrame();
 

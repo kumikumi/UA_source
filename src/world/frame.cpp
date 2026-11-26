@@ -37,7 +37,8 @@ static mat3x3f Blend(const mat3x3f &a, const mat3x3f &b, float t)
 
 bool Frame::Sector::operator==(const Sector &b) const
 {
-    return Type == b.Type && !memcmp(Health, b.Health, sizeof(Health));
+    return Type == b.Type && !memcmp(Health, b.Health, sizeof(Health)) && Owner == b.Owner && Purpose == b.Purpose &&
+           Power == b.Power && StationPower == b.StationPower;
 }
 
 const Frame::Unit *Frame::FindUnit(uint32_t id) const
@@ -46,6 +47,23 @@ const Frame::Unit *Frame::FindUnit(uint32_t id) const
                                [](const Unit &u, uint32_t id) { return u.Id < id; });
 
     if ( it == Units.end() || it->Id != id )
+        return NULL;
+
+    return &*it;
+}
+
+const Frame::UnitInfo *Frame::FindInfo(uint32_t id) const
+{
+    const Unit *unit = FindUnit(id);
+    return unit ? InfoAt(unit - Units.data()) : NULL;
+}
+
+const Frame::HostStation *Frame::FindHostStation(uint32_t id) const
+{
+    auto it = std::lower_bound(HostStations.begin(), HostStations.end(), id,
+                               [](const HostStation &h, uint32_t id) { return h.Unit < id; });
+
+    if ( it == HostStations.end() || it->Unit != id )
         return NULL;
 
     return &*it;
@@ -81,8 +99,12 @@ void Frame::Between(const Frame &a, const Frame &b, float t, Frame &out)
     out.Step = nearer.Step;
     out.Time = a.Time + (int32_t)((b.Time - a.Time) * t);
     out.Viewer = nearer.Viewer;
+    out.UserRobo = nearer.UserRobo;
+    out.UserUnit = nearer.UserUnit;
     out.Sectors = nearer.Sectors;
     out.SuperItems = nearer.SuperItems;
+    out.Infos = nearer.Infos;
+    out.HostStations = nearer.HostStations;
 
     out.CameraPosition = nearer.CameraPosition;
     out.CameraRotation = nearer.CameraRotation;
@@ -193,16 +215,23 @@ FrameMaker::Field FrameMaker::Find(const State::Schema &schema, uint8_t kind, co
     return out;
 }
 
-FrameMaker::FrameMaker(const State::Schema &viewSchema)
-: _schema(viewSchema)
+FrameMaker::FrameMaker(const State::Schema &viewSchema, bool details)
+: _schema(viewSchema), _details(details)
 {
     _time = Find(_schema, State::KIND_WORLD, "time");
     _viewer = Find(_schema, State::KIND_WORLD, "viewer");
+    _userRobo = Find(_schema, State::KIND_WORLD, "userRobo");
+    _userUnit = Find(_schema, State::KIND_WORLD, "userUnit");
     _cameraPosition = Find(_schema, State::KIND_WORLD, "cameraPosition");
     _cameraRotation = Find(_schema, State::KIND_WORLD, "cameraRotation");
 
     _sectorType = Find(_schema, State::KIND_SECTOR, "type");
     _sectorHealth = Find(_schema, State::KIND_SECTOR, "health");
+    _sectorOwner = Find(_schema, State::KIND_SECTOR, "owner");
+    _sectorPurpose = Find(_schema, State::KIND_SECTOR, "purpose");
+    _sectorPower = Find(_schema, State::KIND_SECTOR, "energyPower");
+    _powerStation = Find(_schema, State::KIND_SECTOR, "powerStation");
+    _stationPower = Find(_schema, State::KIND_SECTOR, "effectivePower");
     _constructing = Find(_schema, State::KIND_SECTOR, "constructing");
     _constructBuilding = Find(_schema, State::KIND_SECTOR, "constructBuilding");
     _constructTime = Find(_schema, State::KIND_SECTOR, "constructTime");
@@ -239,6 +268,32 @@ FrameMaker::FrameMaker(const State::Schema &viewSchema)
             f.ExtraFlags[i] = Find(_schema, kind, extraNames[i][3]);
             f.ExtraModel[i] = Find(_schema, kind, extraNames[i][4]);
         }
+
+        f.Owner = Find(_schema, kind, "owner");
+        f.Status = Find(_schema, kind, "status");
+        f.Aggression = Find(_schema, kind, "aggression");
+        f.Shield = Find(_schema, kind, "shield");
+        f.Energy = Find(_schema, kind, "energy");
+        f.EnergyMax = Find(_schema, kind, "energyMax");
+        f.Parent = Find(_schema, kind, "parent");
+        f.PrimaryType = Find(_schema, kind, "primaryType");
+        f.Primary = Find(_schema, kind, "primary");
+        f.PrimaryPos = Find(_schema, kind, "primaryPos");
+        f.SecondaryType = Find(_schema, kind, "secondaryType");
+        f.Secondary = Find(_schema, kind, "secondary");
+        f.GunFlags = Find(_schema, kind, "gunFlags");
+        f.ClockStart = Find(_schema, kind, "clockStart");
+        f.WeaponTime = Find(_schema, kind, "weaponTime");
+        f.SalveCounter = Find(_schema, kind, "salveCounter");
+
+        f.Create = Find(_schema, kind, "energyLife");
+        f.Beam = Find(_schema, kind, "energyMove");
+        f.BuildSpare = Find(_schema, kind, "buildSpare");
+        f.VehicleSpare = Find(_schema, kind, "vehicleSpare");
+        f.ReloadPS = Find(_schema, kind, "energyReloadPS");
+        f.FillMode = Find(_schema, kind, "fillMode");
+        f.LoadFlags = Find(_schema, kind, "energyLoadFlags");
+        f.LossFlags = Find(_schema, kind, "energyLossFlags");
     }
 }
 
@@ -280,6 +335,8 @@ void FrameMaker::Add(Frame &frame, std::vector<Frame::Sector> &sectors, uint8_t 
     {
         get(_time, &frame.Time, sizeof(frame.Time));
         get(_viewer, &frame.Viewer, sizeof(frame.Viewer));
+        get(_userRobo, &frame.UserRobo, sizeof(frame.UserRobo));
+        get(_userUnit, &frame.UserUnit, sizeof(frame.UserUnit));
         get(_cameraPosition, &frame.CameraPosition, sizeof(frame.CameraPosition));
         get(_cameraRotation, &frame.CameraRotation, sizeof(frame.CameraRotation));
     }
@@ -291,6 +348,15 @@ void FrameMaker::Add(Frame &frame, std::vector<Frame::Sector> &sectors, uint8_t 
         Frame::Sector &s = sectors[id];
         get(_sectorType, &s.Type, sizeof(s.Type));
         get(_sectorHealth, s.Health, sizeof(s.Health));
+        get(_sectorOwner, &s.Owner, sizeof(s.Owner));
+        get(_sectorPurpose, &s.Purpose, sizeof(s.Purpose));
+        get(_sectorPower, &s.Power, sizeof(s.Power));
+
+        bool powerStation = false;
+        get(_powerStation, &powerStation, sizeof(powerStation));
+
+        if ( powerStation )
+            get(_stationPower, &s.StationPower, sizeof(s.StationPower));
 
         bool constructing = false;
         get(_constructing, &constructing, sizeof(constructing));
@@ -349,13 +415,94 @@ void FrameMaker::Add(Frame &frame, std::vector<Frame::Sector> &sectors, uint8_t 
             getRotation(f.ExtraRotation[i], e.Rotation);
             frame.Extras.push_back(e);
         }
+
+        if ( !_details )
+            return;
+
+        frame.Infos.emplace_back();
+        Frame::UnitInfo &info = frame.Infos.back();
+        get(f.Owner, &info.Owner, sizeof(info.Owner));
+        get(f.Status, &info.Status, sizeof(info.Status));
+        get(f.Aggression, &info.Aggression, sizeof(info.Aggression));
+
+        uint8_t shield = 0;
+        if ( f.Shield.Found )
+        {
+            get(f.Shield, &shield, sizeof(shield));
+            info.Shield = shield;
+        }
+
+        get(f.Energy, &info.Energy, sizeof(info.Energy));
+        get(f.EnergyMax, &info.EnergyMax, sizeof(info.EnergyMax));
+        get(f.Parent, &info.Parent, sizeof(info.Parent));
+        get(f.PrimaryType, &info.PrimaryType, sizeof(info.PrimaryType));
+        get(f.Primary, &info.Primary, sizeof(info.Primary));
+        get(f.PrimaryPos, &info.PrimaryPos, sizeof(info.PrimaryPos));
+        get(f.SecondaryType, &info.SecondaryType, sizeof(info.SecondaryType));
+        get(f.Secondary, &info.Secondary, sizeof(info.Secondary));
+
+        if ( f.GunFlags.Found )
+        {
+            uint8_t gunFlags = 0;
+            get(f.GunFlags, &gunFlags, sizeof(gunFlags));
+            info.GunFlags = gunFlags;
+        }
+        get(f.ClockStart, &info.ClockStart, sizeof(info.ClockStart));
+        get(f.WeaponTime, &info.WeaponTime, sizeof(info.WeaponTime));
+        get(f.SalveCounter, &info.SalveCounter, sizeof(info.SalveCounter));
+
+        if ( f.Create.Found )
+        {
+            Frame::HostStation h;
+            h.Unit = id;
+            get(f.Create, &h.Create, sizeof(h.Create));
+            get(f.Beam, &h.Beam, sizeof(h.Beam));
+            get(f.BuildSpare, &h.BuildSpare, sizeof(h.BuildSpare));
+            get(f.VehicleSpare, &h.VehicleSpare, sizeof(h.VehicleSpare));
+            get(f.ReloadPS, &h.ReloadPS, sizeof(h.ReloadPS));
+            get(f.FillMode, &h.FillMode, sizeof(h.FillMode));
+            get(f.LoadFlags, &h.LoadFlags, sizeof(h.LoadFlags));
+            get(f.LossFlags, &h.LossFlags, sizeof(h.LossFlags));
+            frame.HostStations.push_back(h);
+        }
     }
 }
 
 void FrameMaker::End(Frame &frame, std::vector<Frame::Sector> &sectors, const Frame *before) const
 {
-    std::sort(frame.Units.begin(), frame.Units.end(),
-              [](const Frame::Unit &a, const Frame::Unit &b) { return a.Id < b.Id; });
+    if ( frame.Infos.size() == frame.Units.size() && !frame.Infos.empty() )
+    {
+        // Units and what there is to show of them, in the same order
+        std::vector<size_t> order(frame.Units.size());
+        for (size_t i = 0; i < order.size(); i++)
+            order[i] = i;
+
+        std::sort(order.begin(), order.end(),
+                  [&frame](size_t a, size_t b) { return frame.Units[a].Id < frame.Units[b].Id; });
+
+        std::vector<Frame::Unit> units;
+        std::vector<Frame::UnitInfo> infos;
+        units.reserve(order.size());
+        infos.reserve(order.size());
+
+        for (size_t i : order)
+        {
+            units.push_back(frame.Units[i]);
+            infos.push_back(frame.Infos[i]);
+        }
+
+        frame.Units = std::move(units);
+        frame.Infos = std::move(infos);
+    }
+    else
+    {
+        frame.Infos.clear();
+        std::sort(frame.Units.begin(), frame.Units.end(),
+                  [](const Frame::Unit &a, const Frame::Unit &b) { return a.Id < b.Id; });
+    }
+
+    std::sort(frame.HostStations.begin(), frame.HostStations.end(),
+              [](const Frame::HostStation &a, const Frame::HostStation &b) { return a.Unit < b.Unit; });
 
     std::sort(frame.Constructions.begin(), frame.Constructions.end(),
               [](const Frame::Construction &a, const Frame::Construction &b) { return a.Sector < b.Sector; });

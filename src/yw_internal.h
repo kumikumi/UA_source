@@ -1,6 +1,8 @@
 #ifndef  YWINT_H_INCLUDED
 #define YWINT_H_INCLUDED
 
+#include "yw_mapscene.h"
+
 struct TSectorCollision
 {
     NC_STACK_skeleton *sklt = NULL;
@@ -209,9 +211,13 @@ public:
     int last_msg_duration = 0;
 };
 
+class tehMap;
+extern tehMap robo_map;
+
 class tehMap : public GuiBase
 {
 public:
+    const MapScene *Scene = NULL; // What it shows: the game's, or a replay's
     int16_t hScrollLength;
     int16_t hThumbPos;
     int16_t hThumbSize;
@@ -280,6 +286,7 @@ struct debrif_t1
 void HandleGuiInput(NC_STACK_ypaworld *yw, TInputState *inpt);
 void RoboMapFollowViewer(NC_STACK_ypaworld *yw);
 void RoboMapUpdateLayout(NC_STACK_ypaworld *yw);
+void RoboMapZoom(NC_STACK_ypaworld *yw, int zoomDir);
 
 void UpdateGunList(NC_STACK_ypaworld *yw);
 void UpdateVehicleList(NC_STACK_ypaworld *yw);
@@ -288,14 +295,91 @@ void UpdateBuildingList(NC_STACK_ypaworld *yw);
 
 void DrawGameMessages(NC_STACK_ypaworld *yw);
 
+// The game map's art, shared with the replay viewer's map: a layer of tiles
+// over the pixels from left, top to right, bottom of a map whose tiles are
+// tileSize pixels, its top left at xpos, ypos from the screen's centre,
+// each tile's glyph in tilesetId as ffunc gives it for its column and row
+typedef int (*mapFunc)(NC_STACK_ypaworld *yw, int x, int y);
+void RoboMapLayoutTileLayer(NC_STACK_ypaworld *yw, int tileSize, CmdStream *cmdbuf, int left, int top, int right, int bottom, int tilesetId, mapFunc ffunc, int xpos, int ypos);
+
+// The game's map window, of the game's own scene or another's (MapScene),
+// and the scene's unit of one of the game's
+void CreateRoboMap(NC_STACK_ypaworld *yw, const MapScene *scene = NULL);
+MapScene::Unit LiveMapUnit(NC_STACK_ypaworld *yw, NC_STACK_ypabact *bact);
+void RoboMap_InputHandle(NC_STACK_ypaworld *yw, TInputState *inpt);
+
+// Where the pointer is over the map's view, in world x and z, and the unit
+// drawn there, the player's first; false for none
+vec2d RoboMapWorldAt(const TClickBoxInf *winp);
+bool RoboMapUnitAt(NC_STACK_ypaworld *yw, const TClickBoxInf *winp, MapScene::Unit &out);
+
+// The glyph of the buildings layer, four tiles a sector, at a tile of a
+// sector of a type and simple type (TSectorDesc::SectorType) whose buildings
+// are that healthy (x + 3 * y); between sectors, of where the ground steps
+int MapLegoTile(NC_STACK_ypaworld *yw, int x, int y, int32_t typeId, int sectorType, const int16_t *health);
+
+// A unit's glyph on the map at a zoom level: its type's in its owner's
+// colour, or its vehicle's type icon with typeIcons
+int MapUnitGlyph(NC_STACK_ypaworld *yw, uint8_t type, uint8_t owner, int vehicle, int zoomLevel, bool typeIcons);
+
+// The glyph that shows how much energy a unit has left, a quarter at a time
+uint8_t EnergyGlyph(int energy, int energyMax);
+
+// What the energy panel's reload gauge shows of a host station of an owner
+// on a sector of some power: whether it fills (1), drains (-1) or neither
+// (0), the share of the sector's power the sector's owner gets, how much
+// that gives in ten seconds, in hundreds, and the gauge's label
+struct TReloadGauge
+{
+    int State = 0;
+    int SectorPower = 0;
+    float Ratio = 0.0;
+    int Amount = 0;
+    std::string Label;
+};
+
+TReloadGauge ReloadGauge(uint8_t owner, uint8_t sectorOwner, int sectorPower, float sectorRatio, int absReload);
+
+void LayoutClippedTileString(TileMap *tyle, CmdStream *cur, const std::string &st, int maxWidth, char padChar);
+
+// The squad manager's icons: a vehicle's type, and what a squad is doing
+char VehicleTypeIcon(NC_STACK_ypaworld *yw, int vehicle);
+char SquadStatusIcon(uint8_t status, int32_t statusFlags, uint8_t primaryType, uint8_t secondaryType);
+
 
 typedef void ( *wis_color_func)(NC_STACK_ypaworld *, float, float, float, float, SDL_Color *, SDL_Color *);
 
 int DrawTechUpgrade(NC_STACK_ypaworld *yw);
 void DrawHud(NC_STACK_ypaworld *yw);
-void yw_RenderHUDTarget(NC_STACK_ypaworld *yw, THudState *wis);
+void yw_RenderHUDTarget(NC_STACK_ypaworld *yw, THudState *wis, const THudSubject &unit);
 
-void yw_RenderCursorOverUnit(NC_STACK_ypaworld *yw, NC_STACK_ypabact *bact);
+// The HUD of a unit: its compass, sights and bars, as of the HUD's time
+// (_timeStamp); and the blinking line that says it or its host station is
+// gone
+THudSubject HudSubjectOf(NC_STACK_ypaworld *yw);
+void DrawHudOf(NC_STACK_ypaworld *yw, CmdStream *buf, const THudSubject &unit);
+void DrawHudDestroyed(NC_STACK_ypaworld *yw, CmdStream *buf, bool hostStation);
+
+// How far a weapon has reloaded, in percent, so long after its last shot
+// of a salvo so far
+int WeaponReloadPercent(const World::TWeapProto &wpn, int sinceShot, int salveCounter);
+
+void LoadHud(NC_STACK_ypaworld *yw);
+void FreeHud(NC_STACK_ypaworld *yw);
+
+// Where the HUD's radar is, from the screen's centre, as parts of its half
+// width and height
+const float HudRadarLeft = 0.45;
+const float HudRadarTop = 0;
+const float HudRadarRight = 0.95;
+const float HudRadarBottom = 0.6;
+
+// The marks over a unit under the pointer: a cursor in its owner's colour,
+// and how much energy it has left; and over every enemy unit around the
+// unit the player steers, with the enemy indicator preference
+void yw_RenderCursorOverUnit(NC_STACK_ypaworld *yw, const MapScene::Unit &bact);
+void yw_RenderUnitLifeBar(NC_STACK_ypaworld *yw, CmdStream *cur, const MapScene::Unit &bact);
+void yw_RenderOverlayCursors(NC_STACK_ypaworld *yw, CmdStream *cur);
 
 
 void yw_RenderHUDRadare(NC_STACK_ypaworld *yw);

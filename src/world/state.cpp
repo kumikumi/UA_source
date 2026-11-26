@@ -548,26 +548,21 @@ static void VisitSector(Visitor &v, NC_STACK_ypaworld *world, cellArea &cell, En
             cIt->second.Owner = construct.Owner;
     }
 
-    if ( !v.Visits(INTERNAL) )
-        return;
+    // The power it has, and a power station on it, of the world's: what
+    // the energy panel shows of what host stations take in
+    v.Field("energyPower", cell.energy_power, VIEW);
 
-    v.Field("energyPower", cell.energy_power);
-    v.Field("purposeIndex", cell.PurposeIndex);
-    v.Field("accumOwner", accum.Owner);
-    v.Field("accumEnergy", accum.Energy);
-
-    // A power station on it, of the world's
     TPowerStationInfo ps;
     auto psIt = world->_powerStations.find(cell.Id);
     bool powerStation = psIt != world->_powerStations.end();
     if ( powerStation )
         ps = psIt->second;
 
-    v.Field("powerStation", powerStation);
-    v.Field("power", ps.Power);
-    v.Field("effectivePower", ps.EffectivePower);
+    v.Field("powerStation", powerStation, VIEW);
+    v.Field("power", ps.Power, VIEW);
+    v.Field("effectivePower", ps.EffectivePower, VIEW);
 
-    if ( v.Reads(INTERNAL) )
+    if ( v.Reads(VIEW) )
     {
         if ( powerStation )
         {
@@ -580,6 +575,13 @@ static void VisitSector(Visitor &v, NC_STACK_ypaworld *world, cellArea &cell, En
             world->_powerStations.erase(cell.Id);
         }
     }
+
+    if ( !v.Visits(INTERNAL) )
+        return;
+
+    v.Field("purposeIndex", cell.PurposeIndex);
+    v.Field("accumOwner", accum.Owner);
+    v.Field("accumEnergy", accum.Energy);
 
     v.SectorUnits("units", cell);
 }

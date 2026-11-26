@@ -66,6 +66,7 @@ public:
     virtual size_t SetPosition(TUnitPlacement *arg);
     virtual void EnergyInteract(update_msg *arg);
     virtual void Renew();
+    virtual void VisitView(World::State::Visitor &v) override;
     virtual void VisitInternal(World::State::Visitor &v) override;
     virtual void HandBrake(update_msg *);
     virtual void CorrectPositionOnLand();

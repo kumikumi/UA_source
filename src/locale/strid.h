@@ -70,6 +70,16 @@ enum HUDSTR
     HUDSTR_OK   = 4,
     HUDSTR_EGY  = 5,
     HUDSTR_AMR  = 6,
+
+    // The replay viewer's: its factions' batteries and its keys
+    HUDSTR_SYSTEM = 7,
+    HUDSTR_CREATE = 8,
+    HUDSTR_BEAM = 9,
+    HUDSTR_RELOAD = 10,
+    HUDSTR_VEHICLES = 11,
+    HUDSTR_BUILDINGS = 12,
+    HUDSTR_REPLAYVIEWKEYS = 13,
+    HUDSTR_REPLAYFREEKEYS = 14,
     
     HUDSTR_MAX
 };
@@ -100,7 +110,10 @@ enum TITLE
     TITLE_REPLAYSAVED = 13,
     TITLE_VIEW     = 14,     // The replays page's
     TITLE_NOREPLAYS = 15,
-    TITLE_REPLAYPAUSED = 16, // The replay viewer's
+    TITLE_REPLAYPAUSED = 16, // The replay viewer's, and its ways to look
+    TITLE_REPLAYORIGINAL = 17,
+    TITLE_REPLAYMANUAL = 18,
+    TITLE_REPLAYFREE = 19,
     
     TITLE_MAX
 };

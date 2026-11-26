@@ -517,6 +517,13 @@ public:
     bool IsAnyKidWithoutSecondUnitTarget() const;
     
     void UpdateVisor(NC_STACK_ypabact *bact2, int noWeaponSight);
+
+    // The sights of a unit with a machine gun and a weapon, either -1 for
+    // none, its guns pointing at gunX, gunY on the screen, and no target
+    static THudVisor Sights(int mgun, int weapon, int weaponFlags, float gunX, float gunY, bool noWeaponSight);
+
+    // Whether a weapon of these flags (TWeapProto::_weaponFlags) has no sight
+    static bool NoWeaponSight(int weaponFlags);
     void NetBroadcastReorder(NC_STACK_ypabact *bact2, int mode);
     void StartDestFX(const World::DestFX &fx);
 

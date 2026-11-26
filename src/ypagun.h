@@ -17,6 +17,7 @@ public:
     virtual size_t SetPosition(TUnitPlacement *arg);
     virtual void EnergyInteract(update_msg *arg);
     virtual void Renew();
+    virtual void VisitView(World::State::Visitor &v) override;
     virtual void VisitInternal(World::State::Visitor &v) override;
     virtual bool TestTargetSector(const NC_STACK_ypabact *) const override;
     virtual void SetGunBasis(const vec3d &basis, bool directDown);

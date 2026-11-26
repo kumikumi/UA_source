@@ -6,6 +6,7 @@
 #include "includes.h"
 #include "yw_internal.h"
 #include "yw.h"
+#include "yw_mapscene.h"
 #include "yw_net.h"
 
 #include "font.h"
@@ -81,8 +82,6 @@ float mapSelWorldMinZ;
 float mapSelWorldMaxZ;
 
 tehMap robo_map;
-
-typedef int (*mapFunc)(NC_STACK_ypaworld *yw, int x, int y);
 
 NC_STACK_ypaworld *protoSortWorld; // For sort func
 
@@ -350,71 +349,52 @@ void RoboMapDrawIcon(CmdStream *cur, float x, float y, char glyph, int width, in
     }
 }
 
-void RoboMapDrawOrders(NC_STACK_ypaworld *yw, NC_STACK_ypabact *bact)
+void RoboMapDrawOrders(NC_STACK_ypaworld *yw, const MapScene &scene, const MapScene::Unit &bact)
 {
-    if ( bact != yw->_userRobo && bact->_host_station != bact->_parent && bact->_parent )
+    if ( bact.Id != scene.UserRoboId() && bact.HasParent && !bact.Commander )
     {
-        SDL_Color clr;
-        NC_STACK_ypabact *bct;
-
-        if ( bact->_secndTtype == BACT_TGT_TYPE_UNIT )
-        {
-            clr = yw->GetColor(10);
-            bct = bact->_secndT.pbact;
-        }
+        if ( bact.SecondaryType == BACT_TGT_TYPE_UNIT )
+            RoboMapDrawWorldLine(bact.Position.x, bact.Position.z, bact.SecondaryPos.x, bact.SecondaryPos.z, yw->GetColor(10));
         else
-        {
-            if ( !bact->_parent )
-                return;
+            RoboMapDrawWorldLine(bact.Position.x, bact.Position.z, bact.ParentPos.x, bact.ParentPos.z, yw->GetColor(11));
 
-            clr = yw->GetColor(11);
-            bct = bact->_parent;
-        }
-
-        RoboMapDrawWorldLine(bact->_position.x, bact->_position.z, bct->_position.x, bct->_position.z, clr);
         return;
     }
 
-    if ( bact->_secndTtype == BACT_TGT_TYPE_UNIT )
+    if ( bact.SecondaryType == BACT_TGT_TYPE_UNIT )
     {
-        NC_STACK_ypabact *bct = bact->_secndT.pbact;
-
-        RoboMapDrawWorldLine(bact->_position.x, bact->_position.z, bct->_position.x, bct->_position.z,  yw->GetColor(10));
+        RoboMapDrawWorldLine(bact.Position.x, bact.Position.z, bact.SecondaryPos.x, bact.SecondaryPos.z,  yw->GetColor(10));
         return;
     }
 
-    if ( bact->_secndTtype == BACT_TGT_TYPE_CELL )
+    if ( bact.SecondaryType == BACT_TGT_TYPE_CELL )
     {
-        RoboMapDrawWorldLine(bact->_position.x, bact->_position.z, bact->_sencdTpos.x, bact->_sencdTpos.z, yw->GetColor(10));
+        RoboMapDrawWorldLine(bact.Position.x, bact.Position.z, bact.SecondaryPos.x, bact.SecondaryPos.z, yw->GetColor(10));
     }
     else
     {
-        if ( bact->_primTtype == BACT_TGT_TYPE_CELL )
-        {
-            RoboMapDrawWorldLine(bact->_position.x, bact->_position.z, bact->_primTpos.x, bact->_primTpos.z, yw->GetColor(9));
-        }
-        else if ( bact->_primTtype == BACT_TGT_TYPE_UNIT )
-        {
-            RoboMapDrawWorldLine(bact->_position.x, bact->_position.z, bact->_primT.pbact->_position.x, bact->_primT.pbact->_position.z, yw->GetColor(9));
-        }
+        if ( bact.PrimaryType == BACT_TGT_TYPE_CELL || bact.PrimaryType == BACT_TGT_TYPE_UNIT )
+            RoboMapDrawWorldLine(bact.Position.x, bact.Position.z, bact.PrimaryPos.x, bact.PrimaryPos.z, yw->GetColor(9));
 
-        if ( bact->_status_flg & BACT_STFLAG_WAYPOINT )
+        if ( (bact.StatusFlags & BACT_STFLAG_WAYPOINT) && bact.Waypoints )
         {
-            if ( bact->_status_flg & BACT_STFLAG_WAYPOINTCCL )
+            const vec3d *waypoints = bact.Waypoints;
+
+            if ( bact.StatusFlags & BACT_STFLAG_WAYPOINTCCL )
             {
                 SDL_Color clr = yw->GetColor(9);
 
-                for (int i = 1; i < bact->_waypoints_count; i++)
-                    RoboMapDrawWorldLine(bact->_waypoints[i - 1].x, bact->_waypoints[i - 1].z, bact->_waypoints[i].x, bact->_waypoints[i].z, clr);
+                for (int i = 1; i < bact.WaypointCount; i++)
+                    RoboMapDrawWorldLine(waypoints[i - 1].x, waypoints[i - 1].z, waypoints[i].x, waypoints[i].z, clr);
 
-                RoboMapDrawWorldLine(bact->_waypoints[bact->_waypoints_count - 1].x, bact->_waypoints[bact->_waypoints_count - 1].z, bact->_waypoints[0].x, bact->_waypoints[0].z, clr);
+                RoboMapDrawWorldLine(waypoints[bact.WaypointCount - 1].x, waypoints[bact.WaypointCount - 1].z, waypoints[0].x, waypoints[0].z, clr);
             }
-            else if ( bact->_waypoints_count > 0 )
+            else if ( bact.WaypointCount > 0 )
             {
                 SDL_Color clr = yw->GetColor(9);
 
-                for (int i = bact->_current_waypoint; i < bact->_waypoints_count - 1; i++)
-                    RoboMapDrawWorldLine(bact->_waypoints[i].x, bact->_waypoints[i].z, bact->_waypoints[i + 1].x, bact->_waypoints[i + 1].z, clr);
+                for (int i = bact.CurrentWaypoint; i < bact.WaypointCount - 1; i++)
+                    RoboMapDrawWorldLine(waypoints[i].x, waypoints[i].z, waypoints[i + 1].x, waypoints[i + 1].z, clr);
             }
         }
     }
@@ -510,66 +490,48 @@ void  RoboMapDrawRoboAIDebug(NC_STACK_ypaworld *yw)
 
 void RoboMapDrawLines(NC_STACK_ypaworld *yw)
 {
+    const MapScene &scene = *robo_map.Scene;
+    MapScene::Unit user;
+    bool hasUser = scene.UserUnit(user);
+
     if ( robo_map.stateFlags & 0x100 )
     {
-        if ( yw->_userRobo != yw->_userUnit && yw->_userUnit->_parent )
+        if ( hasUser && scene.UserRoboId() != user.Id && user.HasParent )
         {
-            RoboMapDrawWorldLine(yw->_userUnit->_position.x, yw->_userUnit->_position.z, yw->_userUnit->_parent->_position.x, yw->_userUnit->_parent->_position.z, yw->GetColor(11));
+            RoboMapDrawWorldLine(user.Position.x, user.Position.z, user.ParentPos.x, user.ParentPos.z, yw->GetColor(11));
 
-            if ( yw->_userUnit->IsParentMyRobo() )
-            {
-                int hasTarget = 0;
-                float targetX, targetZ;
-
-                if ( yw->_userUnit->_primTtype == BACT_TGT_TYPE_CELL )
-                {
-                    targetX = yw->_userUnit->_primTpos.x;
-                    targetZ = yw->_userUnit->_primTpos.z;
-                    hasTarget = 1;
-                }
-                else if ( yw->_userUnit->_primTtype == BACT_TGT_TYPE_UNIT )
-                {
-                    targetX = yw->_userUnit->_primT.pbact->_position.x;
-                    targetZ = yw->_userUnit->_primT.pbact->_position.z;
-                    hasTarget = 1;
-                }
-
-                if ( hasTarget )
-                    RoboMapDrawWorldLine(yw->_userUnit->_position.x, yw->_userUnit->_position.z, targetX, targetZ, yw->GetColor(9));
-            }
+            if ( user.Commander && (user.PrimaryType == BACT_TGT_TYPE_CELL || user.PrimaryType == BACT_TGT_TYPE_UNIT) )
+                RoboMapDrawWorldLine(user.Position.x, user.Position.z, user.PrimaryPos.x, user.PrimaryPos.z, yw->GetColor(9));
         }
     }
     else
     {
         if ( robo_map.layerFlags & 4 )
         {
-            for (NC_STACK_ypabact* const comm: yw->_cmdrsRemap)
+            scene.ForEachCommander([yw, &scene](const MapScene::Unit &comm)
             {
-                if (comm->_status != BACT_STATUS_DEAD)
-                    RoboMapDrawOrders(yw, comm);
+                if ( comm.Status != BACT_STATUS_DEAD )
+                    RoboMapDrawOrders(yw, scene, comm);
 
-                for( NC_STACK_ypabact* &kid : comm->_kidList )
+                scene.ForEachKid(comm, [yw, &scene](const MapScene::Unit &kid)
                 {
-                    if ( kid->_status != BACT_STATUS_DEAD )
-                        RoboMapDrawOrders(yw, kid);
-                }
-            }
+                    if ( kid.Status != BACT_STATUS_DEAD )
+                        RoboMapDrawOrders(yw, scene, kid);
+                });
+            });
         }
         else
         {
-            if ( yw->_activeCmdrRemapIndex != -1 )
-            {
-                NC_STACK_ypabact *tmp = yw->_cmdrsRemap[yw->_activeCmdrRemapIndex];
+            MapScene::Unit selected;
 
-                if ( tmp->_status != BACT_STATUS_DEAD )
-                    RoboMapDrawOrders(yw, tmp);
-            }
+            if ( scene.SelectedCommander(selected) && selected.Status != BACT_STATUS_DEAD )
+                RoboMapDrawOrders(yw, scene, selected);
         }
 
-        if ( yw->_userUnit )
+        if ( hasUser )
         {
-            RoboMapDrawWorldLine(yw->_userUnit->_position.x, 0.0, yw->_userUnit->_position.x, -yw->_mapLength.y, yw->GetColor(13));
-            RoboMapDrawWorldLine(0.0, yw->_userUnit->_position.z, yw->_mapLength.x, yw->_userUnit->_position.z, yw->GetColor(13));
+            RoboMapDrawWorldLine(user.Position.x, 0.0, user.Position.x, -yw->_mapLength.y, yw->GetColor(13));
+            RoboMapDrawWorldLine(0.0, user.Position.z, yw->_mapLength.x, user.Position.z, yw->GetColor(13));
         }
 
         if ( robo_map.stateFlags & 0x200 )
@@ -598,7 +560,7 @@ void RoboMapDrawLines(NC_STACK_ypaworld *yw)
         }
     }
 
-    if ( yw->_showDebugMode )
+    if ( yw->_showDebugMode && scene.Interactive() )
         RoboMapDrawRoboAIDebug(yw);
 }
 
@@ -709,56 +671,55 @@ void RoboMapDrawSpecialSectors(NC_STACK_ypaworld *yw, CmdStream *cur)
         break;
     }
 
+    const MapScene &scene = *robo_map.Scene;
+    uint8_t player = scene.PlayerOwner();
+
     if ( iconSize >= 8 )
     {
         if ( robo_map.layerFlags & 1 )
         {
             FontUA::select_tileset(cur, tilesetId);
 
-            for ( const auto &ps : yw->_powerStations )
+            scene.ForEachPowerStation([&](const Common::Point &cellId, int power)
             {
-                if ( ps.second.pCell )
+                if ( scene.CanSee(cellId, player) )
                 {
-                    if ( ps.second.pCell->IsCanSee(yw->_userRobo->_owner) )
+                    if ( power > 0 )
                     {
-                        if ( ps.second.EffectivePower > 0 )
-                        {
-                            int energyGlyph = 0;
-                            
-                            vec2d tmp = World::SectorIDToCenterPos2(ps.second.CellId);
+                        int energyGlyph = 0;
 
-                            if ( ps.second.EffectivePower <= 32)
-                                energyGlyph = 0x80;
-                            else if ( ps.second.EffectivePower <= 64)
-                                energyGlyph = 0x81;
-                            else if ( ps.second.EffectivePower <= 96)
-                                energyGlyph = 0x82;
-                            else if ( ps.second.EffectivePower <= 128)
-                                energyGlyph = 0x83;
-                            else if ( ps.second.EffectivePower <= 160)
-                                energyGlyph = 0x84;
-                            else if ( ps.second.EffectivePower <= 192)
-                                energyGlyph = 0x85;
-                            else if ( ps.second.EffectivePower <= 224)
-                                energyGlyph = 0x86;
-                            else if ( ps.second.EffectivePower <= 256)
-                                energyGlyph = 0x87;
+                        vec2d tmp = World::SectorIDToCenterPos2(cellId);
 
-                            RoboMapDrawIcon(cur, tmp.x, tmp.y, 0x89, iconSize, iconSize);
-                            RoboMapDrawIconStrip(cur, tmp.x, tmp.y, energyGlyph, iconSize, iconSize / 8);
-                        }
+                        if ( power <= 32)
+                            energyGlyph = 0x80;
+                        else if ( power <= 64)
+                            energyGlyph = 0x81;
+                        else if ( power <= 96)
+                            energyGlyph = 0x82;
+                        else if ( power <= 128)
+                            energyGlyph = 0x83;
+                        else if ( power <= 160)
+                            energyGlyph = 0x84;
+                        else if ( power <= 192)
+                            energyGlyph = 0x85;
+                        else if ( power <= 224)
+                            energyGlyph = 0x86;
+                        else if ( power <= 256)
+                            energyGlyph = 0x87;
+
+                        RoboMapDrawIcon(cur, tmp.x, tmp.y, 0x89, iconSize, iconSize);
+                        RoboMapDrawIconStrip(cur, tmp.x, tmp.y, energyGlyph, iconSize, iconSize / 8);
                     }
                 }
-            }
+            });
 
             for ( const TMapGem &gem : yw->_techUpgrades )
             {
-                cellArea &cell = yw->SectorAt(gem.CellId);
-                if ( cell.IsCanSee(yw->_userRobo->_owner) )
+                if ( scene.CanSee(gem.CellId, player) )
                 {
                     int showGem = 1;
 
-                    if ( cell.PurposeType == cellArea::PT_TECHUPGRADE )
+                    if ( scene.Purpose(gem.CellId) == cellArea::PT_TECHUPGRADE )
                     {
                         if ( yw->_timeStamp / 300 & 1 )
                             showGem = 0;
@@ -774,9 +735,9 @@ void RoboMapDrawSpecialSectors(NC_STACK_ypaworld *yw, CmdStream *cur)
 
             for ( const TMapGate &gate : yw->_levelInfo.Gates )
             {
-                if ( gate.PCell->PurposeType == cellArea::PT_GATECLOSED )
+                if ( scene.Purpose(gate.CellId) == cellArea::PT_GATECLOSED )
                 {
-                    if ( gate.PCell->IsCanSee(yw->_userRobo->_owner) )
+                    if ( scene.CanSee(gate.CellId, player) )
                     {
                         vec2d tmp = World::SectorIDToCenterPos2( gate.CellId );
                         RoboMapDrawIcon(cur, tmp.x, tmp.y, 0x93, iconSize, iconSize);
@@ -786,9 +747,9 @@ void RoboMapDrawSpecialSectors(NC_STACK_ypaworld *yw, CmdStream *cur)
                     {
                         if ( ks.PCell )
                         {
-                            if ( ks.PCell->IsCanSee(yw->_userRobo->_owner) )
+                            if ( scene.CanSee(ks.CellId, player) )
                             {
-                                if ( ks.PCell->owner == yw->_userRobo->_owner || yw->_timeStamp / 300 & 1 )
+                                if ( scene.Owner(ks.CellId) == player || yw->_timeStamp / 300 & 1 )
                                 {
                                     vec2d tmp = World::SectorIDToCenterPos2( ks.CellId );
                                     RoboMapDrawIcon(cur, tmp.x, tmp.y, 0x8A, iconSize, iconSize);
@@ -797,9 +758,9 @@ void RoboMapDrawSpecialSectors(NC_STACK_ypaworld *yw, CmdStream *cur)
                         }
                     }
                 }
-                else if ( gate.PCell->PurposeType == cellArea::PT_GATEOPENED )
+                else if ( scene.Purpose(gate.CellId) == cellArea::PT_GATEOPENED )
                 {
-                    if ( gate.PCell->IsCanSee(yw->_userRobo->_owner) )
+                    if ( scene.CanSee(gate.CellId, player) )
                     {
                         if ( yw->_timeStamp / 300 & 1 )
                         {
@@ -810,8 +771,10 @@ void RoboMapDrawSpecialSectors(NC_STACK_ypaworld *yw, CmdStream *cur)
                 }
             }
 
-            for (const TMapSuperItem &sitem : yw->_levelInfo.SuperItems)
+            for (size_t itemIndex = 0; itemIndex < yw->_levelInfo.SuperItems.size(); itemIndex++)
             {
+                const TMapSuperItem &sitem = yw->_levelInfo.SuperItems[itemIndex];
+                int itemState = scene.SuperItemState(itemIndex);
                 int keyGlyph = 0;
                 int itemGlyph = 0;
 
@@ -819,24 +782,24 @@ void RoboMapDrawSpecialSectors(NC_STACK_ypaworld *yw, CmdStream *cur)
                 {
                     keyGlyph = 0x8E;
 
-                    if ( sitem.State == TMapSuperItem::STATE_INACTIVE )
+                    if ( itemState == TMapSuperItem::STATE_INACTIVE )
                         itemGlyph = 0x8B;
-                    else if ( sitem.State == TMapSuperItem::STATE_ACTIVE ||
-                              sitem.State == TMapSuperItem::STATE_STOPPED )
+                    else if ( itemState == TMapSuperItem::STATE_ACTIVE ||
+                              itemState == TMapSuperItem::STATE_STOPPED )
                         itemGlyph = 0x8C;
-                    else if ( sitem.State == TMapSuperItem::STATE_TRIGGED )
+                    else if ( itemState == TMapSuperItem::STATE_TRIGGED )
                         itemGlyph = 0x8D;
                 }
                 else if ( sitem.Type == TMapSuperItem::TYPE_WAVE )
                 {
                     keyGlyph = 0x92;
 
-                    if ( sitem.State == TMapSuperItem::STATE_INACTIVE )
+                    if ( itemState == TMapSuperItem::STATE_INACTIVE )
                         itemGlyph = 0x8F;
-                    else if ( sitem.State == TMapSuperItem::STATE_ACTIVE ||
-                              sitem.State == TMapSuperItem::STATE_STOPPED )
+                    else if ( itemState == TMapSuperItem::STATE_ACTIVE ||
+                              itemState == TMapSuperItem::STATE_STOPPED )
                         itemGlyph = 0x90;
-                    else if ( sitem.State == TMapSuperItem::STATE_TRIGGED )
+                    else if ( itemState == TMapSuperItem::STATE_TRIGGED )
                         itemGlyph = 0x91;
                 }
 
@@ -844,9 +807,9 @@ void RoboMapDrawSpecialSectors(NC_STACK_ypaworld *yw, CmdStream *cur)
                 {
                     int showItem = 0;
 
-                    if ( sitem.PCell->IsCanSee(yw->_userRobo->_owner) )
+                    if ( scene.CanSee(sitem.CellId, player) )
                     {
-                        if ( sitem.PCell->owner == yw->_userRobo->_owner || yw->_timeStamp / 300 & 1 )
+                        if ( scene.Owner(sitem.CellId) == player || yw->_timeStamp / 300 & 1 )
                             showItem = 1;
                     }
 
@@ -862,9 +825,9 @@ void RoboMapDrawSpecialSectors(NC_STACK_ypaworld *yw, CmdStream *cur)
                         {
                             if ( ks.PCell )
                             {
-                                if ( ks.PCell->IsCanSee(yw->_userRobo->_owner) )
+                                if ( scene.CanSee(ks.CellId, player) )
                                 {
-                                    if ( ks.PCell->owner == yw->_userRobo->_owner || yw->_timeStamp / 500 & 1 )
+                                    if ( scene.Owner(ks.CellId) == player || yw->_timeStamp / 500 & 1 )
                                     {
                                         vec2d tmp = World::SectorIDToCenterPos2( ks.CellId );
                                         // TODO(bug): Key sectors get itemGlyph; keyGlyph (0x8E/0x92) is only used as a flag.
@@ -882,81 +845,86 @@ void RoboMapDrawSpecialSectors(NC_STACK_ypaworld *yw, CmdStream *cur)
     }
 }
 
-void RoboMapDrawUnit(NC_STACK_ypaworld *yw, CmdStream *cur, int height, int width, NC_STACK_ypabact *bact, int useTypeIcons)
+int MapUnitGlyph(NC_STACK_ypaworld *yw, uint8_t type, uint8_t owner, int vehicle, int zoomLevel, bool typeIcons)
 {
-    if ( bact->_status != BACT_STATUS_DEAD && !bact->IsHiddenFor( yw->GetPlayerOwner() ) )
+    if ( typeIcons )
     {
-        int glyph;
-
-        if ( useTypeIcons )
-        {
-            if ( bact->_bact_type == BACT_TYPES_MISSLE )
-                glyph = bact->_owner + 1;
-            else
-                glyph = yw->_vhclProtos[bact->_vehicleID].type_icon;
-        }
+        if ( type == BACT_TYPES_MISSLE )
+            return owner + 1;
         else
+            return yw->_vhclProtos[vehicle].type_icon;
+    }
+
+    switch ( type )
+    {
+    case BACT_TYPES_BACT:
+        return owner + 9;
+
+    case BACT_TYPES_ROBO:
+        switch ( zoomLevel )
         {
-            switch ( bact->_bact_type )
-            {
-            case BACT_TYPES_BACT:
-                glyph = bact->_owner + 9;
-                break;
+        case 0:
+        case 1:
+            return owner + 0x30;
 
-            case BACT_TYPES_ROBO:
-                switch ( robo_map.zoomLevel )
-                {
-                case 0:
-                case 1:
-                    glyph = bact->_owner + 0x30;
-                    break;
+        case 2:
+            return owner + 0x28;
 
-                case 2:
-                    glyph = bact->_owner + 0x28;
-                    break;
+        case 3:
+            return owner + 0x20;
 
-                case 3:
-                    glyph = bact->_owner + 0x20;
-                    break;
-
-                case 4:
-                    glyph = bact->_owner + 0x18;
-                    break;
-                }
-                break;
-
-            case BACT_TYPES_MISSLE:
-                glyph = bact->_owner + 1;
-                break;
-
-            case BACT_TYPES_TANK:
-            case BACT_TYPES_CAR:
-                glyph = bact->_owner + 0x19;
-                break;
-
-            case BACT_TYPES_FLYER:
-                glyph = bact->_owner + 0x11;
-                break;
-
-            case BACT_TYPES_UFO:
-                glyph = bact->_owner + 0x21;
-                break;
-
-            case BACT_TYPES_GUN:
-                glyph = bact->_owner + 0x29;
-                break;
-
-            default:
-                glyph = 0x41;
-                break;
-            }
+        default:
+            return owner + 0x18;
         }
 
-        RoboMapDrawIcon(cur, bact->_position.x, bact->_position.z, glyph, height, width);
+    case BACT_TYPES_MISSLE:
+        return owner + 1;
 
-        if ( bact->_bact_type != BACT_TYPES_MISSLE && robo_map.zoomLevel > 2 )
+    case BACT_TYPES_TANK:
+    case BACT_TYPES_CAR:
+        return owner + 0x19;
+
+    case BACT_TYPES_FLYER:
+        return owner + 0x11;
+
+    case BACT_TYPES_UFO:
+        return owner + 0x21;
+
+    case BACT_TYPES_GUN:
+        return owner + 0x29;
+
+    default:
+        return 0x41;
+    }
+}
+
+uint8_t EnergyGlyph(int energy, int energyMax)
+{
+    float energyRatio = energyMax > 0 ? (float)energy / (float)energyMax : 0.0;
+
+    if ( energyRatio > 0.75 )
+        return 0x83;
+    else if ( energyRatio > 0.5 )
+        return 0x82;
+    else if ( energyRatio > 0.25 )
+        return 0x81;
+    else
+        return 0x80;
+}
+
+void RoboMapDrawUnit(NC_STACK_ypaworld *yw, CmdStream *cur, int height, int width, const MapScene::Unit &bact, int useTypeIcons)
+{
+    const MapScene &scene = *robo_map.Scene;
+
+    if ( bact.Status != BACT_STATUS_DEAD && !bact.Hidden )
+    {
+        int glyph = MapUnitGlyph(yw, bact.Type, bact.Owner, bact.Vehicle, robo_map.zoomLevel, useTypeIcons);
+
+        RoboMapDrawIcon(cur, bact.Position.x, bact.Position.z, glyph, height, width);
+
+        if ( bact.Type != BACT_TYPES_MISSLE && robo_map.zoomLevel > 2 )
         {
-            SDL_Color clr = yw->GetColor(bact->_owner);
+            SDL_Color clr = yw->GetColor(bact.Owner);
 
             int drawBase = 0;
             float dirX, dirZ;
@@ -967,12 +935,12 @@ void RoboMapDrawUnit(NC_STACK_ypaworld *yw, CmdStream *cur, int height, int widt
             float tipDepth;
             float rightDepth;
 
-            if ( bact == yw->_userRobo )
+            if ( bact.Id == scene.UserRoboId() )
             {
-                dirX = bact->_viewer_rotation.m02;
-                dirZ = bact->_viewer_rotation.m22;
+                dirX = bact.LookRotation.m02;
+                dirZ = bact.LookRotation.m22;
 
-                if ( bact == yw->_userUnit )
+                if ( bact.Id == scene.UserUnitId() )
                 {
                     leftSide = -380.0;
                     rightSide = 380.0;
@@ -995,10 +963,10 @@ void RoboMapDrawUnit(NC_STACK_ypaworld *yw, CmdStream *cur, int height, int widt
                     rightDepth = 0.0;
                 }
             }
-            else if ( bact == yw->_userUnit )
+            else if ( bact.Id == scene.UserUnitId() )
             {
-                dirX = yw->_viewerRotation.m02;
-                dirZ = yw->_viewerRotation.m22;
+                dirX = scene.ViewerRotation().m02;
+                dirZ = scene.ViewerRotation().m22;
 
                 leftSide = -190.0;
                 rightSide = 190.0;
@@ -1013,8 +981,8 @@ void RoboMapDrawUnit(NC_STACK_ypaworld *yw, CmdStream *cur, int height, int widt
             }
             else
             {
-                dirX = bact->_rotation.m02;
-                dirZ = bact->_rotation.m22;
+                dirX = bact.Rotation.m02;
+                dirZ = bact.Rotation.m22;
 
                 leftSide = -40.0;
                 rightSide = 40.0;
@@ -1040,15 +1008,15 @@ void RoboMapDrawUnit(NC_STACK_ypaworld *yw, CmdStream *cur, int height, int widt
 
             float negNormX = -normX;
 
-            float leftX = normZ * leftSide + negNormX * leftDepth + bact->_position.x;
-            float leftZ = normX * leftSide + normZ * leftDepth + bact->_position.z;
-            float tipX = normZ * 0.0 + negNormX * tipDepth + bact->_position.x;
-            float tipZ = normX * 0.0 + normZ * tipDepth + bact->_position.z;
+            float leftX = normZ * leftSide + negNormX * leftDepth + bact.Position.x;
+            float leftZ = normX * leftSide + normZ * leftDepth + bact.Position.z;
+            float tipX = normZ * 0.0 + negNormX * tipDepth + bact.Position.x;
+            float tipZ = normX * 0.0 + normZ * tipDepth + bact.Position.z;
 
             RoboMapDrawWorldLine(leftX, leftZ, tipX, tipZ, clr);
 
-            float rightX = normZ * rightSide + negNormX * rightDepth + bact->_position.x;
-            float rightZ = normX * rightSide + normZ * rightDepth + bact->_position.z;
+            float rightX = normZ * rightSide + negNormX * rightDepth + bact.Position.x;
+            float rightZ = normX * rightSide + normZ * rightDepth + bact.Position.z;
 
             RoboMapDrawWorldLine(rightX, rightZ, tipX, tipZ, clr);
 
@@ -1056,37 +1024,14 @@ void RoboMapDrawUnit(NC_STACK_ypaworld *yw, CmdStream *cur, int height, int widt
                 RoboMapDrawWorldLine(leftX, leftZ, rightX, rightZ, clr); // Also draw base of view triangle
         }
 
-        if ( bact->_bact_type != BACT_TYPES_MISSLE && bact->_bact_type != BACT_TYPES_ROBO && bact->_owner == yw->_userRobo->_owner )
+        if ( bact.Type != BACT_TYPES_MISSLE && bact.Type != BACT_TYPES_ROBO && bact.Owner == scene.PlayerOwner() )
         {
             if ( robo_map.layerFlags & 4 && robo_map.zoomLevel > 2 )
-            {
-                float energyRatio = (float)bact->_energy / (float)bact->_energy_max;
-                int energyGlyph;
-
-                if ( energyRatio > 0.25 )
-                {
-                    if ( energyRatio > 0.5 )
-                    {
-                        if ( energyRatio > 0.75 )
-                            energyGlyph = 0x83;
-                        else
-                            energyGlyph = 0x82;
-                    }
-                    else
-                    {
-                        energyGlyph = 0x81;
-                    }
-                }
-                else
-                {
-                    energyGlyph = 0x80;
-                }
-
-                RoboMapDrawIcon(cur, bact->_position.x, bact->_position.z, energyGlyph, height, width);
-            }
+                RoboMapDrawIcon(cur, bact.Position.x, bact.Position.z, EnergyGlyph(bact.Energy, bact.EnergyMax), height, width);
         }
     }
 }
+
 
 NC_STACK_ypabact * GetSquadLeader(NC_STACK_ypabact *bact)
 {
@@ -1102,20 +1047,185 @@ NC_STACK_ypabact * GetSquadLeader(NC_STACK_ypabact *bact)
     return bact;
 }
 
-void RoboMapDrawSquadIcons(NC_STACK_ypaworld *yw, CmdStream *cur, NC_STACK_ypabact *bact, int tilesetId, int glyph, int width, int height)
+bool MapScene::CanSee(const Common::Point &sector, uint8_t owner) const
 {
-    if ( bact )
+    return (cellArea::ViewMask(owner) & ViewMask(sector)) != 0;
+}
+
+// The map's scene of the game itself: the world as it is now, as the player
+// sees it
+MapScene::Unit LiveMapUnit(NC_STACK_ypaworld *yw, NC_STACK_ypabact *bact)
+{
+    MapScene::Unit u;
+    u.Id = bact->_gid;
+    u.Type = bact->_bact_type;
+    u.Owner = bact->_owner;
+    u.Status = bact->_status;
+    u.StatusFlags = bact->_status_flg;
+    u.Vehicle = bact->_vehicleID;
+    u.Position = bact->_position;
+    u.Sector = bact->_cellId;
+    u.Rotation = bact->_rotation;
+    u.LookRotation = bact->_viewer_rotation;
+    u.Energy = bact->_energy;
+    u.EnergyMax = bact->_energy_max;
+    u.Hidden = bact->IsHiddenFor( yw->GetPlayerOwner() );
+    u.RoboGun = bact->_bact_type == BACT_TYPES_GUN && static_cast<NC_STACK_ypagun *>(bact)->IsRoboGun();
+    u.Commander = bact->IsParentMyRobo();
+
+    if ( bact->_parent )
     {
-        FontUA::select_tileset(cur, tilesetId);
+        u.HasParent = true;
+        u.Parent = bact->_parent->_gid;
+        u.ParentPos = bact->_parent->_position;
+    }
 
-        RoboMapDrawIcon(cur, bact->_position.x, bact->_position.z, glyph, width, height);
+    u.PrimaryType = bact->_primTtype;
 
-        for( NC_STACK_ypabact* &kid : bact->_kidList )
+    if ( bact->_primTtype == BACT_TGT_TYPE_CELL )
+    {
+        u.PrimaryPos = bact->_primTpos;
+
+        if ( bact->_primT.pcell )
+            u.PrimarySector = bact->_primT.pcell->CellId;
+    }
+    else if ( bact->_primTtype == BACT_TGT_TYPE_UNIT && bact->_primT.pbact )
+    {
+        u.PrimaryPos = bact->_primT.pbact->_position;
+    }
+
+    u.SecondaryType = bact->_secndTtype;
+
+    if ( bact->_secndTtype == BACT_TGT_TYPE_CELL )
+        u.SecondaryPos = bact->_sencdTpos;
+    else if ( bact->_secndTtype == BACT_TGT_TYPE_UNIT && bact->_secndT.pbact )
+        u.SecondaryPos = bact->_secndT.pbact->_position;
+
+    u.Waypoints = bact->_waypoints;
+    u.WaypointCount = bact->_waypoints_count;
+    u.CurrentWaypoint = bact->_current_waypoint;
+    u.Bact = bact;
+    return u;
+}
+
+class LiveMapScene : public MapScene
+{
+public:
+    NC_STACK_ypaworld *World = NULL;
+
+    int32_t ViewMask(const Common::Point &sector) const override { return World->_cells(sector).view_mask; }
+    uint8_t Owner(const Common::Point &sector) const override { return World->_cells(sector).owner; }
+    int32_t Type(const Common::Point &sector) const override { return World->_cells(sector).type_id; }
+    uint8_t SimpleType(const Common::Point &sector) const override { return World->_cells(sector).SectorType; }
+    const int16_t *Health(const Common::Point &sector) const override { return World->_cells(sector).buildings_health.data(); }
+    uint8_t Purpose(const Common::Point &sector) const override { return World->_cells(sector).PurposeType; }
+
+    void ForEachUnitIn(const Common::Point &sector, const UnitFunc &func) const override
+    {
+        for ( NC_STACK_ypabact *bact : World->_cells(sector).unitsList )
+            func(LiveMapUnit(World, bact));
+    }
+
+    void ForEachKid(const Unit &unit, const UnitFunc &func) const override
+    {
+        if ( unit.Bact )
         {
-            if ( kid->_status != BACT_STATUS_DEAD )
-                RoboMapDrawIcon(cur, kid->_position.x, kid->_position.z, glyph, width, height);
+            for ( NC_STACK_ypabact *kid : unit.Bact->_kidList )
+                func(LiveMapUnit(World, kid));
         }
     }
+
+    bool SquadLeader(const Unit &unit, Unit &leader) const override
+    {
+        NC_STACK_ypabact *bact = GetSquadLeader(unit.Bact);
+
+        if ( !bact )
+            return false;
+
+        leader = LiveMapUnit(World, bact);
+        return true;
+    }
+
+    uint8_t PlayerOwner() const override { return World->_userRobo->_owner; }
+    uint32_t UserRoboId() const override { return World->_userRobo ? World->_userRobo->_gid : 0; }
+    uint32_t UserUnitId() const override { return World->_userUnit ? World->_userUnit->_gid : 0; }
+
+    bool UserRobo(Unit &out) const override
+    {
+        if ( World->_userRobo )
+            out = LiveMapUnit(World, World->_userRobo);
+
+        return World->_userRobo != NULL;
+    }
+
+    bool UserUnit(Unit &out) const override
+    {
+        if ( World->_userUnit )
+            out = LiveMapUnit(World, World->_userUnit);
+
+        return World->_userUnit != NULL;
+    }
+
+    bool ViewerPosition(vec3d &out) const override
+    {
+        if ( World->_viewerBact )
+            out = World->_viewerBact->_position;
+
+        return World->_viewerBact != NULL;
+    }
+
+    mat3x3 ViewerRotation() const override { return World->_viewerRotation; }
+
+    // The game marks it by what a click would do
+    bool Hovered(Unit &out) const override { return false; }
+
+    void ForEachCommander(const UnitFunc &func) const override
+    {
+        for ( NC_STACK_ypabact *comm : World->_cmdrsRemap )
+            func(LiveMapUnit(World, comm));
+    }
+
+    bool SelectedCommander(Unit &out) const override
+    {
+        if ( World->_activeCmdrRemapIndex == -1 || !World->_cmdrsRemap[World->_activeCmdrRemapIndex] )
+            return false;
+
+        out = LiveMapUnit(World, World->_cmdrsRemap[World->_activeCmdrRemapIndex]);
+        return true;
+    }
+
+    void ForEachPowerStation(const std::function<void(const Common::Point &, int)> &func) const override
+    {
+        for ( const auto &ps : World->_powerStations )
+        {
+            if ( ps.second.pCell )
+                func(ps.second.CellId, ps.second.EffectivePower);
+        }
+    }
+
+    int SuperItemState(size_t index) const override { return World->_levelInfo.SuperItems[index].State; }
+
+    bool Interactive() const override { return true; }
+};
+
+static LiveMapScene &LiveScene(NC_STACK_ypaworld *yw)
+{
+    static LiveMapScene scene;
+    scene.World = yw;
+    return scene;
+}
+
+void RoboMapDrawSquadIcons(NC_STACK_ypaworld *yw, CmdStream *cur, const MapScene::Unit &bact, int tilesetId, int glyph, int width, int height)
+{
+    FontUA::select_tileset(cur, tilesetId);
+
+    RoboMapDrawIcon(cur, bact.Position.x, bact.Position.z, glyph, width, height);
+
+    robo_map.Scene->ForEachKid(bact, [&](const MapScene::Unit &kid)
+    {
+        if ( kid.Status != BACT_STATUS_DEAD )
+            RoboMapDrawIcon(cur, kid.Position.x, kid.Position.z, glyph, width, height);
+    });
 }
 
 int NC_STACK_ypaworld::SectorBeamEnergy(const Common::Point &sector)
@@ -1151,6 +1261,28 @@ void RoboMapDrawSectorLabel(NC_STACK_ypaworld *yw, const std::string &labl, int 
 
         for ( uint8_t c : labl )
             FontUA::store_s8(cur, c);
+    }
+}
+
+// The unit a click would select: a host station, or the squad the unit is
+// in
+static void RoboMapDrawHovered(NC_STACK_ypaworld *yw, CmdStream *cur, const MapScene::Unit &unit, int roboHoverGlyph, int markerTileset,
+                               int markerWidth, int markerHeight)
+{
+    if ( unit.Type == BACT_TYPES_ROBO )
+    {
+        int roboIconSize = yw->_guiTiles[1]->h;
+
+        FontUA::select_tileset(cur, 1);
+
+        RoboMapDrawIcon(cur, unit.Position.x, unit.Position.z, roboHoverGlyph, roboIconSize, roboIconSize);
+    }
+    else
+    {
+        MapScene::Unit leader;
+
+        if ( robo_map.Scene->SquadLeader(unit, leader) )
+            RoboMapDrawSquadIcons(yw, cur, leader, markerTileset, 0x85, markerWidth, markerHeight);
     }
 }
 
@@ -1218,7 +1350,16 @@ void RoboMapDrawMarkers(NC_STACK_ypaworld *yw, CmdStream *cur)
     }
 
 
-    switch ( yw->_doAction )
+    const MapScene &scene = *robo_map.Scene;
+
+    // Watching a replay, the unit under the pointer is marked as the game
+    // marks the one a click would select
+    MapScene::Unit hovered;
+
+    if ( !scene.Interactive() && scene.Hovered(hovered) )
+        RoboMapDrawHovered(yw, cur, hovered, roboHoverGlyph, markerTileset, markerWidth, markerHeight);
+
+    switch ( scene.Interactive() ? yw->_doAction : World::DOACTION_0 )
     {
     case World::DOACTION_2:
         if ( !(robo_map.stateFlags & 0x200) )
@@ -1263,26 +1404,7 @@ void RoboMapDrawMarkers(NC_STACK_ypaworld *yw, CmdStream *cur)
         if ( !(robo_map.stateFlags & 0x200) )
         {
             if ( yw->_bactOnMouse )
-            {
-                if ( yw->_bactOnMouse == yw->_userRobo )
-                {
-                    int roboIconSize = yw->_guiTiles[1]->h;
-
-                    FontUA::select_tileset(cur, 1);
-
-                    RoboMapDrawIcon(cur, yw->_bactOnMouse->_position.x, yw->_bactOnMouse->_position.z, roboHoverGlyph, roboIconSize, roboIconSize);
-                }
-                else
-                {
-                    NC_STACK_ypabact *leader = GetSquadLeader(yw->_bactOnMouse);
-
-                    if ( leader )
-                    {
-                        RoboMapDrawSquadIcons(yw, cur, leader, markerTileset, 0x85, markerWidth, markerHeight);
-                    }
-
-                }
-            }
+                RoboMapDrawHovered(yw, cur, LiveMapUnit(yw, yw->_bactOnMouse), roboHoverGlyph, markerTileset, markerWidth, markerHeight);
         }
         break;
 
@@ -1296,7 +1418,9 @@ void RoboMapDrawMarkers(NC_STACK_ypaworld *yw, CmdStream *cur)
         break;
     }
 
-    if ( bzda.activeMode & 0x20 )
+    MapScene::Unit commander;
+
+    if ( scene.Interactive() && (bzda.activeMode & 0x20) )
     {
         FontUA::select_tileset(cur, 1);
 
@@ -1304,76 +1428,75 @@ void RoboMapDrawMarkers(NC_STACK_ypaworld *yw, CmdStream *cur)
 
         RoboMapDrawIcon(cur, yw->_userRobo->_position.x, yw->_userRobo->_position.z, roboSelectGlyph, roboIconSize, roboIconSize);
     }
-    else
+    else if ( scene.SelectedCommander(commander) )
     {
-        if ( yw->_activeCmdrRemapIndex != -1 )
+        RoboMapDrawSquadIcons(yw, cur, commander, markerTileset, 0x84, markerWidth, markerHeight);
+
+        if ( commander.PrimaryType == BACT_TGT_TYPE_CELL )
         {
-            NC_STACK_ypabact *commander = yw->_cmdrsRemap[yw->_activeCmdrRemapIndex];
-
-            if ( commander )
+            if ( scene.Owner(commander.PrimarySector) != scene.PlayerOwner() )
             {
-                RoboMapDrawSquadIcons(yw, cur, commander, markerTileset, 0x84, markerWidth, markerHeight);
+                vec2d tmp = World::SectorIDToCenterPos2( World::PositionToSectorID(commander.PrimaryPos) );
 
-                if ( commander->_primTtype == BACT_TGT_TYPE_CELL )
-                {
-                    if ( commander->_primT.pcell->owner != yw->_userRobo->_owner )
-                    {
-                        vec2d tmp = World::SectorIDToCenterPos2( World::PositionToSectorID(commander->_primTpos) );
+                FontUA::select_tileset(cur, sectorTileset);
 
-                        FontUA::select_tileset(cur, sectorTileset);
+                RoboMapDrawIcon(cur, tmp.x, tmp.y, 66, sectorIconSize, sectorIconSize);
 
-                        RoboMapDrawIcon(cur, tmp.x, tmp.y, 66, sectorIconSize, sectorIconSize);
+                FontUA::select_tileset(cur, markerTileset);
 
-                        FontUA::select_tileset(cur, markerTileset);
+                RoboMapDrawIcon(cur, commander.PrimaryPos.x, commander.PrimaryPos.z, 0x88, markerWidth, markerHeight);
+            }
+            else
+            {
+                FontUA::select_tileset(cur, markerTileset);
 
-                        RoboMapDrawIcon(cur, commander->_primTpos.x, commander->_primTpos.z, 0x88, markerWidth, markerHeight);
-                    }
-                    else
-                    {
-                        FontUA::select_tileset(cur, markerTileset);
+                RoboMapDrawIcon(cur, commander.PrimaryPos.x, commander.PrimaryPos.z, 0x88, markerWidth, markerHeight);
+            }
+        }
+        else if ( commander.PrimaryType == BACT_TGT_TYPE_UNIT )
+        {
+            FontUA::select_tileset(cur, markerTileset);
 
-                        RoboMapDrawIcon(cur, commander->_primTpos.x, commander->_primTpos.z, 0x88, markerWidth, markerHeight);
-                    }
-                }
-                else if ( commander->_primTtype == BACT_TGT_TYPE_UNIT )
+            RoboMapDrawIcon(cur, commander.PrimaryPos.x, commander.PrimaryPos.z, 0x86, markerWidth, markerHeight);
+        }
+
+        if ( (commander.StatusFlags & BACT_STFLAG_WAYPOINT) && commander.Waypoints )
+        {
+            if ( commander.WaypointCount > 0 )
+            {
+                int firstWaypoint;
+
+                if ( commander.StatusFlags & BACT_STFLAG_WAYPOINTCCL )
+                    firstWaypoint = 0;
+                else
+                    firstWaypoint = commander.CurrentWaypoint;
+
+                for (int i = firstWaypoint; i < commander.WaypointCount; i++)
                 {
                     FontUA::select_tileset(cur, markerTileset);
 
-                    RoboMapDrawIcon(cur, commander->_primT.pbact->_position.x, commander->_primT.pbact->_position.z, 0x86, markerWidth, markerHeight);
-                }
-
-                if ( commander->_status_flg & BACT_STFLAG_WAYPOINT )
-                {
-                    if ( commander->_waypoints_count > 0 )
-                    {
-                        int firstWaypoint;
-
-                        if ( commander->_status_flg & BACT_STFLAG_WAYPOINTCCL )
-                            firstWaypoint = 0;
-                        else
-                            firstWaypoint = commander->_current_waypoint;
-
-                        for (int i = firstWaypoint; i < commander->_waypoints_count; i++)
-                        {
-                            FontUA::select_tileset(cur, markerTileset);
-
-                            RoboMapDrawIcon(cur, commander->_waypoints[i].x, commander->_waypoints[i].z, 0x88, markerWidth, markerHeight);
-                        }
-                    }
+                    RoboMapDrawIcon(cur, commander.Waypoints[i].x, commander.Waypoints[i].z, 0x88, markerWidth, markerHeight);
                 }
             }
         }
     }
 
-    if ( yw->_userUnit )
+    MapScene::Unit user;
+
+    if ( scene.UserUnit(user) )
     {
         if ( yw->_timeStamp / 300 & 1 )
         {
             FontUA::select_tileset(cur, markerTileset);
 
-            RoboMapDrawIcon(cur, yw->_userUnit->_position.x, yw->_userUnit->_position.z, 0x89, markerWidth, markerHeight);
+            RoboMapDrawIcon(cur, user.Position.x, user.Position.z, 0x89, markerWidth, markerHeight);
         }
     }
+
+    // What only the game has: who reported last, and what the gates can
+    // beam
+    if ( !scene.Interactive() )
+        return;
 
     if ( yw->_lastMsgSender )
     {
@@ -1518,19 +1641,19 @@ void RoboMapDrawOverlay(NC_STACK_ypaworld *yw)
 
     RoboMapDrawLines(yw);
 
+    const MapScene &scene = *robo_map.Scene;
+
     for (int row = firstRow; row <= vii; row++)
     {
         for (int j = firstCol; j <= lastCol; j++ )
         {
             if ( drawnCount < 2048 )
             {
-                cellArea &cell = yw->_cells(j, row);
-
-                if ( robo_map.MapViewMask & cell.view_mask )
+                if ( robo_map.MapViewMask & scene.ViewMask({j, row}) )
                 {
-                    for ( NC_STACK_ypabact* &bct : cell.unitsList )
+                    scene.ForEachUnitIn({j, row}, [&](const MapScene::Unit &bct)
                     {
-                        if ( bct->_bact_type == BACT_TYPES_ROBO )
+                        if ( bct.Type == BACT_TYPES_ROBO )
                         {
                             FontUA::select_tileset(&robo_map.overlayCmds, 1);
 
@@ -1540,11 +1663,9 @@ void RoboMapDrawOverlay(NC_STACK_ypaworld *yw)
 
                             drawnCount++;
                         }
-                        else if ( bct->_bact_type == BACT_TYPES_GUN )
+                        else if ( bct.Type == BACT_TYPES_GUN )
                         {
-                            NC_STACK_ypagun *gn = (NC_STACK_ypagun *)bct;
-
-                            if ( !gn->IsRoboGun() || bct == yw->_userUnit )
+                            if ( !bct.RoboGun || bct.Id == scene.UserUnitId() )
                             {
                                 RoboMapDrawUnit(yw, &robo_map.overlayCmds, height, width, bct, useTypeIcons);
                                 drawnCount++;
@@ -1555,7 +1676,7 @@ void RoboMapDrawOverlay(NC_STACK_ypaworld *yw)
                             RoboMapDrawUnit(yw, &robo_map.overlayCmds, height, width, bct, useTypeIcons);
                             drawnCount++;
                         }
-                    }
+                    });
 
                 }
             }
@@ -1570,28 +1691,26 @@ void RoboMapDrawOverlay(NC_STACK_ypaworld *yw)
             {
                 if ( drawnCount < 2048 )
                 {
-                    cellArea &cell = yw->_cells(m, l);
-
-                    if ( robo_map.MapViewMask & cell.view_mask )
+                    if ( robo_map.MapViewMask & scene.ViewMask({m, l}) )
                     {
-                        for ( NC_STACK_ypabact* &bct : cell.unitsList )
+                        scene.ForEachUnitIn({m, l}, [&](const MapScene::Unit &bct)
                         {
-                            if ( bct->_owner == yw->_userRobo->_owner
-                                    && bct->_position.x > mapSelWorldMinX
-                                    && bct->_position.z > mapSelWorldMinZ
-                                    && bct->_position.x < mapSelWorldMaxX
-                                    && bct->_position.z < mapSelWorldMaxZ )
+                            if ( bct.Owner == scene.PlayerOwner()
+                                    && bct.Position.x > mapSelWorldMinX
+                                    && bct.Position.z > mapSelWorldMinZ
+                                    && bct.Position.x < mapSelWorldMaxX
+                                    && bct.Position.z < mapSelWorldMaxZ )
                             {
-                                if ( bct->_bact_type != BACT_TYPES_MISSLE && bct->_bact_type != BACT_TYPES_ROBO && bct->_bact_type != BACT_TYPES_GUN )
+                                if ( bct.Type != BACT_TYPES_MISSLE && bct.Type != BACT_TYPES_ROBO && bct.Type != BACT_TYPES_GUN )
                                 {
-                                    if ( bct->_status != BACT_STATUS_CREATE && bct->_status != BACT_STATUS_BEAM && bct->_status != BACT_STATUS_DEAD )
+                                    if ( bct.Status != BACT_STATUS_CREATE && bct.Status != BACT_STATUS_BEAM && bct.Status != BACT_STATUS_DEAD )
                                     {
-                                        RoboMapDrawIcon(&robo_map.overlayCmds, bct->_position.x, bct->_position.z, 0x85, height, width);
+                                        RoboMapDrawIcon(&robo_map.overlayCmds, bct.Position.x, bct.Position.z, 0x85, height, width);
                                         drawnCount++;
                                     }
                                 }
                             }
-                        }
+                        });
                     }
                 }
             }
@@ -2049,7 +2168,7 @@ int RoboMapFogTile(NC_STACK_ypaworld *yw, int x, int y)
 {
     if ( yw->IsSector( {x, y} ) )
     {
-        if ( (robo_map.layerFlags & 3) && (robo_map.MapViewMask & yw->_cells(x, y).view_mask) )
+        if ( (robo_map.layerFlags & 3) && (robo_map.MapViewMask & robo_map.Scene->ViewMask({x, y})) )
             return 0;
         else
             return 9;
@@ -2062,14 +2181,16 @@ int RoboMapOwnerTile(NC_STACK_ypaworld *yw, int x, int y)
 {
     if ( yw->IsSector( {x, y} ) )
     {
-        cellArea &cell = yw->_cells(x, y);
+        const MapScene &scene = *robo_map.Scene;
 
-        if ( robo_map.MapViewMask & cell.view_mask )
+        if ( robo_map.MapViewMask & scene.ViewMask({x, y}) )
         {
-            if ( !cell.owner )
+            uint8_t owner = scene.Owner({x, y});
+
+            if ( !owner )
                 return 8;
             else
-                return cell.owner;
+                return owner;
         }
     }
 
@@ -2080,10 +2201,10 @@ int RoboMapSectorTypeTile(NC_STACK_ypaworld *yw, int x, int y)
 {
     if ( yw->IsSector( {x, y} ) )
     {
-        cellArea &cell = yw->_cells(x, y);
+        const MapScene &scene = *robo_map.Scene;
 
-        if ( robo_map.MapViewMask & cell.view_mask )
-            return yw->_secTypeArray[cell.type_id].GUIElementID;
+        if ( robo_map.MapViewMask & scene.ViewMask({x, y}) )
+            return yw->_secTypeArray[scene.Type({x, y})].GUIElementID;
     }
 
     return 0;
@@ -2091,35 +2212,51 @@ int RoboMapSectorTypeTile(NC_STACK_ypaworld *yw, int x, int y)
 
 int RoboMapLegoTile(NC_STACK_ypaworld *yw, int x, int y)
 {
+    Common::Point sector(x / 4, y / 4);
+
+    if ( !yw->IsSector( sector ) )
+        return 0;
+
+    const MapScene &scene = *robo_map.Scene;
+
+    if ( !(robo_map.MapViewMask & scene.ViewMask(sector)) )
+        return 0;
+
+    return MapLegoTile(yw, x, y, scene.Type(sector), scene.SimpleType(sector), scene.Health(sector));
+}
+
+int MapLegoTile(NC_STACK_ypaworld *yw, int x, int y, int32_t typeId, int sectorType, const int16_t *health)
+{
     int secX = x / 4;
     int subX = x & 3;
     int secY = y / 4;
     int subY = y & 3;
 
-    if ( !yw->IsSector( {secX, secY} ) )
-        return 0;
-
-    cellArea &cell = yw->_cells(secX, secY);
-
-    if ( !(robo_map.MapViewMask & cell.view_mask) )
-        return 0;
+    // The lego of a building on it, as GetLegoBld has it
+    auto legoAt = [yw, typeId, health](int bldX, int bldY) -> TLego &
+    {
+        TSubSectorDesc *ssec = yw->_secTypeArray[ typeId ].SubSectors.At(bldX, bldY);
+        return yw->_legoArray[ ssec->HPModels[ yw->_buildHealthModelId[ health[bldX + 3 * bldY] ] ] ];
+    };
 
     if ( subX && subY )
     {
-        if ( cell.SectorType == 1 )
+        if ( sectorType == 1 )
         {
-            TLego *lego = &yw->_legoArray[ yw->GetLegoBld(&cell, 0, 0) ];
+            TLego *lego = &legoAt(0, 0);
             int glyph = (16 * (subY - 1) + subX - 1 + lego->GUIElementID) & 0xFF;
             return glyph;
         }
         else
         {
-            TLego *lego = &yw->_legoArray[ yw->GetLegoBld(&cell, subX - 1, 2 - (subY - 1))  ];
+            TLego *lego = &legoAt(subX - 1, 2 - (subY - 1));
             return lego->GUIElementID;
         }
     }
     else
     {
+        cellArea &cell = yw->_cells(secX, secY);
+
         if ( secX < 1 || secY < 1 )
             return 1;
 
@@ -2288,8 +2425,10 @@ void MapRoboUpdateMapInt(NC_STACK_ypaworld *yw)
     RoboMapLayoutTerrain(yw, &robo_map.t1_cmdbuf_3, viewX, viewY);
 }
 
-void  CreateRoboMap(NC_STACK_ypaworld *yw)
+void  CreateRoboMap(NC_STACK_ypaworld *yw, const MapScene *scene)
 {
+    robo_map.Scene = scene ? scene : &LiveScene(yw);
+
     robo_map.t1_cmdbuf_1.reserve(256);
     robo_map.t1_cmdbuf_2.reserve(256);
     robo_map.t1_cmdbuf_3.reserve(32768);
@@ -2324,10 +2463,12 @@ void  CreateRoboMap(NC_STACK_ypaworld *yw)
 
     robo_map.postDraw = RoboMapDrawOverlay;
 
-    if ( yw->_userRobo )
+    MapScene::Unit userRobo;
+
+    if ( robo_map.Scene->UserRobo(userRobo) )
     {
-        robo_map.viewCenterX = yw->_userRobo->_position.x;
-        robo_map.viewCenterZ = yw->_userRobo->_position.z;
+        robo_map.viewCenterX = userRobo.Position.x;
+        robo_map.viewCenterZ = userRobo.Position.z;
     }
     else
     {
@@ -2367,10 +2508,10 @@ void  CreateRoboMap(NC_STACK_ypaworld *yw)
     robo_map.stateFlags = 0;
     robo_map.MapViewMask = cellArea::ViewMask(1);
 
-    robo_map.radarLeft = 0.45;
-    robo_map.radarTop = 0;
-    robo_map.radarRight = 0.95;
-    robo_map.radarBottom = 0.6;
+    robo_map.radarLeft = HudRadarLeft;
+    robo_map.radarTop = HudRadarTop;
+    robo_map.radarRight = HudRadarRight;
+    robo_map.radarBottom = HudRadarBottom;
 
     robo_map.altX = yw->_screenSize.x - robo_map.minWidth;
     robo_map.altY = yw->_screenSize.y - yw->_downScreenBorder - robo_map.minHeight;
@@ -2942,30 +3083,35 @@ void DrawBottomBar()
 }
 
 
+// The open windows, the front one last
+void NC_STACK_ypaworld::DrawGuiWindows()
+{
+    for(GuiBaseList::iterator it = _guiActive.begin(); it != _guiActive.end(); it++)
+    {
+        GuiBase *lstnode = *it;
+        if ( !(lstnode->flags & GuiBase::FLAG_CLOSED) )
+        {
+            if ( lstnode->flags & GuiBase::FLAG_ICONIFED )
+            {
+                GFX::Engine.ProcessDrawSeq(lstnode->iconString);
+            }
+            else
+            {
+                GFX::Engine.ProcessDrawSeq(lstnode->cmdCommands, &lstnode->cmdInclude);
+
+                if ( lstnode->postDraw )
+                    lstnode->postDraw(this);
+            }
+        }
+    }
+}
+
 void DrawGameInterface(NC_STACK_ypaworld *yw)
 {
     if ( yw->_userUnit->_bact_type != BACT_TYPES_MISSLE )
     {
         DrawHud(yw);
-
-        for(GuiBaseList::iterator it = yw->_guiActive.begin(); it != yw->_guiActive.end(); it++)
-        {
-            GuiBase *lstnode = *it;
-            if ( !(lstnode->flags & 0x20) )
-            {
-                if ( lstnode->flags & GuiBase::FLAG_ICONIFED )
-                {
-                    GFX::Engine.ProcessDrawSeq(lstnode->iconString);
-                }
-                else
-                {
-                    GFX::Engine.ProcessDrawSeq(lstnode->cmdCommands, &lstnode->cmdInclude);
-
-                    if ( lstnode->postDraw )
-                        lstnode->postDraw(yw);
-                }
-            }
-        }
+        yw->DrawGuiWindows();
 
         if ( yw->_userUnit->_status != BACT_STATUS_DEAD )
         {
@@ -4652,8 +4798,43 @@ void EnergyPanelDrawGauge(NC_STACK_ypaworld *yw, CmdStream *cur, int x, int y, u
     }
 }
 
-void EnergyPanelDrawReloadGauge(NC_STACK_ypaworld *yw, CmdStream *cur, int x, int y, int loadState, int sectorPower, int reloadAmount, int baseReload, float reloadRatio)
+TReloadGauge ReloadGauge(uint8_t owner, uint8_t sectorOwner, int sectorPower, float sectorRatio, int absReload)
 {
+    TReloadGauge gauge;
+    gauge.SectorPower = sectorPower;
+    gauge.Ratio = sectorRatio;
+    gauge.Amount = 10 * ( absReload * sectorRatio ) / 100;
+
+    int effectivePower = sectorPower * sectorRatio;
+
+    if ( owner == sectorOwner )
+        gauge.State = effectivePower != 0;
+    else if ( effectivePower )
+        gauge.State = -1;
+    else
+        gauge.State = 0;
+
+    if ( gauge.State >= 0 )
+    {
+        if ( gauge.Amount )
+            gauge.Label = fmt::sprintf("+%d   (%d%%)", gauge.Amount, (int)(sectorRatio * 100.0) );
+        else
+            gauge.Label = fmt::sprintf("%d", 0);
+    }
+    else
+    {
+        gauge.Label = fmt::sprintf("%d", -gauge.Amount);
+    }
+
+    return gauge;
+}
+
+void EnergyPanelDrawReloadGauge(NC_STACK_ypaworld *yw, CmdStream *cur, int x, int y, const TReloadGauge &gauge)
+{
+    int loadState = gauge.State;
+    int sectorPower = gauge.SectorPower;
+    float reloadRatio = gauge.Ratio;
+
     int icon;
 
     if ( loadState == -1 )
@@ -4712,25 +4893,7 @@ void EnergyPanelDrawReloadGauge(NC_STACK_ypaworld *yw, CmdStream *cur, int x, in
         fillRatio = reloadRatio * powerRatio;
     }
 
-    std::string label;
-
-    if ( loadState >= 0 )
-    {
-        if ( reloadAmount )
-        {
-            label = fmt::sprintf("+%d   (%d%%)", reloadAmount, (int)(reloadRatio * 100.0) );
-        }
-        else
-        {
-            label = fmt::sprintf("%d", 0);
-        }
-    }
-    else
-    {
-        label = fmt::sprintf("%d", -reloadAmount);
-    }
-
-    EnergyPanelDrawGauge(yw, cur, x, y, icon, ownerGlyph, 57, fillRatio, powerRatio, label);
+    EnergyPanelDrawGauge(yw, cur, x, y, icon, ownerGlyph, 57, fillRatio, powerRatio, gauge.Label);
 }
 
 void EnergyPanelDrawMainGauge(NC_STACK_ypaworld *yw, CmdStream *cur, int x, int y, char fillMode, int loadState, int energy, int maxEnergy)
@@ -4887,22 +5050,10 @@ void EnergyPanelUpdateLayout(NC_STACK_ypaworld *yw)
 
         yw->GetReloadRatios(&reloadRatios);
 
-        int sectorPower = yw->_userRobo->_pSector->energy_power;
-        int effectivePower = yw->_userRobo->_pSector->energy_power * reloadRatios.ratioClamped;
+        TReloadGauge reload = ReloadGauge(yw->_userRobo->_owner, yw->_userRobo->_pSector->owner, yw->_userRobo->_pSector->energy_power,
+                                          reloadRatios.ratioClamped, robo->getROBO_absReload());
 
-        int idx = robo->getROBO_absReload();
-
-        int baseReload = 10 * idx / 100;
-        int reloadAmount = 10 * ( idx * reloadRatios.ratioClamped ) / 100;
-
-        int reloadState, mainState, createState, beamState;
-
-        if ( yw->_userRobo->_owner == yw->_userRobo->_pSector->owner )
-            reloadState = effectivePower != 0;
-        else if ( effectivePower )
-            reloadState = -1;
-        else
-            reloadState = 0;
+        int mainState, createState, beamState;
 
         if ( loadFlags & 1 )
             mainState = 1;
@@ -4931,7 +5082,7 @@ void EnergyPanelUpdateLayout(NC_STACK_ypaworld *yw)
         // TODO(cleanup): The & 0xFFFF is a 16-bit leftover from the decompile.
         int x = (up_panel.gaugeStartX & 0xFFFF) + panelX;
 
-        EnergyPanelDrawReloadGauge(yw, &up_panel.cmdCommands, x, y, reloadState, sectorPower, reloadAmount, baseReload, reloadRatios.ratioClamped);
+        EnergyPanelDrawReloadGauge(yw, &up_panel.cmdCommands, x, y, reload);
 
         int mainX = gaugeStep + x;
         EnergyPanelDrawMainGauge(yw, &up_panel.cmdCommands, mainX, y, fillMode, mainState, yw->_userRobo->_energy, maxEnergy);
@@ -5004,7 +5155,12 @@ void EnergyPanelHandleInput(NC_STACK_ypaworld *yw, TInputState *inpt)
 
 char GetVehicleTypeIcon(NC_STACK_ypaworld *yw, NC_STACK_ypabact *bact)
 {
-    uint8_t icon = yw->_vhclProtos[ bact->_vehicleID ].type_icon;
+    return VehicleTypeIcon(yw, bact->_vehicleID);
+}
+
+char VehicleTypeIcon(NC_STACK_ypaworld *yw, int vehicle)
+{
+    uint8_t icon = vehicle >= 0 && vehicle < (int)yw->_vhclProtos.size() ? yw->_vhclProtos[ vehicle ].type_icon : 0;
 
     if ( !icon )
         icon = 65;
@@ -5139,24 +5295,29 @@ void SquadManagerLayoutHostStation(NC_STACK_ypaworld *yw, NC_STACK_ypabact *bact
 
 char GetSquadStatusIcon(NC_STACK_ypabact *bact)
 {
-    if ( bact->_status == BACT_STATUS_NORMAL )
+    return SquadStatusIcon(bact->_status, bact->_status_flg, bact->_primTtype, bact->_secndTtype);
+}
+
+char SquadStatusIcon(uint8_t status, int32_t statusFlags, uint8_t primaryType, uint8_t secondaryType)
+{
+    if ( status == BACT_STATUS_NORMAL )
     {
-        if ( bact->_status_flg & BACT_STFLAG_ESCAPE )
+        if ( statusFlags & BACT_STFLAG_ESCAPE )
         {
             return 102;
         }
-        else if ( bact->_secndTtype )
+        else if ( secondaryType )
         {
             return 99;
         }
-        else if ( bact->_primTtype )
+        else if ( primaryType )
         {
             return 98;
         }
     }
-    else if ( bact->_status == BACT_STATUS_IDLE )
+    else if ( status == BACT_STATUS_IDLE )
     {
-        if ( bact->_status_flg & BACT_STFLAG_ESCAPE )
+        if ( statusFlags & BACT_STFLAG_ESCAPE )
             return 102;
     }
 
@@ -5241,26 +5402,7 @@ void SquadManagerLayoutSquad(NC_STACK_ypaworld *yw, NC_STACK_ypabact *bact, CmdS
             FontUA::add_xpos(cur, -(squadron_manager.entryWidth - 2 * yw->_fontBorderW));
             FontUA::add_xpos(cur, hoverIconX);
 
-            float energyRatio = (float)hoverUnit->_energy / (float)hoverUnit->_energy_max;
-
-            if ( energyRatio > 0.25 )
-            {
-                if ( energyRatio > 0.5 )
-                {
-                    if ( energyRatio > 0.75 )
-                        FontUA::store_u8(cur, 131);
-                    else
-                        FontUA::store_u8(cur, 130);
-                }
-                else
-                {
-                    FontUA::store_u8(cur, 129);
-                }
-            }
-            else
-            {
-                FontUA::store_u8(cur, 128);
-            }
+            FontUA::store_u8(cur, EnergyGlyph(hoverUnit->_energy, hoverUnit->_energy_max));
         }
     }
 
@@ -5931,9 +6073,12 @@ void  RoboMap_InputHandle(NC_STACK_ypaworld *yw, TInputState *inpt)
     }
     else
     {
-        robo_map.MapViewMask = cellArea::ViewMask( yw->_userRobo->_owner );
+        robo_map.MapViewMask = cellArea::ViewMask( robo_map.Scene->PlayerOwner() );
 
         TClickBoxInf *winpt = &inpt->ClickInf;
+
+        // Watching a replay, the map only shows: it doesn't select or help
+        bool interactive = robo_map.Scene->Interactive();
 
         if ( yw->_showDebugMode )
             robo_map.MapViewMask = -1;
@@ -6057,7 +6202,7 @@ void  RoboMap_InputHandle(NC_STACK_ypaworld *yw, TInputState *inpt)
                 int dx = abs(robo_map.dragStartX - winpt->move.ScreenPos.x);
                 int dy = abs(robo_map.dragStartY - winpt->move.ScreenPos.y);
 
-                if ( dx <= 1 && dy <= 1 )
+                if ( dx <= 1 && dy <= 1 && interactive )
                 {
                     yw->_activeCmdrRemapIndex = -1;
                     yw->_activeCmdrID = 0;
@@ -6106,7 +6251,7 @@ void  RoboMap_InputHandle(NC_STACK_ypaworld *yw, TInputState *inpt)
                 }
             }
 
-            if ( winpt->flag & TClickBoxInf::FLAG_LM_DOWN )
+            if ( (winpt->flag & TClickBoxInf::FLAG_LM_DOWN) && interactive )
             {
                 if ( winpt->selected_btnID == 17 )
                 {
@@ -6256,6 +6401,9 @@ void  RoboMap_InputHandle(NC_STACK_ypaworld *yw, TInputState *inpt)
                 break;
 
             case 2:
+                if ( !interactive )
+                    break;
+
                 if ( winpt->flag & (TClickBoxInf::FLAG_BTN_DOWN | TClickBoxInf::FLAG_BTN_HOLD) )
                     robo_map.flags |= GuiBase::FLAG_HELP_DOWN;
 
@@ -6903,6 +7051,160 @@ void NC_STACK_ypaworld::ConfirmDialogHandleInput(TInputState *inpt)
 }
 
 
+// What the windows do alike: clicked, one comes to the front; its close
+// button closes or iconifies it, and its title bar drags it about
+void NC_STACK_ypaworld::HandleGuiWindows(TInputState *inpt)
+{
+    TClickBoxInf *winpt = &inpt->ClickInf;
+
+    for(GuiBaseList::iterator it = _guiActive.begin(); it != _guiActive.end(); it++)
+    {
+        GuiBase *llst = *it;
+
+        if ( llst->flags & GuiBase::FLAG_WITH_ICON )
+        {
+            if ( llst->flags & GuiBase::FLAG_ICONIFED )
+                llst->iconString[2] = 1;
+        }
+
+        if ( llst->flags & GuiBase::FLAG_WITH_CLOSE )
+        {
+            if ( !( llst->flags & (GuiBase::FLAG_ICONIFED | GuiBase::FLAG_CLOSED) ) )
+                llst->flags &= ~GuiBase::FLAG_CLOSE_DOWN;
+        }
+    }
+
+    if ( inpt->ClickInf.selected_btn )
+    {
+        GuiBase *clickedGui = (GuiBase *)inpt->ClickInf.selected_btn->pobject;
+        if ( clickedGui )
+        {
+            if ( clickedGui->flags & 1 )
+            {
+                if ( winpt->flag & (TClickBoxInf::FLAG_BTN_DOWN | TClickBoxInf::FLAG_BTN_HOLD) )
+                    clickedGui->iconString[2] = 2;
+
+                if ( winpt->flag & TClickBoxInf::FLAG_BTN_UP )
+                {
+                    clickedGui->flags &= 0xFFFFFFFE;
+
+                    Input::Engine.RemClickBox(&clickedGui->iconBox);
+                    Input::Engine.AddClickBoxFront(clickedGui);
+
+                    clickedGui->Attach(_guiActive);
+                }
+            }
+            else
+            {
+                if ( winpt->flag & TClickBoxInf::FLAG_LM_DOWN )
+                {
+                    Input::Engine.RemClickBox(clickedGui);
+                    Input::Engine.AddClickBoxFront(clickedGui);
+
+                    clickedGui->Attach(_guiActive);
+                }
+
+                if ( clickedGui->flags & 0x10 )
+                {
+                    if ( winpt->selected_btnID == 0)
+                    {
+                        if ( winpt->flag & (TClickBoxInf::FLAG_BTN_DOWN | TClickBoxInf::FLAG_BTN_HOLD) )
+                            clickedGui->flags |= 0x40;
+
+                        if ( winpt->flag & TClickBoxInf::FLAG_BTN_DOWN )
+                        {
+                            if ( _GameShell )
+                                SFXEngine::SFXe.startSound(&_GameShell->samples1_info, 3);
+                        }
+
+                        if ( winpt->flag & TClickBoxInf::FLAG_BTN_UP )
+                        {
+                            Input::Engine.RemClickBox(clickedGui);
+
+                            if ( clickedGui->flags & 4 )
+                            {
+                                Input::Engine.AddClickBoxFront(&clickedGui->iconBox);
+
+                                clickedGui->flags |= 1;
+                            }
+                            else
+                            {
+                                clickedGui->flags |= 0x20;
+                            }
+
+                            clickedGui->Attach(_guiActive);
+                        }
+                    }
+                }
+
+                if ( clickedGui->flags & 8 )
+                {
+                    if ( winpt->flag & TClickBoxInf::FLAG_BTN_DOWN )
+                    {
+                        if ( winpt->selected_btnID == 1 )
+                        {
+                            _guiDragDefaultMouse = true;
+                            _guiDragElement = clickedGui;
+                            _guiDragging = true;
+                            _guiDragPos.x = winpt->ldw_pos.BoxPos.x;
+                            _guiDragPos.y = winpt->ldw_pos.BoxPos.y;
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    if ( _guiDragging )
+    {
+        if ( winpt->flag & TClickBoxInf::FLAG_LM_HOLD )
+        {
+            int newX = winpt->move.ScreenPos.x - _guiDragPos.x;
+            int newY = winpt->move.ScreenPos.y - _guiDragPos.y;
+
+            if ( newX >= 0 )
+            {
+                if ( _guiDragElement->w + newX > _screenSize.x )
+                    newX = _screenSize.x - _guiDragElement->w;
+            }
+            else
+            {
+                newX = 0;
+            }
+
+            if ( newY >= _upScreenBorder )
+            {
+                if ( _guiDragElement->h + newY > _screenSize.y - _downScreenBorder )
+                    newY = _screenSize.y - _downScreenBorder - _guiDragElement->h;
+            }
+            else
+            {
+                newY = _upScreenBorder;
+            }
+
+            _guiDragElement->y = newY;
+            _guiDragElement->x = newX;
+
+            int16_t tmp = newX - (_screenSize.x / 2);
+            _guiDragElement->cmdCommands[5] = (tmp >>  8) & 0xFF ; //HACKY UPDATE!
+            _guiDragElement->cmdCommands[6] = tmp & 0xFF ;
+
+            tmp = newY - (_screenSize.y / 2); 
+            _guiDragElement->cmdCommands[9] = (tmp >>  8) & 0xFF ; //HACKY UPDATE!
+            _guiDragElement->cmdCommands[10] = tmp & 0xFF ;
+        }
+    }
+
+    if ( _guiDragging )
+    {
+        if ( !(winpt->flag & TClickBoxInf::FLAG_LM_HOLD) )
+        {
+            _guiDragDefaultMouse = false;
+            _guiDragging = false;
+        }
+    }
+}
+
 void NC_STACK_ypaworld::HandleGuiInput(TInputState *inpt)
 {
     TClickBoxInf *winpt = &inpt->ClickInf;
@@ -6911,152 +7213,7 @@ void NC_STACK_ypaworld::HandleGuiInput(TInputState *inpt)
     {
         if ( winpt->flag & TClickBoxInf::FLAG_OK )
         {
-            for(GuiBaseList::iterator it = _guiActive.begin(); it != _guiActive.end(); it++)
-            {
-                GuiBase *llst = *it;
-
-                if ( llst->flags & GuiBase::FLAG_WITH_ICON )
-                {
-                    if ( llst->flags & GuiBase::FLAG_ICONIFED )
-                        llst->iconString[2] = 1;
-                }
-
-                if ( llst->flags & GuiBase::FLAG_WITH_CLOSE )
-                {
-                    if ( !( llst->flags & (GuiBase::FLAG_ICONIFED | GuiBase::FLAG_CLOSED) ) )
-                        llst->flags &= ~GuiBase::FLAG_CLOSE_DOWN;
-                }
-            }
-
-            if ( inpt->ClickInf.selected_btn )
-            {
-                GuiBase *clickedGui = (GuiBase *)inpt->ClickInf.selected_btn->pobject;
-                if ( clickedGui )
-                {
-                    if ( clickedGui->flags & 1 )
-                    {
-                        if ( winpt->flag & (TClickBoxInf::FLAG_BTN_DOWN | TClickBoxInf::FLAG_BTN_HOLD) )
-                            clickedGui->iconString[2] = 2;
-
-                        if ( winpt->flag & TClickBoxInf::FLAG_BTN_UP )
-                        {
-                            clickedGui->flags &= 0xFFFFFFFE;
-
-                            Input::Engine.RemClickBox(&clickedGui->iconBox);
-                            Input::Engine.AddClickBoxFront(clickedGui);
-
-                            clickedGui->Attach(_guiActive);
-                        }
-                    }
-                    else
-                    {
-                        if ( winpt->flag & TClickBoxInf::FLAG_LM_DOWN )
-                        {
-                            Input::Engine.RemClickBox(clickedGui);
-                            Input::Engine.AddClickBoxFront(clickedGui);
-
-                            clickedGui->Attach(_guiActive);
-                        }
-
-                        if ( clickedGui->flags & 0x10 )
-                        {
-                            if ( winpt->selected_btnID == 0)
-                            {
-                                if ( winpt->flag & (TClickBoxInf::FLAG_BTN_DOWN | TClickBoxInf::FLAG_BTN_HOLD) )
-                                    clickedGui->flags |= 0x40;
-
-                                if ( winpt->flag & TClickBoxInf::FLAG_BTN_DOWN )
-                                {
-                                    if ( _GameShell )
-                                        SFXEngine::SFXe.startSound(&_GameShell->samples1_info, 3);
-                                }
-
-                                if ( winpt->flag & TClickBoxInf::FLAG_BTN_UP )
-                                {
-                                    Input::Engine.RemClickBox(clickedGui);
-
-                                    if ( clickedGui->flags & 4 )
-                                    {
-                                        Input::Engine.AddClickBoxFront(&clickedGui->iconBox);
-
-                                        clickedGui->flags |= 1;
-                                    }
-                                    else
-                                    {
-                                        clickedGui->flags |= 0x20;
-                                    }
-
-                                    clickedGui->Attach(_guiActive);
-                                }
-                            }
-                        }
-
-                        if ( clickedGui->flags & 8 )
-                        {
-                            if ( winpt->flag & TClickBoxInf::FLAG_BTN_DOWN )
-                            {
-                                if ( winpt->selected_btnID == 1 )
-                                {
-                                    _guiDragDefaultMouse = true;
-                                    _guiDragElement = clickedGui;
-                                    _guiDragging = true;
-                                    _guiDragPos.x = winpt->ldw_pos.BoxPos.x;
-                                    _guiDragPos.y = winpt->ldw_pos.BoxPos.y;
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-
-            if ( _guiDragging )
-            {
-                if ( winpt->flag & TClickBoxInf::FLAG_LM_HOLD )
-                {
-                    int newX = winpt->move.ScreenPos.x - _guiDragPos.x;
-                    int newY = winpt->move.ScreenPos.y - _guiDragPos.y;
-
-                    if ( newX >= 0 )
-                    {
-                        if ( _guiDragElement->w + newX > _screenSize.x )
-                            newX = _screenSize.x - _guiDragElement->w;
-                    }
-                    else
-                    {
-                        newX = 0;
-                    }
-
-                    if ( newY >= _upScreenBorder )
-                    {
-                        if ( _guiDragElement->h + newY > _screenSize.y - _downScreenBorder )
-                            newY = _screenSize.y - _downScreenBorder - _guiDragElement->h;
-                    }
-                    else
-                    {
-                        newY = _upScreenBorder;
-                    }
-
-                    _guiDragElement->y = newY;
-                    _guiDragElement->x = newX;
-
-                    int16_t tmp = newX - (_screenSize.x / 2);
-                    _guiDragElement->cmdCommands[5] = (tmp >>  8) & 0xFF ; //HACKY UPDATE!
-                    _guiDragElement->cmdCommands[6] = tmp & 0xFF ;
-
-                    tmp = newY - (_screenSize.y / 2); 
-                    _guiDragElement->cmdCommands[9] = (tmp >>  8) & 0xFF ; //HACKY UPDATE!
-                    _guiDragElement->cmdCommands[10] = tmp & 0xFF ;
-                }
-            }
-
-            if ( _guiDragging )
-            {
-                if ( !(winpt->flag & TClickBoxInf::FLAG_LM_HOLD) )
-                {
-                    _guiDragDefaultMouse = false;
-                    _guiDragging = false;
-                }
-            }
+            HandleGuiWindows(inpt);
 
             if ( _isNetGame )
                 NetGameWindowHandleInput(this, inpt);
@@ -7225,12 +7382,14 @@ void RoboMapFollowViewer(NC_STACK_ypaworld *yw)
 {
     if ( robo_map.IsOpen() )
     {
+        vec3d viewer;
+
         if ( !(robo_map.stateFlags & 0x16) && robo_map.lockViewer == 1 )
         {
-            if ( yw->_viewerBact )
+            if ( robo_map.Scene->ViewerPosition(viewer) )
             {
-                robo_map.viewCenterX = yw->_viewerBact->_position.x;
-                robo_map.viewCenterZ = yw->_viewerBact->_position.z;
+                robo_map.viewCenterX = viewer.x;
+                robo_map.viewCenterZ = viewer.z;
 
                 RoboMapClampView(yw, robo_map.hScrollLength - robo_map.borderLeft, robo_map.vScrollLength);
             }
@@ -8307,15 +8466,15 @@ void RenderInfoBar(NC_STACK_ypaworld *yw, THudState *wis, CmdStream *cur, float 
     }
 }
 
-void yw_RenderInfoLifebar(NC_STACK_ypaworld *yw, THudState *wis, CmdStream *cur, NC_STACK_ypabact *bact, World::TVhclProto *vhcl, float xpos, float ypos)
+void yw_RenderInfoLifebar(NC_STACK_ypaworld *yw, THudState *wis, CmdStream *cur, const THudSubject *bact, World::TVhclProto *vhcl, float xpos, float ypos)
 {
     int energy;
     int maxEnergy;
 
     if ( bact )
     {
-        energy = bact->_energy;
-        maxEnergy = bact->_energy_max;
+        energy = bact->Energy;
+        maxEnergy = bact->EnergyMax;
     }
     else
     {
@@ -8327,12 +8486,12 @@ void yw_RenderInfoLifebar(NC_STACK_ypaworld *yw, THudState *wis, CmdStream *cur,
 }
 
 
-void yw_RenderInfoShieldbar(NC_STACK_ypaworld *yw, THudState *wis, CmdStream *cur, NC_STACK_ypabact *bact, World::TVhclProto *vhcl, float xpos, float ypos)
+void yw_RenderInfoShieldbar(NC_STACK_ypaworld *yw, THudState *wis, CmdStream *cur, const THudSubject *bact, World::TVhclProto *vhcl, float xpos, float ypos)
 {
     int shield;
 
     if ( bact )
-        shield = bact->_shield;
+        shield = bact->Shield;
     else
         shield = vhcl->shield;
 
@@ -8441,30 +8600,27 @@ void yw_RenderInfoWeaponWire(NC_STACK_ypaworld *yw, THudState *wis, World::TWeap
     }
 }
 
-void yw_RenderInfoReloadbar(NC_STACK_ypaworld *yw, THudState *wis, CmdStream *cur, NC_STACK_ypabact *bact, World::TWeapProto *wpn, float xpos, float ypos)
+int WeaponReloadPercent(const World::TWeapProto &wpn, int sinceShot, int salveCounter)
+{
+    int reloadTime = wpn.shot_time_user;
+
+    if ( wpn.salve_shots )
+    {
+        if ( salveCounter >= wpn.salve_shots )
+            reloadTime = wpn.salve_delay;
+    }
+
+    if ( reloadTime <= 0 )
+        return 100;
+
+    return std::min(100 * sinceShot / reloadTime, 100);
+}
+
+void yw_RenderInfoReloadbar(NC_STACK_ypaworld *yw, THudState *wis, CmdStream *cur, const THudSubject *bact, World::TWeapProto *wpn, float xpos, float ypos)
 {
     if ( wpn )
     {
-        int reloadPercent;
-
-        if ( bact )
-        {
-
-            int reloadTime = wpn->shot_time_user;
-
-            if ( wpn->salve_shots )
-            {
-                if ( bact->_salve_counter >= wpn->salve_shots )
-                    reloadTime = wpn->salve_delay;
-            }
-
-            reloadPercent = 100 * (bact->_clock - bact->_weapon_time) / reloadTime;
-
-            if ( reloadPercent >= 100 )
-                reloadPercent = 100;
-        }
-        else
-            reloadPercent = 100;
+        int reloadPercent = bact ? bact->ReloadPercent : 100;
 
         std::string txt2;
 
@@ -8477,7 +8633,7 @@ void yw_RenderInfoReloadbar(NC_STACK_ypaworld *yw, THudState *wis, CmdStream *cu
     }
 }
 
-void yw_RenderInfoWeaponInf(NC_STACK_ypaworld *yw, THudState *wis, CmdStream *cur, NC_STACK_ypabact *bact, World::TVhclProto *vhcl, World::TWeapProto *weap, float xpos, float ypos)
+void yw_RenderInfoWeaponInf(NC_STACK_ypaworld *yw, THudState *wis, CmdStream *cur, const THudSubject *bact, World::TVhclProto *vhcl, World::TWeapProto *weap, float xpos, float ypos)
 {
     if ( weap )
     {
@@ -8493,7 +8649,7 @@ void yw_RenderInfoWeaponInf(NC_STACK_ypaworld *yw, THudState *wis, CmdStream *cu
 }
 
 
-void yw_RenderHUDInfo(NC_STACK_ypaworld *yw, THudState *wis, CmdStream *cur, float xpos, float ypos, NC_STACK_ypabact *bact, int vhclid, int flag)
+void yw_RenderHUDInfo(NC_STACK_ypaworld *yw, THudState *wis, CmdStream *cur, float xpos, float ypos, const THudSubject *bact, int vhclid, int flag)
 {
 //  yw->GetColor(25);
 //  yw->GetColor(34);
@@ -8529,7 +8685,7 @@ void yw_RenderHUDInfo(NC_STACK_ypaworld *yw, THudState *wis, CmdStream *cur, flo
     }
 
     if ( vhclid == -1 )
-        vhclid = bact->_vehicleID;
+        vhclid = bact->Vehicle;
 
     World::TVhclProto *vhcl = &yw->_vhclProtos[vhclid];
 
@@ -8641,7 +8797,7 @@ int DrawTechUpgrade(NC_STACK_ypaworld *yw)
         blinkFlags |= 8;
 
     if ( vhclId )
-        yw_RenderHUDInfo(yw, wis, &buf, 0.0, -0.5, 0, vhclId, blinkFlags);
+        yw_RenderHUDInfo(yw, wis, &buf, 0.0, -0.5, NULL, vhclId, blinkFlags);
     else if ( bldId )
         DrawTechUpgradeBuildingName(yw, wis, &buf, 0.0, -0.5, bldId, blinkFlags);
 
@@ -8691,7 +8847,7 @@ void wis_color2(NC_STACK_ypaworld *yw, float x1, float y1, float x2, float y2, S
 
 
 
-void yw_RenderHUDCompass(NC_STACK_ypaworld *yw, THudState *wis)
+void yw_RenderHUDCompass(NC_STACK_ypaworld *yw, THudState *wis, const THudSubject &unit)
 {
     float openProgress = (yw->_timeStamp - wis->switch_time) / 180.0;
 
@@ -8700,8 +8856,8 @@ void yw_RenderHUDCompass(NC_STACK_ypaworld *yw, THudState *wis)
     if ( wis->color_fx )
         func = wis_color2;
 
-    float xx = yw->_viewerRotation.m02;
-    float yy = yw->_viewerRotation.m22;
+    float xx = unit.Rotation.m02;
+    float yy = unit.Rotation.m22;
 
     float headingLen = sqrt( POW2(xx) + POW2(yy) );
 
@@ -8714,15 +8870,15 @@ void yw_RenderHUDCompass(NC_STACK_ypaworld *yw, THudState *wis)
     SDL_Color roboColor = yw->GetColor(21);
     SDL_Color roboColor2 = yw->GetColor(30);
 
-    float tx = yw->_userUnit->_parent->_position.x - yw->_userUnit->_position.x;
-    float ty = yw->_userUnit->_parent->_position.z - yw->_userUnit->_position.z;
+    float tx = unit.ParentPos.x - unit.Position.x;
+    float ty = unit.ParentPos.z - unit.Position.z;
 
     float roboDx = tx * yy + ty * xx;
     float roboDy = tx * -xx + ty * yy;
 
     float roboDist = sqrt( POW2(roboDx) + POW2(roboDy) );
 
-    if ( roboDist > 30.0 )
+    if ( unit.HasParent && roboDist > 30.0 )
     {
         float roboDirX = roboDx * (1.0 / roboDist);
         float roboDirY = roboDy * (1.0 / roboDist);
@@ -8737,25 +8893,12 @@ void yw_RenderHUDCompass(NC_STACK_ypaworld *yw, THudState *wis)
         yw_RenderVector2D(yw, wis->sklts_intern[3], 0.7, 0.3, roboDirY, -roboDirX, roboDirX, roboDirY, 0.25, 0.3, roboColor, func, 0, true);
     }
 
-    if ( yw->_userUnit->IsParentMyRobo() )
     {
-        int hasTarget = 0;
+        if ( unit.HasTarget )
+        {
+            tx = unit.TargetPos.x - unit.Position.x;
+            ty = unit.TargetPos.z - unit.Position.z;
 
-        if ( yw->_userUnit->_primTtype == BACT_TGT_TYPE_CELL )
-        {
-            hasTarget = 1;
-            ty = yw->_userUnit->_primTpos.z - yw->_userUnit->_position.z;
-            tx = yw->_userUnit->_primTpos.x - yw->_userUnit->_position.x;
-        }
-        else if ( yw->_userUnit->_primTtype == BACT_TGT_TYPE_UNIT )
-        {
-            hasTarget = 1;
-            tx = yw->_userUnit->_primT.pbact->_position.x - yw->_userUnit->_position.x;
-            ty = yw->_userUnit->_primT.pbact->_position.z - yw->_userUnit->_position.z;
-        }
-
-        if ( hasTarget )
-        {
             SDL_Color targetColor = yw->GetColor(22);
             SDL_Color targetColor2 = yw->GetColor(31);
 
@@ -8781,13 +8924,13 @@ void yw_RenderHUDCompass(NC_STACK_ypaworld *yw, THudState *wis)
         }
     }
 
-    if ( yw->_guiVisor.target )
+    if ( unit.Visor.target )
     {
         SDL_Color visorColor = yw->GetColor(23);
         SDL_Color visorColor2 = yw->GetColor(32);
 
-        float visorTx = yw->_guiVisor.target->_position.x - yw->_userUnit->_position.x;
-        float visorTy = yw->_guiVisor.target->_position.z - yw->_userUnit->_position.z;
+        float visorTx = unit.VisorTargetPos.x - unit.Position.x;
+        float visorTy = unit.VisorTargetPos.z - unit.Position.z;
 
         float visorDx = visorTx * yy + visorTy * xx;
         float visorDy = visorTx * -xx + visorTy * yy;
@@ -8834,7 +8977,7 @@ void yw_RenderHUDCompass(NC_STACK_ypaworld *yw, THudState *wis)
 
     int sectorOwner;
 
-    switch ( yw->_userUnit->_pSector->owner )
+    switch ( unit.SectorOwner )
     {
     case 0:
         sectorOwner = 0;
@@ -8886,7 +9029,7 @@ void yw_RenderHUDCompass(NC_STACK_ypaworld *yw, THudState *wis)
 }
 
 
-void yw_RenderHUDVectorGFX(NC_STACK_ypaworld *yw, CmdStream *cur)
+void yw_RenderHUDVectorGFX(NC_STACK_ypaworld *yw, CmdStream *cur, const THudSubject &unit)
 {
     GFX::Engine.SetClipNormalized( Common::FRect(-1.0, -1.0, 1.0, 1.0) );
 
@@ -8904,15 +9047,15 @@ void yw_RenderHUDVectorGFX(NC_STACK_ypaworld *yw, CmdStream *cur)
 
     THudState *wis = &yw->_hud;
 
-    yw_RenderHUDCompass(yw, wis);
+    yw_RenderHUDCompass(yw, wis, unit);
 
     GFX::Engine.SetInverseClipCentered(Common::Rect());
 
-    yw_RenderHUDTarget(yw, wis);
+    yw_RenderHUDTarget(yw, wis, unit);
 
     GFX::Engine.SetInverseClipCentered(mapRect);
 
-    yw_RenderHUDInfo(yw, wis, cur, -0.7, 0.3, yw->_userUnit, -1, 0x10);
+    yw_RenderHUDInfo(yw, wis, cur, -0.7, 0.3, &unit, -1, 0x10);
 
     if ( robo_map.IsOpen() )
         GFX::Engine.SetInverseClipCentered(Common::Rect());
@@ -8974,13 +9117,13 @@ void DrawNetPlayerName(NC_STACK_ypaworld *yw, CmdStream *cur, NC_STACK_ypabact *
     }
 }
 
-void yw_RenderUnitLifeBar(NC_STACK_ypaworld *yw, CmdStream *cur, NC_STACK_ypabact *bact)
+void yw_RenderUnitLifeBar(NC_STACK_ypaworld *yw, CmdStream *cur, const MapScene::Unit &bact)
 {
     // Render fraction triangles above units
 
-    float dx = bact->_position.x - yw->_viewerPosition.x;
-    float dy = bact->_position.y - yw->_viewerPosition.y;
-    float dz = bact->_position.z - yw->_viewerPosition.z;
+    float dx = bact.Position.x - yw->_viewerPosition.x;
+    float dy = bact.Position.y - yw->_viewerPosition.y;
+    float dz = bact.Position.z - yw->_viewerPosition.z;
 
     mat3x3 corrected = yw->_viewerRotation;
     GFX::Engine.matrixAspectCorrection(corrected, false);
@@ -9039,13 +9182,13 @@ void yw_RenderUnitLifeBar(NC_STACK_ypaworld *yw, CmdStream *cur, NC_STACK_ypabac
                             FontUA::set_center_xpos(cur, screenX - (yw->_screenSize.x / 2) );
                             FontUA::set_center_ypos(cur, screenY - (yw->_screenSize.y / 2) );
 
-                            int energyPerSeg = bact->_energy_max / segCount;
+                            int energyPerSeg = bact.EnergyMax / segCount;
 
                             int threshold = energyPerSeg / 2; //v38 - (v38 / 2);
 
                             for (int i = 1; i <= segCount; i++)
                             {
-                                if ( threshold > bact->_energy )
+                                if ( threshold > bact.Energy )
                                     FontUA::store_u8(cur, 6);
                                 else
                                     FontUA::store_u8(cur, 2);
@@ -9063,12 +9206,17 @@ void yw_RenderUnitLifeBar(NC_STACK_ypaworld *yw, CmdStream *cur, NC_STACK_ypabac
 
 void yw_RenderOverlayCursors(NC_STACK_ypaworld *yw, CmdStream *cur)
 {
-    if ( yw->_preferences & World::PREF_ENEMYINDICATOR )
+    const MapScene &scene = *robo_map.Scene;
+    MapScene::Unit user;
+
+    if ( (yw->_preferences & World::PREF_ENEMYINDICATOR) && scene.UserUnit(user) )
     {
-        int minX = yw->_userUnit->_cellId.x - 1;
-        int maxX = yw->_userUnit->_cellId.x + 1;
-        int minY = yw->_userUnit->_cellId.y - 1;
-        int maxY = yw->_userUnit->_cellId.y + 1;
+        Common::Point userSector = user.Sector;
+
+        int minX = userSector.x - 1;
+        int maxX = userSector.x + 1;
+        int minY = userSector.y - 1;
+        int maxY = userSector.y + 1;
 
         if ( minX < 1 )
             minX = 1;
@@ -9086,47 +9234,114 @@ void yw_RenderOverlayCursors(NC_STACK_ypaworld *yw, CmdStream *cur)
         {
             for (int  j = minX; j <= maxX; j++ )
             {
-                cellArea &cell = yw->_cells(j, i);
-
-                if ( robo_map.MapViewMask & cell.view_mask )
+                if ( robo_map.MapViewMask & scene.ViewMask({j, i}) )
                 {
-                    for ( NC_STACK_ypabact* &bct : cell.unitsList )
+                    scene.ForEachUnitIn({j, i}, [&](const MapScene::Unit &bct)
                     {
-
-                        if ( bct->_bact_type != BACT_TYPES_MISSLE && bct->_bact_type != BACT_TYPES_ROBO )
+                        if ( bct.Type != BACT_TYPES_MISSLE && bct.Type != BACT_TYPES_ROBO )
                         {
-
-                            if ( bct->_status != BACT_STATUS_CREATE && bct->_status != BACT_STATUS_BEAM && bct->_status != BACT_STATUS_DEAD )
+                            if ( bct.Status != BACT_STATUS_CREATE && bct.Status != BACT_STATUS_BEAM && bct.Status != BACT_STATUS_DEAD )
                             {
-                                if ( bct->_bact_type != BACT_TYPES_GUN )
+                                if ( bct.Type != BACT_TYPES_GUN || !bct.RoboGun )
                                     yw_RenderCursorOverUnit(yw, bct);
-                                else
-                                {
-                                    NC_STACK_ypagun *gun = (NC_STACK_ypagun *)bct;
 
-                                    if ( !gun->IsRoboGun() )
-                                        yw_RenderCursorOverUnit(yw, bct);
-                                }
-
-                                if ( yw->_isNetGame )
+                                if ( yw->_isNetGame && bct.Bact )
                                 {
-                                    if ( bct->_status_flg & BACT_STFLAG_ISVIEW )
+                                    if ( bct.StatusFlags & BACT_STFLAG_ISVIEW )
                                     {
                                         if ( yw->_GameShell )
-                                            DrawNetPlayerName(yw, cur, bct);
+                                            DrawNetPlayerName(yw, cur, bct.Bact);
                                     }
                                 }
                             }
-
                         }
-                    }
-
-
-
+                    });
                 }
             }
         }
     }
+}
+
+THudSubject HudSubjectOf(NC_STACK_ypaworld *yw)
+{
+    NC_STACK_ypabact *unit = yw->_userUnit;
+
+    THudSubject subject;
+    subject.Vehicle = unit->_vehicleID;
+    subject.Position = unit->_position;
+    subject.Rotation = yw->_viewerRotation;
+    subject.Energy = unit->_energy;
+    subject.EnergyMax = unit->_energy_max;
+    subject.Shield = unit->_shield;
+    subject.SectorOwner = unit->_pSector->owner;
+
+    if ( unit->_weapon != -1 )
+        subject.ReloadPercent = WeaponReloadPercent(yw->_weaponProtos.at(unit->_weapon), unit->_clock - unit->_weapon_time, unit->_salve_counter);
+
+    if ( unit->_parent )
+    {
+        subject.HasParent = true;
+        subject.ParentPos = unit->_parent->_position;
+    }
+
+    if ( unit->IsParentMyRobo() )
+    {
+        if ( unit->_primTtype == BACT_TGT_TYPE_CELL )
+        {
+            subject.HasTarget = true;
+            subject.TargetPos = unit->_primTpos;
+        }
+        else if ( unit->_primTtype == BACT_TGT_TYPE_UNIT )
+        {
+            subject.HasTarget = true;
+            subject.TargetPos = unit->_primT.pbact->_position;
+        }
+    }
+
+    subject.Visor = yw->_guiVisor;
+
+    if ( subject.Visor.target )
+        subject.VisorTargetPos = subject.Visor.target->_position;
+
+    return subject;
+}
+
+void DrawHudDestroyed(NC_STACK_ypaworld *yw, CmdStream *buf, bool hostStation)
+{
+    std::string msg = Locale::Text::Common(hostStation ? Locale::CMN_HSDESTR : Locale::CMN_UNITDESTR);
+
+    if ( yw->_timeStamp / 500 & 1 )
+    {
+        FontUA::select_tileset(buf, 15);
+        FontUA::set_xpos(buf, 0);
+        FontUA::set_center_ypos(buf, -(yw->_fontH / 2));
+
+        FontUA::set_txtColor(buf, 255, 255, 255);
+
+        FontUA::FormateCenteredSkipableItem(yw->_guiTiles[15], buf, msg, yw->_screenSize.x);
+    }
+}
+
+void DrawHudOf(NC_STACK_ypaworld *yw, CmdStream *buf, const THudSubject &unit)
+{
+    if ( unit.Energy >= unit.EnergyMax )
+    {
+        yw->_hud.pulse_period = 3000;
+    }
+    else
+    {
+        yw->_hud.pulse_period = 3000 * unit.Energy / std::max(unit.EnergyMax, 1);
+
+        if ( yw->_hud.pulse_period < 200 )
+            yw->_hud.pulse_period = 200;
+    }
+
+    yw->_hud.pulse_phase += (float)yw->_frameTime / (float)yw->_hud.pulse_period;
+
+    if ( yw->_hud.pulse_phase >= 1.0 )
+        yw->_hud.pulse_phase = 0;
+
+    yw_RenderHUDVectorGFX(yw, buf, unit);
 }
 
 void DrawHud(NC_STACK_ypaworld *yw)
@@ -9136,59 +9351,24 @@ void DrawHud(NC_STACK_ypaworld *yw)
 
     if ( yw->_userUnit->_status == BACT_STATUS_DEAD )
     {
-        std::string msg;
-
         if ( !(yw->_userRobo->_status_flg & BACT_STFLAG_CLEAN) )
-        {
-            if ( yw->_userRobo->_status == BACT_STATUS_DEAD )
-                msg = Locale::Text::Common(Locale::CMN_HSDESTR);
-            else
-                msg = Locale::Text::Common(Locale::CMN_UNITDESTR);
-        }
-
-        if ( !msg.empty() && yw->_timeStamp / 500 & 1 )
-        {
-            FontUA::select_tileset(&buf, 15);
-            FontUA::set_xpos(&buf, 0);
-            FontUA::set_center_ypos(&buf, -(yw->_fontH / 2));
-
-            FontUA::set_txtColor(&buf, 255, 255, 255);
-
-            FontUA::FormateCenteredSkipableItem(yw->_guiTiles[15], &buf, msg, yw->_screenSize.x);
-        }
+            DrawHudDestroyed(yw, &buf, yw->_userRobo->_status == BACT_STATUS_DEAD);
     }
     else if ( yw->_userUnit != yw->_userRobo && yw->_hud.visible )
     {
         yw_RenderHUDRadare(yw);
-
-        if ( yw->_userUnit->_energy >= yw->_userUnit->_energy_max )
-        {
-            yw->_hud.pulse_period = 3000;
-        }
-        else
-        {
-            yw->_hud.pulse_period = 3000 * yw->_userUnit->_energy / yw->_userUnit->_energy_max;
-
-            if ( yw->_hud.pulse_period < 200 )
-                yw->_hud.pulse_period = 200;
-        }
-
-        yw->_hud.pulse_phase += (float)yw->_frameTime / (float)yw->_hud.pulse_period;
-
-        if ( yw->_hud.pulse_phase >= 1.0 )
-            yw->_hud.pulse_phase = 0;
-
-        yw_RenderHUDVectorGFX(yw, &buf);
+        DrawHudOf(yw, &buf, HudSubjectOf(yw));
     }
 
     if ( yw->_guiActFlags & 0x20 )
     {
-        yw_RenderCursorOverUnit(yw, yw->_bactOnMouse);
-        yw_RenderUnitLifeBar(yw, &buf, yw->_bactOnMouse);
+        MapScene::Unit hovered = LiveMapUnit(yw, yw->_bactOnMouse);
+        yw_RenderCursorOverUnit(yw, hovered);
+        yw_RenderUnitLifeBar(yw, &buf, hovered);
     }
 
     if ( yw->_guiVisor.target )
-        yw_RenderUnitLifeBar(yw, &buf, yw->_guiVisor.target);
+        yw_RenderUnitLifeBar(yw, &buf, LiveMapUnit(yw, yw->_guiVisor.target));
 
     yw_RenderOverlayCursors(yw, &buf);
 
@@ -9247,18 +9427,20 @@ void HudColorTimeBlend(NC_STACK_ypaworld *yw, float x1, float y1, float x2, floa
     *out2 = GFX::Engine.Color(r2, g2, b2);
 }
 
-void yw_RenderHUDTarget(NC_STACK_ypaworld *yw, THudState *wis)
+void yw_RenderHUDTarget(NC_STACK_ypaworld *yw, THudState *wis, const THudSubject &unit)
 {
     UAskeleton::Data *mg_wure = NULL;
     UAskeleton::Data *hud_wure = NULL;
     UAskeleton::Data *wpn_wure = NULL;
     UAskeleton::Data *wpn_wure2 = NULL;
 
+    const THudVisor &visor = unit.Visor;
+
     float openProgress = (yw->_timeStamp - wis->switch_time - 350) / 200.0;
 
-    if ( openProgress > 0.0 && yw->_userUnit )
+    if ( openProgress > 0.0 )
     {
-        World::TVhclProto *vhcl = &yw->_vhclProtos[ yw->_userUnit->_vehicleID ];
+        World::TVhclProto *vhcl = &yw->_vhclProtos[ unit.Vehicle ];
 
         if ( vhcl->hud_wireframe )
             hud_wure = vhcl->hud_wireframe->GetSkelet();
@@ -9272,27 +9454,27 @@ void yw_RenderHUDTarget(NC_STACK_ypaworld *yw, THudState *wis)
 
         if ( vhcl->wpn_wireframe_1 )
             wpn_wure = vhcl->wpn_wireframe_1->GetSkelet();
-        else if ( yw->_guiVisor.weaponSight == 2)
+        else if ( visor.weaponSight == 2)
             wpn_wure = wis->sklts_intern[5];
-        else if ( yw->_guiVisor.weaponSight == 3 )
+        else if ( visor.weaponSight == 3 )
             wpn_wure = wis->sklts_intern[6];
-        else if ( yw->_guiVisor.weaponSight == 4 )
+        else if ( visor.weaponSight == 4 )
             wpn_wure = wis->sklts_intern[7];
 
         if ( vhcl->wpn_wireframe_2 )
             wpn_wure2 = vhcl->wpn_wireframe_2->GetSkelet();
-        else if ( yw->_guiVisor.weaponSight == 2)
+        else if ( visor.weaponSight == 2)
             wpn_wure2 = wis->sklts_intern[9];
-        else if ( yw->_guiVisor.weaponSight == 3 )
+        else if ( visor.weaponSight == 3 )
             wpn_wure2 = wis->sklts_intern[10];
-        else if ( yw->_guiVisor.weaponSight == 4 )
+        else if ( visor.weaponSight == 4 )
             wpn_wure2 = wis->sklts_intern[11];
 
-        if ( yw->_guiVisor.target )
+        if ( visor.target )
         {
-            if ( yw->_guiVisor.target != wis->target )
+            if ( visor.target != wis->target )
             {
-                wis->target = yw->_guiVisor.target;
+                wis->target = visor.target;
                 wis->target_time = yw->_timeStamp;
             }
         }
@@ -9307,7 +9489,7 @@ void yw_RenderHUDTarget(NC_STACK_ypaworld *yw, THudState *wis)
             yw_RenderVector2D(yw, hud_wure, 0.0, 0.0, 1.0, 0.0, 0.0, 1.0, 0.99, 0.99, hudColor, NULL, NULL, true);
         }
 
-        if ( yw->_guiVisor.mgunSight )
+        if ( visor.mgunSight )
         {
             if ( mg_wure )
             {
@@ -9335,11 +9517,11 @@ void yw_RenderHUDTarget(NC_STACK_ypaworld *yw, THudState *wis)
                 hud->cl2_g = mgColor2.g;
                 hud->cl2_b = mgColor2.b;
 
-                yw_RenderVector2D(yw, mg_wure, yw->_guiVisor.mgunX, yw->_guiVisor.mgunY, 1.0, 0.0, 0.0, 1.0, mgScaleX, 0.4, mgColor, func, NULL, true);
+                yw_RenderVector2D(yw, mg_wure, visor.mgunX, visor.mgunY, 1.0, 0.0, 0.0, 1.0, mgScaleX, 0.4, mgColor, func, NULL, true);
             }
         }
 
-        if ( yw->_guiVisor.weaponSight )
+        if ( visor.weaponSight )
         {
             float lockProgress[2];
             wis_color_func func;
@@ -9347,7 +9529,7 @@ void yw_RenderHUDTarget(NC_STACK_ypaworld *yw, THudState *wis)
             SDL_Color sightColor;
             SDL_Color sightColor2;
 
-            if ( yw->_guiVisor.target )
+            if ( visor.target )
             {
                 for (int i = 0; i < 2; i++)
                 {
@@ -9390,15 +9572,15 @@ void yw_RenderHUDTarget(NC_STACK_ypaworld *yw, THudState *wis)
             {
                 float sightX, sightY;
 
-                if ( yw->_guiVisor.target )
+                if ( visor.target )
                 {
-                    sightX = (yw->_guiVisor.weaponX - yw->_guiVisor.mgunX) * lockProgress[i] + yw->_guiVisor.mgunX;
-                    sightY = (yw->_guiVisor.weaponY - yw->_guiVisor.mgunY) * lockProgress[i] + yw->_guiVisor.mgunY;
+                    sightX = (visor.weaponX - visor.mgunX) * lockProgress[i] + visor.mgunX;
+                    sightY = (visor.weaponY - visor.mgunY) * lockProgress[i] + visor.mgunY;
                 }
                 else
                 {
-                    sightX = yw->_guiVisor.weaponX;
-                    sightY = yw->_guiVisor.weaponY;
+                    sightX = visor.weaponX;
+                    sightY = visor.weaponY;
                 }
 
                 float scaleY = lockProgress[i] * -0.23 + 0.4;
@@ -9448,11 +9630,11 @@ void yw_RenderHUDTarget(NC_STACK_ypaworld *yw, THudState *wis)
     }
 }
 
-void yw_RenderCursorOverUnit(NC_STACK_ypaworld *yw, NC_STACK_ypabact *bact)
+void yw_RenderCursorOverUnit(NC_STACK_ypaworld *yw, const MapScene::Unit &bact)
 {
-    float dx = bact->_position.x - yw->_viewerPosition.x;
-    float dy = bact->_position.y - yw->_viewerPosition.y;
-    float dz = bact->_position.z - yw->_viewerPosition.z;
+    float dx = bact.Position.x - yw->_viewerPosition.x;
+    float dy = bact.Position.y - yw->_viewerPosition.y;
+    float dz = bact.Position.z - yw->_viewerPosition.z;
 
     mat3x3 corrected = yw->_viewerRotation;
     GFX::Engine.matrixAspectCorrection(corrected, false);
@@ -9465,7 +9647,7 @@ void yw_RenderCursorOverUnit(NC_STACK_ypaworld *yw, NC_STACK_ypabact *bact)
     {
         if ( viewX > -viewZ && viewY < viewZ && viewY > -viewZ )
         {
-            SDL_Color ownerColor = yw->GetColor(bact->_owner);
+            SDL_Color ownerColor = yw->GetColor(bact.Owner);
             UAskeleton::Data *cursorWire = yw->_hud.sklts_intern[13];
 
             float screenX = viewX / viewZ;
@@ -9475,7 +9657,7 @@ void yw_RenderCursorOverUnit(NC_STACK_ypaworld *yw, NC_STACK_ypabact *bact)
             {
                 float cursorY = screenY - 0.08;
 
-                if ( bact->IsParentMyRobo() && bact->_owner == yw->_userRobo->_owner )
+                if ( bact.Commander && bact.Owner == robo_map.Scene->PlayerOwner() )
                 {
                     yw_RenderVector2D(yw, cursorWire, screenX, cursorY, 1.0, 0.0, 0.0, 1.0, 0.015, 0.02, ownerColor, NULL, NULL, true);
                     yw_RenderVector2D(yw, cursorWire, screenX, cursorY, 1.0, 0.0, 0.0, 1.0, 0.005, 0.00666, ownerColor, NULL, NULL, true);
@@ -9544,6 +9726,7 @@ void DrawRadarUnits(NC_STACK_ypaworld *yw)
         maxY = yw->_mapSize.y - 1;
 
     int drawnCount = 0;
+    const MapScene &scene = *robo_map.Scene;
 
     for (int i = minY; i <= maxY; i++ )
     {
@@ -9551,11 +9734,9 @@ void DrawRadarUnits(NC_STACK_ypaworld *yw)
         {
             if ( drawnCount < 512 ) // Units maximum?
             {
-                cellArea &cell = yw->_cells(j, i);
-
-                if ( robo_map.MapViewMask & cell.view_mask )
+                if ( robo_map.MapViewMask & scene.ViewMask({j, i}) )
                 {
-                    for( NC_STACK_ypabact* &bact : cell.unitsList )
+                    scene.ForEachUnitIn({j, i}, [&](const MapScene::Unit &bact)
                     {
                         int underMap = 0;
                         if ( robo_map.IsOpen() )
@@ -9565,11 +9746,11 @@ void DrawRadarUnits(NC_STACK_ypaworld *yw)
                                                 , robo_map.w
                                                 , robo_map.h };
 
-                            if ( r.IsIn( RoboMapWorldToScreen( bact->_position.XZ() ) ) )
+                            if ( r.IsIn( RoboMapWorldToScreen( bact.Position.XZ() ) ) )
                                 underMap = 1;
                         }
 
-                        if ( bact->_bact_type == BACT_TYPES_ROBO )
+                        if ( bact.Type == BACT_TYPES_ROBO )
                         {
                             if ( !underMap )
                             {
@@ -9582,11 +9763,9 @@ void DrawRadarUnits(NC_STACK_ypaworld *yw)
                                 drawnCount++;
                             }
                         }
-                        else if ( bact->_bact_type == BACT_TYPES_GUN )
+                        else if ( bact.Type == BACT_TYPES_GUN )
                         {
-                            NC_STACK_ypagun *gun = (NC_STACK_ypagun *)bact;
-
-                            if ( (!gun->IsRoboGun() || bact == yw->_userUnit) && !underMap )
+                            if ( (!bact.RoboGun || bact.Id == scene.UserUnitId()) && !underMap )
                             {
                                 RoboMapDrawUnit(yw, &buf, 7, 7, bact, 0);
 
@@ -9599,7 +9778,7 @@ void DrawRadarUnits(NC_STACK_ypaworld *yw)
 
                             drawnCount++;
                         }
-                    }
+                    });
                 }
             }
         }
@@ -9620,17 +9799,30 @@ void yw_RenderHUDRadare(NC_STACK_ypaworld *yw)
     int32_t savedViewMask = robo_map.MapViewMask;
     int savedZoom = robo_map.zoomLevel;
 
+    // And where the map's view is on the screen, which finding a unit
+    // under the pointer on the map goes by too
+    int savedViewWidth = robo_map.viewWidth;
+    int savedViewHeight = robo_map.viewHeight;
+    int savedScrollPixelX = robo_map.scrollPixelX;
+    int savedScrollPixelY = robo_map.scrollPixelY;
+    int savedViewScreenX = robo_map.viewScreenX;
+    int savedViewScreenY = robo_map.viewScreenY;
+
     robo_map.layerFlags = 1;
     robo_map.MapViewMask = -1;
     robo_map.stateFlags |= 0x100;
     robo_map.zoomLevel = 3;
-    robo_map.viewCenterX = yw->_viewerBact->_position.x;
-    robo_map.viewCenterZ = yw->_viewerBact->_position.z;
+
+    vec3d viewer;
+    robo_map.Scene->ViewerPosition(viewer);
+    robo_map.viewCenterX = viewer.x;
+    robo_map.viewCenterZ = viewer.z;
     robo_map.unitsPerPixelX = 4800.0 / ((float)(yw->_screenSize.x / 2) * (robo_map.radarRight - robo_map.radarLeft));
     robo_map.unitsPerPixelY = 4800.0 / ((float)(yw->_screenSize.y / 2) * (robo_map.radarBottom - robo_map.radarTop));
 
-    float fwdX = yw->_viewerRotation.m20;
-    float fwdZ = yw->_viewerRotation.m22;
+    mat3x3 view = robo_map.Scene->ViewerRotation();
+    float fwdX = view.m20;
+    float fwdZ = view.m22;
 
     float rotCos, rotSin;
 
@@ -9661,6 +9853,13 @@ void yw_RenderHUDRadare(NC_STACK_ypaworld *yw)
     robo_map.unitsPerPixelX = savedUnitsPerPixelX;
     robo_map.stateFlags &= 0xFFFFFEFF;
     robo_map.unitsPerPixelY = savedUnitsPerPixelY;
+
+    robo_map.viewWidth = savedViewWidth;
+    robo_map.viewHeight = savedViewHeight;
+    robo_map.scrollPixelX = savedScrollPixelX;
+    robo_map.scrollPixelY = savedScrollPixelY;
+    robo_map.viewScreenX = savedViewScreenX;
+    robo_map.viewScreenY = savedViewScreenY;
 }
 
 
@@ -10309,14 +10508,66 @@ void NC_STACK_ypaworld::ComputeMouseSelectFlags(TInputState *arg)
     }
 }
 
-void NC_STACK_ypaworld::yw_MAP_MouseSelect(TClickBoxInf *winp)
+// Where the pointer is on the map's view, in pixels of the whole map at
+// its zoom
+static Common::Point RoboMapPixelAt(const TClickBoxInf *winp)
 {
-    int pixelX = winp->move.BtnPos.x + robo_map.viewCenterX / robo_map.unitsPerPixelX - (robo_map.viewWidth / 2);
-    int pixelY = winp->move.BtnPos.y - (robo_map.viewCenterZ / robo_map.unitsPerPixelY) - (robo_map.viewHeight / 2);
+    return Common::Point( winp->move.BtnPos.x + robo_map.viewCenterX / robo_map.unitsPerPixelX - (robo_map.viewWidth / 2),
+                          winp->move.BtnPos.y - (robo_map.viewCenterZ / robo_map.unitsPerPixelY) - (robo_map.viewHeight / 2) );
+}
+
+vec2d RoboMapWorldAt(const TClickBoxInf *winp)
+{
+    Common::Point pixel = RoboMapPixelAt(winp);
+    return vec2d( (float)pixel.x * robo_map.unitsPerPixelX + 0.5, -((float)pixel.y * robo_map.unitsPerPixelY + 0.75) );
+}
+
+bool RoboMapUnitAt(NC_STACK_ypaworld *yw, const TClickBoxInf *winp, MapScene::Unit &out)
+{
+    const MapScene &scene = *robo_map.Scene;
+    Common::Point pixel = RoboMapPixelAt(winp);
 
     int sectorShift = robo_map.zoomLevel + 2;
 
-    Common::Point pt( pixelX >> sectorShift, pixelY >> sectorShift);
+    Common::Point pt( pixel.x >> sectorShift, pixel.y >> sectorShift);
+
+    if ( !yw->IsGamePlaySector( pt ) || !scene.CanSee(pt, scene.PlayerOwner()) )
+        return false;
+
+    // The player's own first
+    bool found = false;
+
+    for ( int pass = 0; pass < 2 && !found; pass++ )
+    {
+        scene.ForEachUnitIn(pt, [&](const MapScene::Unit &unit)
+        {
+            if ( found || (unit.Owner == scene.PlayerOwner()) != (pass == 0) )
+                return;
+
+            if ( unit.Status != BACT_STATUS_CREATE && unit.Status != BACT_STATUS_DEAD && unit.Status != BACT_STATUS_BEAM && unit.Type != BACT_TYPES_MISSLE )
+            {
+                int unitPixelX = unit.Position.x / robo_map.unitsPerPixelX;
+                int unitPixelY = unit.Position.z / robo_map.unitsPerPixelY;
+
+                if ( abs(unitPixelX - pixel.x) <= 8 && abs(-unitPixelY - pixel.y) <= 8 )
+                {
+                    out = unit;
+                    found = true;
+                }
+            }
+        });
+    }
+
+    return found;
+}
+
+void NC_STACK_ypaworld::yw_MAP_MouseSelect(TClickBoxInf *winp)
+{
+    Common::Point pixel = RoboMapPixelAt(winp);
+
+    int sectorShift = robo_map.zoomLevel + 2;
+
+    Common::Point pt( pixel.x >> sectorShift, pixel.y >> sectorShift);
 
     if ( IsGamePlaySector( pt ) )
     {
@@ -10324,45 +10575,23 @@ void NC_STACK_ypaworld::yw_MAP_MouseSelect(TClickBoxInf *winp)
 
         if ( _guiActFlags & 1 )
         {
+            vec2d at = RoboMapWorldAt(winp);
+
             _cellOnMouse = &cell;
             _guiActFlags |= 0x10;
-            _cellMouseIsectPos.x = (float)pixelX * robo_map.unitsPerPixelX + 0.5;
+            _cellMouseIsectPos.x = at.x;
             _cellMouseIsectPos.y = cell.height;
-            _cellMouseIsectPos.z = -((float)pixelY * robo_map.unitsPerPixelY + 0.75);
+            _cellMouseIsectPos.z = at.y;
         }
 
-        if ( _guiActFlags & 2 && !(bzda.activeMode & 0x30) && cell.IsCanSee(_userRobo->_owner) )
+        MapScene::Unit unit;
+
+        if ( _guiActFlags & 2 && !(bzda.activeMode & 0x30) && RoboMapUnitAt(this, winp, unit) )
         {
+            _guiActFlags |= 0x20;
 
-            int pass = 0;
-
-            while ( pass < 2 )
-            {
-                for( NC_STACK_ypabact* &unit : cell.unitsList )
-                {
-                    if ( (pass != 1 || unit->_owner != _userRobo->_owner) && (pass || unit->_owner == _userRobo->_owner) )
-                    {
-                        if ( unit->_status != BACT_STATUS_CREATE && unit->_status != BACT_STATUS_DEAD && unit->_status != BACT_STATUS_BEAM && unit->_bact_type != BACT_TYPES_MISSLE )
-                        {
-                            int unitPixelX = unit->_position.x / robo_map.unitsPerPixelX;
-                            int unitPixelY = unit->_position.z / robo_map.unitsPerPixelY;
-
-                            if ( abs(unitPixelX - pixelX) <= 8 && abs(-unitPixelY - pixelY) <= 8 )
-                            {
-                                _guiActFlags |= 0x20;
-
-                                _bactOnMouse = unit;
-                                _guiActFlags &= ~0x10;
-
-                                pass = 2;
-                                break;
-                            }
-                        }
-                    }
-                }
-
-                pass++;
-            }
+            _bactOnMouse = unit.Bact;
+            _guiActFlags &= ~0x10;
         }
     }
 }

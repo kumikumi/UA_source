@@ -55,6 +55,10 @@ struct Frame
     {
         int32_t Type = 0;
         int16_t Health[9] = {};  // Each building's, x + 3 * y
+        uint8_t Owner = 0;
+        uint8_t Purpose = 0;     // cellArea::PT_*
+        int32_t Power = 0;       // What host stations on it take in, 0-255
+        int32_t StationPower = -1; // Of a power station on it; -1 for none
 
         bool operator==(const Sector &b) const;
         bool operator!=(const Sector &b) const { return !(*this == b); }
@@ -77,14 +81,58 @@ struct Frame
         int32_t Radius = 0;
     };
 
+    // What else there is to show of a unit than how it's drawn, as the
+    // interface shows it: only in a frame with details (FrameMaker)
+    struct UnitInfo
+    {
+        uint8_t Owner = 0;
+        uint8_t Status = 0;      // BACT_STATUS_*
+        uint8_t Aggression = 0;
+        int16_t Shield = -1;     // Armour, in percent; -1 when not recorded
+        int32_t Energy = 0;
+        int32_t EnergyMax = 0;
+        uint32_t Parent = 0;     // Its commander, or a commander's host station
+        uint8_t PrimaryType = 0; // BACT_TGT_TYPE_*, of its target
+        uint32_t Primary = 0;    // The unit's id, or the sector's index
+        vec3f PrimaryPos;        // Where it heads for
+        uint8_t SecondaryType = 0; // Of what it fights on the way
+        uint32_t Secondary = 0;
+        int16_t GunFlags = -1;   // A gun's NC_STACK_ypagun::GUN_FLAGS_*; -1 when not recorded
+        int32_t ClockStart = 0;  // The game time its clock started at
+        int32_t WeaponTime = 0;  // Its clock at its last shot
+        int32_t SalveCounter = 0;
+    };
+
+    // A host station's batteries and what it takes in, as the energy panel
+    // shows them: only with details
+    struct HostStation
+    {
+        uint32_t Unit = 0;
+        int32_t Create = 0;      // The battery new units take from
+        int32_t Beam = 0;        // The battery beaming takes from
+        int32_t BuildSpare = 0;  // What another faction's builds with
+        int32_t VehicleSpare = 0;
+        int32_t ReloadPS = 0;    // What it would take in a second, at full power
+        uint8_t FillMode = 0;    // Which of its batteries it fills (1, 4, 8)
+        uint8_t LoadFlags = 0;   // Which of them filled or drained last
+        uint8_t LossFlags = 0;
+    };
+
     uint32_t Step = 0;           // Steps since the level started
     int32_t Time = 0;            // Game time, in 1/1024 s
     uint32_t Viewer = 0;         // The unit the player sees from
+    uint32_t UserRobo = 0;       // The player's host station
+    uint32_t UserUnit = 0;       // The unit the player steers
     vec3f CameraPosition;
     mat3x3f CameraRotation;
 
     std::vector<Unit> Units;     // In the order of their ids
     std::vector<Extra> Extras;
+
+    // With details: one for each unit, in the same order, and the host
+    // stations in the order of their ids
+    std::vector<UnitInfo> Infos;
+    std::vector<HostStation> HostStations;
 
     // By index: shared with the frames before while no sector changes
     std::shared_ptr<const std::vector<Sector>> Sectors;
@@ -94,6 +142,15 @@ struct Frame
 
     const Unit *FindUnit(uint32_t id) const;
     const Construction *FindConstruction(uint32_t sector) const;
+
+    // A sector by its index, if the frame has it
+    const Sector *SectorAt(size_t index) const { return Sectors && index < Sectors->size() ? &(*Sectors)[index] : NULL; }
+
+    // With details: what there is to show of a unit, by its id or its
+    // index in Units, and of a host station
+    const UnitInfo *FindInfo(uint32_t id) const;
+    const UnitInfo *InfoAt(size_t index) const { return index < Infos.size() ? &Infos[index] : NULL; }
+    const HostStation *FindHostStation(uint32_t id) const;
 
     // The frame t of the way from a to b, b following a or the other way
     // around: units and the camera moved and turned in between, as far as
@@ -106,7 +163,8 @@ struct Frame
 class FrameMaker
 {
 public:
-    explicit FrameMaker(const State::Schema &viewSchema);
+    // With details, the frames have what the interface shows too
+    explicit FrameMaker(const State::Schema &viewSchema, bool details = false);
 
     // A frame of the level as it is now. The frame before, when given, keeps
     // its sectors if they're the same.
@@ -134,13 +192,20 @@ protected:
     {
         Field Vehicle, StatusFlags, Position, Rotation, Scale, Look;
         Field ExtraScale[3], ExtraPos[3], ExtraRotation[3], ExtraFlags[3], ExtraModel[3];
+
+        // Details
+        Field Owner, Status, Aggression, Shield, Energy, EnergyMax, Parent;
+        Field PrimaryType, Primary, PrimaryPos, SecondaryType, Secondary, GunFlags, ClockStart, WeaponTime, SalveCounter;
+        Field Create, Beam, BuildSpare, VehicleSpare, ReloadPS, FillMode, LoadFlags, LossFlags;
     };
 
     static Field Find(const State::Schema &schema, uint8_t kind, const char *name);
 
     State::Schema _schema;
-    Field _time, _viewer, _cameraPosition, _cameraRotation;
-    Field _sectorType, _sectorHealth, _constructing, _constructBuilding, _constructTime, _constructEnd;
+    bool _details;
+    Field _time, _viewer, _userRobo, _userUnit, _cameraPosition, _cameraRotation;
+    Field _sectorType, _sectorHealth, _sectorOwner, _sectorPurpose, _sectorPower, _powerStation, _stationPower;
+    Field _constructing, _constructBuilding, _constructTime, _constructEnd;
     Field _itemState, _itemRadius;
     std::unordered_map<uint8_t, UnitFields> _units; // By kind
 };

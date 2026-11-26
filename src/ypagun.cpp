@@ -635,6 +635,14 @@ void NC_STACK_ypagun::Renew()
     _viewer_rotation = _rotation;
 }
 
+void NC_STACK_ypagun::VisitView(World::State::Visitor &v)
+{
+    NC_STACK_ypabact::VisitView(v);
+
+    // Whether it's one of a host station's, which the map leaves out
+    v.Field("gunFlags", _gunFlags, World::State::VIEW);
+}
+
 void NC_STACK_ypagun::VisitInternal(World::State::Visitor &v)
 {
     NC_STACK_ypabact::VisitInternal(v);
@@ -647,7 +655,6 @@ void NC_STACK_ypagun::VisitInternal(World::State::Visitor &v)
     v.Field("gunType", _gunType);
     v.Field("gunFireTime", _gunFireTime);
     v.Field("gunFireCount", _gunFireCount);
-    v.Field("gunFlags", _gunFlags);
     v.Field("gunDownTime", _gunDownTime);
 }
 

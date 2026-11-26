@@ -91,6 +91,7 @@ set(SOURCES
 	yw_game_ui.cpp
 	yw_net.cpp
 	yw_replay.cpp
+	yw_replayui.cpp
 	yw_replays.cpp
 	yw_save.cpp
 	ypabact.cpp

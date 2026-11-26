@@ -42,7 +42,15 @@ std::array<std::string, HUDSTR_MAX> DefaultStrings::HudStrings = Common::ArrayIn
     {HUDSTR_RLD, "RLD"},
     {HUDSTR_EGY, "HP"},
     {HUDSTR_OK,  "OK"},
-    {HUDSTR_AMR, "AMR"}
+    {HUDSTR_AMR, "AMR"},
+    {HUDSTR_SYSTEM, "SYSTEM"},
+    {HUDSTR_CREATE, "CREATE"},
+    {HUDSTR_BEAM, "BEAM"},
+    {HUDSTR_RELOAD, "RELOAD"},
+    {HUDSTR_VEHICLES, "VEHICLES"},
+    {HUDSTR_BUILDINGS, "BUILDINGS"},
+    {HUDSTR_REPLAYVIEWKEYS, "1 2 3 View   DOUBLE-CLICK Look from a unit   M Map   U Units   H HUD"},
+    {HUDSTR_REPLAYFREEKEYS, "W A S D Move   Q/E Down/Up   SHIFT Faster   RIGHT MOUSE Look"}
 });
 
 std::array<std::string, WINNAME_MAX> DefaultStrings::WinNames = Common::ArrayInit<std::string, WINNAME_MAX>(
@@ -69,7 +77,10 @@ std::array<std::string, TITLE_MAX> DefaultStrings::Titles = Common::ArrayInit<st
     {TITLE_REPLAYSAVED, "Replay Saved"},
     {TITLE_VIEW, "View"},
     {TITLE_NOREPLAYS, "No replays saved yet. Save one from a debriefing."},
-    {TITLE_REPLAYPAUSED, "PAUSED"}
+    {TITLE_REPLAYPAUSED, "PAUSED"},
+    {TITLE_REPLAYORIGINAL, "ORIGINAL"},
+    {TITLE_REPLAYMANUAL, "MANUAL"},
+    {TITLE_REPLAYFREE, "FREE LOOK"}
 });
 
 

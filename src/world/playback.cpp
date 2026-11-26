@@ -20,8 +20,9 @@ bool Playback::Open(const std::string &path)
         return false;
     }
 
-    // The recording's own view, whichever build made it
-    _maker.reset(new FrameMaker(_recording.ViewSchema()));
+    // The recording's own view, whichever build made it, with what the
+    // viewer's interface shows too
+    _maker.reset(new FrameMaker(_recording.ViewSchema(), true));
     _reader.reset(new ViewReader(_recording));
     _duration = (LastStep() - FirstStep()) * Recording::StepTicks;
     return true;

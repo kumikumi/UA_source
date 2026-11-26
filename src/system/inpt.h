@@ -73,6 +73,8 @@ struct TClickBoxInf
     ClickBox *selected_btn = NULL;
     int32_t selected_btnID = 0;
     TMousePos move;
+    Common::Point moved; // Since the last query, in the window's points,
+                         // however far the pointer itself could go
     TMousePos ldw_pos;
     TMousePos lup_pos;
 };
