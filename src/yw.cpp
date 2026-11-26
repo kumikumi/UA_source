@@ -6825,28 +6825,24 @@ size_t NC_STACK_ypaworld::AdvancedCreateLevel(TLevelLoadRequest *arg)
         World::Recording recording;
         World::State::Image view, internal;
 
-        if ( recording.Open(won) && recording.ReadKeyframe(recording.Keyframes().back().Step, view, internal) )
+        loaded = recording.Open(won) && recording.ReadKeyframe(recording.Keyframes().back().Step, view, internal) &&
+                 World::State::Restore(this, view, internal, false);
+
+        if ( loaded )
         {
-            loaded = World::State::Restore(this, view, internal, false);
+            InitBuddies();
 
-            if ( loaded )
-            {
-                InitBuddies();
+            _userRobo->_energy = _userRobo->_energy_max;
 
-                _userRobo->_energy = _userRobo->_energy_max;
-
-                // A won training mission played again has nothing left to teach
-                _tutorialHints.Stop();
-            }
-            else
-            {
-                ypa_log_out("Warning: could not start won level %d from %s\n", arg->lvlID, won.c_str());
-            }
+            // A won training mission played again has nothing left to teach
+            _tutorialHints.Stop();
         }
         else
         {
-            // As by an older build: the level starts as new
-            ypa_log_out("Warning: %s can't be read, so won level %d starts as new\n", won.c_str(), arg->lvlID);
+            // As from another version of the game: the level starts as new,
+            // the prototypes and buddies as before the restoring read some
+            ypa_log_out("Warning: won level %d can't start from %s, so it starts as new\n", arg->lvlID, won.c_str());
+            LoadSettings("settings.tmp", _GameShell->UserName, World::SDF_BUDDY | World::SDF_PROTO | World::SDF_USER, false);
             loaded = CreateLevel(arg);
         }
     }

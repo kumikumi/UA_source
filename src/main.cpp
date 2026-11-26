@@ -433,9 +433,7 @@ int ProcessMenuFrame()
         if ( !ypaworld->AdvancedCreateLevel(&loadRequest) )
         {
             ypa_log_out("Sorry, unable to init this level!\n");
-
-            ypaworld->DeinitGameShell();
-            return 0;
+            return BackToLevelMap(false);
         }
         GameScreenMode = GAME_SCREEN_MODE_GAME;
         Input::Engine.QueryInput(&input_states);
