@@ -1410,37 +1410,31 @@ static std::string HeadlessOutcome(int32_t startTime)
     if ( state == TLevelInfo::STATE_ABORTED )
         return "aborted";
 
-    // Nobody is there to leave the level, so these end it
-    NC_STACK_ypabact *mine = ypaworld->UserRobo();
+    // Nobody is there to leave the level, so these end it: a faction is
+    // out when it has no units left
+    uint32_t factionsLeft = ypaworld->FactionsWithUnits();
+    int mine = ypaworld->LocalOwner();
 
-    if ( mine && mine->_status == BACT_STATUS_DEAD )
-        return "lost, the player's host station destroyed";
-
-    bool enemyLeft = false;
-    uint32_t factionsLeft = 0; // Of host stations, as bits
-    for ( NC_STACK_ypabact *unit : ypaworld->_unitsList )
+    if ( mine > 0 )
     {
-        if ( unit->_bact_type == BACT_TYPES_ROBO && unit->_status != BACT_STATUS_DEAD )
-        {
-            factionsLeft |= 1 << unit->_owner;
+        if ( !(factionsLeft & (1u << mine)) )
+            return "lost, the player's faction has no units left";
 
-            if ( unit != mine )
-                enemyLeft = true;
-        }
+        if ( !(factionsLeft & ~(1u << mine)) )
+            return "won, no enemy faction has units left";
     }
 
-    if ( mine && !enemyLeft )
-        return "won, no enemy host station left";
+    // With no one playing, it's over when one faction is all that's left
+    if ( mine <= 0 && !factionsLeft )
+        return "over, no faction has units left";
 
-    // With no one playing, it's over when one faction's host stations are
-    // all that's left
-    if ( !mine && !(factionsLeft & (factionsLeft - 1)) )
+    if ( mine <= 0 && !(factionsLeft & (factionsLeft - 1)) )
     {
         int faction = 0;
         while ( factionsLeft > 1u << faction )
             faction++;
 
-        return fmt::sprintf("over, only faction %d's host stations left", faction);
+        return fmt::sprintf("over, only faction %d has units left", faction);
     }
 
     if ( headlessTimeLimit && ypaworld->_timeStamp - startTime >= headlessTimeLimit )

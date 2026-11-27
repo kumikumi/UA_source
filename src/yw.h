@@ -1962,6 +1962,12 @@ public:
     // the top level when it has none
     void AddCommander(NC_STACK_ypabact *unit);
 
+    // The factions with units left, host stations included, as bits (1 <<
+    // owner). A faction is defeated when it has none left: one with host
+    // stations when the last of them falls and takes the rest along, one
+    // without when its last unit is destroyed.
+    uint32_t FactionsWithUnits();
+
     // What a faction's units say to the player here (TRoboMessage ids), into
     // the message log and out loud; some are left out when said just before.
     // Returns whether it was said.

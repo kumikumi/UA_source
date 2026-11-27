@@ -59,7 +59,7 @@ enum RecordingEnd : uint8_t
     END_UNFINISHED = 0, // Gone back to the level map, or the game quit: it
                         // can go on (Continue)
     END_WON = 1,
-    END_LOST = 2,       // The player's host station was destroyed
+    END_LOST = 2,       // The player's faction had no units left
 };
 
 // Records a level as it is played (--record FILE): keyframes, each the whole

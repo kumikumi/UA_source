@@ -351,7 +351,7 @@ def summary(rec):
     print("%d keyframes: %s" % (len(keys), " ".join(map(str, shown))))
     print("packed: steps %d bytes, keyframes %d bytes (%.1f%%)" % (rec.packed["STEP"], rec.packed["KEYF"],
                                                                    100.0 * rec.packed["KEYF"] / max(total, 1)))
-    ends = {0: "left unfinished", 1: "won", 2: "lost: the player's host station destroyed"}
+    ends = {0: "left unfinished", 1: "won", 2: "lost: the player's faction had no units left"}
     print("the level was " + ends.get(rec.end, "left %d" % rec.end) if rec.end is not None else
           "no end: a saved game, still being recorded or cut short")
     units = collections.Counter(kind_name(k) for k, _ in view if k >= 16)

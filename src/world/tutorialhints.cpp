@@ -8,27 +8,21 @@ extern tehMap robo_map;
 namespace World
 {
 
-// An enemy host station still stands
-static bool EnemyHostStationStands(NC_STACK_ypaworld *world)
-{
-    for ( NC_STACK_ypabact *unit : world->_unitsList )
-    {
-        if ( unit != world->UserRobo() && unit->_bact_type == BACT_TYPES_ROBO && unit->_status != BACT_STATUS_DEAD )
-            return true;
-    }
-
-    return false;
-}
-
 // The player sits in their host station, or in one of its guns
 static bool PlayerInHostStation(NC_STACK_ypaworld *world)
 {
     return world->UserUnit() == world->UserRobo() || world->_playerInHSGun;
 }
 
+// Every other faction is out of units
 static bool EnemiesDefeated(NC_STACK_ypaworld *world)
 {
-    return !EnemyHostStationStands(world);
+    uint32_t factions = world->FactionsWithUnits();
+
+    if ( world->LocalOwner() > 0 )
+        factions &= ~(1u << world->LocalOwner());
+
+    return !factions;
 }
 
 // These three are also done once the enemies are defeated, and while the

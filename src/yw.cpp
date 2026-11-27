@@ -2177,7 +2177,7 @@ void NC_STACK_ypaworld::DeleteLevel()
 
     if ( _levelInfo.State == TLevelInfo::STATE_COMPLETED )
         end = World::END_WON;
-    else if ( UserRobo() && UserRobo()->_status == BACT_STATUS_DEAD )
+    else if ( LocalOwner() > 0 && !(FactionsWithUnits() & (1u << LocalOwner())) )
         end = World::END_LOST;
 
     std::string recorded = _recorder.Stop(this, end);
@@ -7141,6 +7141,25 @@ void NC_STACK_ypaworld::AddCommander(NC_STACK_ypabact *unit)
         unit->_host_station->AddSubject(unit);
     else
         AddToUnitsList(unit);
+}
+
+static void AddFactionsWithUnits(NC_STACK_ypabact *unit, uint32_t &factions)
+{
+    if ( unit->_status != BACT_STATUS_DEAD && unit->_owner )
+        factions |= 1u << unit->_owner;
+
+    for ( NC_STACK_ypabact *kid : unit->_kidList )
+        AddFactionsWithUnits(kid, factions);
+}
+
+uint32_t NC_STACK_ypaworld::FactionsWithUnits()
+{
+    uint32_t factions = 0;
+
+    for ( NC_STACK_ypabact *unit : _unitsList )
+        AddFactionsWithUnits(unit, factions);
+
+    return factions;
 }
 
 bool NC_STACK_ypaworld::MakeSquad(uint8_t owner, NC_STACK_yparobo *host, const std::vector<int> &VhclIDS, vec3d pos, bool usable)
