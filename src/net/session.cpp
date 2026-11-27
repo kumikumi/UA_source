@@ -42,9 +42,12 @@ constexpr size_t DATA_HEADER = 9;
 // game is full
 constexpr uint32_t SPARE_PEERS = 4;
 
-// A peer that stops answering is dropped after this long
-constexpr uint32_t PEER_TIMEOUT_MIN = 5000;
-constexpr uint32_t PEER_TIMEOUT_MAX = 20000;
+// A peer that stops answering is dropped after 10 to 30 s, depending on
+// how often ENet has tried. A dropped player can't come back, so a
+// machine that stops for a few seconds (loading, switching windows)
+// shouldn't be.
+constexpr uint32_t PEER_TIMEOUT_MIN = 10000;
+constexpr uint32_t PEER_TIMEOUT_MAX = 30000;
 
 // How long leaving waits for the others to hear of it
 constexpr uint32_t CLOSE_WAIT = 300;
