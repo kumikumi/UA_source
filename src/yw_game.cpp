@@ -166,6 +166,7 @@ int NC_STACK_ypaworld::LevelCommonLoader(TLevelDescription *mapp, int levelID, c
     ResetControls();
     _localPlayer->HostStation = NULL;
     _localPlayer->Unit = NULL;
+    _localPlayer->Controls = NULL;
     _playerHSDestroyed = false;
     _vehicleSectorRatio = 0;
     _beamEnergyCurrent = 0;
@@ -473,8 +474,8 @@ bool NC_STACK_ypaworld::yw_createRobos(const std::vector<MapRobo> &Robos)
 
             if ( first )
             {
-                robo->setBACT_viewer(true);
-                robo->setBACT_inputting(true);
+                robo->setBACT_viewer(true, _localPlayer);
+                robo->setBACT_inputting(true, _localPlayer);
             }
         }
         

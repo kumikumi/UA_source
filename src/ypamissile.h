@@ -75,7 +75,7 @@ public:
         MISS_ATT_STHEIGHT = 0x80002010
     };
 
-    virtual void setBACT_viewer(bool) override;
+    virtual void setBACT_viewer(bool vwr, World::Player *player) override;
     
     virtual void SetLauncherBact(NC_STACK_ypabact *);
     virtual void SetMissileType(int);

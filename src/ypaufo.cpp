@@ -25,9 +25,6 @@ size_t NC_STACK_ypaufo::Init(IDVList &stak)
         {
             switch (val.ID)
             {
-            case BACT_ATT_INPUTTING:
-                setBACT_inputting(val.Get<bool>());
-                break;
 
             case UFO_ATT_TOGO:
                 setUFO_togo(val.Get<int32_t>());
@@ -59,9 +56,6 @@ size_t NC_STACK_ypaufo::SetParameters(IDVList &stak)
         {
             switch (val.ID)
             {
-            case BACT_ATT_INPUTTING:
-                setBACT_inputting(val.Get<bool>());
-                break;
 
             case UFO_ATT_TOGO:
                 setUFO_togo(val.Get<int32_t>());
@@ -951,11 +945,11 @@ void NC_STACK_ypaufo::VisitInternal(World::State::Visitor &v)
 }
 
 
-void NC_STACK_ypaufo::setBACT_inputting(bool inpt)
+void NC_STACK_ypaufo::setBACT_inputting(bool inpt, World::Player *player)
 {
-    NC_STACK_ypabact::setBACT_inputting(inpt);
+    NC_STACK_ypabact::setBACT_inputting(inpt, player);
 
-    if ( !inpt )
+    if ( !getBACT_inputting() )
         _rotation = mat3x3::Ident();
 
 }

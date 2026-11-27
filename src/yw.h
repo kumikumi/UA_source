@@ -1928,7 +1928,15 @@ public:
     void OverrideCamera(const vec3d &pos, const mat3x3 &rotation);
     virtual void DamageSectorBuilding(TSectorDamage *arg);
     virtual size_t GetSectorInfo(TSectorInfo *arg);
-    virtual void SetViewerUnit(NC_STACK_ypabact *bact);
+    // A player looks from a unit now: their camera and HUD go there
+    void SetPlayerUnit(World::Player *player, NC_STACK_ypabact *unit);
+    void SetPlayerHostStation(World::Player *player, NC_STACK_ypabact *host);
+
+    // The player whose controls move a unit; NULL when none's do
+    World::Player *ControllerOf(const NC_STACK_ypabact *unit) const;
+
+    // A player looking from a unit, other than one; NULL when there's none
+    World::Player *PlayerLookingFrom(const NC_STACK_ypabact *unit, const World::Player *other = NULL) const;
     virtual void AddToUnitsList(NC_STACK_ypabact *bact);
     virtual void IntersectRay(TRayIntersection *arg);
     virtual void FindSphereCollisions(TSphereCollisionQuery *arg);
@@ -2076,8 +2084,6 @@ public:
     virtual void setYW_skyHeight(int);
     virtual void setYW_skyRender(int);
     virtual void setYW_doEnergyRecalc(int);
-    virtual void setYW_userHostStation(NC_STACK_ypabact *);
-    virtual void setYW_userVehicle(NC_STACK_ypabact *);
     virtual void setYW_screenW(int);
     virtual void setYW_screenH(int);
     virtual void setYW_dontRender(bool);
@@ -2090,6 +2096,8 @@ public:
     virtual int getYW_skyHeight();
     virtual int getYW_skyRender();
     virtual int getYW_doEnergyRecalc();
+    World::Player *LocalPlayer() const { return _localPlayer; }
+
     // The local player's host station, and the unit they look from
     NC_STACK_ypabact *UserRobo() const { return _localPlayer->HostStation; }
     NC_STACK_ypabact *UserUnit() const { return _localPlayer->Unit; }

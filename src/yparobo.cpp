@@ -42,9 +42,6 @@ size_t NC_STACK_yparobo::Init(IDVList &stak)
         {
             switch (val.ID)
             {
-            case BACT_ATT_INPUTTING:
-                setBACT_inputting(val.Get<bool>());
-                break;
 
             case ROBO_ATT_EP_CONQUER:
                 setROBO_epConquer(val.Get<int32_t>());
@@ -162,9 +159,6 @@ size_t NC_STACK_yparobo::SetParameters(IDVList &stak)
         {
             switch (val.ID)
             {
-            case BACT_ATT_INPUTTING:
-                setBACT_inputting(val.Get<bool>());
-                break;
 
             case ROBO_ATT_PROTO:
                 setROBO_proto(val.Get<World::TRoboProto *>());
@@ -297,7 +291,7 @@ void NC_STACK_yparobo::AI_layer1(update_msg *arg)
     int inputting = getBACT_inputting();
 
     if ( inputting )
-        User_layer(arg);
+        UserUpdate(arg);
     else
         AI_layer3(arg);
 }
@@ -4882,11 +4876,13 @@ void NC_STACK_yparobo::Die()
 
                 if ( this == _world->UserRobo() )
                 {
-                    _world->UserUnit()->setBACT_inputting(false);
-                    _world->UserUnit()->setBACT_viewer(false);
+                    World::Player *local = _world->LocalPlayer();
 
-                    setBACT_inputting(true);
-                    setBACT_viewer(true);
+                    _world->UserUnit()->setBACT_inputting(false, local);
+                    _world->UserUnit()->setBACT_viewer(false, local);
+
+                    setBACT_inputting(true, local);
+                    setBACT_viewer(true, local);
                 }
             }
         }
@@ -5964,13 +5960,13 @@ void NC_STACK_yparobo::UpdateGateBeamOut()
 
 
 
-void NC_STACK_yparobo::setBACT_inputting(bool inpt)
+void NC_STACK_yparobo::setBACT_inputting(bool inpt, World::Player *player)
 {
-    NC_STACK_ypabact::setBACT_inputting(inpt);
+    NC_STACK_ypabact::setBACT_inputting(inpt, player);
 
-    if ( inpt )
+    if ( inpt && _world->ControllerOf(this) == player )
     {
-        _world->setYW_userHostStation(this);
+        _world->SetPlayerHostStation(player, this);
 
         _roboState |= ROBOSTATE_PLAYERROBO;
     }

@@ -4374,11 +4374,13 @@ void SwitchControlToUnit(NC_STACK_ypaworld *yw, NC_STACK_ypabact *bact1, NC_STAC
         {
             yw->_hud.switch_time = yw->_timeStamp;
 
-            bact2->setBACT_viewer(false);
-            bact2->setBACT_inputting(false);
+            World::Player *local = yw->LocalPlayer();
 
-            bact1->setBACT_viewer(true);
-            bact1->setBACT_inputting(true);
+            bact2->setBACT_viewer(false, local);
+            bact2->setBACT_inputting(false, local);
+
+            bact1->setBACT_viewer(true, local);
+            bact1->setBACT_inputting(true, local);
 
             yw->GuiWinClose( &gui_lstvw );
 
@@ -10902,9 +10904,9 @@ void NC_STACK_ypaworld::ExecuteMouseAction(int arg)
         break;
 
     case World::DOACTION_19:
-        UserUnit()->setBACT_viewer(false);
-        UserUnit()->setBACT_inputting(false);
-        _bactOnMouse->setBACT_viewer(true);
+        UserUnit()->setBACT_viewer(false, _localPlayer);
+        UserUnit()->setBACT_inputting(false, _localPlayer);
+        _bactOnMouse->setBACT_viewer(true, _localPlayer);
         break;
 
     default:

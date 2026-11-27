@@ -27,9 +27,6 @@ size_t NC_STACK_ypamissile::Init(IDVList &stak)
         {
             switch (val.ID)
             {
-            case BACT_ATT_VIEWER:
-                setBACT_viewer(val.Get<bool>());
-                break;
 
             case MISS_ATT_LAUNCHER:
                 SetLauncherBact(val.Get<NC_STACK_ypabact *>());
@@ -81,9 +78,6 @@ size_t NC_STACK_ypamissile::SetParameters(IDVList &stak)
         {
             switch (val.ID)
             {
-            case BACT_ATT_VIEWER:
-                setBACT_viewer(val.Get<bool>());
-                break;
 
             case MISS_ATT_LAUNCHER:
                 SetLauncherBact(val.Get<NC_STACK_ypabact *>());
@@ -817,22 +811,19 @@ size_t NC_STACK_ypamissile::SetStateInternal(setState_msg *arg)
 
 void NC_STACK_ypamissile::ResetViewing()
 {
-    if ( getBACT_viewer() )
+    // Each player riding it goes back to the unit that fired it
+    while ( World::Player *rider = _world->PlayerLookingFrom(this) )
     {
-        setBACT_viewer(false);
-        setBACT_inputting(false);
+        setBACT_viewer(false, rider);
+        setBACT_inputting(false, rider);
 
-        if ( _mislEmitter->_status != BACT_STATUS_DEAD || _mislEmitter->_parent == NULL )
-        {
-            _mislEmitter->setBACT_viewer(true);
-            _mislEmitter->setBACT_inputting(true);
-        }
-        else
-        {
-            _mislEmitter->_parent->setBACT_viewer(true);
-            _mislEmitter->_parent->setBACT_inputting(true);
-        }
+        NC_STACK_ypabact *back = _mislEmitter;
 
+        if ( _mislEmitter->_status == BACT_STATUS_DEAD && _mislEmitter->_parent )
+            back = _mislEmitter->_parent;
+
+        back->setBACT_viewer(true, rider);
+        back->setBACT_inputting(true, rider);
     }
 }
 
@@ -973,11 +964,11 @@ NC_STACK_ypamissile::NC_STACK_ypamissile()
 }
 
 
-void NC_STACK_ypamissile::setBACT_viewer(bool vwr)
+void NC_STACK_ypamissile::setBACT_viewer(bool vwr, World::Player *player)
 {
-    NC_STACK_ypabact::setBACT_viewer(vwr);
+    NC_STACK_ypabact::setBACT_viewer(vwr, player);
 
-    if ( vwr )
+    if ( getBACT_viewer() )
         _mislFlags |= FLAG_MISL_VIEW;
     else
         _mislFlags &= ~FLAG_MISL_VIEW;

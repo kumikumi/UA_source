@@ -3309,8 +3309,8 @@ bool NC_STACK_ypaworld::yw_NetSetHostStations(const std::vector<MapRobo> &Robos)
 
         if ( plData.IsItMe() )
         {
-            hostObj->setBACT_viewer(true);
-            hostObj->setBACT_inputting(true);
+            hostObj->setBACT_viewer(true, LocalPlayer());
+            hostObj->setBACT_inputting(true, LocalPlayer());
             _GameShell->netPlayerOwner = owner;
             _levelInfo.UserMask |= 1 << owner;
         }
@@ -3470,7 +3470,7 @@ size_t NC_STACK_ypaworld::CreateNetLevel(TLevelLoadRequest *arg)
 
         log_netlog("Sent a READY TO PLAY to all for my Owner %d\n", _GameShell->netPlayerOwner);
 
-        fndHost->setBACT_viewer(true);
+        fndHost->setBACT_viewer(true, LocalPlayer());
     }
 
     _GameShell->netsend_count = 0;

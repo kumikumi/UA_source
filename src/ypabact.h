@@ -18,6 +18,7 @@ class NC_STACK_ypamissile;
 class NC_STACK_ypaworld;
 
 namespace World { namespace State { class Visitor; } }
+namespace World { struct Player; }
 
 struct TSectorDamage;
 
@@ -438,8 +439,6 @@ public:
     {
         BACT_ATT_WORLD = 0x80001001,
         BACT_ATT_PTRANSFORM = 0x80001002,
-        BACT_ATT_VIEWER = 0x80001004,       // bool
-        BACT_ATT_INPUTTING = 0x80001005,    // bool
         BACT_ATT_EXACTCOLL = 0x80001006,    // bool
         BACT_ATT_BACTCOLL = 0x80001007,     // bool
         BACT_ATT_ATTACKLIST = 0x80001008,
@@ -456,8 +455,17 @@ public:
         BACT_ATT_ALWAYSRENDER = 0x80001013  // bool
     };
 
-    virtual void setBACT_viewer(bool);
-    virtual void setBACT_inputting(bool);
+    // A player looks from the unit, or no longer does. It stays the viewer
+    // while anyone else looks from it.
+    virtual void setBACT_viewer(bool vwr, World::Player *player);
+
+    // A player's controls move the unit, or no longer do. Only one player's
+    // at a time: another can't take it over, nor let it go. NULL lets go
+    // whoever has it.
+    virtual void setBACT_inputting(bool inpt, World::Player *player);
+
+    // The unit moved by its controller's controls this step
+    void UserUpdate(update_msg *arg);
     virtual void setBACT_exactCollisions(bool);
     virtual void setBACT_bactCollisions(bool);
     virtual void setBACT_airconst(int);

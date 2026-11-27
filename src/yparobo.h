@@ -150,7 +150,7 @@ public:
     };
 
 
-    virtual void setBACT_inputting(bool) override;
+    virtual void setBACT_inputting(bool inpt, World::Player *player) override;
     virtual void setROBO_proto(World::TRoboProto *);
     virtual void setROBO_epConquer(int);
     virtual void setROBO_epDefense(int);

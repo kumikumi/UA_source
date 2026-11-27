@@ -394,6 +394,7 @@ bool NC_STACK_ypaworld::SimulationStep(TUpdateArgs *arg)
     _updateMessage.frameTime = arg->DTime;
     _updateMessage.units_count = 0;
     _updateMessage.inpt = arg->Input;
+    _localPlayer->Input = arg->Input;
 
     uint32_t netStart = profiler_begin();
     
@@ -1200,9 +1201,26 @@ size_t NC_STACK_ypaworld::GetSectorInfo(TSectorInfo *arg)
 }
 
 
-void NC_STACK_ypaworld::SetViewerUnit(NC_STACK_ypabact *bact)
+World::Player *NC_STACK_ypaworld::ControllerOf(const NC_STACK_ypabact *unit) const
 {
-    setYW_userVehicle(bact);
+    for ( const std::unique_ptr<World::Player> &player : _players )
+    {
+        if ( player->Controls == unit )
+            return player.get();
+    }
+
+    return NULL;
+}
+
+World::Player *NC_STACK_ypaworld::PlayerLookingFrom(const NC_STACK_ypabact *unit, const World::Player *other) const
+{
+    for ( const std::unique_ptr<World::Player> &player : _players )
+    {
+        if ( player->Unit == unit && player.get() != other )
+            return player.get();
+    }
+
+    return NULL;
 }
 
 
@@ -6374,8 +6392,30 @@ void NC_STACK_ypaworld::GiveUnitAssets(NC_STACK_ypabact *unit)
 
 void NC_STACK_ypaworld::FinishRestore(bool inPlace)
 {
-    // As setYW_userHostStation sets it for a level started anew
+    // As SetPlayerHostStation sets it for a level started anew
     _playerOwner = UserRobo() ? UserRobo()->_owner : 0;
+
+    // Who controls which unit isn't kept: the units say they're controlled,
+    // and the only player is the local one
+    _localPlayer->Controls = NULL;
+
+    for ( NC_STACK_ypabact *robo : _unitsList )
+    {
+        if ( robo->getBACT_inputting() )
+            _localPlayer->Controls = robo;
+
+        for ( NC_STACK_ypabact *comm : robo->_kidList )
+        {
+            if ( comm->getBACT_inputting() )
+                _localPlayer->Controls = comm;
+
+            for ( NC_STACK_ypabact *unit : comm->_kidList )
+            {
+                if ( unit->getBACT_inputting() )
+                    _localPlayer->Controls = unit;
+            }
+        }
+    }
 
     _countSectorsPerOwner.fill(0);
 
@@ -6952,38 +6992,43 @@ void NC_STACK_ypaworld::setYW_doEnergyRecalc(int doRecalc)
     _doEnergyRecalc = doRecalc;
 }
 
-void NC_STACK_ypaworld::setYW_userHostStation(NC_STACK_ypabact *host)
+void NC_STACK_ypaworld::SetPlayerHostStation(World::Player *player, NC_STACK_ypabact *host)
 {
-    _localPlayer->HostStation = host;
-    _playerOwner = host->_owner;
+    player->HostStation = host;
+
+    if ( player == _localPlayer )
+        _playerOwner = host->_owner;
 }
 
-void NC_STACK_ypaworld::setYW_userVehicle(NC_STACK_ypabact *bact)
+void NC_STACK_ypaworld::SetPlayerUnit(World::Player *player, NC_STACK_ypabact *unit)
 {
-    if ( bact != _localPlayer->Unit )
+    if ( unit == player->Unit )
+        return;
+
+    NC_STACK_ypabact *before = player->Unit;
+    player->Unit = unit;
+
+    // The rest is this machine's interface, following the local player
+    if ( player != _localPlayer )
+        return;
+
+    if ( before )
+        _prevUnitId = before->_gid;
+
+    _vehicleTakenControlTimestamp = _timeStamp;
+    _vehicleTakenCommandId = unit->_commandID;
+    _guiDragDefaultMouse = false;
+
+    if ( unit->_bact_type == BACT_TYPES_ROBO )
     {
-        NC_STACK_ypabact *oldpBact = _localPlayer->Unit;
-
-        if ( oldpBact )
-            _prevUnitId = oldpBact->_gid;
-
-        _localPlayer->Unit = bact;
-
-        _vehicleTakenControlTimestamp = _timeStamp;
-        _vehicleTakenCommandId = UserUnit()->_commandID;
-        _guiDragDefaultMouse = false;
-
-        if ( UserUnit()->_bact_type == BACT_TYPES_ROBO )
-        {
-            _joyIgnoreY = 1;
-            _joyIgnoreX = 1;
-        }
-
-        FFeedback_VehicleChanged();
-
-        if ( oldpBact )
-            RestoreWinStatus(this, oldpBact, UserUnit());
+        _joyIgnoreY = 1;
+        _joyIgnoreX = 1;
     }
+
+    FFeedback_VehicleChanged();
+
+    if ( before )
+        RestoreWinStatus(this, before, unit);
 }
 
 void NC_STACK_ypaworld::setYW_screenW(int w)

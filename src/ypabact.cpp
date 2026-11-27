@@ -156,61 +156,6 @@ size_t NC_STACK_ypabact::Init(IDVList &stak)
             {
                 switch (val.ID)
                 {
-                case BACT_ATT_VIEWER:
-                {
-                    uamessage_viewer viewMsg;
-
-                    if ( val.Get<int32_t>() )
-                    {
-                        _world->SetViewerUnit(this); //Set current bact
-
-                        _oflags |= BACT_OFLAG_VIEWER;
-
-                        if ( _world->_isNetGame )
-                            viewMsg.view = 1;
-
-                        SFXEngine::SFXe.startSound(&_soundcarrier, 8);
-                    }
-                    else
-                    {
-                        _oflags &= ~BACT_OFLAG_VIEWER;
-
-                        if ( _world->_isNetGame )
-                            viewMsg.view = 0;
-
-                        SFXEngine::SFXe.stopSound(&_soundcarrier, 8);
-                    }
-
-                    if ( _world->_isNetGame ) // Network message send routine?
-                    {
-                        viewMsg.msgID = UAMSG_VIEWER;
-                        viewMsg.owner = _owner;
-                        viewMsg.classID = _bact_type;
-                        viewMsg.id = _gid;
-
-                        if ( viewMsg.classID == BACT_TYPES_MISSLE )
-                        {
-                            NC_STACK_ypamissile *miss = dynamic_cast<NC_STACK_ypamissile *>(this);
-                            viewMsg.launcher = miss->GetLauncherBact()->_gid;
-                        }
-
-                        _world->NetBroadcastMessage(&viewMsg, sizeof(viewMsg), true);
-                    }
-                }
-                break;
-
-                case BACT_ATT_INPUTTING:
-                    if ( val.Get<int32_t>() )
-                    {
-                        _oflags |= BACT_OFLAG_USERINPT;
-                        _world->setYW_userVehicle(this);
-                    }
-                    else
-                    {
-                        _oflags &= ~BACT_OFLAG_USERINPT;
-                    }
-                    break;
-
                 case BACT_ATT_EXACTCOLL:
                     setBACT_exactCollisions(val.Get<bool>());
                     break;
@@ -392,13 +337,7 @@ size_t NC_STACK_ypabact::SetParameters(IDVList &stak)
         {
             switch (val.ID)
             {
-            case BACT_ATT_VIEWER:
-                setBACT_viewer(val.Get<bool>());
-                break;
 
-            case BACT_ATT_INPUTTING:
-                setBACT_inputting(val.Get<bool>());
-                break;
 
             case BACT_ATT_EXACTCOLL:
                 setBACT_exactCollisions ( val.Get<bool>() );
@@ -979,7 +918,7 @@ void NC_STACK_ypabact::AI_layer2(update_msg *arg)
        || _status == BACT_STATUS_BEAM )
     {
         if ( _oflags & BACT_OFLAG_USERINPT )
-            User_layer(arg);
+            UserUpdate(arg);
         else
             AI_layer3(arg);
         
@@ -1001,7 +940,7 @@ void NC_STACK_ypabact::AI_layer2(update_msg *arg)
         SetTarget(&targetMsg);
 
         if ( _oflags & BACT_OFLAG_USERINPT )
-            User_layer(arg);
+            UserUpdate(arg);
         else
             AI_layer3(arg);
         return;
@@ -1133,7 +1072,7 @@ void NC_STACK_ypabact::AI_layer2(update_msg *arg)
     }
     
     if ( _oflags & BACT_OFLAG_USERINPT )
-        User_layer(arg);
+        UserUpdate(arg);
     else
         AI_layer3(arg);
 }
@@ -3068,7 +3007,7 @@ void NC_STACK_ypabact::Die()
         if ( !(_oflags & BACT_OFLAG_VIEWER) )
         {
             if ( _parent )
-                setBACT_inputting(false);
+                setBACT_inputting(false, NULL);
         }
     }
 
@@ -3312,10 +3251,12 @@ size_t NC_STACK_ypabact::LaunchMissile(TMissileLaunch *arg)
         {
             if ( i == 0 )
             {
-                if ( _oflags & BACT_OFLAG_VIEWER )
+                World::Player *firer = _world->ControllerOf(this);
+
+                if ( firer && firer->Unit == this )
                 {
-                    setBACT_viewer(false);
-                    wobj->setBACT_viewer(true);
+                    setBACT_viewer(false, firer);
+                    wobj->setBACT_viewer(true, firer);
                 }
             }
         }
@@ -3337,8 +3278,9 @@ size_t NC_STACK_ypabact::LaunchMissile(TMissileLaunch *arg)
     {
         if ( _oflags & BACT_OFLAG_USERINPT )
         {
-            setBACT_viewer(false);
-            wobj->setBACT_viewer(true);
+            World::Player *firer = _world->ControllerOf(this);
+            setBACT_viewer(false, firer);
+            wobj->setBACT_viewer(true, firer);
         }
 
         TEnergyChange energyChange;
@@ -7847,19 +7789,16 @@ size_t NC_STACK_ypabact::SetPath(TPathRequest *arg)
 
 
 
-void NC_STACK_ypabact::setBACT_viewer(bool vwr)
+void NC_STACK_ypabact::setBACT_viewer(bool vwr, World::Player *player)
 {
     uamessage_viewer viewMsg;
 
     if ( vwr )
     {
-        if (_world->UserUnit())
-        {
-            if ( _world->UserUnit()->_bact_type != BACT_TYPES_MISSLE )
-                _salve_counter = 0;
-        }
+        if ( player->Unit && player->Unit->_bact_type != BACT_TYPES_MISSLE )
+            _salve_counter = 0;
 
-        _world->SetViewerUnit(this); //Set current bact
+        _world->SetPlayerUnit(player, this);
 
         _oflags |= BACT_OFLAG_VIEWER;
 
@@ -7873,6 +7812,9 @@ void NC_STACK_ypabact::setBACT_viewer(bool vwr)
     }
     else
     {
+        if ( _world->PlayerLookingFrom(this, player) )
+            return;
+
         _oflags &= ~BACT_OFLAG_VIEWER;
 
         if ( _world->_isNetGame )
@@ -7915,12 +7857,18 @@ void NC_STACK_ypabact::setBACT_viewer(bool vwr)
     }
 }
 
-void NC_STACK_ypabact::setBACT_inputting(bool inpt)
+void NC_STACK_ypabact::setBACT_inputting(bool inpt, World::Player *player)
 {
+    World::Player *controller = _world->ControllerOf(this);
+
+    if ( player && controller && controller != player )
+        return;
+
     if ( inpt )
     {
         _oflags |= BACT_OFLAG_USERINPT;
-        _world->setYW_userVehicle(this);
+        player->Controls = this;
+        _world->SetPlayerUnit(player, this);
 
         if ( _bact_type != BACT_TYPES_GUN )
             CorrectPositionOnLand();
@@ -7928,7 +7876,23 @@ void NC_STACK_ypabact::setBACT_inputting(bool inpt)
     else
     {
         _oflags &= ~BACT_OFLAG_USERINPT;
+
+        if ( controller )
+            controller->Controls = NULL;
     }
+}
+
+void NC_STACK_ypabact::UserUpdate(update_msg *arg)
+{
+    World::Player *controller = _world->ControllerOf(this);
+    TInputState *stepInput = arg->inpt;
+
+    if ( controller && controller->Input )
+        arg->inpt = controller->Input;
+
+    User_layer(arg);
+
+    arg->inpt = stepInput;
 }
 
 void NC_STACK_ypabact::setBACT_exactCollisions(bool col)
