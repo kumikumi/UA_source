@@ -33,7 +33,11 @@ public:
         int EnergyMax = 1;
         bool Hidden = false;       // From the player
         bool RoboGun = false;      // One of a host station's guns
-        bool Commander = false;    // Of a squad of its host station's
+        bool Commander = false;    // Of a squad: under its host station, or
+                                   // at the top level without one
+        uint32_t CommandId = 0;    // Its squad's, by which the squad
+                                   // manager orders them
+        uint8_t Aggression = 0;
 
         // Who it follows: its commander, or a commander's host station
         bool HasParent = false;
@@ -78,6 +82,19 @@ public:
     virtual void ForEachUnitIn(const Common::Point &sector, const UnitFunc &func) const = 0;
     virtual void ForEachKid(const Unit &unit, const UnitFunc &func) const = 0;
     virtual bool SquadLeader(const Unit &unit, Unit &leader) const = 0;
+
+    // A unit by its id, false for none
+    virtual bool Find(uint32_t id, Unit &out) const = 0;
+
+    // A unit as it is now, for one kept since: in the game, as the world has
+    // it now; in a frame, as it was
+    virtual Unit Fresh(const Unit &unit) const { return unit; }
+
+    // The commander of each of a faction's squads, dead or not, guns'
+    // included; and its host stations still going, in the order of their
+    // ids
+    virtual void ForEachSquad(uint8_t owner, const UnitFunc &func) const = 0;
+    virtual void ForEachHostStation(uint8_t owner, const UnitFunc &func) const = 0;
 
     // The player: whose sight the map shows, its host station and the unit
     // it steers (their ids 0 for none), and the unit it looks from, false

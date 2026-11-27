@@ -135,9 +135,9 @@ bool GameAnalyzer::IsHasBackupPS(NC_STACK_ypaworld *world)
     
 bool GameAnalyzer::IsAnySquadInFight(NC_STACK_ypaworld *world)
 {
-    for (NC_STACK_ypabact* const bact : world->_cmdrsRemap) 
+    for (const MapScene::Unit &commander : world->_cmdrsRemap) 
     {
-        if (bact->_secndTtype == BACT_TGT_TYPE_UNIT) 
+        if (commander.SecondaryType == BACT_TGT_TYPE_UNIT) 
             return true;
     }
     return false;

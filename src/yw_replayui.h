@@ -145,6 +145,9 @@ public:
     mat3x3 ViewerRotation() const override { return _rotation; }
     bool Hovered(Unit &out) const override { return Find(_hovered, out); }
 
+    void ForEachSquad(uint8_t owner, const UnitFunc &func) const override;
+    void ForEachHostStation(uint8_t owner, const UnitFunc &func) const override;
+
     void ForEachCommander(const UnitFunc &func) const override;
     bool SelectedCommander(Unit &out) const override;
     void ForEachPowerStation(const std::function<void(const Common::Point &, int)> &func) const override;
@@ -152,7 +155,7 @@ public:
     bool Interactive() const override { return false; }
 
     // A unit of the frame by its id, false for none
-    bool Find(uint32_t id, Unit &out) const;
+    bool Find(uint32_t id, Unit &out) const override;
 
 protected:
     Unit UnitAt(size_t index) const;

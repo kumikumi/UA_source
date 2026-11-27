@@ -1076,6 +1076,8 @@ MapScene::Unit LiveMapUnit(NC_STACK_ypaworld *yw, NC_STACK_ypabact *bact)
     u.Hidden = bact->IsHiddenFor( yw->GetPlayerOwner() );
     u.RoboGun = bact->_bact_type == BACT_TYPES_GUN && static_cast<NC_STACK_ypagun *>(bact)->IsRoboGun();
     u.Commander = bact->IsCommander();
+    u.CommandId = bact->_commandID;
+    u.Aggression = bact->_aggr;
 
     if ( bact->_parent )
     {
@@ -1150,6 +1152,46 @@ public:
         return true;
     }
 
+    bool Find(uint32_t id, Unit &out) const override
+    {
+        NC_STACK_ypabact *bact = World->FindUnit(id);
+
+        if ( bact )
+            out = LiveMapUnit(World, bact);
+
+        return bact != NULL;
+    }
+
+    Unit Fresh(const Unit &unit) const override
+    {
+        return unit.Bact ? LiveMapUnit(World, unit.Bact) : unit;
+    }
+
+    void ForEachSquad(uint8_t owner, const UnitFunc &func) const override
+    {
+        World->ForEachCommander(owner, [&](NC_STACK_ypabact *commander)
+        {
+            func(LiveMapUnit(World, commander));
+        });
+    }
+
+    void ForEachHostStation(uint8_t owner, const UnitFunc &func) const override
+    {
+        std::vector<NC_STACK_ypabact *> hosts;
+
+        for ( NC_STACK_ypabact *unit : World->_unitsList )
+        {
+            if ( unit->_bact_type == BACT_TYPES_ROBO && unit->_owner == owner && unit->_status != BACT_STATUS_DEAD &&
+                 !(unit->_status_flg & BACT_STFLAG_DEATH1) )
+                hosts.push_back(unit);
+        }
+
+        std::sort(hosts.begin(), hosts.end(), [](NC_STACK_ypabact *a, NC_STACK_ypabact *b) { return a->_gid < b->_gid; });
+
+        for ( NC_STACK_ypabact *host : hosts )
+            func(LiveMapUnit(World, host));
+    }
+
     uint8_t PlayerOwner() const override { return World->LocalOwner(); }
     uint32_t UserRoboId() const override { return World->UserRobo() ? World->UserRobo()->_gid : 0; }
     uint32_t UserUnitId() const override { return World->UserUnit() ? World->UserUnit()->_gid : 0; }
@@ -1185,16 +1227,16 @@ public:
 
     void ForEachCommander(const UnitFunc &func) const override
     {
-        for ( NC_STACK_ypabact *comm : World->_cmdrsRemap )
-            func(LiveMapUnit(World, comm));
+        for ( const Unit &comm : World->_cmdrsRemap )
+            func(Fresh(comm));
     }
 
     bool SelectedCommander(Unit &out) const override
     {
-        if ( World->_activeCmdrRemapIndex == -1 || !World->_cmdrsRemap[World->_activeCmdrRemapIndex] )
+        if ( World->_activeCmdrRemapIndex == -1 )
             return false;
 
-        out = LiveMapUnit(World, World->_cmdrsRemap[World->_activeCmdrRemapIndex]);
+        out = Fresh(World->_cmdrsRemap[World->_activeCmdrRemapIndex]);
         return true;
     }
 
@@ -1217,6 +1259,31 @@ static LiveMapScene &LiveScene(NC_STACK_ypaworld *yw)
     static LiveMapScene scene;
     scene.World = yw;
     return scene;
+}
+
+const MapScene &NC_STACK_ypaworld::UiScene()
+{
+    return _uiScene ? *_uiScene : LiveScene(this);
+}
+
+void NC_STACK_ypaworld::IssueOrder(const World::PlayerOrder &order)
+{
+    if ( _orderSink )
+    {
+        _orderSink(order);
+        return;
+    }
+
+    ApplyPlayerOrder(_localPlayer, order);
+
+    // The interface's units as the order left them
+    const MapScene &scene = UiScene();
+
+    for ( MapScene::Unit &commander : _cmdrsRemap )
+        commander = scene.Fresh(commander);
+
+    if ( _lastMsgSender.Id )
+        _lastMsgSender = scene.Fresh(_lastMsgSender);
 }
 
 void RoboMapDrawSquadIcons(NC_STACK_ypaworld *yw, CmdStream *cur, const MapScene::Unit &bact, int tilesetId, int glyph, int width, int height)
@@ -1502,13 +1569,15 @@ void RoboMapDrawMarkers(NC_STACK_ypaworld *yw, CmdStream *cur)
     if ( !scene.Interactive() )
         return;
 
-    if ( yw->_lastMsgSender )
+    if ( yw->_lastMsgSender.Id )
     {
         if ( yw->_timeStamp / 300 & 1 )
         {
+            MapScene::Unit sender = scene.Fresh(yw->_lastMsgSender);
+
             FontUA::select_tileset(cur, markerTileset);
 
-            RoboMapDrawIcon(cur, yw->_lastMsgSender->_position.x, yw->_lastMsgSender->_position.z, 0x8A, markerWidth, markerHeight);
+            RoboMapDrawIcon(cur, sender.Position.x, sender.Position.z, 0x8A, markerWidth, markerHeight);
         }
     }
 
@@ -4102,7 +4171,11 @@ int BottomBarHandleHotkeys(NC_STACK_ypaworld *yw, TInputState *inpt)
                 break;
             }
 
-            yw->_cmdrsRemap[ yw->_activeCmdrRemapIndex ]->setBACT_aggression(aggression);
+            World::PlayerOrder order;
+            order.Type = World::PlayerOrder::AGGRESSION;
+            order.Unit = yw->_cmdrsRemap[ yw->_activeCmdrRemapIndex ].Id;
+            order.Value = aggression;
+            yw->IssueOrder(order);
 
             if ( yw->_GameShell )
                 SFXEngine::SFXe.startSound(&yw->_GameShell->samples1_info, 3);
@@ -4129,54 +4202,64 @@ int BottomBarHandleHotkeys(NC_STACK_ypaworld *yw, TInputState *inpt)
     return 1;
 }
 
-NC_STACK_ypabact * NC_STACK_ypaworld::GetDefaultCmdr() const
+bool NC_STACK_ypaworld::GetDefaultCmdr(MapScene::Unit &out)
 {
     if ( _activeCmdrRemapIndex != -1 )
-        return _cmdrsRemap.at( _activeCmdrRemapIndex );
+    {
+        out = _cmdrsRemap.at( _activeCmdrRemapIndex );
+        return true;
+    }
 
     if ( !_cmdrsRemap.empty() )
-        return _cmdrsRemap.front(); 
+    {
+        out = _cmdrsRemap.front();
+        return true;
+    }
     
-    return UserRobo();
+    return UiScene().UserRobo(out);
 }
 
-NC_STACK_ypabact * NC_STACK_ypaworld::GetNextCmdrByCmdId(uint32_t cmdrId) const
+bool NC_STACK_ypaworld::GetNextCmdrByCmdId(uint32_t cmdrId, MapScene::Unit &out)
 {
     for (auto it = _cmdrsRemap.begin(); it != _cmdrsRemap.end(); ++it)
     {
-        if ( cmdrId == (*it)->_commandID )
+        if ( cmdrId == it->CommandId )
         {
             ++it;
-            if (it != _cmdrsRemap.end())
-                return *it;
-
-            return _cmdrsRemap.front();
+            out = it != _cmdrsRemap.end() ? *it : _cmdrsRemap.front();
+            return true;
         }
     }
     
-    return GetDefaultCmdr();
+    return GetDefaultCmdr(out);
 }
 
-NC_STACK_ypabact * NC_STACK_ypaworld::GetNextSquad() const
+bool NC_STACK_ypaworld::GetNextSquad(MapScene::Unit &out)
 {
-    if ( UserUnit() == UserRobo() || _playerInHSGun )
-        return GetDefaultCmdr();
+    const MapScene &scene = UiScene();
+    MapScene::Unit user;
+
+    if ( scene.UserUnitId() == scene.UserRoboId() || _playerInHSGun || !scene.UserUnit(user) )
+        return GetDefaultCmdr(out);
     
-    if ( UserUnit()->_status == BACT_STATUS_DEAD )
+    if ( user.Status == BACT_STATUS_DEAD )
     {
-        for (NC_STACK_ypabact *comm : _cmdrsRemap)
+        for (const MapScene::Unit &comm : _cmdrsRemap)
         {
-            if ( _vehicleTakenCommandId == comm->_commandID )
-                return comm;
+            if ( _vehicleTakenCommandId == comm.CommandId )
+            {
+                out = comm;
+                return true;
+            }
         }
 
-        return GetDefaultCmdr();
+        return GetDefaultCmdr(out);
     }
     
-    if ( UserUnit()->_bact_type == BACT_TYPES_GUN )
-        return GetDefaultCmdr();
+    if ( user.Type == BACT_TYPES_GUN )
+        return GetDefaultCmdr(out);
 
-    return GetNextCmdrByCmdId(_vehicleTakenCommandId);
+    return GetNextCmdrByCmdId(_vehicleTakenCommandId, out);
 }
 
 void StoreWinStatus(NC_STACK_ypaworld *yw)
@@ -4466,10 +4549,10 @@ void  BottomBarHandleInput(NC_STACK_ypaworld *yw, TInputState *inpt)
         {
             case 31:
             {
-                NC_STACK_ypabact *sender = yw->GetLastMsgSender();
+                MapScene::Unit sender;
 
-                if ( sender )
-                    bact1 = sender;
+                if ( yw->GetLastMsgSender(sender) )
+                    bact1 = sender.Bact;
             }
             break;
 
@@ -4492,7 +4575,8 @@ void  BottomBarHandleInput(NC_STACK_ypaworld *yw, TInputState *inpt)
         {
             if ( yw->_fireBtnDownHappen )
             {
-                bact1 = yw->GetNextSquad();
+                MapScene::Unit next;
+                bact1 = yw->GetNextSquad(next) ? next.Bact : NULL;
                 inpt->Buttons.UnSet(0);
             }
         }
@@ -4689,7 +4773,10 @@ void  BottomBarHandleInput(NC_STACK_ypaworld *yw, TInputState *inpt)
                     bzda.pressedBtns |= 0x80;
 
                 if ( winpt->flag & TClickBoxInf::FLAG_BTN_UP )
-                    bact1 = yw->GetNextSquad();
+                {
+                    MapScene::Unit next;
+                    bact1 = yw->GetNextSquad(next) ? next.Bact : NULL;
+                }
 
                 yw->SetShowingTooltipWithHotkey(Locale::TIP_GUI_NEXTCMDR, 20);
                 break;
@@ -5222,7 +5309,7 @@ void SquadManagerDrawDragIcon(NC_STACK_ypaworld *yw, CmdStream *cur, int x, int 
                 FontUA::set_center_xpos(cur, x - (yw->_screenSize.x / 2));
                 FontUA::set_center_ypos(cur, y - (yw->_screenSize.y / 2));
 
-                FontUA::store_u8(cur, GetVehicleTypeIcon(yw, squadron_manager.dragUnit));
+                FontUA::store_u8(cur, VehicleTypeIcon(yw, squadron_manager.dragUnit.Vehicle));
             }
         }
     }
@@ -5298,14 +5385,16 @@ std::string SquadManagerHostStationIcons(NC_STACK_ypaworld *yw)
 {
     std::string icons;
 
-    for ( NC_STACK_ypabact *bact : squadron_manager.hostStations )
+    uint32_t userUnit = yw->UiScene().UserUnitId();
+
+    for ( const MapScene::Unit &host : squadron_manager.hostStations )
     {
-        if ( bact == yw->UserUnit() && yw->_timeStamp / 300 & 1 )
+        if ( host.Id == userUnit && yw->_timeStamp / 300 & 1 )
             icons += (char)33;
-        else if ( info_log.last_sender_gid == bact->_gid && yw->_timeStamp - info_log.msgs[info_log.last_msg_idx].timestamp < 10000 && yw->_timeStamp / 300 & 1 )
+        else if ( info_log.last_sender_gid == host.Id && yw->_timeStamp - info_log.msgs[info_log.last_msg_idx].timestamp < 10000 && yw->_timeStamp / 300 & 1 )
             icons += (char)34;
         else
-            icons += GetVehicleTypeIcon(yw, bact);
+            icons += VehicleTypeIcon(yw, host.Vehicle);
     }
 
     return icons;
@@ -5340,9 +5429,9 @@ void SquadManagerLayoutHostStations(NC_STACK_ypaworld *yw, CmdStream *cur)
     FontUA::next_line(cur);
 }
 
-char GetSquadStatusIcon(NC_STACK_ypabact *bact)
+char GetSquadStatusIcon(const MapScene::Unit &unit)
 {
-    return SquadStatusIcon(bact->_status, bact->_status_flg, bact->_primTtype, bact->_secndTtype);
+    return SquadStatusIcon(unit.Status, unit.StatusFlags, unit.PrimaryType, unit.SecondaryType);
 }
 
 char SquadStatusIcon(uint8_t status, int32_t statusFlags, uint8_t primaryType, uint8_t secondaryType)
@@ -5412,50 +5501,52 @@ void LayoutSquadRow(NC_STACK_ypaworld *yw, CmdStream *cur, int entryWidth, char 
     FontUA::next_line(cur);
 }
 
-void SquadManagerLayoutSquad(NC_STACK_ypaworld *yw, NC_STACK_ypabact *bact, CmdStream *cur)
+void SquadManagerLayoutSquad(NC_STACK_ypaworld *yw, const MapScene::Unit &commander, CmdStream *cur)
 {
+    const MapScene &scene = yw->UiScene();
     NC_STACK_ypabact *hoverUnit = NULL;
 
     if ( yw->_guiActFlags & 0x20 )
         hoverUnit = yw->_bactOnMouse;
 
     int ttt = (yw->_timeStamp / 300) & 1;
+    uint32_t userUnit = scene.UserUnitId();
 
     // The one steered and the last to report blink
-    auto icon = [yw, ttt](NC_STACK_ypabact *unit)
+    auto icon = [yw, ttt, userUnit](const MapScene::Unit &unit)
     {
-        if ( unit == yw->UserUnit() && ttt )
+        if ( unit.Id == userUnit && ttt )
             return '!';
-        else if ( unit == yw->_lastMsgSender && ttt )
+        else if ( unit.Id == yw->_lastMsgSender.Id && ttt )
             return '"';
         else
-            return GetVehicleTypeIcon(yw, unit);
+            return VehicleTypeIcon(yw, unit.Vehicle);
     };
 
-    std::string units(1, icon(bact));
-    int hoverIconX = bact == hoverUnit ? squadron_manager.cmdrIconX : 0;
+    std::string units(1, icon(commander));
+    int hoverIconX = hoverUnit && commander.Id == hoverUnit->_gid ? squadron_manager.cmdrIconX : 0;
     int iconX = squadron_manager.kidIconsX;
 
-    for ( NC_STACK_ypabact* &kid : bact->_kidList )
+    scene.ForEachKid(commander, [&](const MapScene::Unit &kid)
     {
-        if ( kid->_status != BACT_STATUS_DEAD && kid->_status != BACT_STATUS_CREATE && kid->_status != BACT_STATUS_BEAM )
+        if ( units.size() >= SquadRowMaxUnits )
+            return;
+
+        if ( kid.Status != BACT_STATUS_DEAD && kid.Status != BACT_STATUS_CREATE && kid.Status != BACT_STATUS_BEAM )
         {
             units += icon(kid);
 
-            if ( kid == hoverUnit )
+            if ( hoverUnit && kid.Id == hoverUnit->_gid )
                 hoverIconX = iconX;
 
             iconX += squadron_manager.iconWidth;
-
-            if ( units.size() >= SquadRowMaxUnits )
-                break;
         }
-    }
+    });
 
-    bool chosen = yw->_activeCmdrRemapIndex != -1 && bact == yw->_cmdrsRemap[ yw->_activeCmdrRemapIndex ] &&
+    bool chosen = yw->_activeCmdrRemapIndex != -1 && commander.Id == yw->_cmdrsRemap[ yw->_activeCmdrRemapIndex ].Id &&
                   !(bzda.activeMode & 0x20);
 
-    LayoutSquadRow(yw, cur, squadron_manager.entryWidth, GetSquadStatusIcon(bact), units, chosen, hoverIconX,
+    LayoutSquadRow(yw, cur, squadron_manager.entryWidth, GetSquadStatusIcon(commander), units, chosen, hoverIconX,
                    hoverUnit ? EnergyGlyph(hoverUnit->_energy, hoverUnit->_energy_max) : 0);
 }
 
@@ -5470,7 +5561,7 @@ void SquadManagerLayoutFooter(NC_STACK_ypaworld *yw, CmdStream *cur)
     }
     else
     {
-        int aggression = yw->_cmdrsRemap[ yw->_activeCmdrRemapIndex ]->_aggr;
+        int aggression = yw->_cmdrsRemap[ yw->_activeCmdrRemapIndex ].Aggression;
         FontUA::select_tileset(cur, 0);
         FontUA::store_u8(cur, '{');
         FontUA::store_u8(cur, ' ');
@@ -5541,17 +5632,17 @@ void SquadManagerLayoutItems(NC_STACK_ypaworld *yw, TInputState *inpt)
 
     for (int i = 0; i < squadron_manager.shownEntries; i++)
     {
-        NC_STACK_ypabact *squad = squadron_manager.squads[i];
+        const MapScene::Unit &squad = squadron_manager.squads[i];
 
-        if ( squad )
+        if ( squad.Id )
         {
-            if ( squad->_bact_type == BACT_TYPES_ROBO )
+            if ( squad.Type == BACT_TYPES_ROBO )
             {
                 SquadManagerLayoutHostStations(yw, &squadron_manager.itemBlock);
             }
             else
             {
-                if ( squad->IsCommander() )
+                if ( squad.Commander )
                     SquadManagerLayoutSquad(yw, squad, &squadron_manager.itemBlock);
                 else
                     SquadManagerLayoutEmptyLine(yw, &squadron_manager.itemBlock);
@@ -5581,21 +5672,18 @@ void SquadManagerLayoutItems(NC_STACK_ypaworld *yw, TInputState *inpt)
 
 void SquadManagerUpdateRows(NC_STACK_ypaworld *yw)
 {
-    squadron_manager.squads.fill(NULL);
+    const MapScene &scene = yw->UiScene();
+
+    squadron_manager.squads.fill(MapScene::Unit());
 
     // The player's faction's host stations still going, in the order they
     // came
     squadron_manager.hostStations.clear();
 
-    for ( NC_STACK_ypabact *unit : yw->_unitsList )
+    scene.ForEachHostStation(scene.PlayerOwner(), [](const MapScene::Unit &host)
     {
-        if ( unit->_bact_type == BACT_TYPES_ROBO && unit->_owner == yw->LocalOwner() && unit->_status != BACT_STATUS_DEAD &&
-             !(unit->_status_flg & BACT_STFLAG_DEATH1) )
-            squadron_manager.hostStations.push_back(unit);
-    }
-
-    std::sort(squadron_manager.hostStations.begin(), squadron_manager.hostStations.end(),
-              [](NC_STACK_ypabact *a, NC_STACK_ypabact *b) { return a->_gid < b->_gid; });
+        squadron_manager.hostStations.push_back(host);
+    });
 
     squadron_manager.hostRows = squadron_manager.hostStations.empty() ? 0 : 1;
 
@@ -5612,12 +5700,8 @@ void SquadManagerUpdateRows(NC_STACK_ypaworld *yw)
     int firstShown = squadron_manager.firstShownEntries;
     for (int i = 0; i < rows; i++ )
     {
-        NC_STACK_ypabact *squad;
-
-        if ( i >= squadron_manager.hostRows )
-            squad = yw->_cmdrsRemap.at(i - squadron_manager.hostRows);
-        else
-            squad = squadron_manager.hostStations.front();
+        const MapScene::Unit &squad = i >= squadron_manager.hostRows ? yw->_cmdrsRemap.at(i - squadron_manager.hostRows)
+                                                                     : squadron_manager.hostStations.front();
 
         if ( i >= firstShown && i - firstShown < squadron_manager.shownEntries )
             squadron_manager.squads[i - firstShown] = squad;
@@ -5632,164 +5716,156 @@ bool NC_STACK_ypaworld::SquadManagerIsDragValid()
     if ( squadron_manager.dragCmdrIdx < 0 || (size_t)squadron_manager.dragCmdrIdx >= _cmdrsRemap.size() )
         return false;
 
-    NC_STACK_ypabact *bct = _cmdrsRemap[squadron_manager.dragCmdrIdx];
-    if ( !bct )
-        return false;
+    const MapScene::Unit &commander = _cmdrsRemap[squadron_manager.dragCmdrIdx];
+    uint32_t dragged = squadron_manager.dragUnit.Id;
 
-    if ( bct == squadron_manager.dragUnit )
+    if ( commander.Id == dragged )
     {
-        if (bct->_status != BACT_STATUS_DEAD && bct->_status != BACT_STATUS_CREATE && bct->_status != BACT_STATUS_BEAM )
+        if (commander.Status != BACT_STATUS_DEAD && commander.Status != BACT_STATUS_CREATE && commander.Status != BACT_STATUS_BEAM )
             return true;
     }
 
+    bool valid = false;
 
-    for ( NC_STACK_ypabact* &kid : bct->_kidList )
+    UiScene().ForEachKid(commander, [&](const MapScene::Unit &kid)
     {
-        if ( kid == squadron_manager.dragUnit )
-        {
-            if ( kid->_status != BACT_STATUS_DEAD && kid->_status != BACT_STATUS_CREATE && kid->_status != BACT_STATUS_BEAM )
-                return true;
-        }
-    }
-    return false;
+        if ( kid.Id == dragged && kid.Status != BACT_STATUS_DEAD && kid.Status != BACT_STATUS_CREATE && kid.Status != BACT_STATUS_BEAM )
+            valid = true;
+    });
+
+    return valid;
+}
+
+// The units of a squad from one of them on, in the squad's order
+static std::vector<uint32_t> SquadUnitsFrom(const MapScene &scene, const MapScene::Unit &unit)
+{
+    std::vector<uint32_t> units;
+    MapScene::Unit commander;
+
+    if ( !unit.HasParent || !scene.Find(unit.Parent, commander) )
+        return units;
+
+    scene.ForEachKid(commander, [&](const MapScene::Unit &kid)
+    {
+        if ( kid.Id == unit.Id || !units.empty() )
+            units.push_back(kid.Id);
+    });
+
+    return units;
+}
+
+static void IssueReorganize(NC_STACK_ypaworld *yw, uint32_t unit, int mode, uint32_t other)
+{
+    World::PlayerOrder order;
+    order.Type = World::PlayerOrder::REORGANIZE;
+    order.Unit = unit;
+    order.Value = mode;
+    order.Target = other;
+    yw->IssueOrder(order);
 }
 
 void SquadManagerDropUnit(NC_STACK_ypaworld *yw, TClickBoxInf *winpt)
 {
+    const MapScene &scene = yw->UiScene();
+    const MapScene::Unit dragged = scene.Fresh(squadron_manager.dragUnit);
+
     if ( winpt->selected_btn != &squadron_manager
             || winpt->selected_btnID < 8
             || squadron_manager.numEntries <= (int32_t)(winpt->selected_btnID - 8 + squadron_manager.firstShownEntries)
-            || squadron_manager.squads[ winpt->selected_btnID - 8 ] == 0
-            || squadron_manager.squads[ winpt->selected_btnID - 8 ]->_bact_type == BACT_TYPES_ROBO )
+            || squadron_manager.squads[ winpt->selected_btnID - 8 ].Id == 0
+            || squadron_manager.squads[ winpt->selected_btnID - 8 ].Type == BACT_TYPES_ROBO )
     {
+        // A squad of their own: with the right button, the unit and those
+        // after it in its squad, the first of them leading
         if ( squadron_manager.dragFlags & 2 )
         {
-            if ( squadron_manager.dragUnit->_host_station != squadron_manager.dragUnit->_parent )
+            if ( !dragged.Commander )
             {
-                NC_STACK_ypabact *newChief = NULL;
+                std::vector<uint32_t> units = SquadUnitsFrom(scene, dragged);
 
-                World::RefBactList *kidlist = squadron_manager.dragUnit->_kidRef.PList();
-                if (kidlist)
+                for ( size_t i = 0; i < units.size(); i++ )
                 {
-                    World::RefBactList::iterator it = squadron_manager.dragUnit->_kidRef;
-
-                    while(it != kidlist->end())
-                    {
-                        NC_STACK_ypabact *itbact = *it;
-                        it++;
-
-                        TReorgOrder order;
-
-                        if ( newChief )
-                        {
-                            order.unit = itbact;
-                            order.mode = 4;
-                        }
-                        else
-                        {
-                            order.unit = NULL;
-                            order.mode = 3;
-
-                            newChief = itbact;
-                        }
-                        newChief->ReorganizeGroup(&order);
-                    }
+                    if ( i == 0 )
+                        IssueReorganize(yw, units[0], 3, 0);
+                    else
+                        IssueReorganize(yw, units[0], 4, units[i]);
                 }
             }
         }
         else
         {
-            TReorgOrder order;
-            order.unit = NULL;
-            order.mode = 3;
-
-            squadron_manager.dragUnit->ReorganizeGroup(&order);
+            IssueReorganize(yw, dragged.Id, 3, 0);
         }
-        yw->_activeCmdrID = squadron_manager.dragUnit->_commandID;
+
+        // Its squad now
+        yw->_activeCmdrID = scene.Fresh(dragged).CommandId;
         SquadManagerUpdateRows(yw);
         yw->UpdateCommanderList();
     }
     else
     {
-        NC_STACK_ypabact *targetSquad = squadron_manager.squads[ winpt->selected_btnID - 8 ];
-        int sameSquad;
-        if ( squadron_manager.dragUnit->IsCommander() )
-            sameSquad = targetSquad == squadron_manager.dragUnit;
+        MapScene::Unit targetSquad = squadron_manager.squads[ winpt->selected_btnID - 8 ];
+        bool sameSquad;
+
+        if ( dragged.Commander )
+            sameSquad = targetSquad.Id == dragged.Id;
         else
-            sameSquad = targetSquad == squadron_manager.dragUnit->_parent;
+            sameSquad = dragged.HasParent && targetSquad.Id == dragged.Parent;
 
         if ( !sameSquad )
         {
             if ( squadron_manager.dragFlags & 2 )
             {
-                if ( squadron_manager.dragUnit->_host_station != squadron_manager.dragUnit->_parent )
+                if ( !dragged.Commander )
                 {
-                    World::RefBactList *kidlist = squadron_manager.dragUnit->_kidRef.PList();
-                    if (kidlist)
-                    {
-                        World::RefBactList::iterator it = squadron_manager.dragUnit->_kidRef;
-                        while ( it != kidlist->end() )
-                        {
-                            NC_STACK_ypabact *itbact = *it;
-                            it++;
-
-                            TReorgOrder order;
-                            order.mode = 1;
-                            order.unit = targetSquad;
-                            itbact->ReorganizeGroup(&order);
-                        }
-                    }
+                    for ( uint32_t unit : SquadUnitsFrom(scene, dragged) )
+                        IssueReorganize(yw, unit, 1, targetSquad.Id);
                 }
                 else
                 {
-                    TReorgOrder order;
-                    order.mode = 1;
-                    order.unit = targetSquad;
-                    squadron_manager.dragUnit->ReorganizeGroup(&order);
+                    IssueReorganize(yw, dragged.Id, 1, targetSquad.Id);
                 }
             }
             else
             {
-                TReorgOrder order;
-                order.mode = 4;
-                order.unit = squadron_manager.dragUnit;
-                targetSquad->ReorganizeGroup(&order);
+                IssueReorganize(yw, targetSquad.Id, 4, dragged.Id);
             }
-            yw->_activeCmdrID = targetSquad->_commandID;
+
+            yw->_activeCmdrID = scene.Fresh(targetSquad).CommandId;
             SquadManagerUpdateRows(yw);
             yw->UpdateCommanderList();
         }
     }
 }
 
-void NC_STACK_ypaworld::SquadManagerShowStatusTooltip(NC_STACK_ypabact *bact)
+void NC_STACK_ypaworld::SquadManagerShowStatusTooltip(const MapScene::Unit &unit)
 {
-    if ( bact->_status == BACT_STATUS_NORMAL )
+    if ( unit.Status == BACT_STATUS_NORMAL )
     {
-        if ( bact->_status_flg & BACT_STFLAG_ESCAPE )
+        if ( unit.StatusFlags & BACT_STFLAG_ESCAPE )
             SetShowingTooltip(Locale::TIP_FINDER_ESCAPE);
-        else if ( bact->_secndTtype )
+        else if ( unit.SecondaryType )
             SetShowingTooltip(Locale::TIP_FINDER_FIGHTING);
-        else if ( bact->_primTtype )
+        else if ( unit.PrimaryType )
             SetShowingTooltip(Locale::TIP_FINDER_MOVE);
     }
-    else if (bact->_status == BACT_STATUS_IDLE)
+    else if (unit.Status == BACT_STATUS_IDLE)
         SetShowingTooltip(Locale::TIP_FINDER_WAITORDER);
 }
 
-NC_STACK_ypabact * NC_STACK_ypaworld::SquadManagerPickUnit(int sqid, int btnX)
+bool NC_STACK_ypaworld::SquadManagerPickUnit(int sqid, int btnX, MapScene::Unit &out)
 {
-    NC_STACK_ypabact *cmdr = squadron_manager.squads[sqid];
+    const MapScene::Unit &cmdr = squadron_manager.squads[sqid];
 
-    if ( !cmdr )
+    if ( !cmdr.Id )
     {
         squadron_manager.pickKidIdx = -1;
         squadron_manager.pickCmdrIdx = -1;
-        return NULL;
+        return false;
     }
 
     // The top row: the host station under the mouse
-    if ( cmdr->_bact_type == BACT_TYPES_ROBO )
+    if ( cmdr.Type == BACT_TYPES_ROBO )
     {
         squadron_manager.pickKidIdx = -1;
         squadron_manager.pickCmdrIdx = -1;
@@ -5802,45 +5878,56 @@ NC_STACK_ypabact * NC_STACK_ypaworld::SquadManagerPickUnit(int sqid, int btnX)
             x += _guiTiles[28]->map[(uint8_t)icons[i]].w;
 
             if ( btnX < x )
-                return squadron_manager.hostStations[i];
+            {
+                out = squadron_manager.hostStations[i];
+                return true;
+            }
         }
 
-        return NULL;
+        return false;
     }
 
     squadron_manager.pickKidIdx = -1;
     squadron_manager.pickCmdrIdx = squadron_manager.firstShownEntries + sqid - squadron_manager.hostRows;
 
     if ( btnX > squadron_manager.cmdrIconX && btnX < squadron_manager.cmdrIconX + squadron_manager.iconWidth )
-        return cmdr;
+    {
+        out = cmdr;
+        return true;
+    }
 
     int kidOffsetX = btnX - squadron_manager.kidIconsX;
     if ( kidOffsetX < 0 )
     {
         squadron_manager.pickKidIdx = -1;
         squadron_manager.pickCmdrIdx = -1;
-        return NULL;
+        return false;
     }
 
     squadron_manager.pickKidIdx = kidOffsetX / squadron_manager.iconWidth;
 
     int kidsLeft = squadron_manager.pickKidIdx;
+    bool found = false;
 
-    for(NC_STACK_ypabact * &bact : cmdr->_kidList)
+    UiScene().ForEachKid(cmdr, [&](const MapScene::Unit &kid)
     {
-        if (bact->_status != BACT_STATUS_DEAD && bact->_status != BACT_STATUS_CREATE && bact->_status != BACT_STATUS_BEAM)
+        if ( !found && kid.Status != BACT_STATUS_DEAD && kid.Status != BACT_STATUS_CREATE && kid.Status != BACT_STATUS_BEAM )
         {
             kidsLeft--;
             if (kidsLeft == -1)
             {
-                return bact;
+                out = kid;
+                found = true;
             }
         }
-    }
+    });
+
+    if ( found )
+        return true;
 
     squadron_manager.pickKidIdx = -1;
     squadron_manager.pickCmdrIdx = -1;
-    return NULL;
+    return false;
 }
 
 int NC_STACK_ypaworld::SquadManagerBeginDrag(TClickBoxInf *winpt)
@@ -5852,25 +5939,25 @@ int NC_STACK_ypaworld::SquadManagerBeginDrag(TClickBoxInf *winpt)
     if ( (int32_t)(winpt->selected_btnID - 8 + squadron_manager.firstShownEntries) >= squadron_manager.numEntries )
         return 0;
 
-    NC_STACK_ypabact *pickedUnit = SquadManagerPickUnit(winpt->selected_btnID - 8, winpt->move.BtnPos.x);
+    MapScene::Unit pickedUnit;
 
-    if ( !pickedUnit )
+    if ( !SquadManagerPickUnit(winpt->selected_btnID - 8, winpt->move.BtnPos.x, pickedUnit) )
         return 0;
 
     if ( robo_map.IsOpen() )
     {
         if ( winpt->flag & TClickBoxInf::FLAG_RM_DOWN )
         {
-            robo_map.viewCenterX = pickedUnit->_position.x;
+            robo_map.viewCenterX = pickedUnit.Position.x;
             robo_map.lockViewer = 0;
-            robo_map.viewCenterZ = pickedUnit->_position.z;
+            robo_map.viewCenterZ = pickedUnit.Position.z;
 
             RoboMapClampView(this, robo_map.hScrollLength - robo_map.borderLeft, robo_map.vScrollLength);
         }
     }
 
     // Host stations stay where they are
-    if ( pickedUnit->_bact_type == BACT_TYPES_ROBO )
+    if ( pickedUnit.Type == BACT_TYPES_ROBO )
         return 0;
 
     squadron_manager.dragCmdrIdx = squadron_manager.pickCmdrIdx;
@@ -5878,7 +5965,7 @@ int NC_STACK_ypaworld::SquadManagerBeginDrag(TClickBoxInf *winpt)
     squadron_manager.dragStartX = winpt->move.ScreenPos.x;
     squadron_manager.dragUnit = pickedUnit;
 
-    if ( pickedUnit->IsCommander() )
+    if ( pickedUnit.Commander )
     {
         squadron_manager.dragOffsetX = -(winpt->move.BtnPos.x - squadron_manager.cmdrIconX);
     }
@@ -5943,7 +6030,11 @@ void NC_STACK_ypaworld::SquadManager_InputHandle(TInputState *inpt)
                 {
                     if ( winpt->flag & TClickBoxInf::FLAG_BTN_DOWN )
                     {
-                        _cmdrsRemap[_activeCmdrRemapIndex]->setBACT_aggression(25 * aggrLevel);
+                        World::PlayerOrder order;
+                        order.Type = World::PlayerOrder::AGGRESSION;
+                        order.Unit = _cmdrsRemap[_activeCmdrRemapIndex].Id;
+                        order.Value = 25 * aggrLevel;
+                        IssueOrder(order);
 
                         if ( _GameShell )
                             SFXEngine::SFXe.startSound(&_GameShell->samples1_info, 3);
@@ -6000,8 +6091,8 @@ void NC_STACK_ypaworld::SquadManager_InputHandle(TInputState *inpt)
 
                 if ( row >= 0 && row < squadron_manager.maxShownEntries )
                 {
-                    NC_STACK_ypabact *squad = squadron_manager.squads[row];
-                    if ( squad )
+                    const MapScene::Unit &squad = squadron_manager.squads[row];
+                    if ( squad.Id )
                     {
                         if ( winpt->move.BtnPos.x < squadron_manager.cmdrIconX )
                             SquadManagerShowStatusTooltip(squad);
@@ -7321,61 +7412,62 @@ void NC_STACK_ypaworld::HandleGuiInput(TInputState *inpt)
 
 
 
-NC_STACK_ypabact * NC_STACK_ypaworld::GetLastMsgSender()
+bool NC_STACK_ypaworld::GetLastMsgSender(MapScene::Unit &out)
 {
     if ( !info_log.last_sender_gid )
-        return NULL;
+        return false;
 
-    for (NC_STACK_ypabact *comm : _cmdrsRemap)
+    const MapScene &scene = UiScene();
+
+    for (const MapScene::Unit &comm : _cmdrsRemap)
     {
-        NC_STACK_ypabact *found = NULL;
+        bool found = false;
         
-        if ( info_log.last_sender_gid == comm->_gid )
+        if ( info_log.last_sender_gid == comm.Id )
         {
-            found = comm;
+            out = comm;
+            found = true;
         }
         else
         {
-            for (NC_STACK_ypabact *bact : comm->_kidList)
+            scene.ForEachKid(comm, [&](const MapScene::Unit &unit)
             {
-                if ( bact->_status != BACT_STATUS_DEAD && 
-                     bact->_status != BACT_STATUS_CREATE && 
-                     bact->_status != BACT_STATUS_BEAM && 
-                     bact->_gid == info_log.last_sender_gid )
+                if ( !found &&
+                     unit.Status != BACT_STATUS_DEAD && 
+                     unit.Status != BACT_STATUS_CREATE && 
+                     unit.Status != BACT_STATUS_BEAM && 
+                     unit.Id == info_log.last_sender_gid )
                 {
-                    found = bact;
-                    break;
+                    out = unit;
+                    found = true;
                 }
-            }
+            });
         }
 
         if (found)
-        {
-            if ( (_timeStamp - info_log.last_msg_time) > 10000 )
-                return NULL;
-            
-            return found;
-        }
+            return (_timeStamp - info_log.last_msg_time) <= 10000;
     }
 
-    return NULL;
+    return false;
 }
 
-bool CompareCommanderIds(NC_STACK_ypabact* const &lhs, NC_STACK_ypabact* const &rhs)
+bool CompareCommanderIds(const MapScene::Unit &lhs, const MapScene::Unit &rhs)
 {
-    return (lhs->_commandID & 0xFFFFFF) < (rhs->_commandID & 0xFFFFFF);
+    return (lhs.CommandId & 0xFFFFFF) < (rhs.CommandId & 0xFFFFFF);
 }
 
 
 void NC_STACK_ypaworld::UpdateCommanderList()
 {
+    const MapScene &scene = UiScene();
+
     _cmdrsRemap.clear();
     _cmdrsRemap.reserve(128);
     // The squads of the player's faction, of all its host stations
-    ForEachCommander(LocalOwner(), [this](NC_STACK_ypabact *bact)
+    scene.ForEachSquad(scene.PlayerOwner(), [this](const MapScene::Unit &commander)
     {
-        if (bact->_status != BACT_STATUS_DEAD && bact->_status != BACT_STATUS_BEAM && bact->_bact_type != BACT_TYPES_GUN)
-            _cmdrsRemap.push_back(bact);
+        if (commander.Status != BACT_STATUS_DEAD && commander.Status != BACT_STATUS_BEAM && commander.Type != BACT_TYPES_GUN)
+            _cmdrsRemap.push_back(commander);
     });
 
     std::sort(_cmdrsRemap.begin(), _cmdrsRemap.end(), CompareCommanderIds);
@@ -7387,7 +7479,7 @@ void NC_STACK_ypaworld::UpdateCommanderList()
         {
             for (size_t i = 0; i < _cmdrsRemap.size(); i++)
             {
-                if (_cmdrIdToSelect == (int32_t)_cmdrsRemap[i]->_commandID)
+                if (_cmdrIdToSelect == (int32_t)_cmdrsRemap[i].CommandId)
                 {
                     _activeCmdrRemapIndex = i;
                     _activeCmdrID = _cmdrIdToSelect;
@@ -7403,7 +7495,7 @@ void NC_STACK_ypaworld::UpdateCommanderList()
             {
                 if ( bzda.activeMode & 6 )
                 {
-                    _activeCmdrID = _cmdrsRemap.back()->_commandID;
+                    _activeCmdrID = _cmdrsRemap.back().CommandId;
                     _activeCmdrRemapIndex = _cmdrsRemap.size() - 1;
                 }
             }
@@ -7413,7 +7505,7 @@ void NC_STACK_ypaworld::UpdateCommanderList()
 
                 for (size_t i = 0; i < _cmdrsRemap.size(); i++)
                 {
-                    if (_activeCmdrID == _cmdrsRemap[i]->_commandID)
+                    if (_activeCmdrID == _cmdrsRemap[i].CommandId)
                     {
                         _activeCmdrRemapIndex = i;
                         break;
@@ -7436,13 +7528,15 @@ void NC_STACK_ypaworld::UpdateCommanderList()
     else
     {
         _activeCmdrKidsCount = 0;
-        for ( NC_STACK_ypabact* &bact : _cmdrsRemap[ _activeCmdrRemapIndex ]->_kidList )
+        scene.ForEachKid(_cmdrsRemap[ _activeCmdrRemapIndex ], [this](const MapScene::Unit &kid)
         {
-            if (bact->_status != BACT_STATUS_DEAD && bact->_status != BACT_STATUS_BEAM && bact->_bact_type != BACT_TYPES_GUN)
+            if (kid.Status != BACT_STATUS_DEAD && kid.Status != BACT_STATUS_BEAM && kid.Type != BACT_TYPES_GUN)
                 _activeCmdrKidsCount++;
-        }
+        });
     }
-    _lastMsgSender = GetLastMsgSender();
+
+    MapScene::Unit sender;
+    _lastMsgSender = GetLastMsgSender(sender) ? sender : MapScene::Unit();
 }
 
 void RoboMapUpdateLayout(NC_STACK_ypaworld *yw)
@@ -10711,13 +10805,13 @@ void NC_STACK_ypaworld::yw_SMAN_MouseSelect(TClickBoxInf *winp)
     {
         int squadRow = winp->selected_btnID - 8;
 
-        NC_STACK_ypabact *unit = SquadManagerPickUnit(squadRow, winp->move.BtnPos.x);
+        MapScene::Unit unit;
 
-        if ( unit )
+        if ( SquadManagerPickUnit(squadRow, winp->move.BtnPos.x, unit) )
         {
-            if ( unit->_status != BACT_STATUS_CREATE && unit->_status != BACT_STATUS_DEAD && unit->_status != BACT_STATUS_BEAM )
+            if ( unit.Status != BACT_STATUS_CREATE && unit.Status != BACT_STATUS_DEAD && unit.Status != BACT_STATUS_BEAM )
             {
-                _bactOnMouse = unit;
+                _bactOnMouse = unit.Bact;
                 _guiActFlags |= 0x20;
             }
         }
@@ -10725,16 +10819,10 @@ void NC_STACK_ypaworld::yw_SMAN_MouseSelect(TClickBoxInf *winp)
         {
             unit = squadron_manager.squads[squadRow];
 
-            if ( unit )
+            if ( unit.Id && unit.Status != BACT_STATUS_CREATE && unit.Status != BACT_STATUS_BEAM && unit.Status != BACT_STATUS_DEAD )
             {
-                if ( unit->_status == BACT_STATUS_CREATE || unit->_status == BACT_STATUS_BEAM || unit->_status == BACT_STATUS_DEAD )
-                    unit = NULL;
-
-                if ( unit )
-                {
-                    _bactOnMouse = unit;
-                    _guiActFlags |= 0x20;
-                }
+                _bactOnMouse = unit.Bact;
+                _guiActFlags |= 0x20;
             }
         }
     }
@@ -10917,7 +11005,7 @@ void NC_STACK_ypaworld::ExecuteMouseAction(int arg)
         if (_activeCmdrRemapIndex >= 0)
         {
             _localPlayer->Order.user_action = World::DOACTION_2;
-            _localPlayer->Order.selectBact = _cmdrsRemap[_activeCmdrRemapIndex];
+            _localPlayer->Order.selectBact = _cmdrsRemap[_activeCmdrRemapIndex].Bact;
 
             if ( _guiActFlags & 0x10 )
             {
@@ -10941,7 +11029,7 @@ void NC_STACK_ypaworld::ExecuteMouseAction(int arg)
         if (_activeCmdrRemapIndex >= 0)
         {
             _localPlayer->Order.user_action = arg;
-            _localPlayer->Order.selectBact = _cmdrsRemap[_activeCmdrRemapIndex];
+            _localPlayer->Order.selectBact = _cmdrsRemap[_activeCmdrRemapIndex].Bact;
 
             if ( _guiActFlags & 0x30 )
             {
@@ -10967,7 +11055,7 @@ void NC_STACK_ypaworld::ExecuteMouseAction(int arg)
         if (_activeCmdrRemapIndex >= 0)
         {
             _localPlayer->Order.user_action = World::DOACTION_ADD_UNIT2;
-            _localPlayer->Order.selectBact = _cmdrsRemap[_activeCmdrRemapIndex];
+            _localPlayer->Order.selectBact = _cmdrsRemap[_activeCmdrRemapIndex].Bact;
 
             _localPlayer->Order.protoID = bzda.vhclProtoIds[bzda.selVhclIdx];
             _localPlayer->Order.target_point = _mouseVector * _mouseSelDistance + _viewerPosition;

@@ -122,16 +122,16 @@ class squadMan: public GuiList
 public:
     // The rows shown: the first host station for the top row, which has
     // all the player's faction's host stations (hostStations), when it has
-    // any; then the squads' commanders
-    std::array<NC_STACK_ypabact *, 24> squads;
-    std::vector<NC_STACK_ypabact *> hostStations;
+    // any; then the squads' commanders; Id 0 for none
+    std::array<MapScene::Unit, 24> squads;
+    std::vector<MapScene::Unit> hostStations;
     int hostRows = 0; // 1 with the top row, 0 without
     int dragFlags;
     int pickCmdrIdx;
     int pickKidIdx;
     int dragCmdrIdx;
     int dragKidIdx;
-    NC_STACK_ypabact *dragUnit;
+    MapScene::Unit dragUnit;
     int16_t dragOffsetX;
     int16_t dragOffsetY;
     int16_t dragIconX;

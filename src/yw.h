@@ -3,6 +3,7 @@
 
 #include <string.h>
 #include <array>
+#include <functional>
 #include <limits>
 #include <memory>
 #include <string>
@@ -2019,6 +2020,16 @@ public:
     // gun; NULL when there's none
     NC_STACK_ypabact *FindUnit(uint32_t id);
 
+    // What the game's interface reads of the level: the world itself, or
+    // the frames of a game played elsewhere
+    const MapScene &UiScene();
+    const MapScene *_uiScene = NULL; // NULL for the world
+
+    // The local player's order from the interface: carried out now, or sent
+    // where the game is played (_orderSink)
+    void IssueOrder(const World::PlayerOrder &order);
+    std::function<void(const World::PlayerOrder &)> _orderSink;
+
     // Carries out a player's order, if what it names is there and theirs to
     // order: one to their host station or a squad goes there in this step's
     // orders (Player::Order), the rest is done now. False when refused.
@@ -2452,12 +2463,15 @@ public:
     bool OwnerHasHostStation(int owner);
     
     void UpdateCommanderList();
-    NC_STACK_ypabact *GetLastMsgSender();
+
+    // The player's unit that reported last, in the last 10 s; false for
+    // none
+    bool GetLastMsgSender(MapScene::Unit &out);
     
     void HandleGuiInput(TInputState *inpt);
     void ConfirmDialogHandleInput(TInputState *inpt);
     void ConfirmDialogLayoutItems(int pressedFlags);
-    void SquadManagerShowStatusTooltip(NC_STACK_ypabact *bact);
+    void SquadManagerShowStatusTooltip(const MapScene::Unit &unit);
     bool SquadManagerIsDragValid();
     
     void yw_MouseSelect(TInputState *arg);
@@ -2475,7 +2489,7 @@ public:
     int SquadManagerBeginDrag(TClickBoxInf *winpt);
     void yw_SMAN_MouseSelect(TClickBoxInf *winp);
     void SquadManager_InputHandle(TInputState *inpt);
-    NC_STACK_ypabact * SquadManagerPickUnit(int sqid, int btnX);
+    bool SquadManagerPickUnit(int sqid, int btnX, MapScene::Unit &out);
     
     
     void SetShowingTooltip(int32_t id)
@@ -2536,9 +2550,9 @@ public:
     
     void LoadKeyNames();
     
-    NC_STACK_ypabact *GetDefaultCmdr() const;
-    NC_STACK_ypabact *GetNextCmdrByCmdId(uint32_t cmdrId) const;
-    NC_STACK_ypabact *GetNextSquad() const;
+    bool GetDefaultCmdr(MapScene::Unit &out);
+    bool GetNextCmdrByCmdId(uint32_t cmdrId, MapScene::Unit &out);
+    bool GetNextSquad(MapScene::Unit &out);
     
     
     void LinkGatesAndSuperItems();
@@ -2873,7 +2887,9 @@ public:
     std::array<float, 8> _reloadRatioClamped = Common::ArrayInit<float, 8>(0.0); // clamped to 0.0..1.0
     std::array<float, 8> _reloadRatioPositive = Common::ArrayInit<float, 8>(0.0); // 0 and positive
     
-    std::vector<NC_STACK_ypabact *> _cmdrsRemap;
+    // The player's squads, by their commanders, in the order of their
+    // command ids
+    std::vector<MapScene::Unit> _cmdrsRemap;
     uint32_t _activeCmdrID = 0; // active CMDR ID
     int32_t _activeCmdrRemapIndex = 0; // index in _cmdrsRemap
     int32_t _activeCmdrKidsCount = 0; // count of alive units in active squad
@@ -2881,7 +2897,7 @@ public:
     
     uint32_t _prevUnitId = 0;
     
-    NC_STACK_ypabact *_lastMsgSender = NULL;
+    MapScene::Unit _lastMsgSender; // Id 0 for none
     
     int32_t _screenShotCount = 0;
     

@@ -2413,7 +2413,7 @@ void NC_STACK_ypaworld::ResetControls()
     _prevUnitId = 0;
     _fireBtnIsDown = false;
     _fireBtnDownHappen = false;
-    _lastMsgSender = NULL;
+    _lastMsgSender = MapScene::Unit();
     _cmdrsRemap.clear();
     _activeCmdrRemapIndex = -1;
     _guiVisor.target = NULL;

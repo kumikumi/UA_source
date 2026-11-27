@@ -620,6 +620,7 @@ MapScene::Unit ReplayMapScene::UnitAt(size_t index) const
 
     u.Owner = info->Owner;
     u.Status = info->Status;
+    u.Aggression = info->Aggression;
     u.Energy = info->Energy;
     u.EnergyMax = std::max(info->EnergyMax, 1);
     u.RoboGun = f.Type == BACT_TYPES_GUN && info->GunFlags >= 0 && (info->GunFlags & NC_STACK_ypagun::GUN_FLAGS_ROBO);
@@ -630,6 +631,11 @@ MapScene::Unit ReplayMapScene::UnitAt(size_t index) const
         u.Parent = parent->Id;
         u.ParentPos = vec3d(parent->Position);
         u.Commander = parent->Type == BACT_TYPES_ROBO;
+    }
+    else
+    {
+        // A squad of a faction without host stations leads at the top level
+        u.Commander = f.Type != BACT_TYPES_ROBO && f.Type != BACT_TYPES_MISSLE;
     }
 
     // Targets that are gone aren't shown
@@ -734,6 +740,41 @@ bool ReplayMapScene::ViewerPosition(vec3d &out) const
     Unit viewed;
     out = Find(_viewed, viewed) ? viewed.Position : _camera;
     return true;
+}
+
+void ReplayMapScene::ForEachSquad(uint8_t owner, const UnitFunc &func) const
+{
+    if ( !_frame )
+        return;
+
+    for (size_t i = 0; i < _frame->Units.size(); i++)
+    {
+        const World::Frame::UnitInfo *info = _frame->InfoAt(i);
+
+        if ( !info || info->Owner != owner )
+            continue;
+
+        Unit unit = UnitAt(i);
+
+        if ( unit.Commander )
+            func(unit);
+    }
+}
+
+void ReplayMapScene::ForEachHostStation(uint8_t owner, const UnitFunc &func) const
+{
+    if ( !_frame )
+        return;
+
+    for (size_t i = 0; i < _frame->Units.size(); i++)
+    {
+        const World::Frame::UnitInfo *info = _frame->InfoAt(i);
+        const World::Frame::Unit &unit = _frame->Units[i];
+
+        if ( unit.Type == BACT_TYPES_ROBO && info && info->Owner == owner && info->Status != BACT_STATUS_DEAD &&
+             !(unit.StatusFlags & BACT_STFLAG_DEATH1) )
+            func(UnitAt(i));
+    }
 }
 
 // The player's squads, as the squad manager has them
