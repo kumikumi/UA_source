@@ -4,6 +4,7 @@
 #include "prediction.h"
 #include "consts.h"
 #include "../yw.h"
+#include "../ypamissile.h"
 #include "../log.h"
 
 namespace World
@@ -16,9 +17,8 @@ static const uint32_t MaxStepsWithoutGame = 30;
 // The controls kept: the game is never further behind than that
 static const size_t MaxSteered = 2 * CVStepsPerSecond;
 
-// The buttons that fire (bits of PlayerControls::Buttons, buttons 0-2): the
-// game fires the unit's weapons
-static const uint8_t FireButtons = 7;
+// The ids shots fired here have in frames: past those of the game's units
+static const uint32_t FirstShotId = 0xF0000000;
 
 // A unit that moves further than this in a step, as when it's set somewhere
 // else, is drawn where it ended up instead of in between
@@ -54,10 +54,23 @@ Prediction::~Prediction()
     Drop();
 }
 
+// A unit gone from here: not one that died, as the game would have it die
+void Prediction::DeleteUnit(NC_STACK_ypabact *unit)
+{
+    unit->_status_flg |= BACT_STFLAG_DEATH1;
+    unit->Delete();
+}
+
 void Prediction::Drop()
 {
+    // Its shots, which it fired
+    for ( Shot &shot : _shots )
+        DeleteUnit(shot.Missile);
+
+    _shots.clear();
+
     if ( _unit )
-        _unit->Delete();
+        DeleteUnit(_unit);
 
     _unit = NULL;
     _kind = 0;
@@ -155,7 +168,7 @@ void Prediction::FromGame(const ControlledUnit &unit)
     // On from there by those it hadn't gone by yet
     for ( Steered &s : _steered )
     {
-        StepUnit(s.Controls);
+        StepUnit(s.Controls, false);
         s.Driven = true;
         s.Position = _unit->_position;
     }
@@ -166,7 +179,7 @@ void Prediction::FromGame(const ControlledUnit &unit)
         _correction = vec3d();
 }
 
-void Prediction::Steer(const PlayerControls &controls)
+void Prediction::Steer(const PlayerControls &controls, const Frame &drawn)
 {
     _steered.emplace_back();
     _steered.back().Controls = controls;
@@ -177,22 +190,21 @@ void Prediction::Steer(const PlayerControls &controls)
     _sinceGame++;
     _correction *= CorrectionKept;
 
-    if ( !UnitId() )
-        return;
+    if ( UnitId() )
+    {
+        StepUnit(controls, true);
+        _steered.back().Driven = true;
+        _steered.back().Position = _unit->_position;
+    }
 
-    StepUnit(controls);
-    _steered.back().Driven = true;
-    _steered.back().Position = _unit->_position;
+    StepShots(drawn);
 }
 
-void Prediction::StepUnit(const PlayerControls &controls)
+void Prediction::StepUnit(const PlayerControls &controls, bool shoot)
 {
-    PlayerControls steered = controls;
-    steered.Buttons &= ~FireButtons;
-
     TInputState input;
     input.Period = CVStepTicks;
-    steered.To(input);
+    controls.To(input);
 
     _time += CVStepTicks;
 
@@ -212,8 +224,112 @@ void Prediction::StepUnit(const PlayerControls &controls)
     _world->_timeStamp = worldTime;
     _world->_invulnerable = invulnerable;
 
+    // What it fired: missiles the first time, and gone when it's fired
+    // again as the unit goes by the same controls again, as are machine
+    // guns' hits, which come dead
+    for ( NC_STACK_ypamissile *missile : _unit->_missiles_list )
+    {
+        if ( !shoot || missile->_status == BACT_STATUS_DEAD )
+        {
+            DeleteUnit(missile);
+            continue;
+        }
+
+        missile->SetPhantom();
+
+        Shot shot;
+        shot.Missile = missile;
+        shot.DrawnId = FirstShotId + _shotsFired++;
+        shot.Before = missile->_position;
+        _shots.push_back(shot);
+        _shotsShowing++;
+    }
+
+    _unit->_missiles_list.clear();
+
     _before = _now;
     _now = PoseOf(_unit);
+}
+
+// Whether a unit as big as radius at center is in the way from a to b, and
+// where it's hit
+static bool HitOnTheWay(const vec3d &a, const vec3d &b, const vec3d &center, double radius, vec3d &at)
+{
+    vec3d way = b - a;
+    double length = way.length();
+    double along = length > 0.0 ? std::max(0.0, std::min((center - a).dot(way) / length, length)) : 0.0;
+
+    at = length > 0.0 ? a + way * (along / length) : a;
+    return (center - at).length() < radius;
+}
+
+void Prediction::StepShots(const Frame &drawn)
+{
+    TInputState none;
+    none.Period = CVStepTicks;
+
+    update_msg msg;
+    msg.gTime = _time;
+    msg.frameTime = CVStepTicks;
+    msg.inpt = &none;
+
+    int32_t worldTime = _world->_timeStamp;
+    bool invulnerable = _world->_invulnerable;
+    _world->_timeStamp = _time;
+    _world->_invulnerable = true;
+
+    for ( Shot &shot : _shots )
+    {
+        NC_STACK_ypamissile *missile = shot.Missile;
+        bool flying = missile->_status == BACT_STATUS_NORMAL;
+
+        shot.Before = missile->_position;
+        missile->Update(&msg);
+
+        if ( !flying || missile->_status != BACT_STATUS_NORMAL )
+            continue;
+
+        // Into a unit drawn: shown hitting it, as the game would hit it
+        for ( size_t i = 0; i < drawn.Units.size(); i++ )
+        {
+            const Frame::Unit &unit = drawn.Units[i];
+            const Frame::UnitInfo *info = drawn.InfoAt(i);
+            vec3d at;
+
+            if ( unit.Id == _id || unit.Type == BACT_TYPES_MISSLE || unit.Id >= FirstShotId || unit.Vehicle >= _world->_vhclProtos.size() ||
+                 (info && info->Status == BACT_STATUS_DEAD) )
+                continue;
+
+            double radius = _world->_vhclProtos[unit.Vehicle].radius + missile->_radius;
+
+            if ( HitOnTheWay(shot.Before, missile->_position, vec3d(unit.Position), radius, at) )
+            {
+                missile->_position = at;
+
+                setState_msg state;
+                state.newStatus = BACT_STATUS_DEAD;
+                state.setFlags = 0;
+                state.unsetFlags = 0;
+                missile->SetState(&state);
+                break;
+            }
+        }
+    }
+
+    _world->_timeStamp = worldTime;
+    _world->_invulnerable = invulnerable;
+
+    // Those that showed their end
+    for ( auto it = _shots.begin(); it != _shots.end(); )
+    {
+        if ( it->Missile->getBACT_yourLastSeconds() <= 0 )
+        {
+            DeleteUnit(it->Missile);
+            it = _shots.erase(it);
+        }
+        else
+            it++;
+    }
 }
 
 Prediction::Pose Prediction::PoseOf(const NC_STACK_ypabact *unit) const
@@ -239,12 +355,15 @@ Prediction::Pose Prediction::PoseOf(const NC_STACK_ypabact *unit) const
     return pose;
 }
 
-void Prediction::Apply(Frame &frame, uint32_t player, float fraction) const
+void Prediction::Apply(Frame &frame, uint32_t player, float fraction)
 {
     uint32_t id = UnitId();
 
     if ( !id )
+    {
+        ApplyShots(frame, fraction);
         return;
+    }
 
     // While the frame has the player in it, as they drive it
     auto p = std::find_if(frame.Players.begin(), frame.Players.end(), [player](const Frame::Player &p) { return p.Id == player; });
@@ -279,14 +398,102 @@ void Prediction::Apply(Frame &frame, uint32_t player, float fraction) const
 
     size_t index = u - frame.Units.begin();
 
+    // Its gun, and its weapon's reload by its clock here
     if ( index < frame.Infos.size() )
     {
-        frame.Infos[index].GunAngle = pose.GunAngle;
-        frame.Infos[index].GunLeftRight = pose.GunLeftRight;
+        Frame::UnitInfo &info = frame.Infos[index];
+        info.GunAngle = pose.GunAngle;
+        info.GunLeftRight = pose.GunLeftRight;
+        info.ClockStart = frame.Time - _unit->_clock;
+        info.WeaponTime = _unit->_weapon_time;
+        info.SalveCounter = _unit->_salve_counter;
     }
+
+    // As it looks firing
+    u->Look = _unit->ModelIndex(_unit->GetVP());
 
     p->CameraPosition = vec3f(pose.CameraPosition);
     p->CameraRotation = mat3x3f(pose.CameraRotation);
+
+    ApplyShots(frame, fraction);
+}
+
+void Prediction::ApplyShots(Frame &frame, float fraction)
+{
+    if ( !_id )
+        return;
+
+    bool infos = frame.Infos.size() == frame.Units.size();
+
+    // The game's missiles of the unit, as they come: not drawn while the
+    // ones fired here show them
+    if ( infos )
+    {
+        std::map<uint32_t, bool> flying;
+        size_t kept = 0;
+
+        for ( size_t i = 0; i < frame.Units.size(); i++ )
+        {
+            const Frame::UnitInfo &info = frame.Infos[i];
+
+            if ( frame.Units[i].Type == BACT_TYPES_MISSLE && info.Emitter == _id )
+            {
+                auto it = _gameShots.find(frame.Units[i].Id);
+                bool hidden;
+
+                if ( it != _gameShots.end() )
+                    hidden = it->second;
+                else if ( info.Status == BACT_STATUS_DEAD )
+                    hidden = false;
+                else
+                    hidden = _gameShotsCame++ < _shotsShowing;
+
+                flying[frame.Units[i].Id] = hidden;
+
+                if ( hidden )
+                    continue;
+            }
+
+            frame.Units[kept] = frame.Units[i];
+            frame.Infos[kept] = frame.Infos[i];
+            kept++;
+        }
+
+        frame.Units.resize(kept);
+        frame.Infos.resize(kept);
+        _gameShots.swap(flying);
+
+        // None of either left: they're counted anew
+        if ( _gameShots.empty() && _shots.empty() )
+            _gameShotsCame = _shotsShowing = 0;
+    }
+
+    float t = std::max(0.0f, std::min(fraction, 1.0f));
+
+    for ( const Shot &shot : _shots )
+    {
+        NC_STACK_ypamissile *missile = shot.Missile;
+
+        Frame::Unit unit;
+        unit.Id = shot.DrawnId;
+        unit.Type = BACT_TYPES_MISSLE;
+        unit.Vehicle = missile->_vehicleID;
+        unit.Look = missile->ModelIndex(missile->GetVP());
+        unit.StatusFlags = missile->_status_flg;
+        unit.Position = vec3f(shot.Before + (missile->_position - shot.Before) * t);
+        unit.Rotation = mat3x3f(missile->_rotation);
+        unit.Scale = vec3f(missile->_scale);
+        frame.Units.push_back(unit);
+
+        if ( infos )
+        {
+            Frame::UnitInfo info;
+            info.Owner = missile->_owner;
+            info.Status = missile->_status;
+            info.Emitter = _id;
+            frame.Infos.push_back(info);
+        }
+    }
 }
 
 }

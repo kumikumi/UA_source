@@ -78,6 +78,7 @@ public:
     virtual void setBACT_viewer(bool vwr, World::Player *player) override;
     
     virtual void SetLauncherBact(NC_STACK_ypabact *);
+    void SetPhantom() { _phantom = true; }
     virtual void SetMissileType(int);
     virtual void SetLifeTime(int);
     virtual void SetDelay(int);
@@ -132,6 +133,10 @@ protected:
     float _mislRadiusTank   = 0.0;
     float _mislRadiusFlyer  = 0.0;
     float _mislRadiusRobo   = 0.0;
+
+    // Shown only, at a machine where its launcher is driven ahead of the
+    // game that runs elsewhere (World::Prediction): it hits nothing
+    bool _phantom = false;
 };
 
 #endif // YMISSILE_H_INCLUDED

@@ -359,6 +359,7 @@ FrameMaker::FrameMaker(const State::Schema &viewSchema, bool details)
         f.SalveCounter = Find(_schema, kind, "salveCounter");
         f.GunAngle = Find(_schema, kind, "gunAngleUser");
         f.GunLeftRight = Find(_schema, kind, "gunLeftRight");
+        f.Emitter = Find(_schema, kind, "emitter");
 
         f.Create = Find(_schema, kind, "energyLife");
         f.Beam = Find(_schema, kind, "energyMove");
@@ -563,6 +564,7 @@ void FrameMaker::Add(Frame &frame, std::vector<Frame::Sector> &sectors, uint8_t 
         get(f.SalveCounter, &info.SalveCounter, sizeof(info.SalveCounter));
         get(f.GunAngle, &info.GunAngle, sizeof(info.GunAngle));
         get(f.GunLeftRight, &info.GunLeftRight, sizeof(info.GunLeftRight));
+        get(f.Emitter, &info.Emitter, sizeof(info.Emitter));
 
         if ( f.Create.Found )
         {

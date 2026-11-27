@@ -3,6 +3,8 @@
 
 #include <cstdint>
 #include <deque>
+#include <map>
+#include <vector>
 
 #include "../vectors.h"
 #include "../matrix.h"
@@ -13,6 +15,7 @@
 
 class NC_STACK_ypaworld;
 class NC_STACK_ypabact;
+class NC_STACK_ypamissile;
 
 namespace World
 {
@@ -26,9 +29,12 @@ namespace World
 // number of the controls it went by, the unit here starts over from there
 // and goes by the controls the game hadn't gone by yet again.
 //
-// Only what the controls move is stepped: the game fires the unit's weapons
-// and deals out damage, and other units and players are as the game shows
-// them.
+// Only what the controls move is stepped, and the missiles they fire: those
+// fly here as they're fired, as the game's code flies them, and hit what's
+// drawn, but deal no damage. The game deals it, as its own missiles hit,
+// which aren't drawn as long as the ones fired here show them (as many of
+// them as were fired here). Machine guns' hits are the game's, and other
+// units and players are as the game shows them.
 class Prediction
 {
 public:
@@ -45,17 +51,19 @@ public:
     void FromGame(const ControlledUnit &unit);
 
     // The player's controls of a step, as they're sent to the game: the
-    // unit goes by them
-    void Steer(const PlayerControls &controls);
+    // unit goes by them, and its shots fly on, hitting units as the frame
+    // drawn last has them
+    void Steer(const PlayerControls &controls, const Frame &drawn);
 
     // The unit driven, 0 for none: none when the game hasn't sent it for a
     // while, as when the player rides along or looks from a missile
     uint32_t UnitId() const;
 
     // A frame drawn as the player drives the unit: the unit where it is
-    // fraction of the way from the step before the last to the last, and
-    // the player's camera on it
-    void Apply(Frame &frame, uint32_t player, float fraction) const;
+    // fraction of the way from the step before the last to the last, the
+    // player's camera on it, and its shots as they fly here instead of the
+    // game's
+    void Apply(Frame &frame, uint32_t player, float fraction);
 
 protected:
     // Where a unit is, and its camera and gun
@@ -78,9 +86,22 @@ protected:
         vec3d Position;
     };
 
-    void StepUnit(const PlayerControls &controls);
+    // A shot fired here
+    struct Shot
+    {
+        NC_STACK_ypamissile *Missile = NULL;
+        uint32_t DrawnId = 0; // In frames, past the ids of the game's units
+        vec3d Before;         // Where it was a step before
+    };
+
+    // A step of the unit, and of its shots: kept only when the controls are
+    // gone by the first time, as they're made
+    void StepUnit(const PlayerControls &controls, bool shoot);
+    void StepShots(const Frame &drawn);
+    void ApplyShots(Frame &frame, float fraction);
     Pose PoseOf(const NC_STACK_ypabact *unit) const;
     void Drop();
+    void DeleteUnit(NC_STACK_ypabact *unit);
 
     NC_STACK_ypaworld *_world;
     bool _possible = false;
@@ -93,6 +114,14 @@ protected:
     std::deque<Steered> _steered;  // The last controls made, the oldest first
     Pose _before, _now;            // After the step before the last, and the last
     vec3d _correction;             // From where it's driven to where it's drawn
+    std::vector<Shot> _shots;
+    uint32_t _shotsFired = 0;
+
+    // The game's missiles of the unit as they came, whether each is drawn
+    // (by id), and how many came since none flew; while fewer came than
+    // were fired here, the ones fired here show them
+    std::map<uint32_t, bool> _gameShots;
+    uint32_t _gameShotsCame = 0, _shotsShowing = 0;
 
     // How far the game had the unit from where it was here after the same
     // controls: how well it was predicted

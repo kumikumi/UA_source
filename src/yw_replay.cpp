@@ -1434,7 +1434,7 @@ void NC_STACK_ypaworld::PlayStep(TInputState *inpt)
         if ( _replay->TakeControlledUnit(unit) )
             _prediction->FromGame(unit);
 
-        _prediction->Steer(controls);
+        _prediction->Steer(controls, _replayFrame);
     }
 
     _playStepped = true;

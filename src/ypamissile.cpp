@@ -396,7 +396,7 @@ bool NC_STACK_ypamissile::TubeCollisionTest()
                                         energyMsg.energy = -damage;
                                         energyMsg.unit = _mislEmitter;
 
-                                        if ( _world->LocalOwner() == _owner || !_world->_isNetGame )
+                                        if ( !_phantom && (_world->LocalOwner() == _owner || !_world->_isNetGame) )
                                             bct->ModifyEnergy(&energyMsg);
                                     }
 
@@ -480,7 +480,7 @@ void NC_STACK_ypamissile::AI_layer3(update_msg *arg)
 
             if ( !(_mislFlags & FLAG_MISL_IGNOREBUILDS) || _pSector->PurposeType == cellArea::PT_NONE )
             {
-                if ( _world->LocalOwner() == _owner || !_world->_isNetGame )
+                if ( !_phantom && (_world->LocalOwner() == _owner || !_world->_isNetGame) )
                 {
                     TSectorDamage sectorDamage;
 
@@ -582,7 +582,7 @@ void NC_STACK_ypamissile::AI_layer3(update_msg *arg)
 
                     if ( !(_mislFlags & FLAG_MISL_IGNOREBUILDS) || _pSector->PurposeType == cellArea::PT_NONE )
                     {
-                        if ( _world->LocalOwner() == _owner || !_world->_isNetGame )
+                        if ( !_phantom && (_world->LocalOwner() == _owner || !_world->_isNetGame) )
                         {
                             TSectorDamage sectorDamage;
 
@@ -596,7 +596,7 @@ void NC_STACK_ypamissile::AI_layer3(update_msg *arg)
                     }
                 }
 
-                int emitterIsUser = _mislEmitter->getBACT_inputting();
+                int emitterIsUser = !_phantom && _mislEmitter->getBACT_inputting();
 
                 if ( emitterIsUser )
                 {
@@ -720,6 +720,7 @@ void NC_STACK_ypamissile::Renew()
     _mislRadiusTank = 0.0;
     _mislRadiusFlyer = 0.0;
     _mislRadiusRobo = 0.0;
+    _phantom = false;
 
     setBACT_yourLastSeconds(3000);
 }
@@ -827,6 +828,9 @@ void NC_STACK_ypamissile::ResetViewing()
 
 void NC_STACK_ypamissile::Impact()
 {
+    if ( _phantom )
+        return;
+
     TImpulse impulse;
     impulse.energ = _energy;
     impulse.pos = _position;

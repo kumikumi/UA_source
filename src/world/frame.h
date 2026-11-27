@@ -104,6 +104,7 @@ struct Frame
         int32_t SalveCounter = 0;
         float GunAngle = 0.0;    // Where its driver aims its gun, up and down
         float GunLeftRight = 0.0; // and to the sides
+        uint32_t Emitter = 0;    // A missile's: the unit that fired it
     };
 
     // A host station's batteries and what it takes in, as the energy panel
@@ -248,7 +249,7 @@ protected:
         // Details
         Field Owner, Status, Aggression, CommandId, Shield, Energy, EnergyMax, Parent;
         Field PrimaryType, Primary, PrimaryPos, SecondaryType, Secondary, GunFlags, ClockStart, WeaponTime, SalveCounter;
-        Field GunAngle, GunLeftRight;
+        Field GunAngle, GunLeftRight, Emitter;
         Field Create, Beam, BuildSpare, VehicleSpare, ReloadPS, FillMode, LoadFlags, LossFlags;
     };
 
