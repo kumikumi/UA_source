@@ -11787,6 +11787,10 @@ void NC_STACK_ypaworld::PrepareUserInput(TInputState *inpt)
     //Precompute input
     TClickBoxInf *winp = &inpt->ClickInf;
 
+    // The unit the player looks from, whose controls these are
+    MapScene::Unit user;
+    UiScene().UserUnit(user);
+
     inpt->Buttons.UnSet(31);
 
     int joyDisabled = 0;
@@ -11805,7 +11809,7 @@ void NC_STACK_ypaworld::PrepareUserInput(TInputState *inpt)
 
     TrackFireButton(inpt);
 
-    if ( UserUnit()->_status == BACT_STATUS_DEAD )
+    if ( user.Status == BACT_STATUS_DEAD )
     {
         _mouseGrabbed = false;
     }
@@ -11861,11 +11865,12 @@ void NC_STACK_ypaworld::PrepareUserInput(TInputState *inpt)
 
     if ( !joyDisabled )
     {
-        int isGroundVehicle = UserUnit()->_bact_type == BACT_TYPES_TANK || UserUnit()->_bact_type == BACT_TYPES_CAR;
-        int isRobo = UserUnit()->_bact_type == BACT_TYPES_ROBO;
+        int isGroundVehicle = user.Type == BACT_TYPES_TANK || user.Type == BACT_TYPES_CAR;
+        int isRobo = user.Type == BACT_TYPES_ROBO;
 
-        if ( !_framesElapsed )
+        if ( !_joyKnown )
         {
+            _joyKnown = true;
             _oldJoyX = inpt->Sliders[12];
             _oldJoyY = inpt->Sliders[13];
             _oldJoyZ = inpt->Sliders[14];

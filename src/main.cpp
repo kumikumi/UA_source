@@ -104,12 +104,16 @@ static std::string watchName = "watcher";
 static int watchFaction = 0; // --faction: played as well
 
 // Those watching who play (--stream): the player each watcher plays as, and
-// their controls, which stay empty until they can steer
+// their controls this step, as they last sent them
 struct RemotePlayer
 {
     uint32_t Player = 0;
     TInputState Input;
 };
+
+// A watcher's controls hold this long after the last that came: over a few
+// lost on the way, but a watcher gone quiet doesn't drive on
+static const uint32_t RemoteControlsHoldMs = 250;
 
 static std::map<uint32_t, RemotePlayer> remotePlayers; // By watcher
 
@@ -174,6 +178,12 @@ static void TakeWatchersRequests()
         {
             it.second.Input = TInputState();
             it.second.Input.Period = World::CVStepTicks;
+
+            World::PlayerControls controls;
+
+            if ( viewServer.Controls(it.first, RemoteControlsHoldMs, controls) )
+                controls.To(it.second.Input);
+
             player->Input = &it.second.Input;
         }
     }
@@ -595,10 +605,55 @@ static int StartReplayViewer()
 }
 
 // Played on by the real time alone, as the game stepped
+// Playing a game watched live: the time its interface hasn't stepped
+// through yet
+static int32_t playPendingTicks = 0;
+
 static int ProcessReplayFrame(int32_t frameTicks)
 {
     world_update_arg.DTime = frameTicks;
-    ypaworld->ReplayFrame(&world_update_arg);
+
+    if ( ypaworld->PlayingLive() )
+    {
+        // The game's interface takes the input a step at a time, as in a
+        // level, and sends the controls the steps leave; the frame drawn
+        // sees the first step's key presses and clicks
+        TInputState renderInput;
+        bool stepped = false;
+
+        playPendingTicks = std::min(playPendingTicks + frameTicks, SimMaxStepsPerFrame * World::CVStepTicks);
+
+        while ( playPendingTicks >= World::CVStepTicks && ypaworld->PlayingLive() )
+        {
+            playPendingTicks -= World::CVStepTicks;
+
+            input_states = TInputState();
+            Input::Engine.QueryEvents(&input_states);
+            input_states.Period = World::CVStepTicks;
+
+            if ( !stepped )
+                renderInput = input_states;
+
+            stepped = true;
+            ypaworld->PlayStep(&input_states);
+            lastStepInput = input_states;
+        }
+
+        if ( !stepped )
+        {
+            renderInput = lastStepInput;
+            ClearInputEvents(&renderInput);
+        }
+
+        world_update_arg.Input = &renderInput;
+        ypaworld->ReplayFrame(&world_update_arg);
+        world_update_arg.Input = &input_states;
+    }
+    else
+    {
+        playPendingTicks = 0;
+        ypaworld->ReplayFrame(&world_update_arg);
+    }
 
     // Started from the command line (--replay), the game quits
     if ( ypaworld->LeavingReplay() )
@@ -755,12 +810,14 @@ int ProcessNextFrame()
     viewServer.Service();
 
     // Gameplay reads input and advances time once per simulation step, in
-    // ProcessGameplayFrame, so here it only takes the time since the last frame
+    // ProcessGameplayFrame, and so does playing a game watched live, in
+    // ProcessReplayFrame: here it only takes the time since the last frame
     bool gameplay = ( GameScreenMode == GAME_SCREEN_MODE_GAME );
+    bool playingLive = ( GameScreenMode == GAME_SCREEN_MODE_REPLAY && ypaworld->PlayingLive() );
 
     input_states = TInputState();
 
-    if ( gameplay )
+    if ( gameplay || playingLive )
         input_states.Period = Input::Engine.QueryTimer();
     else
         Input::Engine.QueryInput(&input_states);

@@ -8,6 +8,7 @@
 
 #include "session.h"
 #include "../world/playerorder.h"
+#include "../world/playercontrols.h"
 
 struct z_stream_s;
 
@@ -18,17 +19,22 @@ namespace Net
 
 // What those who watch a game and the game that's watched send each other,
 // to tell them from other sessions
-constexpr const char *VIEW_VERSION = "ua-view-2";
+constexpr const char *VIEW_VERSION = "ua-view-3";
 
-// What a watcher sends the game, each message beginning with its type, on
-// the reliable channel and unpacked:
+// What a watcher sends the game, each message beginning with its type,
+// unpacked; on the reliable channel:
 //
 //   'J'  join a faction: u8 its owner (1-7), or 0 to only watch again
 //   'O'  an order, as World::PlayerOrder writes it
+//
+// and every step, on the latest-only channel:
+//
+//   'C'  their controls, as World::PlayerControls writes them
 enum WatcherMessage : uint8_t
 {
     WATCHER_JOIN = 'J',
     WATCHER_ORDER = 'O',
+    WATCHER_CONTROLS = 'C',
 };
 
 // The game's side of others watching it as it's played (--stream): whoever
@@ -77,6 +83,10 @@ public:
     // A watcher plays as a player from the next step on (0: only watches)
     void SetPlayer(uint32_t watcher, uint32_t player);
 
+    // The controls a watcher sent last, false when none came in the last
+    // maxAgeMs
+    bool Controls(uint32_t watcher, uint32_t maxAgeMs, World::PlayerControls &out) const;
+
     bool IsOpen() const { return _session.IsOpen(); }
     size_t Watchers() const { return _watchers.size(); }
 
@@ -95,11 +105,14 @@ protected:
         uint32_t ViewEpoch = 0; // Of the recorder's view they have
         uint32_t Player = 0;    // Who they play as
         bool PlayerToSend = false;
+        World::PlayerControls Controls; // The last they sent, and when it came
+        uint64_t ControlsTicks = 0;     // (SDL_GetTicks); 0 for none yet
     };
 
     void Poll();
     void Receive(const Event &event);
     Watcher *Find(uint32_t id);
+    const Watcher *Find(uint32_t id) const;
     void Send(Watcher &watcher, const std::string &msg);
     void Drop(uint32_t id);
 

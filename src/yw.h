@@ -2127,6 +2127,11 @@ public:
     bool StartWatching(std::unique_ptr<World::FrameSource> source, int level, const std::string &levelDescription);
     void ReplayFrame(TUpdateArgs *arg);
     bool LeavingReplay() const { return _replayLeave; }
+
+    // Playing the game watched live with the game's interface, which then
+    // takes the input a step at a time (PlayStep), as in a level
+    bool PlayingLive() const { return _replay && _replayPlaying; }
+    void PlayStep(TInputState *inpt);
     void EndReplay();
     bool StartViewer(std::unique_ptr<World::FrameSource> source, int level, const std::string &levelDescription,
                      uint32_t startStep);
@@ -2970,6 +2975,7 @@ public:
     // Playing a game watched live (FrameSource::Player): the game's own
     // interface, on the frames shown, its orders sent to the game
     bool _replayPlaying = false;
+    bool _playStepped = false;     // Its interface stepped since it began
     PlayMapScene _playScene;
     uint32_t _playUnit = 0;        // The player's unit in the frame before
     bool _playSelectNewSquad = false; // A squad was ordered: select it once it comes
@@ -3135,6 +3141,7 @@ public:
     float _oldJoyZ = 0.0; // input slider 14
     float _oldJoyHatX = 0.0; // input slider 15
     float _oldJoyHatY = 0.0; // input slider 16
+    bool _joyKnown = false;  // The old ones were read
     
     std::array<std::string, World::MOVIE_MAX_NUMBER> _movies;
     

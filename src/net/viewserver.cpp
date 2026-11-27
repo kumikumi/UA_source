@@ -1,5 +1,6 @@
 #include <algorithm>
 #include <zlib.h>
+#include <SDL3/SDL_timer.h>
 
 #include "viewserver.h"
 #include "../world/viewstream.h"
@@ -126,9 +127,16 @@ ViewServer::Watcher *ViewServer::Find(uint32_t id)
     return NULL;
 }
 
+const ViewServer::Watcher *ViewServer::Find(uint32_t id) const
+{
+    return const_cast<ViewServer *>(this)->Find(id);
+}
+
 void ViewServer::Receive(const Event &event)
 {
-    if ( !Find(event.From) || event.Data.empty() )
+    Watcher *watcher = Find(event.From);
+
+    if ( !watcher || event.Data.empty() )
         return;
 
     Request request;
@@ -157,6 +165,22 @@ void ViewServer::Receive(const Event &event)
         _requests.push_back(request);
         return;
 
+    case WATCHER_CONTROLS:
+    {
+        World::PlayerControls controls;
+
+        if ( !controls.Read(data + 1, size - 1) )
+            break;
+
+        // The newest only, should older ones come after it
+        if ( !watcher->ControlsTicks || controls.Number > watcher->Controls.Number )
+        {
+            watcher->Controls = controls;
+            watcher->ControlsTicks = SDL_GetTicks();
+        }
+        return;
+    }
+
     default:
         break;
     }
@@ -178,6 +202,17 @@ void ViewServer::SetPlayer(uint32_t watcher, uint32_t player)
         w->Player = player;
         w->PlayerToSend = true;
     }
+}
+
+bool ViewServer::Controls(uint32_t watcher, uint32_t maxAgeMs, World::PlayerControls &out) const
+{
+    const Watcher *w = Find(watcher);
+
+    if ( !w || !w->ControlsTicks || SDL_GetTicks() - w->ControlsTicks > maxAgeMs )
+        return false;
+
+    out = w->Controls;
+    return true;
 }
 
 void ViewServer::Service()

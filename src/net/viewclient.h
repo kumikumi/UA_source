@@ -58,6 +58,10 @@ public:
     // An order as that player
     void SendOrder(const World::PlayerOrder &order) override;
 
+    // Their controls this step, which go on the latest-only channel: the
+    // game goes by the last that came
+    void SendControls(const World::PlayerControls &controls) override;
+
     // What came so far, as it came and unpacked, and the steps
     uint64_t BytesReceived() const { return _received; }
     uint64_t BytesUnpacked() const { return _unpacked; }
@@ -93,6 +97,7 @@ protected:
     bool _ended = false;
     uint64_t _received = 0, _unpacked = 0;
     uint32_t _steps = 0;
+    uint32_t _controlsSent = 0;
     uint32_t _hashEvery = 0;
     std::vector<std::pair<uint32_t, uint64_t>> _hashes;
 };

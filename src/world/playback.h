@@ -8,6 +8,7 @@
 
 #include "frame.h"
 #include "playerorder.h"
+#include "playercontrols.h"
 #include "recorder.h"
 
 namespace World
@@ -44,9 +45,11 @@ public:
     virtual bool Update() { return true; }
 
     // A game played elsewhere that this machine plays too: the player it
-    // plays as (0 for none, only watching), and their orders to it
+    // plays as (0 for none, only watching), their orders to it, and their
+    // controls every step
     virtual uint32_t Player() const { return 0; }
     virtual void SendOrder(const PlayerOrder &order) {}
+    virtual void SendControls(const PlayerControls &controls) {}
 };
 
 // A recording played back as it was drawn, from any step: the frames of the

@@ -153,6 +153,7 @@ int NC_STACK_ypaworld::LevelCommonLoader(TLevelDescription *mapp, int levelID, c
     _lastRoboMessages.fill(TLastRoboMessage());
     _lastEnemyHostFoundMsgTime.fill(0);
     _framesElapsed = 0;
+    _joyKnown = false;
 
     _nextUnitId = World::CVFirstUnitId;
     _nextCommandId = 1;

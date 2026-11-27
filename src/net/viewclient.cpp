@@ -191,6 +191,19 @@ void ViewClient::SendOrder(const World::PlayerOrder &order)
     SendToGame(std::string(1, (char)WATCHER_ORDER) + order.Write());
 }
 
+void ViewClient::SendControls(const World::PlayerControls &controls)
+{
+    if ( _ended || _session.Players().empty() )
+        return;
+
+    World::PlayerControls numbered = controls;
+    numbered.Number = ++_controlsSent;
+
+    std::string msg = std::string(1, (char)WATCHER_CONTROLS) + numbered.Write();
+    _session.Send(_session.Players().front().Id, msg.data(), msg.size(), LATEST);
+    _session.Flush();
+}
+
 uint32_t ViewClient::FirstStep() const
 {
     return _frames.empty() ? 0 : _frames.front().Step;

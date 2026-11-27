@@ -1241,11 +1241,13 @@ void NC_STACK_ypaworld::ReplayFrame(TUpdateArgs *arg)
 
         if ( _replayPlaying )
         {
-            // The game's interface, the HUD under its windows as in the game
+            // The game's interface as its steps left it (PlayStep), the HUD
+            // under its windows as in the game; they're laid out by a step
             PlayFromFrame(_replayFrame);
-            PlayInterfaceStep(arg->Input);
             DrawReplayHud(_replayFrame);
-            DrawGameWindows(this);
+
+            if ( _playStepped )
+                DrawGameWindows(this);
         }
         else
         {
@@ -1295,6 +1297,9 @@ void NC_STACK_ypaworld::StartPlaying()
     _playUnit = 0;
     _playSelectNewSquad = false;
     _playerInHSGun = false;
+    _mouseGrabbed = false;
+    _joyKnown = false;
+    _playStepped = false;
     _levelInfo.State = TLevelInfo::STATE_PLAYING;
 
     _playScene.SetPlayer(this, &_replayFrame, _replay->Player(), _replayCamera.Position, _replayCamera.Rotation);
@@ -1324,6 +1329,7 @@ void NC_STACK_ypaworld::StopPlaying()
     _orderSink = nullptr;
     _cmdrsRemap.clear();
     _activeCmdrRemapIndex = -1;
+    _mouseGrabbed = false;
     _replayPlaying = false;
 
     OpenReplayWindows();
@@ -1382,6 +1388,25 @@ void NC_STACK_ypaworld::PlayFromFrame(const World::Frame &frame)
     }
 }
 
+// A step of a game played live: the game's interface on the frame shown, a
+// step at a time as in a level, then the controls of the unit the player
+// controls, as the interface left them, to the game
+void NC_STACK_ypaworld::PlayStep(TInputState *inpt)
+{
+    if ( !_replayPlaying )
+        return;
+
+    // The interface's own clock, as while it's drawn
+    int32_t gameTime = _timeStamp;
+    _timeStamp = _replayClock;
+
+    PlayInterfaceStep(inpt);
+    _replay->SendControls(World::PlayerControls::Of(*inpt));
+    _playStepped = true;
+
+    _timeStamp = gameTime;
+}
+
 // A step of the game's interface, as SimulationStep runs it, on the frame
 // shown: what it lists, then the windows' and the mouse's input
 void NC_STACK_ypaworld::PlayInterfaceStep(TInputState *inpt)
@@ -1389,9 +1414,10 @@ void NC_STACK_ypaworld::PlayInterfaceStep(TInputState *inpt)
     // The windows tell anew what they're about
     ClearTooltip();
 
-    // What the game takes of the input before its interface does
+    // What the game takes of the input before its interface does: the
+    // controls as the unit looked from takes them
     TakeDialogKeys(inpt);
-    TrackFireButton(inpt);
+    PrepareUserInput(inpt);
     UpdatePlayerInRoboGun(this);
 
     // A squad just ordered is selected once it's there, as the game selects
