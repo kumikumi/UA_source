@@ -1,6 +1,7 @@
 #include <inttypes.h>
 #include <string.h>
 #include <math.h>
+#include <algorithm>
 #include "env.h"
 #include "includes.h"
 #include "yw_internal.h"
@@ -2373,9 +2374,100 @@ void NC_STACK_ypaworld::RenderGame(TUpdateArgs *arg, const World::Frame &frame, 
     {
         System::PerfStats::Timer perf(System::PerfStats::SEC_GUI);
         uint32_t tpm = profiler_begin();
+        DrawPlayerNames(frame);
         DrawGameInterface(this, frame);
         _profileVals[PFID_NEWGUITIME] = profiler_end(tpm);
     }
+}
+
+// Who's in the units drawn, as far as they're seen: over each unit a player
+// controls or rides along in, their names in their factions' colours, the
+// one who controls it first. None over the unit the view is from, nor of
+// those who look from it.
+void NC_STACK_ypaworld::DrawPlayerNames(const World::Frame &frame)
+{
+    TileMap *font = _guiTiles[15];
+    TViewDistance distance = GetViewDistance();
+    float maxDistance = std::min(distance.ClipDistance, distance.FadeOutEnd);
+
+    CmdStream buf;
+    buf.reserve(512);
+    FontUA::select_tileset(&buf, 15);
+
+    bool drawn = false;
+    std::vector<uint32_t> named;
+
+    for ( const World::Frame::Player &player : frame.Players )
+    {
+        // The unit they're in: the one they control, also while they look
+        // from a missile it fired, or else the one they ride along in
+        uint32_t in = player.Controls ? player.Controls : player.Unit;
+
+        if ( !in || in == frame.Viewer || std::find(named.begin(), named.end(), in) != named.end() )
+            continue;
+
+        named.push_back(in);
+
+        const World::Frame::Unit *unit = frame.FindUnit(in);
+
+        if ( !unit )
+            continue;
+
+        std::vector<const World::Frame::Player *> names;
+
+        for ( const World::Frame::Player &p : frame.Players )
+        {
+            if ( p.Name.empty() || p.Unit == frame.Viewer || (p.Controls ? p.Controls : p.Unit) != in )
+                continue;
+
+            if ( p.Controls )
+                names.insert(names.begin(), &p);
+            else
+                names.push_back(&p);
+        }
+
+        if ( names.empty() )
+            continue;
+
+        // Over its top, and over the marks and the life bar the interface
+        // shows over units
+        float radius = unit->Vehicle < _vhclProtos.size() ? _vhclProtos[unit->Vehicle].radius : 0.0;
+        vec3d middle = _drawnCamera.SclRot.Transform(vec3d(unit->Position) - _drawnCamera.Pos);
+        vec3d top = _drawnCamera.SclRot.Transform(vec3d(unit->Position) - vec3d(0.0, radius, 0.0) - _drawnCamera.Pos);
+
+        if ( middle.z <= 30.0 || top.z <= 30.0 || middle.z > maxDistance || fabs(middle.x) >= middle.z || fabs(middle.y) >= middle.z )
+            continue;
+
+        int x = (_screenSize.x / 2) * (middle.x / middle.z + 1.0);
+        int marks = (_screenSize.y / 2) * (middle.y / middle.z + 1.0) - _screenSize.y / 16 - _guiTiles[50]->h;
+        int y = std::min(marks, (int)((_screenSize.y / 2) * (top.y / top.z + 1.0))) - font->h * names.size();
+
+        for ( const World::Frame::Player *p : names )
+        {
+            // In the font texts are drawn in, which the tiles' widths aren't
+            int width = GFX::Engine.GetTextWidth(p->Name) + 4;
+            int left = std::max(0, std::min(x - width / 2, _screenSize.x - width));
+
+            if ( y >= 0 && y + font->h < _screenSize.y && width < _screenSize.x )
+            {
+                SDL_Color color = GetColor(p->Owner);
+
+                FontUA::set_center_xpos(&buf, left - _screenSize.x / 2);
+                FontUA::set_center_ypos(&buf, y - _screenSize.y / 2);
+                FontUA::set_txtColor(&buf, color.r, color.g, color.b);
+                FontUA::FormateCenteredSkipableItem(font, &buf, p->Name, width);
+                drawn = true;
+            }
+
+            y += font->h;
+        }
+    }
+
+    if ( !drawn )
+        return;
+
+    FontUA::set_end(&buf);
+    GFX::Engine.ProcessDrawSeq(buf);
 }
 
 

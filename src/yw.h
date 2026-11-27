@@ -2385,6 +2385,7 @@ public:
     bool FrameAt(double step, World::Frame &out) const;
     void PlaceDrawnCamera(const World::Frame &frame);
     void RenderGame(TUpdateArgs *arg, const World::Frame &frame, bool withInterface, bool particles);
+    void DrawPlayerNames(const World::Frame &frame);
     void CheckSectorVisibility(Common::Point sect, TRenderingSector *sct, const World::Frame &frame, baseRender_msg *rndrParams);
     void RenderSector(TRenderingSector *sct, const World::Frame &frame, baseRender_msg *rndrParams);
     void RenderUnit(const World::Frame &frame, const World::Frame::Unit &unit, baseRender_msg *arg);

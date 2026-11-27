@@ -1240,6 +1240,10 @@ void NC_STACK_ypaworld::ReplayFrame(TUpdateArgs *arg)
         GFX::Engine.SetAnimationTime(_replayFrame.Time);
         RenderGame(arg, _replayFrame, false, playing && ReplaySpeeds[_replaySpeed] <= 2.0);
 
+        // Who's in the units, with the HUD
+        if ( _replayHudShown )
+            DrawPlayerNames(_replayFrame);
+
         // The interface animates in the viewer's own time, paused or not
         int32_t gameTime = _timeStamp;
         _timeStamp = _replayClock;
