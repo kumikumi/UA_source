@@ -5704,6 +5704,11 @@ size_t NC_STACK_ypabact::FireMinigun(TMinigunShot *arg)
 
 void NC_STACK_ypabact::UpdateVisor(NC_STACK_ypabact *bact2, int noWeaponSight)
 {
+    // The HUD here shows the sights of the unit the player here controls,
+    // not those of the units other players control
+    if ( _world->ControllerOf(this) != _world->LocalPlayer() )
+        return;
+
     THudVisor hudi = Sights(_mgun, _weapon, _weapon_flags, -_gun_leftright, -_gun_angle_user, noWeaponSight);
 
     if ( bact2 )
