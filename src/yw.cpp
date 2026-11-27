@@ -7071,6 +7071,24 @@ void NC_STACK_ypaworld::LeaveFaction(World::Player *player)
     }
 }
 
+void NC_STACK_ypaworld::HostStationTakesOver(NC_STACK_ypabact *lost, NC_STACK_ypabact *heir)
+{
+    for ( std::unique_ptr<World::Player> &player : _players )
+    {
+        if ( player->HostStation == lost )
+            SetPlayerHostStation(player.get(), heir);
+
+        if ( player->Unit == lost || player->Controls == lost )
+        {
+            lost->setBACT_inputting(false, player.get());
+            lost->setBACT_viewer(false, player.get());
+
+            heir->setBACT_viewer(true, player.get());
+            heir->setBACT_inputting(true, player.get());
+        }
+    }
+}
+
 void NC_STACK_ypaworld::SetPlayerHostStation(World::Player *player, NC_STACK_ypabact *host)
 {
     if ( player->Owner != host->_owner )

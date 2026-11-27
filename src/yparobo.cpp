@@ -4770,6 +4770,35 @@ void NC_STACK_yparobo::Die()
             }
         }
 
+        // Only a faction's last host station takes its units along. Before
+        // that, its squads and the faction's guns on the ground go to the
+        // nearest one left, and so do its players.
+        NC_STACK_yparobo *heir = (_status_flg & BACT_STFLAG_CLEAN) ? NULL : NearestFellowHostStation();
+
+        if ( heir )
+        {
+            std::vector<NC_STACK_ypabact *> moving;
+
+            for ( NC_STACK_ypabact *kid : _kidList )
+            {
+                NC_STACK_ypagun *gun = dynamic_cast<NC_STACK_ypagun *>(kid);
+
+                if ( kid->_status != BACT_STATUS_DEAD && (!gun || !gun->IsRoboGun()) )
+                    moving.push_back(kid);
+            }
+
+            for ( NC_STACK_ypabact *kid : moving )
+            {
+                heir->AddSubject(kid);
+                kid->_host_station = heir;
+
+                for ( NC_STACK_ypabact *unit : kid->_kidList )
+                    unit->_host_station = heir;
+            }
+
+            _world->HostStationTakesOver(this, heir);
+        }
+
         for (World::RefBactList::iterator kdIt = _kidList.begin(); kdIt != _kidList.end();)
         {
             NC_STACK_ypabact *node = *kdIt;
@@ -5966,6 +5995,31 @@ void NC_STACK_yparobo::setBACT_inputting(bool inpt, World::Player *player)
 
     if ( inpt && _world->ControllerOf(this) == player )
         _world->SetPlayerHostStation(player, this);
+}
+
+NC_STACK_yparobo *NC_STACK_yparobo::NearestFellowHostStation() const
+{
+    NC_STACK_yparobo *nearest = NULL;
+    float nearestDist = 0.0;
+
+    for ( NC_STACK_ypabact *unit : _world->_unitsList )
+    {
+        NC_STACK_yparobo *robo = dynamic_cast<NC_STACK_yparobo *>(unit);
+
+        if ( !robo || robo == this || robo->_owner != _owner || robo->_status == BACT_STATUS_DEAD ||
+             (robo->_status_flg & BACT_STFLAG_DEATH1) )
+            continue;
+
+        float dist = (robo->_position - _position).length();
+
+        if ( !nearest || dist < nearestDist )
+        {
+            nearest = robo;
+            nearestDist = dist;
+        }
+    }
+
+    return nearest;
 }
 
 void NC_STACK_yparobo::SetPlayerRun(bool run)

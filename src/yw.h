@@ -1939,6 +1939,11 @@ public:
 
     bool FactionHasPlayers(uint8_t owner) const;
 
+    // A host station is destroyed and another of its faction goes on: the
+    // players whose orders went to it go to that one, and those who were
+    // in it get in that one
+    void HostStationTakesOver(NC_STACK_ypabact *lost, NC_STACK_ypabact *heir);
+
     // A player looks from a unit now: their camera and HUD go there
     void SetPlayerUnit(World::Player *player, NC_STACK_ypabact *unit);
 

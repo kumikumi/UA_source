@@ -156,6 +156,10 @@ public:
     // An AI taking over a host station that never had plans of its own gets
     // the campaign's usual ones.
     void SetPlayerRun(bool run);
+
+    // The nearest other host station of its faction still going; NULL when
+    // there's none
+    NC_STACK_yparobo *NearestFellowHostStation() const;
     virtual void setROBO_proto(World::TRoboProto *);
     virtual void setROBO_epConquer(int);
     virtual void setROBO_epDefense(int);
