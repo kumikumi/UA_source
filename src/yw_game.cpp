@@ -865,7 +865,7 @@ NC_STACK_ypabact *NC_STACK_ypaworld::FirstSquad(uint8_t owner)
     return first;
 }
 
-World::Player *NC_STACK_ypaworld::AddFactionPlayer(const std::string &name, uint8_t owner)
+World::Player *NC_STACK_ypaworld::AddFactionPlayer(const std::string &name, uint8_t owner, uint32_t id)
 {
     NC_STACK_ypabact *start = FirstHostStation(owner);
 
@@ -875,7 +875,7 @@ World::Player *NC_STACK_ypaworld::AddFactionPlayer(const std::string &name, uint
     if ( !start )
         return NULL;
 
-    World::Player *player = AddPlayer();
+    World::Player *player = AddPlayer(id);
     player->Name = name.substr(0, World::Player::NameLength);
 
     JoinFaction(player, owner);

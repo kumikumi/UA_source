@@ -46,10 +46,16 @@ NC_STACK_ypaworld::NC_STACK_ypaworld()
     _localPlayer = AddPlayer();
 }
 
-World::Player *NC_STACK_ypaworld::AddPlayer()
+World::Player *NC_STACK_ypaworld::AddPlayer(uint32_t id)
 {
+    if ( !id || FindPlayer(id) )
+        id = _nextPlayerId;
+
+    if ( id >= _nextPlayerId )
+        _nextPlayerId = id + 1;
+
     _players.emplace_back(new World::Player);
-    _players.back()->Id = _nextPlayerId++;
+    _players.back()->Id = id;
     return _players.back().get();
 }
 
@@ -2220,6 +2226,16 @@ void NC_STACK_ypaworld::FreeLevel()
     }
 
     FreeUnits();
+
+    // Those playing at other machines go with the units: they join the next
+    // level anew. The one at this machine plays it (LevelCommonLoader).
+    for ( auto it = _players.begin(); it != _players.end(); )
+    {
+        if ( it->get() == _localPlayer )
+            it++;
+        else
+            it = _players.erase(it);
+    }
 
     // The next level is drawn once its first step has left a frame
     TF::Engine.SetViewPoint(NULL);

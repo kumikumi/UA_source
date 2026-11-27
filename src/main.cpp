@@ -103,11 +103,14 @@ static std::string watchAddress;
 static std::string watchName = "watcher";
 static int watchFaction = 0; // --faction: played as well
 
-// Those watching who play (--stream): the player each watcher plays as, and
-// their controls this step, and their number (0 for none)
+// Those watching who play (--stream): the player each watcher plays as, as
+// whom and which faction, and their controls this step, and their number (0
+// for none)
 struct RemotePlayer
 {
     uint32_t Player = 0;
+    std::string Name;
+    uint8_t Owner = 0;
     TInputState Input;
     uint32_t Controls = 0;
 };
@@ -150,7 +153,10 @@ static void TakeWatchersRequests()
 
                 if ( player )
                 {
-                    remotePlayers[request.Watcher].Player = player->Id;
+                    RemotePlayer &remote = remotePlayers[request.Watcher];
+                    remote.Player = player->Id;
+                    remote.Name = request.Name;
+                    remote.Owner = request.Owner;
                     ypa_log_out("Watching: %s plays faction %d as player %u\n", request.Name.c_str(), (int)request.Owner, player->Id);
                 }
                 else
@@ -221,6 +227,30 @@ static void StreamStep()
         unit.Fields = std::move(v.Out());
 
         viewServer.SendUnit(it.first, unit);
+    }
+}
+
+// The level started again: its players went with it (FreeLevel), so those
+// watching who played join their faction in it anew, as the same players:
+// their machines play on as they did
+static void RejoinWatchers()
+{
+    for ( auto it = remotePlayers.begin(); it != remotePlayers.end(); )
+    {
+        World::Player *player = ypaworld->AddFactionPlayer(it->second.Name, it->second.Owner, it->second.Player);
+        viewServer.SetPlayer(it->first, player ? player->Id : 0);
+
+        if ( player )
+        {
+            ypa_log_out("Watching: %s plays faction %d again as player %u\n", it->second.Name.c_str(), (int)it->second.Owner, player->Id);
+            it->second.Player = player->Id;
+            it++;
+        }
+        else
+        {
+            ypa_log_out("Watching: %s can't play faction %d again, which has no units\n", it->second.Name.c_str(), (int)it->second.Owner);
+            it = remotePlayers.erase(it);
+        }
     }
 }
 
@@ -528,6 +558,8 @@ int ProcessGameplayFrame(int32_t frameTicks, bool timeFrozen)
             ypa_log_out("Warning, could not start the level again\n");
             return BackToLevelMap(false);
         }
+
+        RejoinWatchers();
 
         Input::Engine.QueryInput(&input_states);
     }

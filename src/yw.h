@@ -1940,8 +1940,9 @@ public:
     // Someone at another machine plays a faction from now on: a new player
     // of it, named so, in its first host station (riding along when someone
     // else controls it) or, with none, its first squad. NULL when the
-    // faction has no units to start in.
-    World::Player *AddFactionPlayer(const std::string &name, uint8_t owner);
+    // faction has no units to start in. With an id, the player keeps it
+    // (AddPlayer).
+    World::Player *AddFactionPlayer(const std::string &name, uint8_t owner, uint32_t id = 0);
 
     // A player who isn't at this machine is gone; their faction's AI plays
     // it again when no one else does
@@ -2248,8 +2249,9 @@ public:
     virtual int getYW_doEnergyRecalc();
     World::Player *LocalPlayer() const { return _localPlayer; }
 
-    // A new player, playing nothing yet
-    World::Player *AddPlayer();
+    // A new player, playing nothing yet: by the id given while no one has it,
+    // as one who plays on in the level started again, else the next
+    World::Player *AddPlayer(uint32_t id = 0);
     World::Player *FindPlayer(uint32_t id) const;
 
     // Restoring: the players a state has, by id, made anew with nothing
