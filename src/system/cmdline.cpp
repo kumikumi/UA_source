@@ -65,7 +65,13 @@ static const Option Options[] = {
     {"join",         "ADDRESS", "Join the network game hosted at ADDRESS, a name or an IP address "
                                 "(ADDRESS:PORT if the port isn't 61234), at its lobby"},
     {"callsign",     "NAME",    "With --host or --join, play under this name, not the last one "
-                                "typed"},
+                                "typed; with --watch, watch under it"},
+    {"stream",       NULL,      "Let others watch the level --level or --load starts as it's played "
+                                "(--watch), on port 61234. A level run --headless then goes at the "
+                                "game's own speed"},
+    {"watch",        "ADDRESS", "Watch the game streamed at ADDRESS (--stream) as it's played, in the "
+                                "replay viewer; ADDRESS:PORT if the port isn't 61234. With --headless "
+                                "nothing is shown: what came and how fast goes to stdout"},
     {"bench",        NULL,      "Run the benchmark: level 21 drawn over and over from above, the frame "
                                 "times reported"},
     {"bench-level",  "N",       "The benchmark's level instead"},

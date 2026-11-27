@@ -51,6 +51,8 @@
 #include "system/movie.h"
 #include "system/inivals.h"
 #include "system/cmdline.h"
+#include "net/viewserver.h"
+#include "net/viewclient.h"
 #include "obj3d.h"
 
 
@@ -87,6 +89,27 @@ static int32_t headlessTimeLimit = 0;
 static std::string recordFile; // --record
 static bool recordFull = false; // --record-full
 static uint32_t checkResumeStep = 0; // --check-resume
+
+// --stream: others watch the level as it's played, a step at a time
+// (Net::ViewServer); streamedStep is the recorder's last step sent
+static bool streamLevel = false;
+static Net::ViewServer viewServer;
+static uint32_t streamedStep = 0;
+
+// --watch: a game played elsewhere, watched in the replay viewer or, with
+// --headless, only read
+static std::string watchAddress;
+static std::string watchName = "watcher";
+
+// After a step: what it changed to those watching (--stream)
+static void StreamStep()
+{
+    if ( !viewServer.IsOpen() || ypaworld->_recorder.Step() == streamedStep || !ypaworld->_recorder.IsRecording() )
+        return;
+
+    streamedStep = ypaworld->_recorder.Step();
+    viewServer.Step(ypaworld->_levelInfo.LevelID, ypaworld->_levelDescription, ypaworld->_recorder);
+}
 
 static bool StartDirectLevel();
 
@@ -274,6 +297,7 @@ int ProcessGameplayFrame(int32_t frameTicks, bool timeFrozen)
             world_update_arg.Input = &input_states;
 
             draw = ypaworld->SimulationStep(&world_update_arg);
+            StreamStep();
 
             lastStepInput = input_states;
 
@@ -499,7 +523,7 @@ static int ProcessReplayFrame(int32_t frameTicks)
 
     // Started from the command line (--replay), the game quits
     if ( ypaworld->LeavingReplay() )
-        return directStart.ReplayFile.empty() ? BackFromReplay(false) : 0;
+        return (directStart.ReplayFile.empty() && watchAddress.empty()) ? BackFromReplay(false) : 0;
 
     return 1;
 }
@@ -515,6 +539,31 @@ static bool StartDirectReplay()
         ypa_log_out("Could not watch the replay the command line names\n");
         return false;
     }
+
+    GameScreenMode = GAME_SCREEN_MODE_REPLAY;
+    Input::Engine.QueryInput(&input_states);
+    return true;
+}
+
+// --watch: the game played at the address in the replay viewer, live
+static bool StartDirectWatch()
+{
+    ypaworld->CloseGameShell();
+    GameScreenMode = GAME_SCREEN_MODE_UNKNOWN;
+
+    std::unique_ptr<Net::ViewClient> client(new Net::ViewClient);
+
+    if ( !client->Join(watchAddress, watchName, 10000) )
+    {
+        ypa_log_out("Could not watch the game at %s\n", watchAddress.c_str());
+        return false;
+    }
+
+    int level = client->Level();
+    std::string description = client->LevelDescription();
+
+    if ( !ypaworld->StartWatching(std::move(client), level, description) )
+        return false;
 
     GameScreenMode = GAME_SCREEN_MODE_REPLAY;
     Input::Engine.QueryInput(&input_states);
@@ -619,6 +668,9 @@ int ProcessMenuFrame()
 int ProcessNextFrame()
 {
     ypaworld->UpdateScreenSize();
+
+    // Those watching come and go between steps too
+    viewServer.Service();
 
     // Gameplay reads input and advances time once per simulation step, in
     // ProcessGameplayFrame, so here it only takes the time since the last frame
@@ -1032,8 +1084,13 @@ static bool ReadNetStart()
 
     if ( System::CmdLine::Get("callsign", &netStart.Callsign) && !netStart.Active() )
     {
-        System::CmdLine::PrintError("--callsign needs --host or --join");
-        return false;
+        if ( watchAddress.empty() )
+        {
+            System::CmdLine::PrintError("--callsign needs --host, --join or --watch");
+            return false;
+        }
+
+        watchName = netStart.Callsign;
     }
 
     if ( netStart.Active() && (userdata.DirectStart || System::CmdLine::Has("headless")) )
@@ -1135,6 +1192,17 @@ static bool ReadDirectStart()
         ways++;
     }
 
+    if ( System::CmdLine::Get("watch", &watchAddress) )
+    {
+        if ( watchAddress.empty() )
+        {
+            System::CmdLine::PrintError("--watch needs ADDRESS");
+            return false;
+        }
+
+        ways++;
+    }
+
     if ( benchmark.IsActive() )
     {
         directStart.Level = benchmark.GetLevel();
@@ -1143,7 +1211,7 @@ static bool ReadDirectStart()
 
     if ( ways > 1 )
     {
-        System::CmdLine::PrintError("--level, --load, --replay and --bench each start a level; give one");
+        System::CmdLine::PrintError("--level, --load, --replay, --watch and --bench each start a level; give one");
         return false;
     }
 
@@ -1153,7 +1221,22 @@ static bool ReadDirectStart()
 
     if ( headless && (!userdata.DirectStart || benchmark.IsActive() || !directStart.ReplayFile.empty()) )
     {
-        System::CmdLine::PrintError("--headless needs --level or --load");
+        System::CmdLine::PrintError("--headless needs --level, --load or --watch");
+        return false;
+    }
+
+    streamLevel = System::CmdLine::Has("stream");
+
+    if ( streamLevel && !directStart.Level && directStart.SaveFile.empty() )
+    {
+        System::CmdLine::PrintError("--stream needs --level or --load");
+        return false;
+    }
+
+    if ( !watchAddress.empty() && (System::CmdLine::Has("record") || System::CmdLine::Has("check-resume") ||
+                                   System::CmdLine::Has("ai-only") || System::CmdLine::Has("step")) )
+    {
+        System::CmdLine::PrintError("--watch only goes with --headless, --time-limit and --callsign");
         return false;
     }
 
@@ -1270,6 +1353,10 @@ static const std::string &TemporaryRecordingPath()
 // Whether the level, saved game or replay the command line names is there
 static bool CheckDirectStart()
 {
+    // What's watched comes from the game watched
+    if ( !watchAddress.empty() )
+        return true;
+
     if ( !directStart.SaveFile.empty() || !directStart.ReplayFile.empty() )
     {
         const std::string &file = directStart.SaveFile.empty() ? directStart.ReplayFile : directStart.SaveFile;
@@ -1454,6 +1541,7 @@ static void HeadlessStep()
     world_update_arg.TimeStamp += World::CVStepTicks;
 
     ypaworld->SimulationStep(&world_update_arg);
+    StreamStep();
 }
 
 // --check-resume: keeps the state, plays on, starts again from what was kept
@@ -1515,6 +1603,19 @@ static void RunHeadless()
 
     while ( outcome.empty() )
     {
+        // Watched, it goes at the game's own speed, keeping in touch
+        // between steps
+        if ( viewServer.IsOpen() )
+        {
+            uint64_t due = startTicks + (uint64_t)steps * World::CVStepTicks * 1000000000ull / 1024;
+
+            while ( SDL_GetTicksNS() < due )
+            {
+                viewServer.Service();
+                SDL_DelayNS(1000000);
+            }
+        }
+
         HeadlessStep();
         steps++;
 
@@ -1538,6 +1639,61 @@ static void RunHeadless()
     fputs(report.c_str(), stdout);
     fflush(stdout); // Before anything at exit can end the program
     ypa_log_out("%s", report.c_str());
+}
+
+// --watch with --headless: the game watched read as it comes, nothing shown;
+// every 600 steps a hash of the view then, to compare with the game's, and
+// at the end what came and how fast. --time-limit stops it after that much
+// game time.
+static void RunHeadlessWatch()
+{
+    Net::ViewClient client;
+    client.KeepViewHashes(600);
+
+    if ( !client.Join(watchAddress, watchName, 10000) )
+    {
+        printf("Could not watch the game at %s\n", watchAddress.c_str());
+        return;
+    }
+
+    const uint32_t firstStep = client.LastStep();
+    const uint64_t startTicks = SDL_GetTicksNS();
+    size_t hashesShown = 0;
+
+    // The longest wait for the next step, as when packets were lost
+    uint32_t lastStep = firstStep;
+    uint64_t lastStepTicks = startTicks, longestWait = 0;
+
+    printf("Watching level %d from step %u\n", client.Level(), firstStep);
+    fflush(stdout);
+
+    while ( client.Update() )
+    {
+        if ( client.LastStep() != lastStep )
+        {
+            longestWait = std::max(longestWait, SDL_GetTicksNS() - lastStepTicks);
+            lastStep = client.LastStep();
+            lastStepTicks = SDL_GetTicksNS();
+        }
+
+        for ( ; hashesShown < client.ViewHashes().size(); hashesShown++ )
+            printf("step %u view %016llx\n", client.ViewHashes()[hashesShown].first,
+                   (unsigned long long)client.ViewHashes()[hashesShown].second);
+
+        fflush(stdout);
+
+        if ( headlessTimeLimit && (int64_t)(client.LastStep() - firstStep) * World::CVStepTicks >= headlessTimeLimit )
+            break;
+
+        SDL_DelayNS(1000000);
+    }
+
+    double seconds = (SDL_GetTicksNS() - startTicks) / 1e9;
+    printf("Watched %u steps in %.1f s: %llu bytes, %.1f KB/s (%.1f KB/s unpacked), the longest wait for a step %.0f ms%s\n",
+           client.StepsReceived(), seconds, (unsigned long long)client.BytesReceived(),
+           seconds > 0 ? client.BytesReceived() / 1024.0 / seconds : 0.0, seconds > 0 ? client.BytesUnpacked() / 1024.0 / seconds : 0.0,
+           longestWait / 1e6, client.Ended() ? ", the game ended" : "");
+    fflush(stdout);
 }
 
 int main(int argc, char *argv[])
@@ -1593,7 +1749,17 @@ int main(int argc, char *argv[])
         else
             ypaworld->SetWindowed( !benchmark.IsActive() && userdata.IsWindowedFlag() );
 
-        if ( !CheckDirectStart() || !(directStart.ReplayFile.empty() ? StartDirectLevel() : StartDirectReplay()) )
+        bool started = false;
+
+        if ( CheckDirectStart() )
+        {
+            if ( !watchAddress.empty() )
+                started = headless || StartDirectWatch();
+            else
+                started = directStart.ReplayFile.empty() ? StartDirectLevel() : StartDirectReplay();
+        }
+
+        if ( !started )
         {
             ShutdownGame();
             GFX::Engine.Deinit();
@@ -1624,10 +1790,36 @@ int main(int argc, char *argv[])
             }
         }
 
+        // Others watching: what they get is what's recorded
+        if ( streamLevel )
+        {
+            if ( !ypaworld->_recorder.IsRecording() )
+                ypaworld->_recorder.Start(ypaworld, TemporaryRecordingPath(), "the command line");
+
+            if ( !viewServer.Open(Net::DEFAULT_PORT, fmt::sprintf("level %d", ypaworld->_levelInfo.LevelID)) )
+            {
+                System::CmdLine::PrintError(fmt::sprintf("can't let others watch on port %d", (int)Net::DEFAULT_PORT));
+                ShutdownGame();
+                GFX::Engine.Deinit();
+                System::Deinit();
+                return 1;
+            }
+
+            if ( headless )
+            {
+                printf("Watchable on port %d\n", (int)Net::DEFAULT_PORT);
+                fflush(stdout);
+            }
+        }
+
         if ( headless )
         {
-            RunHeadless();
+            if ( watchAddress.empty() )
+                RunHeadless();
+            else
+                RunHeadlessWatch();
 
+            viewServer.Close();
             ShutdownGame();
             GFX::Engine.Deinit();
             System::Deinit();
@@ -1696,6 +1888,7 @@ int main(int argc, char *argv[])
 
     }
     
+    viewServer.Close();
     ShutdownGame();
     
     GFX::Engine.Deinit();

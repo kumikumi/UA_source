@@ -35,6 +35,8 @@ set(SOURCES
 	main.cpp
 	IFFile.cpp
 	net/session.cpp
+	net/viewclient.cpp
+	net/viewserver.cpp
 	network.cpp
 	nucleas.cpp
 	obj3d.cpp
