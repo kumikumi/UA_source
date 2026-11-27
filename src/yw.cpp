@@ -7518,8 +7518,8 @@ static bool OrderableSquad(const NC_STACK_ypabact *commander, uint8_t owner)
 // A unit that can change squads
 static bool SquadVehicle(const NC_STACK_ypabact *unit, uint8_t owner)
 {
-    return unit && unit->_owner == owner && unit->_bact_type != BACT_TYPES_ROBO && unit->_bact_type != BACT_TYPES_MISSLE &&
-           unit->_bact_type != BACT_TYPES_GUN;
+    return unit && unit->_owner == owner && unit->_status != BACT_STATUS_DEAD && unit->_status != BACT_STATUS_BEAM &&
+           unit->_bact_type != BACT_TYPES_ROBO && unit->_bact_type != BACT_TYPES_MISSLE && unit->_bact_type != BACT_TYPES_GUN;
 }
 
 bool NC_STACK_ypaworld::ApplyPlayerOrder(World::Player *player, const World::PlayerOrder &order)
@@ -7642,15 +7642,31 @@ bool NC_STACK_ypaworld::ApplyPlayerOrder(World::Player *player, const World::Pla
         if ( !SquadVehicle(unit, owner) || (order.Target && !SquadVehicle(other, owner)) )
             return false;
 
-        // A squad of its own (3), another's (1, 4) or the lead of its own
-        // (2, from the one leading it)
-        if ( order.Value == 1 || order.Value == 4 )
+        // A squad of its own (3), the one another leads (1), the other unit
+        // into its own, which it leads (4), or the lead of its own, from the
+        // one leading it (2). The game has them as the player saw them, or
+        // a squad could end up in itself.
+        switch ( order.Value )
         {
-            if ( !other )
+        case 1:
+            if ( !other || other == unit || !other->IsCommander() || other == unit->_parent )
                 return false;
-        }
-        else if ( order.Value != 2 && order.Value != 3 )
-        {
+            break;
+
+        case 2:
+            if ( unit->IsCommander() || other != unit->_parent )
+                return false;
+            break;
+
+        case 3:
+            break;
+
+        case 4:
+            if ( !other || other == unit || !unit->IsCommander() )
+                return false;
+            break;
+
+        default:
             return false;
         }
 
