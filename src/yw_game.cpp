@@ -2157,8 +2157,8 @@ void NC_STACK_ypaworld::PlaceBuilding(const Common::Point &cellId, int ownerid2,
         CellSetOwner(&cell, ownerid2);
 
         // The faction's first host station still going takes the guns; a
-        // faction without one gets none, as the campaign's levels expect of
-        // the sectors they give factions without host stations
+        // faction without one has them on their own, at the top level. No
+        // one's sectors (owner 0) get none.
         robo = FirstHostStation(ownerid2);
 
         if ( _isNetGame )
@@ -2169,7 +2169,7 @@ void NC_STACK_ypaworld::PlaceBuilding(const Common::Point &cellId, int ownerid2,
 
         if ( !skipGuns )
         {
-            if ( robo && isLocal )
+            if ( ownerid2 && isLocal )
             {
                 NC_STACK_ypagun *commander = NULL;
 
@@ -2230,7 +2230,7 @@ void NC_STACK_ypaworld::PlaceBuilding(const Common::Point &cellId, int ownerid2,
                         {
                             commander = gunn;
 
-                            robo->AddSubject(gun_obj);
+                            AddCommander(gun_obj);
                         }
                     }
                 }
