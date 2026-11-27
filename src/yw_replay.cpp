@@ -1175,8 +1175,11 @@ void NC_STACK_ypaworld::ReplayFrame(TUpdateArgs *arg)
     SFXEngine::SFXe.BeginSoundFrame(1, vec3d(0.0, 50000.0, 0.0), vec3d(0.0), mat3x3::Ident());
     SFXEngine::SFXe.EndSoundFrame();
 
-    // Playing it, the game's interface takes the controls
-    if ( (_replay->Player() != 0) != _replayPlaying )
+    // Playing it, the game's interface takes the controls. Once the game has
+    // ended, or is lost, the viewer is back, which says so.
+    bool play = _replay->Player() != 0 && !_replayLiveEnded;
+
+    if ( play != _replayPlaying )
     {
         if ( _replayPlaying )
             StopPlaying();
