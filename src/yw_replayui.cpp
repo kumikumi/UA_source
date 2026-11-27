@@ -615,6 +615,13 @@ MapScene::Unit ReplayMapScene::UnitAt(size_t index) const
     u.Rotation = mat3x3(f.Rotation);
     u.LookRotation = u.Rotation;
 
+    // Missiles' are weapons', and the mouse doesn't pick them
+    if ( f.Type != BACT_TYPES_MISSLE && f.Vehicle < _yw->_vhclProtos.size() )
+    {
+        u.Radius = _yw->_vhclProtos[f.Vehicle].radius;
+        u.Height = _yw->_vhclProtos[f.Vehicle].height;
+    }
+
     if ( !info )
         return u;
 
@@ -800,6 +807,23 @@ bool ReplayMapScene::Defeated(uint8_t owner) const
     }
 
     return true;
+}
+
+// A building being built in a sector of the faction's
+bool ReplayMapScene::Constructing(uint8_t owner) const
+{
+    if ( !_frame )
+        return false;
+
+    for (const World::Frame::Construction &c : _frame->Constructions)
+    {
+        const World::Frame::Sector *s = _frame->SectorAt(c.Sector);
+
+        if ( s && s->Owner == owner )
+            return true;
+    }
+
+    return false;
 }
 
 bool ReplayMapScene::HostStationBatteries(uint32_t id, Batteries &out) const

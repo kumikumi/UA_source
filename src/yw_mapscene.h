@@ -31,6 +31,8 @@ public:
         mat3x3 LookRotation = mat3x3::Ident(); // Which way a host station looks
         int Energy = 0;
         int EnergyMax = 1;
+        float Radius = 0.0;        // As the mouse picks it
+        float Height = 0.0;        // A host station's over the ground
         bool Hidden = false;       // From the player
         bool RoboGun = false;      // One of a host station's guns
         bool Commander = false;    // Of a squad: under its host station, or
@@ -99,8 +101,10 @@ public:
     // A host station's guns, in the order of their places on it
     virtual void ForEachRoboGun(const Unit &host, const UnitFunc &func) const = 0;
 
-    // Whether a faction has no units left, host stations included
+    // Whether a faction has no units left, host stations included; and
+    // whether it builds anything
     virtual bool Defeated(uint8_t owner) const = 0;
+    virtual bool Constructing(uint8_t owner) const = 0;
 
     // A host station's batteries, as the energy panel shows them; false
     // when there's no such host station

@@ -1843,15 +1843,6 @@ struct TRoboDestroyed
     int killerOwner;
 };
 
-struct TUnitRayQuery
-{
-    NC_STACK_ypabact *unit;
-    vec3d pos;
-    vec3d vect;
-    NC_STACK_ypabact *hitUnit;
-    float distance;
-};
-
 struct TRenderingSector;
 
 // The last of a message a host station reported
@@ -2024,6 +2015,7 @@ public:
     // the frames of a game played elsewhere
     const MapScene &UiScene();
     const MapScene *_uiScene = NULL; // NULL for the world
+    const MapScene &WorldScene();
 
     // The local player's order from the interface: carried out now, or sent
     // where the game is played (_orderSink)
@@ -2085,7 +2077,6 @@ public:
     virtual NC_STACK_ypamissile * CreateWeapon(TUnitSpawn *arg);
     virtual size_t CreateBuilding(TBuildingPlacement *arg);
     virtual void IntersectLongRay(TRayIntersection *arg);
-    virtual void FindUnitOnRay(TUnitRayQuery *arg);
     virtual void DeleteLevel();
     void FreeLevel();
     void FreeUnits();
@@ -2533,13 +2524,22 @@ public:
     int UserActCreateCheck(TClickBoxInf *winp);
 
     // Whether a host station can build in a sector for that much: 0 when it
-    // can, else why not (as UserActBuildCheck's results)
-    int CheckBuild(NC_STACK_yparobo *robo, const cellArea &sector, int cost);
+    // can, else why not (as UserActBuildCheck's results). As a scene has
+    // it: what the interface shows, or (WorldScene) the world.
+    int CheckBuild(const MapScene &scene, const MapScene::Unit &robo, const Common::Point &sector, int cost);
 
     // Whether a host station can beam to a point on the ground of a sector:
     // 0 when it can, the point then moved to where it would hover, else why
     // not (as UserActBeamCheck's results). Once it's known, what it costs.
-    int CheckBeam(NC_STACK_yparobo *robo, cellArea &sector, vec3d *point, int *cost);
+    int CheckBeam(const MapScene &scene, const MapScene::Unit &robo, const Common::Point &sector, vec3d *point, int *cost);
+
+    // The unit nearest along a ray, but those two (0 for none), as the
+    // mouse picks units; false for none. Its distance less its radius.
+    bool UnitOnRay(const MapScene &scene, const vec3d &pos, const vec3d &vect, uint32_t ignore, uint32_t ignoreToo,
+                   MapScene::Unit &hit, float &distance);
+
+    // A sector's index, as orders have it; -1 for none
+    int SectorIndex(const Common::Point &sector) const { return IsSector(sector) ? sector.y * _mapSize.x + sector.x : -1; }
     void ExitMenuHandleInput(TInputState *inpt);
     
     int yw_MouseFindCreationPoint(TClickBoxInf *winp);
@@ -2848,15 +2848,17 @@ public:
     uint32_t _guiActFlags = 0;
     uint32_t _doAction = World::DOACTION_0;
     
-    cellArea *_cellOnMouse = NULL;
+    Common::Point _cellOnMouse = Common::Point(-1, -1); // The sector under the pointer
     vec3d _cellMouseIsectPos; // intersect position in cell
 
     vec3d _mouseVector; // normalized mouse cursor vector
     
-    NC_STACK_ypabact *_bactOnMouse = NULL;
+    MapScene::Unit _bactOnMouse; // The unit under the pointer
     float _mouseSelDistance = 0.0;
     Common::Point _prevMousePos;
-    NC_STACK_ypabact *_bactPrevClicked = NULL; // used for dblclick
+    MapScene::Unit _bactPrevClicked; // used for dblclick
+    int _actionEnergyCost = 0; // Of what a click would order now
+    vec3d _beamGroundPos;      // Where on the ground a beam was asked for
     
     bool _makingWaypointsMode = false;
     int32_t _waypointCount = 0;

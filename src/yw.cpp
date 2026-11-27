@@ -2078,111 +2078,6 @@ void NC_STACK_ypaworld::IntersectLongRay(TRayIntersection *arg)
 }
 
 
-void NC_STACK_ypaworld::FindUnitOnRay(TUnitRayQuery *arg)
-{
-    arg->hitUnit = NULL;
-
-    int fixX = arg->pos.x / 300.0 * 16384.0;
-    int fixZ = arg->pos.z / 300.0 * 16384.0;
-
-    float absDx = fabs(arg->vect.x);
-    float absDz = fabs(arg->vect.z);
-
-    arg->distance = arg->vect.length();
-
-    if ( arg->distance <= 0.0 )
-        return;
-
-    int stepX, stepZ, remaining;
-
-    if ( absDx != 0.0 || absDz != 0.0 )
-    {
-        if ( absDx <= absDz )
-        {
-            stepX = (absDx * 16384.0 / absDz);
-
-            if ( arg->vect.x < 0.0 )
-                stepX = -stepX;
-
-            if ( arg->vect.z >= 0.0 )
-                stepZ = 16384;
-            else
-                stepZ = -16384;
-
-            remaining = absDz;
-        }
-        else
-        {
-            if ( arg->vect.x >= 0.0 )
-                stepX = 16384;
-            else
-                stepX = -16384;
-
-            stepZ = (absDz * 16384.0 / absDx);
-
-            if ( arg->vect.z < 0.0 )
-                stepZ = -stepZ;
-
-            remaining = absDx;
-        }
-    }
-    else
-    {
-        stepZ = 0;
-        remaining = 0;
-        stepX = 0;
-    }
-
-    vec3d dir = arg->vect / arg->distance;
-
-    while ( remaining >= 0 )
-    {
-        int secY = -fixZ >> 16;
-        int secX = fixX >> 16;
-
-        if ( IsSector( {secX, secY} ) )
-        {
-            for ( NC_STACK_ypabact* &sect_bacts : _cells(secX, secY).unitsList )
-            {
-                if ( sect_bacts != arg->unit && sect_bacts->_status != BACT_STATUS_DEAD )
-                {
-                    if ( !(arg->unit == UserUnit() && _playerInHSGun) || sect_bacts != UserRobo() )
-                    {
-                        vec3d toUnit = sect_bacts->_position - arg->pos;
-                        vec3d cross = dir * toUnit;
-
-                        if ( cross.length() < sect_bacts->_radius )
-                        {
-                            float dist = toUnit.length();
-
-                            if ( dir.dot(toUnit) / dist > 0.0 )
-                            {
-                                if ( arg->distance > dist - sect_bacts->_radius )
-                                {
-                                    arg->hitUnit = sect_bacts;
-                                    arg->distance = dist - sect_bacts->_radius;
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        }
-
-        if ( arg->hitUnit )
-            break;
-
-        do
-        {
-            fixX += stepX;
-            fixZ += stepZ;
-            remaining -= 300;
-        }
-        while ( (fixX >> 16) == secX && (-fixZ >> 16) == secY && remaining >= 0 );
-    }
-}
-
-
 void NC_STACK_ypaworld::DeleteLevel()
 {
     // A replay's level wasn't played: it only goes
@@ -2400,9 +2295,9 @@ bool NC_STACK_ypaworld::FreeSomeUnits(size_t count)
 // units it may refer to do
 void NC_STACK_ypaworld::ResetControls()
 {
-    _cellOnMouse = 0;
-    _bactOnMouse = NULL;
-    _bactPrevClicked = 0;
+    _cellOnMouse = Common::Point(-1, -1);
+    _bactOnMouse = MapScene::Unit();
+    _bactPrevClicked = MapScene::Unit();
     _makingWaypointsMode = false;
     _gamePaused = false;
     _gamePausedTimeStamp = 0;
@@ -7605,6 +7500,7 @@ bool NC_STACK_ypaworld::ApplyPlayerOrder(World::Player *player, const World::Pla
     {
         NC_STACK_yparobo *robo = dynamic_cast<NC_STACK_yparobo *>(player->HostStation);
         cellArea *sector = order.Sector >= 0 && (size_t)order.Sector < _cells.size() ? &_cells[order.Sector] : NULL;
+        MapScene::Unit host;
 
         TUserOrder command;
         command.user_action = order.Action;
@@ -7635,7 +7531,7 @@ bool NC_STACK_ypaworld::ApplyPlayerOrder(World::Player *player, const World::Pla
         case World::DOACTION_WP_BEGIN:
         case World::DOACTION_WP_ADD:
         case World::DOACTION_WP_CYCLE:
-            if ( !OrderableSquad(unit, owner) || !sector )
+            if ( !OrderableSquad(unit, owner) )
                 return false;
 
             command.selectBact = unit;
@@ -7670,7 +7566,7 @@ bool NC_STACK_ypaworld::ApplyPlayerOrder(World::Player *player, const World::Pla
             command.energy = OrderCost(owner, order.Action, order.Proto);
             command.target_Sect = sector;
 
-            if ( CheckBuild(robo, *sector, command.energy) )
+            if ( !WorldScene().Find(robo->_gid, host) || CheckBuild(WorldScene(), host, sector->CellId, command.energy) )
                 return false;
             break;
 
@@ -7678,7 +7574,8 @@ bool NC_STACK_ypaworld::ApplyPlayerOrder(World::Player *player, const World::Pla
         {
             int cost = 0;
 
-            if ( !robo || !sector || CheckBeam(robo, *sector, &command.target_point, &cost) )
+            if ( !robo || !sector || !WorldScene().Find(robo->_gid, host) ||
+                 CheckBeam(WorldScene(), host, sector->CellId, &command.target_point, &cost) )
                 return false;
 
             command.energy = cost;

@@ -1093,6 +1093,8 @@ MapScene::Unit LiveMapUnit(NC_STACK_ypaworld *yw, NC_STACK_ypabact *bact)
     u.LookRotation = bact->_viewer_rotation;
     u.Energy = bact->_energy;
     u.EnergyMax = bact->_energy_max;
+    u.Radius = bact->_radius;
+    u.Height = bact->_height;
     u.Hidden = bact->IsHiddenFor( yw->GetPlayerOwner() );
     u.RoboGun = bact->_bact_type == BACT_TYPES_GUN && static_cast<NC_STACK_ypagun *>(bact)->IsRoboGun();
     u.Commander = bact->IsCommander();
@@ -1231,6 +1233,11 @@ public:
         return !(World->FactionsWithUnits() & (1u << owner));
     }
 
+    bool Constructing(uint8_t owner) const override
+    {
+        return World->IsAnyBuildingProcess(owner);
+    }
+
     bool HostStationBatteries(uint32_t id, Batteries &out) const override
     {
         NC_STACK_yparobo *robo = dynamic_cast<NC_STACK_yparobo *>(World->FindUnit(id));
@@ -1328,6 +1335,117 @@ static LiveMapScene &LiveScene(NC_STACK_ypaworld *yw)
 const MapScene &NC_STACK_ypaworld::UiScene()
 {
     return _uiScene ? *_uiScene : LiveScene(this);
+}
+
+const MapScene &NC_STACK_ypaworld::WorldScene()
+{
+    return LiveScene(this);
+}
+
+bool NC_STACK_ypaworld::UnitOnRay(const MapScene &scene, const vec3d &pos, const vec3d &vect, uint32_t ignore, uint32_t ignoreToo,
+                                  MapScene::Unit &hit, float &distance)
+{
+    bool found = false;
+
+    int fixX = pos.x / 300.0 * 16384.0;
+    int fixZ = pos.z / 300.0 * 16384.0;
+
+    float absDx = fabs(vect.x);
+    float absDz = fabs(vect.z);
+
+    distance = vect.length();
+
+    if ( distance <= 0.0 )
+        return false;
+
+    int stepX, stepZ, remaining;
+
+    if ( absDx != 0.0 || absDz != 0.0 )
+    {
+        if ( absDx <= absDz )
+        {
+            stepX = (absDx * 16384.0 / absDz);
+
+            if ( vect.x < 0.0 )
+                stepX = -stepX;
+
+            if ( vect.z >= 0.0 )
+                stepZ = 16384;
+            else
+                stepZ = -16384;
+
+            remaining = absDz;
+        }
+        else
+        {
+            if ( vect.x >= 0.0 )
+                stepX = 16384;
+            else
+                stepX = -16384;
+
+            stepZ = (absDz * 16384.0 / absDx);
+
+            if ( vect.z < 0.0 )
+                stepZ = -stepZ;
+
+            remaining = absDx;
+        }
+    }
+    else
+    {
+        stepZ = 0;
+        remaining = 0;
+        stepX = 0;
+    }
+
+    vec3d dir = vect / distance;
+
+    // Sector by sector along it, the nearest unit in the first that has one
+    while ( remaining >= 0 )
+    {
+        int secY = -fixZ >> 16;
+        int secX = fixX >> 16;
+
+        if ( IsSector( {secX, secY} ) )
+        {
+            scene.ForEachUnitIn({secX, secY}, [&](const MapScene::Unit &unit)
+            {
+                if ( unit.Id == ignore || unit.Status == BACT_STATUS_DEAD || (ignoreToo && unit.Id == ignoreToo) )
+                    return;
+
+                vec3d toUnit = unit.Position - pos;
+                vec3d cross = dir * toUnit;
+
+                if ( cross.length() < unit.Radius )
+                {
+                    float dist = toUnit.length();
+
+                    if ( dir.dot(toUnit) / dist > 0.0 )
+                    {
+                        if ( distance > dist - unit.Radius )
+                        {
+                            hit = unit;
+                            found = true;
+                            distance = dist - unit.Radius;
+                        }
+                    }
+                }
+            });
+        }
+
+        if ( found )
+            break;
+
+        do
+        {
+            fixX += stepX;
+            fixZ += stepZ;
+            remaining -= 300;
+        }
+        while ( (fixX >> 16) == secX && (-fixZ >> 16) == secY && remaining >= 0 );
+    }
+
+    return found;
 }
 
 void NC_STACK_ypaworld::IssueOrder(const World::PlayerOrder &order)
@@ -1501,13 +1619,17 @@ void RoboMapDrawMarkers(NC_STACK_ypaworld *yw, CmdStream *cur)
         {
             if ( yw->_guiActFlags & 0x20 )
             {
+                MapScene::Unit target = scene.Fresh(yw->_bactOnMouse);
+
                 FontUA::select_tileset(cur, markerTileset);
 
-                RoboMapDrawIcon(cur, yw->_bactOnMouse->_position.x, yw->_bactOnMouse->_position.z, 0x86, markerWidth, markerHeight);
+                RoboMapDrawIcon(cur, target.Position.x, target.Position.z, 0x86, markerWidth, markerHeight);
             }
             else if ( yw->_guiActFlags & 0x10 && yw->_mouseGrabbed == false)
             {
-                if ( yw->_cellOnMouse->owner == yw->LocalOwner() && yw->_cellOnMouse->IsCanSee(yw->LocalOwner()) )
+                uint8_t player = scene.PlayerOwner();
+
+                if ( scene.Owner(yw->_cellOnMouse) == player && scene.CanSee(yw->_cellOnMouse, player) )
                 {
                     FontUA::select_tileset(cur, markerTileset);
 
@@ -1515,31 +1637,41 @@ void RoboMapDrawMarkers(NC_STACK_ypaworld *yw, CmdStream *cur)
                 }
                 else
                 {
+                    const cellArea &cell = yw->_cells(yw->_cellOnMouse);
+
                     FontUA::select_tileset(cur, sectorTileset);
 
-                    RoboMapDrawIcon(cur, yw->_cellOnMouse->CenterPos.x, yw->_cellOnMouse->CenterPos.z, 66, sectorIconSize, sectorIconSize);
+                    RoboMapDrawIcon(cur, cell.CenterPos.x, cell.CenterPos.z, 66, sectorIconSize, sectorIconSize);
                 }
             }
         }
         break;
 
     case World::DOACTION_5:
+    {
+        MapScene::Unit target = scene.Fresh(yw->_bactOnMouse);
+
         FontUA::select_tileset(cur, markerTileset);
 
-        RoboMapDrawIcon(cur, yw->_bactOnMouse->_position.x, yw->_bactOnMouse->_position.z, 0x85, markerWidth, markerHeight);
+        RoboMapDrawIcon(cur, target.Position.x, target.Position.z, 0x85, markerWidth, markerHeight);
         break;
+    }
 
     case World::DOACTION_6:
+    {
+        const cellArea &cell = yw->_cells(yw->_cellOnMouse);
+
         FontUA::select_tileset(cur, sectorTileset);
 
-        RoboMapDrawIcon(cur, yw->_cellOnMouse->CenterPos.x, yw->_cellOnMouse->CenterPos.z, 65, sectorIconSize, sectorIconSize);
+        RoboMapDrawIcon(cur, cell.CenterPos.x, cell.CenterPos.z, 65, sectorIconSize, sectorIconSize);
         break;
+    }
 
     case World::DOACTION_8:
         if ( !(robo_map.stateFlags & 0x200) )
         {
-            if ( yw->_bactOnMouse )
-                RoboMapDrawHovered(yw, cur, LiveMapUnit(yw, yw->_bactOnMouse), roboHoverGlyph, markerTileset, markerWidth, markerHeight);
+            if ( yw->_bactOnMouse.Id )
+                RoboMapDrawHovered(yw, cur, scene.Fresh(yw->_bactOnMouse), roboHoverGlyph, markerTileset, markerWidth, markerHeight);
         }
         break;
 
@@ -3161,7 +3293,7 @@ int GUI_Open(NC_STACK_ypaworld *yw)
     yw->_guiDragDefaultMouse = false;
     yw->_mouseCursorHidden = false;
     yw->_prevMousePos = Common::Point();
-    yw->_bactPrevClicked = NULL;
+    yw->_bactPrevClicked = MapScene::Unit();
 
     LoadHud(yw);
     CreateEnergyPanel(yw);
@@ -5199,7 +5331,7 @@ void EnergyPanelDrawCreateGauge(NC_STACK_ypaworld *yw, CmdStream *cur, int x, in
     if ( bzda.activeMode & 0x16 )
     {
         if ( bzda.selBuyListIdx != -1 )
-            costRatio = yw->_localPlayer->Order.energy / capacity;
+            costRatio = yw->_actionEnergyCost / capacity;
     }
 
     if ( costRatio <= fillRatio )
@@ -5241,7 +5373,7 @@ void EnergyPanelDrawBeamGauge(NC_STACK_ypaworld *yw, CmdStream *cur, int x, int 
     float fillRatio = (float)energy / capacity;
 
     if ( bzda.activeMode & 0x20 )
-        costRatio = yw->_localPlayer->Order.energy / capacity;
+        costRatio = yw->_actionEnergyCost / capacity;
 
     if ( costRatio <= fillRatio )
     {
@@ -5614,10 +5746,10 @@ void LayoutSquadRow(NC_STACK_ypaworld *yw, CmdStream *cur, int entryWidth, char 
 void SquadManagerLayoutSquad(NC_STACK_ypaworld *yw, const MapScene::Unit &commander, CmdStream *cur)
 {
     const MapScene &scene = yw->UiScene();
-    NC_STACK_ypabact *hoverUnit = NULL;
+    const MapScene::Unit *hoverUnit = NULL;
 
     if ( yw->_guiActFlags & 0x20 )
-        hoverUnit = yw->_bactOnMouse;
+        hoverUnit = &yw->_bactOnMouse;
 
     int ttt = (yw->_timeStamp / 300) & 1;
     uint32_t userUnit = scene.UserUnitId();
@@ -5634,7 +5766,7 @@ void SquadManagerLayoutSquad(NC_STACK_ypaworld *yw, const MapScene::Unit &comman
     };
 
     std::string units(1, icon(commander));
-    int hoverIconX = hoverUnit && commander.Id == hoverUnit->_gid ? squadron_manager.cmdrIconX : 0;
+    int hoverIconX = hoverUnit && commander.Id == hoverUnit->Id ? squadron_manager.cmdrIconX : 0;
     int iconX = squadron_manager.kidIconsX;
 
     scene.ForEachKid(commander, [&](const MapScene::Unit &kid)
@@ -5646,7 +5778,7 @@ void SquadManagerLayoutSquad(NC_STACK_ypaworld *yw, const MapScene::Unit &comman
         {
             units += icon(kid);
 
-            if ( hoverUnit && kid.Id == hoverUnit->_gid )
+            if ( hoverUnit && kid.Id == hoverUnit->Id )
                 hoverIconX = iconX;
 
             iconX += squadron_manager.iconWidth;
@@ -5657,7 +5789,7 @@ void SquadManagerLayoutSquad(NC_STACK_ypaworld *yw, const MapScene::Unit &comman
                   !(bzda.activeMode & 0x20);
 
     LayoutSquadRow(yw, cur, squadron_manager.entryWidth, GetSquadStatusIcon(commander), units, chosen, hoverIconX,
-                   hoverUnit ? EnergyGlyph(hoverUnit->_energy, hoverUnit->_energy_max) : 0);
+                   hoverUnit ? EnergyGlyph(hoverUnit->Energy, hoverUnit->EnergyMax) : 0);
 }
 
 void SquadManagerLayoutFooter(NC_STACK_ypaworld *yw, CmdStream *cur)
@@ -9665,7 +9797,7 @@ void DrawHud(NC_STACK_ypaworld *yw)
 
     if ( yw->_guiActFlags & 0x20 )
     {
-        MapScene::Unit hovered = LiveMapUnit(yw, yw->_bactOnMouse);
+        MapScene::Unit hovered = yw->UiScene().Fresh(yw->_bactOnMouse);
         yw_RenderCursorOverUnit(yw, hovered);
         yw_RenderUnitLifeBar(yw, &buf, hovered);
     }
@@ -10562,21 +10694,21 @@ int NC_STACK_ypaworld::yw_MouseFindCreationPoint(TClickBoxInf *winp)
 
 int NC_STACK_ypaworld::UserActCreateCheck(TClickBoxInf *winp)
 {
-    NC_STACK_yparobo *robo = dynamic_cast<NC_STACK_yparobo *>(UserRobo());
+    const MapScene &scene = UiScene();
+    MapScene::Unit robo;
+    MapScene::Batteries batteries;
 
-    if ( _guiActFlags & 8 || bzda.selVhclIdx == -1 || !robo )
+    if ( _guiActFlags & 8 || bzda.selVhclIdx == -1 || !scene.UserRobo(robo) || !scene.HostStationBatteries(robo.Id, batteries) )
         return 4;
 
-    int availEnergy = robo->getROBO_battVehicle();
-
-    if ( _localPlayer->Order.energy > availEnergy )
+    if ( _actionEnergyCost > batteries.Create )
         return 2;
 
 
     if ( !yw_MouseFindCreationPoint(winp) )
         return 1;
 
-    if ( _isNetGame && !_levelUnitLimitType && _levelUnitLimit <= _countUnitsPerOwner[robo->_owner] )
+    if ( _isNetGame && !_levelUnitLimitType && _levelUnitLimit <= _countUnitsPerOwner[robo.Owner] )
         return 3;
 
     return 0;
@@ -10584,25 +10716,31 @@ int NC_STACK_ypaworld::UserActCreateCheck(TClickBoxInf *winp)
 
 int NC_STACK_ypaworld::UserActBuildCheck()
 {
-    NC_STACK_yparobo *robo = dynamic_cast<NC_STACK_yparobo *>(UserRobo());
+    const MapScene &scene = UiScene();
+    MapScene::Unit robo;
 
-    if ( !(_guiActFlags & 0x10) || bzda.selBuildIdx == -1 || !robo )
+    if ( !(_guiActFlags & 0x10) || bzda.selBuildIdx == -1 || !scene.UserRobo(robo) || robo.Type != BACT_TYPES_ROBO )
         return 1; // NO with no tip
 
-    return CheckBuild(robo, *_cellOnMouse, _localPlayer->Order.energy);
+    return CheckBuild(scene, robo, _cellOnMouse, _actionEnergyCost);
 }
 
-int NC_STACK_ypaworld::CheckBuild(NC_STACK_yparobo *robo, const cellArea &sector, int cost)
+int NC_STACK_ypaworld::CheckBuild(const MapScene &scene, const MapScene::Unit &robo, const Common::Point &sector, int cost)
 {
-    int availEnergy = robo->getROBO_battVehicle();
+    MapScene::Batteries batteries;
 
-    if ( cost > availEnergy )
+    if ( !IsSector(sector) || !scene.HostStationBatteries(robo.Id, batteries) )
+        return 1;
+
+    if ( cost > batteries.Create )
         return 6; // TIP_NOENERGY
 
-    if ( sector.owner && sector.owner != robo->_owner )
+    uint8_t owner = scene.Owner(sector);
+
+    if ( owner && owner != robo.Owner )
         return 2; // TIP_NOTOWN
 
-    Common::Point cellDist = sector.CellId.AbsDistance( robo->_cellId );
+    Common::Point cellDist = sector.AbsDistance( robo.Sector );
 
     if ( cellDist.IsNull() )
         return 3; // TIP_BUILD_TOOCLOSE
@@ -10610,15 +10748,17 @@ int NC_STACK_ypaworld::CheckBuild(NC_STACK_yparobo *robo, const cellArea &sector
     if ( cellDist.x > 1 || cellDist.y > 1 )
         return 4; // TIP_BUILD_TOOFAR
 
-    if ( sector.PurposeType == cellArea::PT_CONSTRUCTING ||
-         (!_allowMultiBuildLevel && IsAnyBuildingProcess(robo->_owner)) )
+    uint8_t purpose = scene.Purpose(sector);
+
+    if ( purpose == cellArea::PT_CONSTRUCTING ||
+         (!_allowMultiBuildLevel && scene.Constructing(robo.Owner)) )
         return 5; // TIP_BUILD_INPROC
 
-    if ( sector.PurposeType == cellArea::PT_TECHUPGRADE || 
-         sector.PurposeType == cellArea::PT_GATECLOSED || 
-         sector.PurposeType == cellArea::PT_GATEOPENED || 
-         sector.PurposeType == cellArea::PT_STOUDSON || 
-         (sector.PurposeType == cellArea::PT_TECHDEACTIVE && _isNetGame) )
+    if ( purpose == cellArea::PT_TECHUPGRADE || 
+         purpose == cellArea::PT_GATECLOSED || 
+         purpose == cellArea::PT_GATEOPENED || 
+         purpose == cellArea::PT_STOUDSON || 
+         (purpose == cellArea::PT_TECHDEACTIVE && _isNetGame) )
         return 1; // NO with no tip
 
     return 0; // Can build
@@ -10627,29 +10767,42 @@ int NC_STACK_ypaworld::CheckBuild(NC_STACK_yparobo *robo, const cellArea &sector
 
 int NC_STACK_ypaworld::UserActBeamCheck()
 {
-    if ( !(_guiActFlags & 0x10) || !UserRobo() )
+    const MapScene &scene = UiScene();
+    MapScene::Unit robo;
+
+    if ( !(_guiActFlags & 0x10) || !scene.UserRobo(robo) )
         return 6;
 
+    // Where on the ground it was asked for, which the order goes by
+    _beamGroundPos = _cellMouseIsectPos;
+
     int cost = -1;
-    int result = CheckBeam(dynamic_cast<NC_STACK_yparobo *>(UserRobo()), *_cellOnMouse, &_cellMouseIsectPos, &cost);
+    int result = CheckBeam(scene, robo, _cellOnMouse, &_cellMouseIsectPos, &cost);
 
     if ( cost >= 0 )
-        _localPlayer->Order.energy = cost;
+        _actionEnergyCost = cost;
 
     return result;
 }
 
-int NC_STACK_ypaworld::CheckBeam(NC_STACK_yparobo *robo, cellArea &sector, vec3d *point, int *cost)
+int NC_STACK_ypaworld::CheckBeam(const MapScene &scene, const MapScene::Unit &robo, const Common::Point &sector, vec3d *point, int *cost)
 {
-    if ( !sector.IsCanSee(robo->_owner) )
-        return 3;
+    MapScene::Batteries batteries;
 
-    if ( sector.PurposeType == cellArea::PT_CONSTRUCTING )
+    if ( !IsSector(sector) || !scene.HostStationBatteries(robo.Id, batteries) )
         return 6;
 
-    float dx = point->x - robo->_position.x;
-    float dy = point->y - robo->_position.y;
-    float dz = point->z - robo->_position.z;
+    if ( !scene.CanSee(sector, robo.Owner) )
+        return 3;
+
+    uint8_t purpose = scene.Purpose(sector);
+
+    if ( purpose == cellArea::PT_CONSTRUCTING )
+        return 6;
+
+    float dx = point->x - robo.Position.x;
+    float dy = point->y - robo.Position.y;
+    float dz = point->z - robo.Position.z;
 
     float dist = sqrt(POW2(dx) + POW2(dy) + POW2(dz));
 
@@ -10658,23 +10811,28 @@ int NC_STACK_ypaworld::CheckBeam(NC_STACK_yparobo *robo, cellArea &sector, vec3d
 
     int beamCost = 0;
 
-    if ( sector.PurposeType != cellArea::PT_GATEOPENED && (sector.PurposeType != cellArea::PT_POWERSTATION || sector.owner != robo->_owner) )
+    if ( purpose != cellArea::PT_GATEOPENED && (purpose != cellArea::PT_POWERSTATION || scene.Owner(sector) != robo.Owner) )
     {
         beamCost = (POW2(dist) / 230.4);
     }
 
-    int availEnergy = robo->getROBO_battBeam();
+    int availEnergy = batteries.Beam;
 
     *cost = beamCost;
 
     if ( beamCost > availEnergy )
         return 1;
 
-    for ( NC_STACK_ypabact* &unit : sector.unitsList )
+    bool enemyHost = false;
+
+    scene.ForEachUnitIn(sector, [&](const MapScene::Unit &unit)
     {
-        if ( unit->_bact_type == BACT_TYPES_ROBO && unit->_status != BACT_STATUS_DEAD && unit->_owner != robo->_owner )
-            return 5;
-    }
+        if ( unit.Type == BACT_TYPES_ROBO && unit.Status != BACT_STATUS_DEAD && unit.Owner != robo.Owner )
+            enemyHost = true;
+    });
+
+    if ( enemyHost )
+        return 5;
 
     float minY = 100000.0;
     float maxY = -100000.0;
@@ -10712,7 +10870,7 @@ int NC_STACK_ypaworld::CheckBeam(NC_STACK_yparobo *robo, cellArea &sector, vec3d
     if ( point->x < 1500.0 || point->z > -1500.0 || point->x > _mapLength.x - 1500.0 || point->z < 1500.0 - _mapLength.y )
         return 2;
 
-    point->y = minY - robo->_height;
+    point->y = minY - robo.Height;
     return 0;
 }
 
@@ -10761,14 +10919,14 @@ int NC_STACK_ypaworld::HandleWaypointMode(TInputState *arg, int action)
 bool NC_STACK_ypaworld::CheckUnitDoubleClick(TClickBoxInf *winp)
 {
     if ( winp->flag & TClickBoxInf::FLAG_DBL_CLICK
-            && _bactPrevClicked
+            && _bactPrevClicked.Id
             && Common::ABS(winp->move.ScreenPos.x - _prevMousePos.x) < 4
             && Common::ABS(winp->move.ScreenPos.y - _prevMousePos.y) < 4 )
     {
         _prevMousePos = Common::Point();
 
-        _bactOnMouse = _bactPrevClicked;
-        _bactPrevClicked = NULL;
+        _bactOnMouse = UiScene().Fresh(_bactPrevClicked);
+        _bactPrevClicked = MapScene::Unit();
 
         _guiActFlags |= 0x20;
 
@@ -10776,7 +10934,7 @@ bool NC_STACK_ypaworld::CheckUnitDoubleClick(TClickBoxInf *winp)
     }
     else
     {
-        if ( (winp->flag & TClickBoxInf::FLAG_LM_DOWN)   &&   _guiActFlags & 0x20   &&   LocalOwner() == _bactOnMouse->_owner )
+        if ( (winp->flag & TClickBoxInf::FLAG_LM_DOWN)   &&   _guiActFlags & 0x20   &&   UiScene().PlayerOwner() == _bactOnMouse.Owner )
         {
             _bactPrevClicked = _bactOnMouse;
             _prevMousePos = winp->move.ScreenPos;
@@ -10785,7 +10943,7 @@ bool NC_STACK_ypaworld::CheckUnitDoubleClick(TClickBoxInf *winp)
         {
             if ( !(_guiActFlags & 0x20) )
             {
-                _bactPrevClicked = NULL;
+                _bactPrevClicked = MapScene::Unit();
                 _prevMousePos = Common::Point();
             }
         }
@@ -10888,16 +11046,14 @@ void NC_STACK_ypaworld::yw_MAP_MouseSelect(TClickBoxInf *winp)
 
     if ( IsGamePlaySector( pt ) )
     {
-        cellArea &cell = _cells( pt );
-
         if ( _guiActFlags & 1 )
         {
             vec2d at = RoboMapWorldAt(winp);
 
-            _cellOnMouse = &cell;
+            _cellOnMouse = pt;
             _guiActFlags |= 0x10;
             _cellMouseIsectPos.x = at.x;
-            _cellMouseIsectPos.y = cell.height;
+            _cellMouseIsectPos.y = _cells( pt ).height;
             _cellMouseIsectPos.z = at.y;
         }
 
@@ -10907,7 +11063,7 @@ void NC_STACK_ypaworld::yw_MAP_MouseSelect(TClickBoxInf *winp)
         {
             _guiActFlags |= 0x20;
 
-            _bactOnMouse = unit.Bact;
+            _bactOnMouse = unit;
             _guiActFlags &= ~0x10;
         }
     }
@@ -10925,7 +11081,7 @@ void NC_STACK_ypaworld::yw_SMAN_MouseSelect(TClickBoxInf *winp)
         {
             if ( unit.Status != BACT_STATUS_CREATE && unit.Status != BACT_STATUS_DEAD && unit.Status != BACT_STATUS_BEAM )
             {
-                _bactOnMouse = unit.Bact;
+                _bactOnMouse = unit;
                 _guiActFlags |= 0x20;
             }
         }
@@ -10935,7 +11091,7 @@ void NC_STACK_ypaworld::yw_SMAN_MouseSelect(TClickBoxInf *winp)
 
             if ( unit.Id && unit.Status != BACT_STATUS_CREATE && unit.Status != BACT_STATUS_BEAM && unit.Status != BACT_STATUS_DEAD )
             {
-                _bactOnMouse = unit.Bact;
+                _bactOnMouse = unit;
                 _guiActFlags |= 0x20;
             }
         }
@@ -10965,20 +11121,20 @@ void NC_STACK_ypaworld::yw_3D_MouseSelect(TClickBoxInf *winp)
 {
     UpdateMouseVector(winp);
 
-    TUnitRayQuery unitRay;
-    unitRay.hitUnit = NULL;
-    unitRay.pos = _viewerPosition;
-    unitRay.vect = _mouseVector * _normalVizLimit;
-    unitRay.unit = UserUnit();
+    const MapScene &scene = UiScene();
+
+    // Not the unit looked from, nor from one of its guns the host station
+    uint32_t ignored = _playerInHSGun ? scene.UserRoboId() : 0;
+    MapScene::Unit hitUnit;
+    float hitDistance = 0.0;
+    bool hit = UnitOnRay(scene, _viewerPosition, _mouseVector * _normalVizLimit, scene.UserUnitId(), ignored, hitUnit, hitDistance);
 
     TRayIntersection ray;
-    ray.stPos = unitRay.pos;
-    ray.vect = unitRay.vect;
+    ray.stPos = _viewerPosition;
+    ray.vect = _mouseVector * _normalVizLimit;
     ray.flags = 0;
 
     IntersectLongRay(&ray);
-
-    FindUnitOnRay(&unitRay);
 
     float groundDist, unitDist;
 
@@ -10991,11 +11147,11 @@ void NC_STACK_ypaworld::yw_3D_MouseSelect(TClickBoxInf *winp)
         groundDist = _mouseSelDistance;
     }
 
-    if ( unitRay.hitUnit )
+    if ( hit )
     {
         _guiActFlags |= 0x20;
 
-        _mouseSelDistance = unitRay.distance;
+        _mouseSelDistance = hitDistance;
 
         unitDist = _mouseSelDistance;
     }
@@ -11016,9 +11172,7 @@ void NC_STACK_ypaworld::yw_3D_MouseSelect(TClickBoxInf *winp)
 
     if ( _guiActFlags & 0x10 )
     {
-        Common::Point tmp = World::PositionToSectorID(ray.isectPos);
-
-        _cellOnMouse = &_cells(tmp);
+        _cellOnMouse = World::PositionToSectorID(ray.isectPos);
         _cellMouseIsectPos = ray.isectPos;
     }
 
@@ -11026,13 +11180,13 @@ void NC_STACK_ypaworld::yw_3D_MouseSelect(TClickBoxInf *winp)
     {
         int ignoreUnit = 0;
 
-        if ( unitRay.hitUnit->_status == BACT_STATUS_CREATE || unitRay.hitUnit->_status == BACT_STATUS_DEAD || unitRay.hitUnit->_status == BACT_STATUS_BEAM || unitRay.hitUnit->_bact_type == BACT_TYPES_MISSLE )
+        if ( hitUnit.Status == BACT_STATUS_CREATE || hitUnit.Status == BACT_STATUS_DEAD || hitUnit.Status == BACT_STATUS_BEAM || hitUnit.Type == BACT_TYPES_MISSLE )
             ignoreUnit = 1;
 
         if ( ignoreUnit )
             _guiActFlags &= ~0x20;
         else
-            _bactOnMouse = unitRay.hitUnit;
+            _bactOnMouse = hitUnit;
     }
 }
 
@@ -11060,35 +11214,34 @@ void NC_STACK_ypaworld::yw_MouseSelect(TInputState *arg)
 
 void NC_STACK_ypaworld::UpdateActionEnergyCost()
 {
-    _localPlayer->Order.energy = 0;
+    _actionEnergyCost = 0;
 
     if ( bzda.activeMode == 2 || bzda.activeMode == 4 )
     {
         if ( bzda.selVhclIdx != -1 )
         {
-            _localPlayer->Order.energy = dround(GetUnitLimitCostFactor() * (2 * _vhclProtos[bzda.vhclProtoIds[bzda.selVhclIdx]].energy));
+            _actionEnergyCost = dround(GetUnitLimitCostFactor() * (2 * _vhclProtos[bzda.vhclProtoIds[bzda.selVhclIdx]].energy));
         }
     }
     else if ( bzda.activeMode == 16 && bzda.selBuildIdx != -1 )
     {
-        _localPlayer->Order.energy = dround(GetUnitLimitCostFactor() * _buildProtos[bzda.buildProtoIds[bzda.selBuildIdx]].Energy);
+        _actionEnergyCost = dround(GetUnitLimitCostFactor() * _buildProtos[bzda.buildProtoIds[bzda.selBuildIdx]].Energy);
     }
 }
 
 int SelectMouseUnitSquadLeader(NC_STACK_ypaworld *yw)
 {
-    if ( !yw->_bactOnMouse )
+    const MapScene &scene = yw->UiScene();
+
+    if ( !yw->_bactOnMouse.Id )
         return 0;
 
-    if ( yw->_bactOnMouse == yw->UserRobo() )
+    if ( yw->_bactOnMouse.Id == scene.UserRoboId() )
         return 0;
 
-    NC_STACK_ypabact *leader = yw->_bactOnMouse;
+    MapScene::Unit leader = yw->_bactOnMouse;
 
-    if ( !yw->_bactOnMouse->IsCommander() )
-        leader = yw->_bactOnMouse->_parent;
-
-    if ( !leader )
+    if ( !leader.Commander && !(leader.HasParent && scene.Find(leader.Parent, leader)) )
         return 0;
     
     yw->_bactOnMouse = leader;
@@ -11097,19 +11250,25 @@ int SelectMouseUnitSquadLeader(NC_STACK_ypaworld *yw)
 
 void NC_STACK_ypaworld::ExecuteMouseAction(int arg)
 {
+    const MapScene &scene = UiScene();
+
+    World::PlayerOrder order;
+    order.Type = World::PlayerOrder::COMMAND;
+    order.Action = arg;
+
     switch ( arg )
     {
     case World::DOACTION_8:
-        if ( _bactOnMouse->_bact_type != BACT_TYPES_GUN && _bactOnMouse != UserRobo() )
+        if ( _bactOnMouse.Type != BACT_TYPES_GUN && _bactOnMouse.Id != scene.UserRoboId() )
         {
             if ( SelectMouseUnitSquadLeader(this) )
             {
-                _activeCmdrID = _bactOnMouse->_commandID;
+                _activeCmdrID = _bactOnMouse.CommandId;
                 UpdateCommanderList();
             }
         }
 
-        if ( UserRobo() != _bactOnMouse )
+        if ( scene.UserRoboId() != _bactOnMouse.Id )
             bzda.activeMode = bzda.enabledModes & 1;
         else
             bzda.activeMode = bzda.enabledModes & 0x20;
@@ -11118,20 +11277,19 @@ void NC_STACK_ypaworld::ExecuteMouseAction(int arg)
     case World::DOACTION_2:
         if (_activeCmdrRemapIndex >= 0)
         {
-            _localPlayer->Order.user_action = World::DOACTION_2;
-            _localPlayer->Order.selectBact = _cmdrsRemap[_activeCmdrRemapIndex].Bact;
+            order.Unit = _cmdrsRemap[_activeCmdrRemapIndex].Id;
 
             if ( _guiActFlags & 0x10 )
             {
-                _localPlayer->Order.target_Sect = _cellOnMouse;
-                _localPlayer->Order.target_point = _cellMouseIsectPos;
-                _localPlayer->Order.target_Bact = NULL;
+                order.Sector = SectorIndex(_cellOnMouse);
+                order.Point = _cellMouseIsectPos;
             }
             else
             {
-                _localPlayer->Order.target_Sect = 0;
-                _localPlayer->Order.target_Bact = _bactOnMouse;
+                order.Target = _bactOnMouse.Id;
             }
+
+            IssueOrder(order);
 
             bzda.activeMode = bzda.enabledModes & 1;
         }
@@ -11142,22 +11300,18 @@ void NC_STACK_ypaworld::ExecuteMouseAction(int arg)
     case World::DOACTION_WP_CYCLE:
         if (_activeCmdrRemapIndex >= 0)
         {
-            _localPlayer->Order.user_action = arg;
-            _localPlayer->Order.selectBact = _cmdrsRemap[_activeCmdrRemapIndex].Bact;
+            order.Unit = _cmdrsRemap[_activeCmdrRemapIndex].Id;
+            order.Sector = SectorIndex(_cellOnMouse);
+            order.Point = _cellMouseIsectPos;
 
-            if ( _guiActFlags & 0x30 )
-            {
-                _localPlayer->Order.target_Sect = _cellOnMouse;
-                _localPlayer->Order.target_point = _cellMouseIsectPos;
-                _localPlayer->Order.target_Bact = NULL;
-            }
+            IssueOrder(order);
         }
         break;
 
     case World::DOACTION_ADD_UNIT1:
-        _localPlayer->Order.user_action = World::DOACTION_ADD_UNIT1;
-        _localPlayer->Order.protoID = bzda.vhclProtoIds[bzda.selVhclIdx];
-        _localPlayer->Order.target_point = _mouseVector * _mouseSelDistance + _viewerPosition;
+        order.Proto = bzda.vhclProtoIds[bzda.selVhclIdx];
+        order.Point = _mouseVector * _mouseSelDistance + _viewerPosition;
+        IssueOrder(order);
 
         bzda.activeMode = 4;
 
@@ -11168,48 +11322,52 @@ void NC_STACK_ypaworld::ExecuteMouseAction(int arg)
     case World::DOACTION_ADD_UNIT2:
         if (_activeCmdrRemapIndex >= 0)
         {
-            _localPlayer->Order.user_action = World::DOACTION_ADD_UNIT2;
-            _localPlayer->Order.selectBact = _cmdrsRemap[_activeCmdrRemapIndex].Bact;
-
-            _localPlayer->Order.protoID = bzda.vhclProtoIds[bzda.selVhclIdx];
-            _localPlayer->Order.target_point = _mouseVector * _mouseSelDistance + _viewerPosition;
+            order.Unit = _cmdrsRemap[_activeCmdrRemapIndex].Id;
+            order.Proto = bzda.vhclProtoIds[bzda.selVhclIdx];
+            order.Point = _mouseVector * _mouseSelDistance + _viewerPosition;
+            IssueOrder(order);
         }
         break;
 
     case World::DOACTION_5:
-        SwitchControlToUnit(this, LiveMapUnit(this, _bactOnMouse));
+        SwitchControlToUnit(this, _bactOnMouse);
 
-        if ( _bactOnMouse->_bact_type != BACT_TYPES_GUN && _bactOnMouse != UserRobo() )
+        if ( _bactOnMouse.Type != BACT_TYPES_GUN && _bactOnMouse.Id != scene.UserRoboId() )
         {
             if ( SelectMouseUnitSquadLeader(this) )
             {
-                _activeCmdrID = _bactOnMouse->_commandID;
+                _activeCmdrID = _bactOnMouse.CommandId;
                 UpdateCommanderList();
             }
         }
         break;
 
     case World::DOACTION_6:
-        _localPlayer->Order.user_action = World::DOACTION_6;
-        _localPlayer->Order.protoID = bzda.buildProtoIds[bzda.selBuildIdx];
-        _localPlayer->Order.target_Sect = _cellOnMouse;
-        _localPlayer->Order.target_point = _cellMouseIsectPos;
-        _localPlayer->Order.target_Bact = NULL;
+        order.Proto = bzda.buildProtoIds[bzda.selBuildIdx];
+        order.Sector = SectorIndex(_cellOnMouse);
+        order.Point = _cellMouseIsectPos;
+        IssueOrder(order);
+
         bzda.activeMode = bzda.enabledModes & 1;
         break;
 
     case World::DOACTION_10:
-        _localPlayer->Order.user_action = World::DOACTION_10;
-        _localPlayer->Order.target_Sect = _cellOnMouse;
-        _localPlayer->Order.target_point = _cellMouseIsectPos;
-        _localPlayer->Order.target_Bact = NULL;
+        // Where on the ground it was asked for: the order is checked again
+        order.Sector = SectorIndex(_cellOnMouse);
+        order.Point = _beamGroundPos;
+        IssueOrder(order);
+
         bzda.activeMode = 1;
         break;
 
     case World::DOACTION_19:
-        UserUnit()->setBACT_viewer(false, _localPlayer);
-        UserUnit()->setBACT_inputting(false, _localPlayer);
-        _bactOnMouse->setBACT_viewer(true, _localPlayer);
+        // Looking from any unit, the game's own only
+        if ( _bactOnMouse.Bact && UserUnit() )
+        {
+            UserUnit()->setBACT_viewer(false, _localPlayer);
+            UserUnit()->setBACT_inputting(false, _localPlayer);
+            _bactOnMouse.Bact->setBACT_viewer(true, _localPlayer);
+        }
         break;
 
     default:
@@ -11220,7 +11378,10 @@ void NC_STACK_ypaworld::ExecuteMouseAction(int arg)
 
 void NC_STACK_ypaworld::HandleWorldMouse(TInputState *arg)
 {
-    if ( LocalOwner() > 0 && (arg->ClickInf.flag & TClickBoxInf::FLAG_OK) && UserUnit() )
+    const MapScene &scene = UiScene();
+    uint8_t player = scene.PlayerOwner();
+
+    if ( player > 0 && player < 8 && (arg->ClickInf.flag & TClickBoxInf::FLAG_OK) && scene.UserUnitId() )
     {
         yw_MouseSelect(arg);
         UpdateActionEnergyCost();
@@ -11253,7 +11414,7 @@ void NC_STACK_ypaworld::HandleWorldMouse(TInputState *arg)
                 {
                     if ( (_guiActFlags & 0x20) )
                     {
-                        if ( LocalOwner() == _bactOnMouse->_owner )
+                        if ( player == _bactOnMouse.Owner )
                         {
                             doAction = World::DOACTION_8;
                             mousePointer = 2;
@@ -11269,7 +11430,7 @@ void NC_STACK_ypaworld::HandleWorldMouse(TInputState *arg)
                 }
                 else if ( _activeCmdrRemapIndex != -1 )
                 {
-                    if ( LocalOwner() == _cellOnMouse->owner && _cellOnMouse->IsCanSee(LocalOwner()) )
+                    if ( player == scene.Owner(_cellOnMouse) && scene.CanSee(_cellOnMouse, player) )
                     {
                         doAction = World::DOACTION_2;
                         mousePointer = 4;
@@ -11287,7 +11448,7 @@ void NC_STACK_ypaworld::HandleWorldMouse(TInputState *arg)
             {
                 if ( !(_guiActFlags & 8) )
                 {
-                    if ( (_guiActFlags & 0x20) && LocalOwner() == _bactOnMouse->_owner )
+                    if ( (_guiActFlags & 0x20) && player == _bactOnMouse.Owner )
                     {
                         doAction = World::DOACTION_8;
                         mousePointer = 2;
@@ -11326,7 +11487,7 @@ void NC_STACK_ypaworld::HandleWorldMouse(TInputState *arg)
                     {
                         if ( _guiActFlags & 0x20 )
                         {
-                            if ( LocalOwner() == _bactOnMouse->_owner )
+                            if ( player == _bactOnMouse.Owner )
                             {
                                 doAction = World::DOACTION_8;
                                 mousePointer = 2;
@@ -11340,7 +11501,7 @@ void NC_STACK_ypaworld::HandleWorldMouse(TInputState *arg)
                             }
                         }
                     }
-                    else if ( LocalOwner() == _cellOnMouse->owner && _cellOnMouse->IsCanSee(LocalOwner()) )
+                    else if ( player == scene.Owner(_cellOnMouse) && scene.CanSee(_cellOnMouse, player) )
                     {
                         doAction = World::DOACTION_2;
                         mousePointer = 4;
@@ -11358,7 +11519,7 @@ void NC_STACK_ypaworld::HandleWorldMouse(TInputState *arg)
             {
                 if ( !(_guiActFlags & 8) )
                 {
-                    if ( (_guiActFlags & 0x20) && LocalOwner() == _bactOnMouse->_owner )
+                    if ( (_guiActFlags & 0x20) && player == _bactOnMouse.Owner )
                     {
                         doAction = World::DOACTION_8;
                         mousePointer = 2;
@@ -11398,7 +11559,7 @@ void NC_STACK_ypaworld::HandleWorldMouse(TInputState *arg)
                     {
                         if ( _guiActFlags & 0x20 )
                         {
-                            if ( LocalOwner() == _bactOnMouse->_owner )
+                            if ( player == _bactOnMouse.Owner )
                             {
                                 doAction = World::DOACTION_8;
                                 mousePointer = 2;
@@ -11412,7 +11573,7 @@ void NC_STACK_ypaworld::HandleWorldMouse(TInputState *arg)
                             }
                         }
                     }
-                    else if ( LocalOwner() == _cellOnMouse->owner && _cellOnMouse->IsCanSee(LocalOwner()) )
+                    else if ( player == scene.Owner(_cellOnMouse) && scene.CanSee(_cellOnMouse, player) )
                     {
                         doAction = World::DOACTION_2;
                         mousePointer = 4;
@@ -11435,7 +11596,7 @@ void NC_STACK_ypaworld::HandleWorldMouse(TInputState *arg)
                         doAction = World::DOACTION_19;
                         mousePointer = 8;
                     }
-                    else if ( LocalOwner() == _bactOnMouse->_owner )
+                    else if ( player == _bactOnMouse.Owner )
                     {
                         doAction = World::DOACTION_5;
                         mousePointer = 8;
@@ -11447,7 +11608,7 @@ void NC_STACK_ypaworld::HandleWorldMouse(TInputState *arg)
             {
                 if ( _guiActFlags & 0x20 )
                 {
-                    if ( LocalOwner() == _bactOnMouse->_owner )
+                    if ( player == _bactOnMouse.Owner )
                     {
                         doAction = World::DOACTION_8;
                         mousePointer = 2;
@@ -11499,7 +11660,7 @@ void NC_STACK_ypaworld::HandleWorldMouse(TInputState *arg)
             {
                 if ( _guiActFlags & 0x20 )
                 {
-                    if ( LocalOwner() == _bactOnMouse->_owner )
+                    if ( player == _bactOnMouse.Owner )
                     {
                         doAction = World::DOACTION_8;
                         mousePointer = 2;
