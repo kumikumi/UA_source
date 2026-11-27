@@ -3955,7 +3955,9 @@ int BottomBarHandleHotkeys(NC_STACK_ypaworld *yw, TInputState *inpt)
     case 24:
         if ( yw->LocalPlayerDefeated() || bzda.activeMode & 1 )
         {
-            if ( yw->UserRobo() == yw->UserUnit() || yw->LocalPlayerDefeated() )
+            // The menu, from the host station or without one; from a unit,
+            // back to the host station
+            if ( yw->UserRobo() == yw->UserUnit() || !yw->UserRobo() || yw->LocalPlayerDefeated() )
             {
                 if ( bzda.buttons[10] ) //menu_btn
                 {
@@ -3966,8 +3968,7 @@ int BottomBarHandleHotkeys(NC_STACK_ypaworld *yw, TInputState *inpt)
             }
             else
             {
-                // Back to the host station, or with none, on to a squad
-                winpt->selected_btnID = yw->UserRobo() ? 4 : 7;
+                winpt->selected_btnID = 4;
                 winpt->selected_btn = &bzda;
                 winpt->flag |= TClickBoxInf::FLAG_BTN_UP;
                 inpt->HotKeyID = -1;
