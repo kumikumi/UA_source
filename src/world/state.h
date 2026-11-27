@@ -91,6 +91,7 @@ enum Kind : uint8_t
     KIND_BUILDING = 6,  // did
     KIND_CAMPAIGN = 7,  // Where the campaign stands: what a saved game takes
                         // back, but not a level started again
+    KIND_PLAYER = 8,    // The players who play a faction, by their id
     KIND_UNIT = 16,
 };
 
@@ -181,6 +182,7 @@ public:
     void Field(const char *name, int32_t *v, size_t count, Role role = INTERNAL);
     void Field(const char *name, int16_t *v, size_t count, Role role = INTERNAL);
     void Field(const char *name, uint32_t *v, size_t count, Role role = INTERNAL);
+    void Field(const char *name, uint8_t *v, size_t count, Role role = INTERNAL);
 
     // Lists
     void Field(const char *name, std::vector<uint8_t> &v, Role role = INTERNAL);

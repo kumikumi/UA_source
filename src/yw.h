@@ -2117,6 +2117,16 @@ public:
     virtual int getYW_doEnergyRecalc();
     World::Player *LocalPlayer() const { return _localPlayer; }
 
+    // A new player, playing nothing yet
+    World::Player *AddPlayer();
+    World::Player *FindPlayer(uint32_t id) const;
+
+    // Restoring: the players a state has, by id, made anew with nothing
+    // set; then which of them is at this machine (none: a new one, who
+    // plays nothing)
+    void MakePlayers(const std::vector<uint32_t> &ids);
+    void SetLocalPlayer(uint32_t id);
+
     // The sector the local player sees from: their unit's, or the camera's
     // when they look from none
     Common::Point ViewerCell() const;
@@ -2734,6 +2744,7 @@ public:
     // Everyone playing, and the one at this machine among them
     std::vector<std::unique_ptr<World::Player>> _players;
     World::Player *_localPlayer = NULL;
+    uint32_t _nextPlayerId = 1;
     
     std::array<uint32_t, 8> _countSectorsPerOwner = Common::ArrayInit<uint32_t, 8>(0);
     std::array<uint32_t, 8>  _countUnitsPerOwner = Common::ArrayInit<uint32_t, 8>(0);

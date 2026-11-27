@@ -41,6 +41,31 @@ bool Frame::Sector::operator==(const Sector &b) const
            Power == b.Power && StationPower == b.StationPower;
 }
 
+const Frame::Player *Frame::FindPlayer(uint32_t id) const
+{
+    for ( const Player &p : Players )
+    {
+        if ( p.Id == id )
+            return &p;
+    }
+
+    return NULL;
+}
+
+void Frame::LookAs(uint32_t player)
+{
+    const Player *p = FindPlayer(player);
+
+    if ( !p )
+        return;
+
+    Viewer = p->Unit;
+    UserUnit = p->Unit;
+    UserRobo = p->HostStation;
+    CameraPosition = p->CameraPosition;
+    CameraRotation = p->CameraRotation;
+}
+
 const Frame::Unit *Frame::FindUnit(uint32_t id) const
 {
     auto it = std::lower_bound(Units.begin(), Units.end(), id,
@@ -113,6 +138,22 @@ void Frame::Between(const Frame &a, const Frame &b, float t, Frame &out)
     {
         out.CameraPosition = a.CameraPosition + (b.CameraPosition - a.CameraPosition) * t;
         out.CameraRotation = Blend(a.CameraRotation, b.CameraRotation, t);
+    }
+
+    // Each player's camera as the one drawn from, so that any of them can be
+    out.LocalPlayer = nearer.LocalPlayer;
+    out.Players = nearer.Players;
+
+    for ( Player &p : out.Players )
+    {
+        const Player *pa = a.FindPlayer(p.Id);
+        const Player *pb = b.FindPlayer(p.Id);
+
+        if ( pa && pb && !IsStepJump(pa->CameraPosition, pa->CameraRotation, pb->CameraPosition, pb->CameraRotation) )
+        {
+            p.CameraPosition = pa->CameraPosition + (pb->CameraPosition - pa->CameraPosition) * t;
+            p.CameraRotation = Blend(pa->CameraRotation, pb->CameraRotation, t);
+        }
     }
 
     // A building grows in between
@@ -219,11 +260,15 @@ FrameMaker::FrameMaker(const State::Schema &viewSchema, bool details)
 : _schema(viewSchema), _details(details)
 {
     _time = Find(_schema, State::KIND_WORLD, "time");
-    _viewer = Find(_schema, State::KIND_WORLD, "viewer");
-    _userRobo = Find(_schema, State::KIND_WORLD, "userRobo");
-    _userUnit = Find(_schema, State::KIND_WORLD, "userUnit");
-    _cameraPosition = Find(_schema, State::KIND_WORLD, "cameraPosition");
-    _cameraRotation = Find(_schema, State::KIND_WORLD, "cameraRotation");
+    _localPlayer = Find(_schema, State::KIND_WORLD, "localPlayer");
+
+    _playerOwner = Find(_schema, State::KIND_PLAYER, "owner");
+    _playerHostStation = Find(_schema, State::KIND_PLAYER, "hostStation");
+    _playerUnit = Find(_schema, State::KIND_PLAYER, "unit");
+    _playerControls = Find(_schema, State::KIND_PLAYER, "controls");
+    _playerCameraPosition = Find(_schema, State::KIND_PLAYER, "cameraPosition");
+    _playerCameraRotation = Find(_schema, State::KIND_PLAYER, "cameraRotation");
+    _playerName = Find(_schema, State::KIND_PLAYER, "name");
 
     _sectorType = Find(_schema, State::KIND_SECTOR, "type");
     _sectorHealth = Find(_schema, State::KIND_SECTOR, "health");
@@ -334,11 +379,26 @@ void FrameMaker::Add(Frame &frame, std::vector<Frame::Sector> &sectors, uint8_t 
     if ( kind == State::KIND_WORLD )
     {
         get(_time, &frame.Time, sizeof(frame.Time));
-        get(_viewer, &frame.Viewer, sizeof(frame.Viewer));
-        get(_userRobo, &frame.UserRobo, sizeof(frame.UserRobo));
-        get(_userUnit, &frame.UserUnit, sizeof(frame.UserUnit));
-        get(_cameraPosition, &frame.CameraPosition, sizeof(frame.CameraPosition));
-        get(_cameraRotation, &frame.CameraRotation, sizeof(frame.CameraRotation));
+        get(_localPlayer, &frame.LocalPlayer, sizeof(frame.LocalPlayer));
+    }
+    else if ( kind == State::KIND_PLAYER )
+    {
+        Frame::Player p;
+        p.Id = id;
+        get(_playerOwner, &p.Owner, sizeof(p.Owner));
+        get(_playerHostStation, &p.HostStation, sizeof(p.HostStation));
+        get(_playerUnit, &p.Unit, sizeof(p.Unit));
+        get(_playerControls, &p.Controls, sizeof(p.Controls));
+        get(_playerCameraPosition, &p.CameraPosition, sizeof(p.CameraPosition));
+        get(_playerCameraRotation, &p.CameraRotation, sizeof(p.CameraRotation));
+
+        if ( _playerName.Found && _playerName.Offset + _playerName.Size <= data.size() )
+        {
+            const char *name = data.data() + _playerName.Offset;
+            p.Name.assign(name, strnlen(name, _playerName.Size));
+        }
+
+        frame.Players.push_back(p);
     }
     else if ( kind == State::KIND_SECTOR )
     {
@@ -503,6 +563,12 @@ void FrameMaker::End(Frame &frame, std::vector<Frame::Sector> &sectors, const Fr
 
     std::sort(frame.HostStations.begin(), frame.HostStations.end(),
               [](const Frame::HostStation &a, const Frame::HostStation &b) { return a.Unit < b.Unit; });
+
+    std::sort(frame.Players.begin(), frame.Players.end(),
+              [](const Frame::Player &a, const Frame::Player &b) { return a.Id < b.Id; });
+
+    // As the player at the machine that played it saw it, if they played
+    frame.LookAs(frame.LocalPlayer);
 
     std::sort(frame.Constructions.begin(), frame.Constructions.end(),
               [](const Frame::Construction &a, const Frame::Construction &b) { return a.Sector < b.Sector; });

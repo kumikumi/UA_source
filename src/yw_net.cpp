@@ -3470,6 +3470,7 @@ size_t NC_STACK_ypaworld::CreateNetLevel(TLevelLoadRequest *arg)
 
         log_netlog("Sent a READY TO PLAY to all for my Owner %d\n", _GameShell->netPlayerOwner);
 
+        LocalPlayer()->Name = _GameShell->netPlayerName;
         fndHost->setBACT_viewer(true, LocalPlayer());
     }
 

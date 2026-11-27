@@ -118,13 +118,36 @@ struct Frame
         uint8_t LossFlags = 0;
     };
 
+    // Someone playing a faction
+    struct Player
+    {
+        uint32_t Id = 0;
+        std::string Name;
+        uint8_t Owner = 0;
+        uint32_t HostStation = 0;
+        uint32_t Unit = 0;       // Looked from
+        uint32_t Controls = 0;
+        vec3f CameraPosition;
+        mat3x3f CameraRotation;
+    };
+
     uint32_t Step = 0;           // Steps since the level started
     int32_t Time = 0;            // Game time, in 1/1024 s
-    uint32_t Viewer = 0;         // The unit the player sees from
-    uint32_t UserRobo = 0;       // The player's host station
-    uint32_t UserUnit = 0;       // The unit the player steers
+
+    // Whose view it's drawn from (LookAs): the unit they see from, their
+    // host station, and their camera
+    uint32_t Viewer = 0;
+    uint32_t UserRobo = 0;
+    uint32_t UserUnit = 0;       // The same unit as Viewer
     vec3f CameraPosition;
     mat3x3f CameraRotation;
+
+    std::vector<Player> Players; // In the order of their ids
+    uint32_t LocalPlayer = 0;    // At the machine that played it; 0 for none
+
+    // Drawn from what a player sees; with no such player, as before
+    void LookAs(uint32_t player);
+    const Player *FindPlayer(uint32_t id) const;
 
     std::vector<Unit> Units;     // In the order of their ids
     std::vector<Extra> Extras;
@@ -203,7 +226,8 @@ protected:
 
     State::Schema _schema;
     bool _details;
-    Field _time, _viewer, _userRobo, _userUnit, _cameraPosition, _cameraRotation;
+    Field _time, _localPlayer;
+    Field _playerOwner, _playerHostStation, _playerUnit, _playerControls, _playerCameraPosition, _playerCameraRotation, _playerName;
     Field _sectorType, _sectorHealth, _sectorOwner, _sectorPurpose, _sectorPower, _powerStation, _stationPower;
     Field _constructing, _constructBuilding, _constructTime, _constructEnd;
     Field _itemState, _itemRadius;

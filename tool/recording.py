@@ -23,7 +23,7 @@ ELEM_SIZE = {1: 1, 2: 1, 3: 1, 4: 2, 5: 2, 6: 4, 7: 4, 8: 4, 9: 8, 10: 4, 11: 4,
 ELEM_FORMAT = {1: "B", 2: "b", 3: "B", 4: "h", 5: "H", 6: "i", 7: "I", 8: "f", 9: "d", 10: "I", 11: "i", 12: "i", 13: "h"}
 T_F32, T_F64, T_UNIT, T_FIXED, T_QUAT = 8, 9, 10, 12, 13
 FIXED_SCALE, QUAT_SCALE = 256.0, 32767.0  # Positions and quaternions in the view
-KIND_NAMES = {1: "world", 2: "sector", 3: "bomb", 4: "vehicle", 5: "weapon", 6: "building", 7: "campaign"}
+KIND_NAMES = {1: "world", 2: "sector", 3: "bomb", 4: "vehicle", 5: "weapon", 6: "building", 7: "campaign", 8: "player"}
 UNIT_TYPES = {1: "unit", 2: "tank", 3: "host station", 4: "missile", 6: "flyer", 7: "ufo", 8: "car", 9: "gun"}
 
 

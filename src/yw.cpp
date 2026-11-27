@@ -43,8 +43,50 @@ NC_STACK_ypaworld::NC_STACK_ypaworld()
 : _unitsList(this, NC_STACK_ypabact::GetKidRefNode, World::BLIST_UNITS)
 , _deadCacheList(this, NC_STACK_ypabact::GetKidRefNode, World::BLIST_CACHE)
 {
+    _localPlayer = AddPlayer();
+}
+
+World::Player *NC_STACK_ypaworld::AddPlayer()
+{
     _players.emplace_back(new World::Player);
-    _localPlayer = _players.back().get();
+    _players.back()->Id = _nextPlayerId++;
+    return _players.back().get();
+}
+
+World::Player *NC_STACK_ypaworld::FindPlayer(uint32_t id) const
+{
+    for ( const std::unique_ptr<World::Player> &player : _players )
+    {
+        if ( player->Id == id )
+            return player.get();
+    }
+
+    return NULL;
+}
+
+void NC_STACK_ypaworld::MakePlayers(const std::vector<uint32_t> &ids)
+{
+    uint32_t localId = _localPlayer ? _localPlayer->Id : 0;
+
+    _players.clear();
+    _localPlayer = NULL;
+
+    for ( uint32_t id : ids )
+    {
+        _players.emplace_back(new World::Player);
+        _players.back()->Id = id;
+    }
+
+    // Until the state says which is at this machine
+    SetLocalPlayer(localId);
+}
+
+void NC_STACK_ypaworld::SetLocalPlayer(uint32_t id)
+{
+    if ( World::Player *player = id ? FindPlayer(id) : NULL )
+        _localPlayer = player;
+    else if ( !_localPlayer || _localPlayer->Owner )
+        _localPlayer = AddPlayer();
 }
 
 namespace World
@@ -252,25 +294,34 @@ size_t NC_STACK_ypaworld::Deinit()
     return NC_STACK_nucleus::Deinit();
 }
 
+// Each player's camera, where the unit they look from places it; the local
+// player's is the one drawn
 void UpdateViewerPosition(NC_STACK_ypaworld *yw)
 {
-    // Looking from nothing, the camera stays where it is
-    if ( !yw->UserUnit() )
-        return;
-
-    if ( yw->UserUnit()->getBACT_extraViewer() )
+    for ( std::unique_ptr<World::Player> &player : yw->_players )
     {
-        NC_STACK_ypabact *viewer = yw->UserUnit();
+        NC_STACK_ypabact *viewer = player->Unit;
 
-        yw->_viewerPosition = viewer->_position + viewer->_rotation.Transpose().Transform(viewer->_viewer_position);
+        // Looking from nothing, the camera stays where it is
+        if ( !viewer )
+            continue;
 
-        yw->_viewerRotation = yw->UserUnit()->_viewer_rotation;
-    }
-    else
-    {
-        yw->_viewerPosition = yw->UserUnit()->_position;
+        if ( viewer->getBACT_extraViewer() )
+        {
+            player->CameraPosition = viewer->_position + viewer->_rotation.Transpose().Transform(viewer->_viewer_position);
+            player->CameraRotation = viewer->_viewer_rotation;
+        }
+        else
+        {
+            player->CameraPosition = viewer->_position;
+            player->CameraRotation = viewer->_rotation;
+        }
 
-        yw->_viewerRotation = yw->UserUnit()->_rotation;
+        if ( player.get() == yw->LocalPlayer() )
+        {
+            yw->_viewerPosition = player->CameraPosition;
+            yw->_viewerRotation = player->CameraRotation;
+        }
     }
 }
 
@@ -6283,13 +6334,13 @@ void NC_STACK_ypaworld::SaveWonState()
 void NC_STACK_ypaworld::VisitState(World::State::Visitor &v)
 {
     v.Field("time", _timeStamp, World::State::VIEW);
-    v.Unit("userRobo", _localPlayer->HostStation, World::State::VIEW);
-    v.Unit("userUnit", _localPlayer->Unit, World::State::VIEW);
-    v.Unit("viewer", _localPlayer->Unit, World::State::VIEW);
 
-    // Where the player looks from, as the viewer left it
-    v.Field("cameraPosition", _viewerPosition, World::State::VIEW);
-    v.Field("cameraRotation", _viewerRotation, World::State::VIEW);
+    // The player at the machine that played it, if they played a faction
+    uint32_t localPlayer = _localPlayer->Owner ? _localPlayer->Id : 0;
+    v.Field("localPlayer", localPlayer, World::State::VIEW);
+
+    if ( v.Reads(World::State::VIEW) )
+        SetLocalPlayer(localPlayer);
 
     // The last tech upgrade, as the HUD shows it
     v.Field("upgrade", _upgradeId, World::State::VIEW);
@@ -6304,6 +6355,8 @@ void NC_STACK_ypaworld::VisitState(World::State::Visitor &v)
     v.Field("steps", _framesElapsed);
     v.Field("nextUnitId", _nextUnitId);
     v.Field("nextCommandId", _nextCommandId);
+    v.Field("nextPlayerId", _nextPlayerId);
+    v.Field("playerOwner", _playerOwner);
 
     static_assert(sizeof(TLastRoboMessage) == 16, "four ints");
     v.Field("lastRoboMessages", &_lastRoboMessages[0].param1, _lastRoboMessages.size() * 4);
@@ -6409,30 +6462,11 @@ void NC_STACK_ypaworld::GiveUnitAssets(NC_STACK_ypabact *unit)
 
 void NC_STACK_ypaworld::FinishRestore(bool inPlace)
 {
-    // As SetPlayerHostStation sets it for a level started anew
-    _playerOwner = UserRobo() ? UserRobo()->_owner : 0;
-    _localPlayer->Owner = _playerOwner;
-
-    // Who controls which unit isn't kept: the units say they're controlled,
-    // and the only player is the local one
-    _localPlayer->Controls = NULL;
-
-    for ( NC_STACK_ypabact *robo : _unitsList )
+    // The local player's camera, where they saw from
+    if ( _localPlayer->Owner )
     {
-        if ( robo->getBACT_inputting() )
-            _localPlayer->Controls = robo;
-
-        for ( NC_STACK_ypabact *comm : robo->_kidList )
-        {
-            if ( comm->getBACT_inputting() )
-                _localPlayer->Controls = comm;
-
-            for ( NC_STACK_ypabact *unit : comm->_kidList )
-            {
-                if ( unit->getBACT_inputting() )
-                    _localPlayer->Controls = unit;
-            }
-        }
+        _viewerPosition = _localPlayer->CameraPosition;
+        _viewerRotation = _localPlayer->CameraRotation;
     }
 
     _countSectorsPerOwner.fill(0);

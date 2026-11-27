@@ -187,6 +187,12 @@ void Visitor::Field(const char *name, uint32_t *v, size_t count, Role role)
         Raw(name, T_U32, count, v, count * 4);
 }
 
+void Visitor::Field(const char *name, uint8_t *v, size_t count, Role role)
+{
+    if ( Includes(role) )
+        Raw(name, T_U8, count, v, count);
+}
+
 void Visitor::Field(const char *name, std::vector<uint8_t> &v, Role role)
 {
     if ( !Includes(role) )
@@ -740,6 +746,24 @@ static void VisitBuilding(Visitor &v, World::TBuildingProto &p)
     v.Field("energy", p.Energy);
 }
 
+// Someone playing: all of it the view, what replays follow
+static void VisitPlayer(Visitor &v, World::Player &p)
+{
+    v.Field("owner", p.Owner, VIEW);
+    v.Unit("hostStation", p.HostStation, VIEW);
+    v.Unit("unit", p.Unit, VIEW);
+    v.Unit("controls", p.Controls, VIEW);
+    v.Field("cameraPosition", p.CameraPosition, VIEW);
+    v.Field("cameraRotation", p.CameraRotation, VIEW);
+
+    uint8_t name[World::Player::NameLength] = {0};
+    memcpy(name, p.Name.data(), std::min(p.Name.size(), sizeof(name)));
+    v.Field("name", name, sizeof(name), VIEW);
+
+    if ( v.Reads(VIEW) )
+        p.Name.assign((const char *)name, strnlen((const char *)name, sizeof(name)));
+}
+
 // Capture
 
 static void ForEachUnit(Visitor &v, std::unordered_set<uint32_t> &added, NC_STACK_ypabact *unit, const ObjectFunc &func)
@@ -815,6 +839,17 @@ void ForEachObject(NC_STACK_ypaworld *world, Part part, const ObjectFunc &allFun
         v.Out().clear();
         VisitBuilding(v, world->_buildProtos[i]);
         func(KIND_BUILDING, i, v.Out());
+    }
+
+    // Only those who play a faction: one who doesn't sees nothing of theirs
+    for ( const std::unique_ptr<World::Player> &player : world->_players )
+    {
+        if ( !has(KIND_PLAYER) || !player->Owner )
+            continue;
+
+        v.Out().clear();
+        VisitPlayer(v, *player);
+        func(KIND_PLAYER, player->Id, v.Out());
     }
 
     std::unordered_set<uint32_t> added;
@@ -909,6 +944,13 @@ Schema MakeSchema(NC_STACK_ypaworld *world, Part part)
         Visitor v(Visitor::SCHEMA, world, part);
         VisitBuilding(v, building);
         schema[KIND_BUILDING] = v.Fields();
+    }
+
+    {
+        World::Player player;
+        Visitor v(Visitor::SCHEMA, world, part);
+        VisitPlayer(v, player);
+        schema[KIND_PLAYER] = v.Fields();
     }
 
     // A unit of each class
@@ -1396,6 +1438,9 @@ static std::string ObjectName(const Object &obj)
     if ( obj.Kind == KIND_BUILDING )
         return fmt::sprintf("building %d", obj.Id);
 
+    if ( obj.Kind == KIND_PLAYER )
+        return fmt::sprintf("player %d", obj.Id);
+
     return fmt::sprintf("unit #%u (type %d)", obj.Id, obj.Kind - KIND_UNIT);
 }
 
@@ -1465,11 +1510,24 @@ std::string Diff(const Schema &schema, const Image &a, const Image &b, size_t ma
 
 // Restore
 
-// Makes every unit of the images, so that the fields can refer to any of
-// them. False, after logging why, when it can't.
+// Makes every unit and player of the images, so that the fields can refer
+// to any of them. False, after logging why, when it can't.
 static bool MakeUnits(NC_STACK_ypaworld *world, const std::vector<std::pair<Part, const Image *>> &parts,
                       std::map<uint32_t, NC_STACK_ypabact *> &units)
 {
+    std::set<uint32_t> players;
+
+    for ( const auto &part : parts )
+    {
+        for ( const Object &obj : part.second->Objects )
+        {
+            if ( obj.Kind == KIND_PLAYER )
+                players.insert(obj.Id);
+        }
+    }
+
+    world->MakePlayers(std::vector<uint32_t>(players.begin(), players.end()));
+
     for ( const auto &part : parts )
     {
         for ( const Object &obj : part.second->Objects )
@@ -1546,6 +1604,15 @@ static bool ReadObject(NC_STACK_ypaworld *world, const std::map<uint32_t, NC_STA
             return true;
 
         VisitBuilding(v, world->_buildProtos[obj.Id]);
+    }
+    else if ( obj.Kind == KIND_PLAYER )
+    {
+        World::Player *player = world->FindPlayer(obj.Id);
+
+        if ( !player )
+            return true;
+
+        VisitPlayer(v, *player);
     }
     else
     {

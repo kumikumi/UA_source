@@ -475,6 +475,8 @@ bool NC_STACK_ypaworld::yw_createRobos(const std::vector<MapRobo> &Robos)
 
             if ( first )
             {
+                // The local player, under their profile's name
+                _localPlayer->Name = _GameShell ? _GameShell->UserName : std::string();
                 robo->setBACT_viewer(true, _localPlayer);
                 robo->setBACT_inputting(true, _localPlayer);
             }
