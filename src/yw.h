@@ -2001,6 +2001,13 @@ public:
     // waypoints), which needs no host station
     void OrderSquad(uint8_t owner, TUserOrder *order);
 
+    // A squad, by its commander: too weak to fight on, it retreats to its
+    // host station; recovered, it stops retreating, where it is if that's
+    // in its faction's power. Says how the squad does: fighting, retreating
+    // or found no path back.
+    enum { SQUAD_FIGHTING, SQUAD_RETREATING, SQUAD_PATHLESS };
+    int CheckSquadRetreat(NC_STACK_ypabact *commander, NC_STACK_yparobo *host);
+
     // What a faction's units say to the player here (TRoboMessage ids), into
     // the message log and out loud; some are left out when said just before.
     // Returns whether it was said.

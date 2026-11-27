@@ -3101,8 +3101,6 @@ void NC_STACK_yparobo::checkCommander()
 {
     bool userRobo =  (this == _world->UserRobo());
 
-    float energyRatio;
-
     for ( NC_STACK_ypabact* &commander : _kidList )
     {
         if ( commander->_status == BACT_STATUS_DEAD )
@@ -3117,195 +3115,25 @@ void NC_STACK_yparobo::checkCommander()
         if ( commander->_bact_type == BACT_TYPES_GUN )
             continue;
 
-        if ( commander->_status_flg & BACT_STFLAG_ESCAPE )
+        int squad = _world->CheckSquadRetreat(commander, this);
+
+        if ( squad == NC_STACK_ypaworld::SQUAD_PATHLESS )
+            // TODO(bug): Leaves the commander loop, so one failed path skips every remaining
+            // commander this frame. Probably meant continue. The first decompile has
+            // the same.
+            break;
+
+        if ( squad == NC_STACK_ypaworld::SQUAD_FIGHTING && !userRobo )
         {
-            if ( commander->GetFightMotivation(&energyRatio) )
+            if ( _clock - _roboAttackersTime > 1000 )
             {
-                if ( commander->_owner == commander->_pSector->owner && commander->_pSector->energy_power )
+                _roboAttackersTime = _clock;
+
+                for ( TRoboAttackSlot &ataker : _roboAttackers )
                 {
-                    setTarget_msg targetMsg;
-                    targetMsg.tgt_type = BACT_TGT_TYPE_CELL;
-                    targetMsg.priority = 0;
-                    targetMsg.tgt_pos = commander->_position;
-
-                    commander->SetTarget(&targetMsg);
-                }
-
-                commander->ChangeEscapeFlag(false);
-
-                if ( userRobo )
-                {
-                    TRoboMessage msg;
-                    msg.param1 = commander->_commandID;
-                    msg.msgID = 10;
-                    msg.param3 = 0;
-                    msg.param2 = 0;
-                    msg.unit = commander;
-                    msg.priority = 28;
-
-                    _world->PlaceMessage(&msg);
-                }
-            }
-            continue;
-        }
-
-        if ( commander->GetFightMotivation(&energyRatio) )
-        {
-            if ( energyRatio < 0.5 && userRobo )
-            {
-                TSummaryQuery summary;
-                summary.enrg_sum = 0;
-                summary.enrg_type = 3;
-
-                commander->GetSummary(&summary);
-
-                int squadSize = summary.enrg_sum;
-
-                summary.enrg_sum = 0;
-                summary.enrg_type = 5;
-                commander->GetSummary(&summary);
-
-                if ( squadSize < summary.enrg_sum )
-                {
-                    TRoboMessage msg;
-                    msg.param1 = 20000;
-                    msg.param3 = 0;
-                    msg.param2 = 0;
-                    msg.msgID = 18;
-                    msg.unit = commander;
-                    msg.priority = 42;
-
-                    _world->PlaceMessage(&msg);
-                }
-            }
-
-            if ( !userRobo )
-            {
-                if ( _clock - _roboAttackersTime > 1000 )
-                {
-                    _roboAttackersTime = _clock;
-
-                    for ( TRoboAttackSlot &ataker : _roboAttackers )
+                    if ( ataker.squadCommandID == commander->_commandID)
                     {
-                        if ( ataker.squadCommandID == commander->_commandID)
-                        {
-                            UpdateRoboAttackSquad(commander, &ataker);
-                            break;
-                        }
-                    }
-                }
-            }
-        }
-        else
-        {
-            commander->ChangeEscapeFlag(true);
-
-
-            commander->_status_flg &= ~(BACT_STFLAG_WAYPOINT | BACT_STFLAG_WAYPOINTCCL);
-            commander->_waypoints_count = 0;
-            commander->_status_flg &= ~BACT_STFLAG_UNUSE;
-
-
-            for (NC_STACK_ypabact* &nod : commander->_kidList)
-                nod->_status_flg &= ~BACT_STFLAG_UNUSE;
-
-            if ( commander->IsNeedsWaypoints() )
-            {
-                TPathRequest pathRequest;
-                pathRequest.steps_cnt = 32;
-                pathRequest.from = commander->_position.XZ();
-                pathRequest.to = _position.XZ();
-                pathRequest.tgt_type = 1;
-
-                if ( ! commander->PathFinder(&pathRequest) )
-                    // TODO(bug): Leaves the commander loop, so one failed path skips every remaining
-                    // commander this frame. Probably meant continue. The first decompile has
-                    // the same.
-                    break;
-
-                if ( pathRequest.steps_cnt > 1 )
-                {
-                    pathRequest.steps_cnt = 32;
-                    commander->SetPath(&pathRequest);
-
-                    commander->_m_cmdID = _commandID;
-                    commander->_m_owner = _owner;
-                }
-                else
-                {
-                    setTarget_msg targetMsg;
-                    targetMsg.tgt.pbact = this;
-                    targetMsg.priority = 0;
-                    targetMsg.tgt_type = BACT_TGT_TYPE_UNIT;
-                    commander->SetTarget(&targetMsg);
-                }
-            }
-            else
-            {
-                setTarget_msg targetMsg;
-                targetMsg.tgt.pbact = this;
-                targetMsg.tgt_type = BACT_TGT_TYPE_UNIT;
-                targetMsg.priority = 0;
-                commander->SetTarget(&targetMsg);
-            }
-
-            if ( userRobo )
-            {
-                TRoboMessage msg;
-                msg.param1 = commander->_commandID;
-                msg.param3 = 0;
-                msg.param2 = 0;
-                msg.msgID = 9;
-                msg.unit = commander;
-                msg.priority = 40;
-
-                _world->PlaceMessage(&msg);
-
-                if ( _world->_isNetGame  )
-                {
-                    NC_STACK_ypabact *enemy = commander->GetSectorTarget(commander->_cellId);
-                    if ( enemy )
-                    {
-                        uamessage_logmsg logMsg;
-                        logMsg.msgID = UAMSG_LOGMSG;
-                        logMsg.owner = _owner;
-                        logMsg.sender = enemy->_gid;
-                        logMsg.senderOwner = enemy->_owner;
-                        logMsg.pr1 = 0;
-                        logMsg.pr2 = 0;
-                        logMsg.pr3 = 0;
-                        logMsg.pri = 34;
-                        logMsg.id = 19;
-
-                        _world->NetBroadcastMessage(&logMsg, sizeof(logMsg), true);
-                    }
-                }
-            }
-            else
-            {
-                for ( const TBactAttacker &ainf : commander->_attackersList )
-                {
-                    if (_world->LocalOwner() == ainf.attacker->_owner)
-                    {                     
-                        NC_STACK_ypabact *realbact = ainf.attacker;                  
-                        if ( realbact->_bact_type == BACT_TYPES_MISSLE ) //If missile
-                        {
-                            NC_STACK_ypamissile *miss = dynamic_cast<NC_STACK_ypamissile *>(realbact);
-                            realbact = miss->GetLauncherBact(); //Get emitter bact
-                        }
-
-                        if ( realbact->_host_station != realbact->_parent &&
-                             realbact->_parent )
-                            realbact = realbact->_parent;
-
-                        TRoboMessage msg;
-                        msg.param1 = 0;
-                        msg.param3 = 0;
-                        msg.param2 = 0;
-                        msg.msgID = 19;
-                        msg.unit = realbact;
-                        msg.priority = 34;
-                        _world->PlaceMessage(&msg);
+                        UpdateRoboAttackSquad(commander, &ataker);
                         break;
                     }
                 }

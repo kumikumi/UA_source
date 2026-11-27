@@ -575,6 +575,192 @@ void NC_STACK_ypaworld::yw_InitSquads(const std::vector<MapSquad> &squads)
     }
 }
 
+int NC_STACK_ypaworld::CheckSquadRetreat(NC_STACK_ypabact *commander, NC_STACK_yparobo *host)
+{
+    bool user = host == UserRobo();
+
+    float energyRatio;
+
+    if ( commander->_status_flg & BACT_STFLAG_ESCAPE )
+    {
+        if ( commander->GetFightMotivation(&energyRatio) )
+        {
+            if ( commander->_owner == commander->_pSector->owner && commander->_pSector->energy_power )
+            {
+                setTarget_msg targetMsg;
+                targetMsg.tgt_type = BACT_TGT_TYPE_CELL;
+                targetMsg.priority = 0;
+                targetMsg.tgt_pos = commander->_position;
+
+                commander->SetTarget(&targetMsg);
+            }
+
+            commander->ChangeEscapeFlag(false);
+
+            if ( user )
+            {
+                TRoboMessage msg;
+                msg.param1 = commander->_commandID;
+                msg.msgID = 10;
+                msg.param3 = 0;
+                msg.param2 = 0;
+                msg.unit = commander;
+                msg.priority = 28;
+
+                PlaceMessage(&msg);
+            }
+        }
+        return SQUAD_RETREATING;
+    }
+
+    if ( commander->GetFightMotivation(&energyRatio) )
+    {
+        if ( energyRatio < 0.5 && user )
+        {
+            TSummaryQuery summary;
+            summary.enrg_sum = 0;
+            summary.enrg_type = 3;
+
+            commander->GetSummary(&summary);
+
+            int squadSize = summary.enrg_sum;
+
+            summary.enrg_sum = 0;
+            summary.enrg_type = 5;
+            commander->GetSummary(&summary);
+
+            if ( squadSize < summary.enrg_sum )
+            {
+                TRoboMessage msg;
+                msg.param1 = 20000;
+                msg.param3 = 0;
+                msg.param2 = 0;
+                msg.msgID = 18;
+                msg.unit = commander;
+                msg.priority = 42;
+
+                PlaceMessage(&msg);
+            }
+        }
+
+        return SQUAD_FIGHTING;
+    }
+    else
+    {
+        commander->ChangeEscapeFlag(true);
+
+
+        commander->_status_flg &= ~(BACT_STFLAG_WAYPOINT | BACT_STFLAG_WAYPOINTCCL);
+        commander->_waypoints_count = 0;
+        commander->_status_flg &= ~BACT_STFLAG_UNUSE;
+
+
+        for (NC_STACK_ypabact* &nod : commander->_kidList)
+            nod->_status_flg &= ~BACT_STFLAG_UNUSE;
+
+        if ( commander->IsNeedsWaypoints() )
+        {
+            TPathRequest pathRequest;
+            pathRequest.steps_cnt = 32;
+            pathRequest.from = commander->_position.XZ();
+            pathRequest.to = host->_position.XZ();
+            pathRequest.tgt_type = 1;
+
+            if ( ! commander->PathFinder(&pathRequest) )
+                return SQUAD_PATHLESS;
+
+            if ( pathRequest.steps_cnt > 1 )
+            {
+                pathRequest.steps_cnt = 32;
+                commander->SetPath(&pathRequest);
+
+                commander->_m_cmdID = host->_commandID;
+                commander->_m_owner = host->_owner;
+            }
+            else
+            {
+                setTarget_msg targetMsg;
+                targetMsg.tgt.pbact = host;
+                targetMsg.priority = 0;
+                targetMsg.tgt_type = BACT_TGT_TYPE_UNIT;
+                commander->SetTarget(&targetMsg);
+            }
+        }
+        else
+        {
+            setTarget_msg targetMsg;
+            targetMsg.tgt.pbact = host;
+            targetMsg.tgt_type = BACT_TGT_TYPE_UNIT;
+            targetMsg.priority = 0;
+            commander->SetTarget(&targetMsg);
+        }
+
+        if ( user )
+        {
+            TRoboMessage msg;
+            msg.param1 = commander->_commandID;
+            msg.param3 = 0;
+            msg.param2 = 0;
+            msg.msgID = 9;
+            msg.unit = commander;
+            msg.priority = 40;
+
+            PlaceMessage(&msg);
+
+            if ( _isNetGame  )
+            {
+                NC_STACK_ypabact *enemy = commander->GetSectorTarget(commander->_cellId);
+                if ( enemy )
+                {
+                    uamessage_logmsg logMsg;
+                    logMsg.msgID = UAMSG_LOGMSG;
+                    logMsg.owner = host->_owner;
+                    logMsg.sender = enemy->_gid;
+                    logMsg.senderOwner = enemy->_owner;
+                    logMsg.pr1 = 0;
+                    logMsg.pr2 = 0;
+                    logMsg.pr3 = 0;
+                    logMsg.pri = 34;
+                    logMsg.id = 19;
+
+                    NetBroadcastMessage(&logMsg, sizeof(logMsg), true);
+                }
+            }
+        }
+        else
+        {
+            for ( const TBactAttacker &ainf : commander->_attackersList )
+            {
+                if (LocalOwner() == ainf.attacker->_owner)
+                {
+                    NC_STACK_ypabact *realbact = ainf.attacker;
+                    if ( realbact->_bact_type == BACT_TYPES_MISSLE ) //If missile
+                    {
+                        NC_STACK_ypamissile *miss = dynamic_cast<NC_STACK_ypamissile *>(realbact);
+                        realbact = miss->GetLauncherBact(); //Get emitter bact
+                    }
+
+                    if ( realbact->_host_station != realbact->_parent &&
+                         realbact->_parent )
+                        realbact = realbact->_parent;
+
+                    TRoboMessage msg;
+                    msg.param1 = 0;
+                    msg.param3 = 0;
+                    msg.param2 = 0;
+                    msg.msgID = 19;
+                    msg.unit = realbact;
+                    msg.priority = 34;
+                    PlaceMessage(&msg);
+                    break;
+                }
+            }
+        }
+    }
+
+    return SQUAD_RETREATING;
+}
+
 // With no host station of their faction to start in, the player starts in
 // its first squad. A level without squads of it is played by no one.
 void NC_STACK_ypaworld::StartPlayerInSquad(int playerOwner)
