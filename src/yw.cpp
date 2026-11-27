@@ -514,6 +514,20 @@ bool NC_STACK_ypaworld::SimulationStep(TUpdateArgs *arg)
     uint32_t updateStart = profiler_begin();
     uint64_t simStart = System::PerfStats::Now();
     
+    // Orders from players at other machines, in the order they came: one to
+    // a host station or squad a step, along with those before it
+    for ( std::unique_ptr<World::Player> &player : _players )
+    {
+        while ( !player->Pending.empty() )
+        {
+            World::PlayerOrder order = player->Pending.front();
+            player->Pending.pop_front();
+
+            if ( ApplyPlayerOrder(player.get(), order) && order.Type == World::PlayerOrder::COMMAND )
+                break;
+        }
+    }
+
     // The players' orders, before any unit state can be changed. They go to
     // their host stations; without one, a player can only order squads.
     for ( std::unique_ptr<World::Player> &player : _players )
@@ -521,7 +535,7 @@ bool NC_STACK_ypaworld::SimulationStep(TUpdateArgs *arg)
         NC_STACK_ypabact *host = player->HostStation;
 
         if ( host && host->_bact_type == BACT_TYPES_ROBO )
-            ((NC_STACK_yparobo *)host)->HandleUserCommands(&player->Order);
+            ((NC_STACK_yparobo *)host)->HandleUserCommands(player.get());
         else if ( player->Owner && player->Order.selectBact && player->Order.selectBact->_owner == player->Owner )
             OrderSquad(player->Owner, &player->Order);
     }
@@ -7523,6 +7537,227 @@ void NC_STACK_ypaworld::OrderSquad(uint8_t owner, TUserOrder *arg)
 
     default:
         break;
+    }
+}
+
+// The unit with the id among a unit and those under it, down to a squad's
+// units
+static NC_STACK_ypabact *FindUnitUnder(NC_STACK_ypabact *unit, uint32_t id, int depth)
+{
+    if ( unit->_gid == id )
+        return unit;
+
+    if ( depth > 0 )
+    {
+        for ( NC_STACK_ypabact *kid : unit->_kidList )
+        {
+            if ( NC_STACK_ypabact *found = FindUnitUnder(kid, id, depth - 1) )
+                return found;
+        }
+    }
+
+    return NULL;
+}
+
+NC_STACK_ypabact *NC_STACK_ypaworld::FindUnit(uint32_t id)
+{
+    if ( !id )
+        return NULL;
+
+    // Host stations, their squads' commanders and guns, and the squads'
+    // units; or a faction's squads at the top level
+    for ( NC_STACK_ypabact *unit : _unitsList )
+    {
+        if ( NC_STACK_ypabact *found = FindUnitUnder(unit, id, 2) )
+            return found;
+    }
+
+    return NULL;
+}
+
+// A squad a player can give orders to: one of their faction's, still there
+static bool OrderableSquad(const NC_STACK_ypabact *commander, uint8_t owner)
+{
+    return commander && commander->_owner == owner && commander->IsCommander() && commander->_status != BACT_STATUS_DEAD &&
+           commander->_status != BACT_STATUS_BEAM && commander->_bact_type != BACT_TYPES_GUN &&
+           commander->_bact_type != BACT_TYPES_ROBO;
+}
+
+// A unit that can change squads
+static bool SquadVehicle(const NC_STACK_ypabact *unit, uint8_t owner)
+{
+    return unit && unit->_owner == owner && unit->_bact_type != BACT_TYPES_ROBO && unit->_bact_type != BACT_TYPES_MISSLE &&
+           unit->_bact_type != BACT_TYPES_GUN;
+}
+
+bool NC_STACK_ypaworld::ApplyPlayerOrder(World::Player *player, const World::PlayerOrder &order)
+{
+    uint8_t owner = player->Owner;
+
+    if ( !owner )
+        return false;
+
+    NC_STACK_ypabact *unit = FindUnit(order.Unit);
+
+    switch ( order.Type )
+    {
+    case World::PlayerOrder::COMMAND:
+    {
+        NC_STACK_yparobo *robo = dynamic_cast<NC_STACK_yparobo *>(player->HostStation);
+        cellArea *sector = order.Sector >= 0 && (size_t)order.Sector < _cells.size() ? &_cells[order.Sector] : NULL;
+
+        TUserOrder command;
+        command.user_action = order.Action;
+        command.protoID = order.Proto;
+        command.target_point = order.Point;
+
+        switch ( order.Action )
+        {
+        case World::DOACTION_2:
+            if ( !OrderableSquad(unit, owner) )
+                return false;
+
+            command.selectBact = unit;
+
+            if ( sector )
+            {
+                command.target_Sect = sector;
+            }
+            else
+            {
+                command.target_Bact = FindUnit(order.Target);
+
+                if ( !command.target_Bact || command.target_Bact->_status == BACT_STATUS_DEAD )
+                    return false;
+            }
+            break;
+
+        case World::DOACTION_WP_BEGIN:
+        case World::DOACTION_WP_ADD:
+        case World::DOACTION_WP_CYCLE:
+            if ( !OrderableSquad(unit, owner) || !sector )
+                return false;
+
+            command.selectBact = unit;
+            command.target_Sect = sector;
+            break;
+
+        case World::DOACTION_ADD_UNIT1:
+        case World::DOACTION_ADD_UNIT2:
+            if ( !robo || order.Proto < 0 || (size_t)order.Proto >= _vhclProtos.size() ||
+                 !(_vhclProtos[order.Proto].disable_enable_bitmask & (1 << owner)) )
+                return false;
+
+            if ( order.Action == World::DOACTION_ADD_UNIT2 )
+            {
+                if ( !OrderableSquad(unit, owner) )
+                    return false;
+
+                command.selectBact = unit;
+            }
+
+            command.energy = OrderCost(owner, order.Action, order.Proto);
+
+            if ( command.energy > robo->getROBO_battVehicle() )
+                return false;
+            break;
+
+        case World::DOACTION_6:
+            if ( !robo || !sector || order.Proto < 0 || (size_t)order.Proto >= _buildProtos.size() ||
+                 !(_buildProtos[order.Proto].EnableMask & (1 << owner)) )
+                return false;
+
+            command.energy = OrderCost(owner, order.Action, order.Proto);
+            command.target_Sect = sector;
+
+            if ( CheckBuild(robo, *sector, command.energy) )
+                return false;
+            break;
+
+        case World::DOACTION_10:
+        {
+            int cost = 0;
+
+            if ( !robo || !sector || CheckBeam(robo, *sector, &command.target_point, &cost) )
+                return false;
+
+            command.energy = cost;
+            command.target_Sect = sector;
+            break;
+        }
+
+        default:
+            return false;
+        }
+
+        player->Order = command;
+        return true;
+    }
+
+    case World::PlayerOrder::AGGRESSION:
+        if ( !unit || unit->_owner != owner || !unit->IsCommander() || order.Value < 0 || order.Value > 100 )
+            return false;
+
+        unit->setBACT_aggression(order.Value);
+        return true;
+
+    case World::PlayerOrder::REORGANIZE:
+    {
+        NC_STACK_ypabact *other = FindUnit(order.Target);
+
+        if ( !SquadVehicle(unit, owner) || (order.Target && !SquadVehicle(other, owner)) )
+            return false;
+
+        // A squad of its own (3), another's (1, 4) or the lead of its own
+        // (2, from the one leading it)
+        if ( order.Value == 1 || order.Value == 4 )
+        {
+            if ( !other )
+                return false;
+        }
+        else if ( order.Value != 2 && order.Value != 3 )
+        {
+            return false;
+        }
+
+        TReorgOrder reorg;
+        reorg.mode = order.Value;
+        reorg.unit = other;
+
+        unit->ReorganizeGroup(&reorg);
+        return true;
+    }
+
+    case World::PlayerOrder::GET_IN:
+    {
+        if ( !unit || unit->_owner != owner || unit->_bact_type == BACT_TYPES_MISSLE || unit->_status == BACT_STATUS_CREATE ||
+             unit->_status == BACT_STATUS_DEAD || unit->_status == BACT_STATUS_BEAM || unit == player->Unit )
+            return false;
+
+        if ( NC_STACK_ypabact *before = player->Unit )
+        {
+            before->setBACT_viewer(false, player);
+            before->setBACT_inputting(false, player);
+        }
+
+        unit->setBACT_viewer(true, player);
+        unit->setBACT_inputting(true, player);
+        return true;
+    }
+
+    case World::PlayerOrder::FILL_MODE:
+    {
+        NC_STACK_yparobo *robo = dynamic_cast<NC_STACK_yparobo *>(unit);
+
+        if ( !robo || robo->_owner != owner || (order.Value & ~(1 | 4 | 8)) )
+            return false;
+
+        robo->setROBO_fillMode(order.Value);
+        return true;
+    }
+
+    default:
+        return false;
     }
 }
 

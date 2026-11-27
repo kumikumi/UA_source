@@ -223,7 +223,7 @@ public:
     bool IsPlayerRobo() const;
     
 public:
-    void HandleUserCommands(TUserOrder *arg);
+    void HandleUserCommands(World::Player *player);
     
 protected:
 
@@ -252,7 +252,7 @@ protected:
     void AI_checkWorld(update_msg *arg);
 
     void doBeamUpdate(int frameTime);
-    void doUserCommands(TUserOrder *arg);
+    void doUserCommands(World::Player *player);
     void wallow(update_msg *arg);
     void searchEnemyRobo();
     void usersRoboEnergyCheck();

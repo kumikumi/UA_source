@@ -2,8 +2,10 @@
 #define WORLD_PLAYER_H_INCLUDED
 
 #include <cstdint>
+#include <deque>
 #include <string>
 #include "../ypabact.h"
+#include "playerorder.h"
 
 namespace World
 {
@@ -31,6 +33,11 @@ struct Player
     NC_STACK_ypabact *Controls = NULL;    // Moved by their controls
     TInputState *Input = NULL;            // Their controls this step
     TUserOrder Order;                     // To their host station, this step
+
+    // Orders from another machine, carried out as steps go
+    // (NC_STACK_ypaworld::ApplyPlayerOrder): those to a host station or a
+    // squad one a step, the rest along with them
+    std::deque<PlayerOrder> Pending;
 
     // Where they see from, as the unit they look from places the camera
     vec3d CameraPosition;

@@ -3208,19 +3208,40 @@ void buy_list_update_sub(NC_STACK_ypaworld *yw, int selected, GuiList *lstvw, Cm
 
 float NC_STACK_ypaworld::GetUnitLimitCostFactor()
 {
+    return UnitLimitCostFactor(_playerOwner);
+}
+
+float NC_STACK_ypaworld::UnitLimitCostFactor(uint8_t owner)
+{
     float factor = 1.0;
 
     if ( _isNetGame )
     {
         if ( _levelUnitLimitType == 2 )
         {
-            int excess = _countUnitsPerOwner[_playerOwner] - _levelUnitLimit;
+            int excess = _countUnitsPerOwner[owner] - _levelUnitLimit;
             if ( excess > 0 )
                 factor = (_levelUnitLimitArg * excess) * 0.01 + 1.0;
         }
     }
 
     return factor;
+}
+
+int NC_STACK_ypaworld::OrderCost(uint8_t owner, int action, int proto)
+{
+    switch ( action )
+    {
+    case World::DOACTION_ADD_UNIT1:
+    case World::DOACTION_ADD_UNIT2:
+        return dround(UnitLimitCostFactor(owner) * (2 * _vhclProtos.at(proto).energy));
+
+    case World::DOACTION_6:
+        return dround(UnitLimitCostFactor(owner) * _buildProtos.at(proto).Energy);
+
+    default:
+        return 0;
+    }
 }
 
 void BottomBarLayoutBuyList(NC_STACK_ypaworld *yw)
@@ -10360,15 +10381,20 @@ int NC_STACK_ypaworld::UserActBuildCheck()
     if ( !(_guiActFlags & 0x10) || bzda.selBuildIdx == -1 || !robo )
         return 1; // NO with no tip
 
+    return CheckBuild(robo, *_cellOnMouse, _localPlayer->Order.energy);
+}
+
+int NC_STACK_ypaworld::CheckBuild(NC_STACK_yparobo *robo, const cellArea &sector, int cost)
+{
     int availEnergy = robo->getROBO_battVehicle();
 
-    if ( _localPlayer->Order.energy > availEnergy )
+    if ( cost > availEnergy )
         return 6; // TIP_NOENERGY
 
-    if ( _cellOnMouse->owner && _cellOnMouse->owner != LocalOwner() )
+    if ( sector.owner && sector.owner != robo->_owner )
         return 2; // TIP_NOTOWN
 
-    Common::Point cellDist = _cellOnMouse->CellId.AbsDistance( UserRobo()->_cellId );
+    Common::Point cellDist = sector.CellId.AbsDistance( robo->_cellId );
 
     if ( cellDist.IsNull() )
         return 3; // TIP_BUILD_TOOCLOSE
@@ -10376,15 +10402,15 @@ int NC_STACK_ypaworld::UserActBuildCheck()
     if ( cellDist.x > 1 || cellDist.y > 1 )
         return 4; // TIP_BUILD_TOOFAR
 
-    if ( _cellOnMouse->PurposeType == cellArea::PT_CONSTRUCTING ||
-         (!_allowMultiBuildLevel && IsAnyBuildingProcess(_playerOwner)) )
+    if ( sector.PurposeType == cellArea::PT_CONSTRUCTING ||
+         (!_allowMultiBuildLevel && IsAnyBuildingProcess(robo->_owner)) )
         return 5; // TIP_BUILD_INPROC
 
-    if ( _cellOnMouse->PurposeType == cellArea::PT_TECHUPGRADE || 
-         _cellOnMouse->PurposeType == cellArea::PT_GATECLOSED || 
-         _cellOnMouse->PurposeType == cellArea::PT_GATEOPENED || 
-         _cellOnMouse->PurposeType == cellArea::PT_STOUDSON || 
-         (_cellOnMouse->PurposeType == cellArea::PT_TECHDEACTIVE && _isNetGame) )
+    if ( sector.PurposeType == cellArea::PT_TECHUPGRADE || 
+         sector.PurposeType == cellArea::PT_GATECLOSED || 
+         sector.PurposeType == cellArea::PT_GATEOPENED || 
+         sector.PurposeType == cellArea::PT_STOUDSON || 
+         (sector.PurposeType == cellArea::PT_TECHDEACTIVE && _isNetGame) )
         return 1; // NO with no tip
 
     return 0; // Can build
@@ -10396,15 +10422,26 @@ int NC_STACK_ypaworld::UserActBeamCheck()
     if ( !(_guiActFlags & 0x10) || !UserRobo() )
         return 6;
 
-    if ( !_cellOnMouse->IsCanSee(UserRobo()->_owner) )
+    int cost = -1;
+    int result = CheckBeam(dynamic_cast<NC_STACK_yparobo *>(UserRobo()), *_cellOnMouse, &_cellMouseIsectPos, &cost);
+
+    if ( cost >= 0 )
+        _localPlayer->Order.energy = cost;
+
+    return result;
+}
+
+int NC_STACK_ypaworld::CheckBeam(NC_STACK_yparobo *robo, cellArea &sector, vec3d *point, int *cost)
+{
+    if ( !sector.IsCanSee(robo->_owner) )
         return 3;
 
-    if ( _cellOnMouse->PurposeType == cellArea::PT_CONSTRUCTING )
+    if ( sector.PurposeType == cellArea::PT_CONSTRUCTING )
         return 6;
 
-    float dx = _cellMouseIsectPos.x - UserRobo()->_position.x;
-    float dy = _cellMouseIsectPos.y - UserRobo()->_position.y;
-    float dz = _cellMouseIsectPos.z - UserRobo()->_position.z;
+    float dx = point->x - robo->_position.x;
+    float dy = point->y - robo->_position.y;
+    float dz = point->z - robo->_position.z;
 
     float dist = sqrt(POW2(dx) + POW2(dy) + POW2(dz));
 
@@ -10413,23 +10450,21 @@ int NC_STACK_ypaworld::UserActBeamCheck()
 
     int beamCost = 0;
 
-    if ( _cellOnMouse->PurposeType != cellArea::PT_GATEOPENED && (_cellOnMouse->PurposeType != cellArea::PT_POWERSTATION || _cellOnMouse->owner != LocalOwner()) )
+    if ( sector.PurposeType != cellArea::PT_GATEOPENED && (sector.PurposeType != cellArea::PT_POWERSTATION || sector.owner != robo->_owner) )
     {
         beamCost = (POW2(dist) / 230.4);
     }
 
-    NC_STACK_yparobo *robo = dynamic_cast<NC_STACK_yparobo *>(UserRobo());
-
     int availEnergy = robo->getROBO_battBeam();
 
-    _localPlayer->Order.energy = beamCost;
+    *cost = beamCost;
 
     if ( beamCost > availEnergy )
         return 1;
 
-    for ( NC_STACK_ypabact* &unit : _cellOnMouse->unitsList )
+    for ( NC_STACK_ypabact* &unit : sector.unitsList )
     {
-        if ( unit->_bact_type == BACT_TYPES_ROBO && unit->_status != BACT_STATUS_DEAD && unit->_owner != LocalOwner() )
+        if ( unit->_bact_type == BACT_TYPES_ROBO && unit->_status != BACT_STATUS_DEAD && unit->_owner != robo->_owner )
             return 5;
     }
 
@@ -10447,8 +10482,8 @@ int NC_STACK_ypaworld::UserActBeamCheck()
         for (int i = -3; i <= 3; i++)
         {
             ray.stPos.y = -25000.0;
-            ray.stPos.x = _cellMouseIsectPos.x - j * 57.14285714285715;
-            ray.stPos.z = _cellMouseIsectPos.z - i * 57.14285714285715;
+            ray.stPos.x = point->x - j * 57.14285714285715;
+            ray.stPos.z = point->z - i * 57.14285714285715;
 
             IntersectRay(&ray);
 
@@ -10466,10 +10501,10 @@ int NC_STACK_ypaworld::UserActBeamCheck()
     if ( abs(maxY - minY) > 800 )
         return 2;
 
-    if ( _cellMouseIsectPos.x < 1500.0 || _cellMouseIsectPos.z > -1500.0 || _cellMouseIsectPos.x > _mapLength.x - 1500.0 || _cellMouseIsectPos.z < 1500.0 - _mapLength.y )
+    if ( point->x < 1500.0 || point->z > -1500.0 || point->x > _mapLength.x - 1500.0 || point->z < 1500.0 - _mapLength.y )
         return 2;
 
-    _cellMouseIsectPos.y = minY - UserRobo()->_height;
+    point->y = minY - robo->_height;
     return 0;
 }
 

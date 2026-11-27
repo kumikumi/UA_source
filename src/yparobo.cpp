@@ -1273,8 +1273,9 @@ int NC_STACK_yparobo::IsCommanderClosestToTarget(NC_STACK_ypabact *bact)
     return 1;
 }
 
-void NC_STACK_yparobo::doUserCommands(TUserOrder *arg)
+void NC_STACK_yparobo::doUserCommands(World::Player *player)
 {
+    TUserOrder *arg = &player->Order;
     setTarget_msg targetMsg;
     TUnitSpawn spawn;
     setState_msg stateMsg;
@@ -1342,7 +1343,8 @@ void NC_STACK_yparobo::doUserCommands(TUserOrder *arg)
                 newbact->_host_station = this;
                 _roboEnergyLife -= arg->energy;
                 
-                _world->SetCmdrIdToSelect(newbact->_commandID); // Select it for add next units
+                if ( player == _world->LocalPlayer() )
+                    _world->SetCmdrIdToSelect(newbact->_commandID); // Select it for add next units
             }
         }
         break;
@@ -1459,7 +1461,7 @@ void NC_STACK_yparobo::doUserCommands(TUserOrder *arg)
     }
 }
 
-void NC_STACK_yparobo::HandleUserCommands(TUserOrder *arg)
+void NC_STACK_yparobo::HandleUserCommands(World::Player *player)
 {
     if ( _kidRef.IsListType(World::BLIST_CACHE) ) // Do not update units in dead list
         return;
@@ -1471,7 +1473,7 @@ void NC_STACK_yparobo::HandleUserCommands(TUserOrder *arg)
         return;
 
     if ( getBACT_inputting() || IsPlayerRobo() )
-        doUserCommands(arg);
+        doUserCommands(player);
 }
 
 int NC_STACK_yparobo::FindBestBldRadar()

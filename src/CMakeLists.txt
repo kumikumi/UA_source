@@ -70,6 +70,7 @@ set(SOURCES
 	world/parsers.cpp
 	world/nparticle.cpp
 	world/playback.cpp
+	world/playerorder.cpp
 	world/protos.cpp
 	world/recorder.cpp
 	world/viewstream.cpp

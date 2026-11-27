@@ -2001,6 +2001,25 @@ public:
     // waypoints), which needs no host station
     void OrderSquad(uint8_t owner, TUserOrder *order);
 
+    // A unit by its id: a host station, a squad's or one of its units, a
+    // gun; NULL when there's none
+    NC_STACK_ypabact *FindUnit(uint32_t id);
+
+    // Carries out a player's order, if what it names is there and theirs to
+    // order: one to their host station or a squad goes there in this step's
+    // orders (Player::Order), the rest is done now. False when refused.
+    bool ApplyPlayerOrder(World::Player *player, const World::PlayerOrder &order);
+
+    // What a faction pays for a unit or a building of the prototype (bought
+    // with DOACTION_ADD_UNIT1/2 or DOACTION_6); with more units than the
+    // network game's limit, more
+    int OrderCost(uint8_t owner, int action, int proto);
+    float UnitLimitCostFactor(uint8_t owner);
+
+    // What beaming a host station costs, from where it is to a point of a
+    // sector
+    int BeamCost(const NC_STACK_ypabact *host, const cellArea &sector, const vec3d &to);
+
     // A squad, by its commander: too weak to fight on, it retreats to its
     // faction's nearest power station or host station it can get to, or
     // with none, fights on; recovered, it stops retreating, where it is if
@@ -2484,6 +2503,15 @@ public:
     int UserActBeamCheck();
     int UserActBuildCheck();
     int UserActCreateCheck(TClickBoxInf *winp);
+
+    // Whether a host station can build in a sector for that much: 0 when it
+    // can, else why not (as UserActBuildCheck's results)
+    int CheckBuild(NC_STACK_yparobo *robo, const cellArea &sector, int cost);
+
+    // Whether a host station can beam to a point on the ground of a sector:
+    // 0 when it can, the point then moved to where it would hover, else why
+    // not (as UserActBeamCheck's results). Once it's known, what it costs.
+    int CheckBeam(NC_STACK_yparobo *robo, cellArea &sector, vec3d *point, int *cost);
     void ExitMenuHandleInput(TInputState *inpt);
     
     int yw_MouseFindCreationPoint(TClickBoxInf *winp);
