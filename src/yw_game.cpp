@@ -2373,7 +2373,7 @@ void NC_STACK_ypaworld::RenderGame(TUpdateArgs *arg, const World::Frame &frame, 
     {
         System::PerfStats::Timer perf(System::PerfStats::SEC_GUI);
         uint32_t tpm = profiler_begin();
-        DrawGameInterface(this);
+        DrawGameInterface(this, frame);
         _profileVals[PFID_NEWGUITIME] = profiler_end(tpm);
     }
 }

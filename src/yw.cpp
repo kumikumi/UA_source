@@ -1326,6 +1326,17 @@ World::Player *NC_STACK_ypaworld::PlayerLookingFrom(const NC_STACK_ypabact *unit
     return NULL;
 }
 
+World::Player *NC_STACK_ypaworld::RiderOf(const NC_STACK_ypabact *unit, const World::Player *other) const
+{
+    for ( const std::unique_ptr<World::Player> &player : _players )
+    {
+        if ( player->Unit == unit && !player->Controls && player.get() != other )
+            return player.get();
+    }
+
+    return NULL;
+}
+
 
 void NC_STACK_ypaworld::AddToUnitsList(NC_STACK_ypabact *bact)
 {
@@ -7641,11 +7652,14 @@ bool NC_STACK_ypaworld::ApplyPlayerOrder(World::Player *player, const World::Pla
              unit->_status == BACT_STATUS_DEAD || unit->_status == BACT_STATUS_BEAM || unit == player->Unit )
             return false;
 
-        if ( NC_STACK_ypabact *before = player->Unit )
-        {
-            before->setBACT_viewer(false, player);
-            before->setBACT_inputting(false, player);
-        }
+        // What they look from and what they control, the unit that fired
+        // the missile they look from, which someone riding along in it then
+        // takes over
+        if ( player->Unit )
+            player->Unit->setBACT_viewer(false, player);
+
+        if ( player->Controls )
+            player->Controls->setBACT_inputting(false, player);
 
         unit->setBACT_viewer(true, player);
         unit->setBACT_inputting(true, player);

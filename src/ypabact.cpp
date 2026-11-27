@@ -7887,6 +7887,13 @@ void NC_STACK_ypabact::setBACT_inputting(bool inpt, World::Player *player)
 
         if ( controller )
             controller->Controls = NULL;
+
+        // Someone else riding along takes over, while it goes on
+        if ( _status != BACT_STATUS_DEAD && _bact_type != BACT_TYPES_MISSLE )
+        {
+            if ( World::Player *rider = _world->RiderOf(this, controller ? controller : player) )
+                setBACT_inputting(true, rider);
+        }
     }
 }
 

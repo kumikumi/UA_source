@@ -2067,6 +2067,10 @@ public:
 
     // A player looking from a unit, other than one; NULL when there's none
     World::Player *PlayerLookingFrom(const NC_STACK_ypabact *unit, const World::Player *other = NULL) const;
+
+    // A player riding along in a unit, looking from it and controlling
+    // nothing, other than one; NULL when there's none
+    World::Player *RiderOf(const NC_STACK_ypabact *unit, const World::Player *other = NULL) const;
     virtual void AddToUnitsList(NC_STACK_ypabact *bact);
     virtual void IntersectRay(TRayIntersection *arg);
     virtual void FindSphereCollisions(TSphereCollisionQuery *arg);

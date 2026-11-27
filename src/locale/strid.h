@@ -60,6 +60,7 @@ enum CMN
     CMN_GAMENAME    = 21,
     CMN_REWINDING   = 22,
     CMN_ALLDESTR    = 23, // A faction without host stations defeated
+    CMN_CONTROLLING = 24, // Riding along in a unit: the player who controls it
     
     CMN_MAX
 };

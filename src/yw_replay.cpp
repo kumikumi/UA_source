@@ -1138,6 +1138,11 @@ void NC_STACK_ypaworld::DrawReplayHud(const World::Frame &frame)
     GFX::Engine.ProcessDrawSeq(buf);
 
     GFX::Engine.SetClipNormalized( Common::FRect(-1.0, -1.0, 1.0, 1.0) );
+
+    // Riding along with another player, or looking from a unit a player
+    // controls: who that is
+    if ( shown )
+        DrawRideAlong(this, frame, viewed, _replayCamera.CameraMode == ReplayCamera::PLAYER ? _replayCamera.Player : 0);
 }
 
 // A frame of the replay: the controls, then the replay drawn at where it's

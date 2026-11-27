@@ -3392,11 +3392,12 @@ void NC_STACK_ypaworld::DrawGuiWindows()
     }
 }
 
-void DrawGameInterface(NC_STACK_ypaworld *yw)
+void DrawGameInterface(NC_STACK_ypaworld *yw, const World::Frame &frame)
 {
     if ( UserUnitOf(yw).Type != BACT_TYPES_MISSLE )
         DrawHud(yw);
 
+    DrawRideAlong(yw, frame, frame.Viewer, frame.LocalPlayer);
     DrawGameWindows(yw);
 }
 
@@ -9766,6 +9767,32 @@ void DrawHudDestroyed(NC_STACK_ypaworld *yw, CmdStream *buf, int textId)
 
         FontUA::FormateCenteredSkipableItem(yw->_guiTiles[15], buf, msg, yw->_screenSize.x);
     }
+}
+
+void DrawRideAlong(NC_STACK_ypaworld *yw, const World::Frame &frame, uint32_t unit, uint32_t player)
+{
+    const World::Frame::Player *controller = frame.ControllerOf(unit);
+
+    if ( !controller || controller->Id == player )
+        return;
+
+    std::string msg = Locale::Text::Common(Locale::CMN_CONTROLLING);
+    size_t name = msg.find("%s");
+
+    if ( name != std::string::npos )
+        msg.replace(name, 2, controller->Name);
+
+    CmdStream buf;
+    buf.reserve(256);
+
+    FontUA::select_tileset(&buf, 15);
+    FontUA::set_xpos(&buf, 0);
+    FontUA::set_center_ypos(&buf, yw->_upScreenBorder + 2 * yw->_fontH - yw->_screenSize.y / 2);
+    FontUA::set_txtColor(&buf, 255, 255, 255);
+    FontUA::FormateCenteredSkipableItem(yw->_guiTiles[15], &buf, msg, yw->_screenSize.x);
+    FontUA::set_end(&buf);
+
+    GFX::Engine.ProcessDrawSeq(buf);
 }
 
 void DrawHudOf(NC_STACK_ypaworld *yw, CmdStream *buf, const THudSubject &unit)

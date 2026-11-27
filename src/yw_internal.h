@@ -112,7 +112,7 @@ void RestoreWinStatus(NC_STACK_ypaworld *yw, NC_STACK_ypabact *bact1, NC_STACK_y
 
 
 void create_squad_man(NC_STACK_ypaworld *yw);
-void DrawGameInterface(NC_STACK_ypaworld *yw);
+void DrawGameInterface(NC_STACK_ypaworld *yw, const World::Frame &frame);
 void DrawGameWindows(NC_STACK_ypaworld *yw);
 
 void draw_tooltip(NC_STACK_ypaworld *yw);
@@ -379,6 +379,10 @@ void yw_RenderHUDTarget(NC_STACK_ypaworld *yw, THudState *wis, const THudSubject
 THudSubject HudSubjectOf(NC_STACK_ypaworld *yw);
 void DrawHudOf(NC_STACK_ypaworld *yw, CmdStream *buf, const THudSubject &unit);
 void DrawHudDestroyed(NC_STACK_ypaworld *yw, CmdStream *buf, int textId);
+
+// Riding along in a unit of a frame that another player than the one
+// looking from it controls: who that is, at the top of the view
+void DrawRideAlong(NC_STACK_ypaworld *yw, const World::Frame &frame, uint32_t unit, uint32_t player);
 
 // How far a weapon has reloaded, in percent, so long after its last shot
 // of a salvo so far
