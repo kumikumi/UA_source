@@ -5965,11 +5965,30 @@ void NC_STACK_yparobo::setBACT_inputting(bool inpt, World::Player *player)
     NC_STACK_ypabact::setBACT_inputting(inpt, player);
 
     if ( inpt && _world->ControllerOf(this) == player )
-    {
         _world->SetPlayerHostStation(player, this);
+}
 
+void NC_STACK_yparobo::SetPlayerRun(bool run)
+{
+    if ( run )
+    {
         _roboState |= ROBOSTATE_PLAYERROBO;
+        return;
     }
+
+    _roboState &= ~ROBOSTATE_PLAYERROBO;
+
+    if ( _roboEpConquer || _roboEpDefense || _roboEpRecon || _roboEpRobo ||
+         _roboEpPower || _roboEpRadar || _roboEpSafety || _roboEpChangePlace )
+        return;
+
+    // The medians of the campaign's AI host stations
+    _roboEpConquer = 96;
+    _roboEpDefense = 90;
+    _roboEpRecon = 90;
+    _roboEpRobo = 90;
+    _roboEpChangePlace = 10;
+    setROBO_robDelay(2000);
 }
 
 void NC_STACK_yparobo::setROBO_proto(World::TRoboProto *proto)

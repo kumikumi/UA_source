@@ -6398,6 +6398,7 @@ void NC_STACK_ypaworld::FinishRestore(bool inPlace)
 {
     // As SetPlayerHostStation sets it for a level started anew
     _playerOwner = UserRobo() ? UserRobo()->_owner : 0;
+    _localPlayer->Owner = _playerOwner;
 
     // Who controls which unit isn't kept: the units say they're controlled,
     // and the only player is the local one
@@ -6996,8 +6997,72 @@ void NC_STACK_ypaworld::setYW_doEnergyRecalc(int doRecalc)
     _doEnergyRecalc = doRecalc;
 }
 
+bool NC_STACK_ypaworld::FactionHasPlayers(uint8_t owner) const
+{
+    for ( const std::unique_ptr<World::Player> &player : _players )
+    {
+        if ( player->Owner == owner )
+            return true;
+    }
+
+    return false;
+}
+
+void NC_STACK_ypaworld::JoinFaction(World::Player *player, uint8_t owner)
+{
+    if ( player->Owner == owner )
+        return;
+
+    if ( player->Owner )
+        LeaveFaction(player);
+
+    player->Owner = owner;
+
+    for ( NC_STACK_ypabact *unit : _unitsList )
+    {
+        NC_STACK_yparobo *robo = dynamic_cast<NC_STACK_yparobo *>(unit);
+
+        if ( !robo || robo->_owner != owner || robo->_status == BACT_STATUS_DEAD )
+            continue;
+
+        robo->SetPlayerRun(true);
+
+        if ( !player->HostStation )
+            SetPlayerHostStation(player, robo);
+    }
+}
+
+void NC_STACK_ypaworld::LeaveFaction(World::Player *player)
+{
+    if ( player->Controls )
+        player->Controls->setBACT_inputting(false, player);
+
+    if ( player->Unit )
+        player->Unit->setBACT_viewer(false, player);
+
+    player->Unit = NULL;
+    player->HostStation = NULL;
+
+    uint8_t owner = player->Owner;
+    player->Owner = 0;
+
+    if ( !owner || FactionHasPlayers(owner) )
+        return;
+
+    for ( NC_STACK_ypabact *unit : _unitsList )
+    {
+        NC_STACK_yparobo *robo = dynamic_cast<NC_STACK_yparobo *>(unit);
+
+        if ( robo && robo->_owner == owner )
+            robo->SetPlayerRun(false);
+    }
+}
+
 void NC_STACK_ypaworld::SetPlayerHostStation(World::Player *player, NC_STACK_ypabact *host)
 {
+    if ( player->Owner != host->_owner )
+        JoinFaction(player, host->_owner);
+
     player->HostStation = host;
 
     if ( player == _localPlayer )

@@ -1928,8 +1928,22 @@ public:
     void OverrideCamera(const vec3d &pos, const mat3x3 &rotation);
     virtual void DamageSectorBuilding(TSectorDamage *arg);
     virtual size_t GetSectorInfo(TSectorInfo *arg);
+    // A player plays a faction now: its host stations follow its players'
+    // orders instead of its AI. The player's orders go to its first host
+    // station, if it has one.
+    void JoinFaction(World::Player *player, uint8_t owner);
+
+    // A player stops playing their faction, and lets go of what they
+    // controlled. When no one plays it any more, its AI does.
+    void LeaveFaction(World::Player *player);
+
+    bool FactionHasPlayers(uint8_t owner) const;
+
     // A player looks from a unit now: their camera and HUD go there
     void SetPlayerUnit(World::Player *player, NC_STACK_ypabact *unit);
+
+    // A player's orders go to a host station now, of the faction they play
+    // from then on
     void SetPlayerHostStation(World::Player *player, NC_STACK_ypabact *host);
 
     // The player whose controls move a unit; NULL when none's do

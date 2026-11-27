@@ -164,6 +164,7 @@ int NC_STACK_ypaworld::LevelCommonLoader(TLevelDescription *mapp, int levelID, c
     _levelInfo.UserMask = 0;
 
     ResetControls();
+    _localPlayer->Owner = 0;
     _localPlayer->HostStation = NULL;
     _localPlayer->Unit = NULL;
     _localPlayer->Controls = NULL;

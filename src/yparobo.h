@@ -151,6 +151,11 @@ public:
 
 
     virtual void setBACT_inputting(bool inpt, World::Player *player) override;
+
+    // Following players' orders (its faction has players), or its own AI's.
+    // An AI taking over a host station that never had plans of its own gets
+    // the campaign's usual ones.
+    void SetPlayerRun(bool run);
     virtual void setROBO_proto(World::TRoboProto *);
     virtual void setROBO_epConquer(int);
     virtual void setROBO_epDefense(int);
