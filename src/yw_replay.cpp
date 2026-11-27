@@ -977,8 +977,9 @@ void NC_STACK_ypaworld::DrawReplayHud(const World::Frame &frame)
     else if ( !unit || !info || info->Status == BACT_STATUS_DEAD )
     {
         const World::Frame::UnitInfo *robo = frame.FindInfo(frame.UserRobo);
-        DrawHudDestroyed(this, &buf, (unit && unit->Type == BACT_TYPES_ROBO) || (robo && robo->Status == BACT_STATUS_DEAD &&
-                                     _replayCamera.CameraMode == ReplayCamera::PLAYER));
+        bool hostStation = (unit && unit->Type == BACT_TYPES_ROBO) || (robo && robo->Status == BACT_STATUS_DEAD &&
+                                                                       _replayCamera.CameraMode == ReplayCamera::PLAYER);
+        DrawHudDestroyed(this, &buf, hostStation ? Locale::CMN_HSDESTR : Locale::CMN_UNITDESTR);
     }
     else if ( unit->Type != BACT_TYPES_ROBO && unit->Vehicle < _vhclProtos.size() )
     {

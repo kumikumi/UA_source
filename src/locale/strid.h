@@ -59,6 +59,7 @@ enum CMN
     CMN_HELP        = 20,
     CMN_GAMENAME    = 21,
     CMN_REWINDING   = 22,
+    CMN_ALLDESTR    = 23, // A faction without host stations defeated
     
     CMN_MAX
 };

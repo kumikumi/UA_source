@@ -365,11 +365,11 @@ void DrawHud(NC_STACK_ypaworld *yw);
 void yw_RenderHUDTarget(NC_STACK_ypaworld *yw, THudState *wis, const THudSubject &unit);
 
 // The HUD of a unit: its compass, sights and bars, as of the HUD's time
-// (_timeStamp); and the blinking line that says it or its host station is
-// gone
+// (_timeStamp); and the blinking line (a Locale::CMN text) that says it, its
+// host station or all its faction's units are gone
 THudSubject HudSubjectOf(NC_STACK_ypaworld *yw);
 void DrawHudOf(NC_STACK_ypaworld *yw, CmdStream *buf, const THudSubject &unit);
-void DrawHudDestroyed(NC_STACK_ypaworld *yw, CmdStream *buf, bool hostStation);
+void DrawHudDestroyed(NC_STACK_ypaworld *yw, CmdStream *buf, int textId);
 
 // How far a weapon has reloaded, in percent, so long after its last shot
 // of a salvo so far

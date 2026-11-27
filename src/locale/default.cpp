@@ -23,6 +23,7 @@ std::array<std::string, CMN_MAX> DefaultStrings::Commons = Common::ArrayInit<std
     {CMN_CONTINUE, "RESUME"},
     {CMN_UNITDESTR, "* * *  D R O N E  D E S T R O Y E D  * * *"},
     {CMN_HSDESTR, "* * *  H O S T  S T A T I O N  D E S T R O Y E D  * * *"},
+    {CMN_ALLDESTR, "* * *  A L L  U N I T S  D E S T R O Y E D  * * *"},
     {CMN_MISNCONT, "GAME CONTINUED AT TIME INDEX %s."},
     {CMN_RESETDEF, "RESET"},
     {CMN_PAUSED, "*** GAME PAUSED, HIT KEY TO CONTINUE ***"},

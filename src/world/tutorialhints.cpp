@@ -56,7 +56,7 @@ static bool OwnsPowerStation(NC_STACK_ypaworld *world)
 
 static bool StationOnPowerStation(NC_STACK_ypaworld *world)
 {
-    const cellArea *cell = world->UserRobo()->_pSector;
+    const cellArea *cell = world->UserRobo() ? world->UserRobo()->_pSector : NULL;
     return cell && cell->PurposeType == cellArea::PT_POWERSTATION;
 }
 

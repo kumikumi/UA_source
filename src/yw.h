@@ -1968,6 +1968,37 @@ public:
     // without when its last unit is destroyed.
     uint32_t FactionsWithUnits();
 
+    // The local player's faction has no units left; false when they play
+    // none
+    bool LocalPlayerDefeated();
+
+    // Each commander of a faction's squads, dead or not, building guns' and
+    // host stations' own included: those under its host stations, and
+    // those at the top level of a faction without one
+    template <typename Func>
+    void ForEachCommander(int owner, Func func)
+    {
+        for ( NC_STACK_ypabact *unit : _unitsList )
+        {
+            if ( unit->_owner != owner )
+                continue;
+
+            if ( unit->_bact_type == BACT_TYPES_ROBO )
+            {
+                for ( NC_STACK_ypabact *commander : unit->_kidList )
+                    func(commander);
+            }
+            else if ( unit->IsCommander() )
+            {
+                func(unit);
+            }
+        }
+    }
+
+    // A player's order to one of their faction's squads (move, attack,
+    // waypoints), which needs no host station
+    void OrderSquad(uint8_t owner, TUserOrder *order);
+
     // What a faction's units say to the player here (TRoboMessage ids), into
     // the message log and out loud; some are left out when said just before.
     // Returns whether it was said.
@@ -2455,6 +2486,7 @@ public:
     void CellSetNewOwner(cellArea *cell, NC_STACK_ypabact *attacker, int newOwner);
     void CellCheckHealth(cellArea *cell, int newOwner, NC_STACK_ypabact *attacker);
     void InitBuddies();
+    void StartPlayerInSquad();
     void InitSuperItems();
     bool LoadBlgMap(const std::string &mapName);
     bool LoadHightMap(const std::string &mapName);

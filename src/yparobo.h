@@ -158,6 +158,14 @@ public:
     // The nearest other host station of its faction still going; NULL when
     // there's none
     NC_STACK_yparobo *NearestFellowHostStation() const;
+
+    // Sending a squad (by its commander) somewhere, which needs no host
+    // station: along a path when it has ground units
+    static int SendSquadToPosition(NC_STACK_ypabact *bact, float x, float z);
+    static int SendSquadToUnit(NC_STACK_ypabact *bact, NC_STACK_ypabact *bact2);
+    static int IsCommanderClosestToTarget(NC_STACK_ypabact *bact);
+    static void ClearSquadSecondaryTargets(NC_STACK_ypabact *bact);
+    static void CopyWaypointsToSquad(NC_STACK_ypabact *bact);
     virtual void setROBO_proto(World::TRoboProto *);
     virtual void setROBO_epConquer(int);
     virtual void setROBO_epDefense(int);
@@ -271,14 +279,9 @@ protected:
     int RateAreaControl(const Common::Point &cellId);
     float RateEnemyTarget(NC_STACK_ypabact *bctnd);
     
-    void ClearSquadSecondaryTargets(NC_STACK_ypabact *bact);
-    void CopyWaypointsToSquad(NC_STACK_ypabact *bact);
     
-    int IsCommanderClosestToTarget(NC_STACK_ypabact *bact);
     void SendSquadAgainstEnemyRobo(NC_STACK_ypabact *unit1, NC_STACK_ypabact *unit2);
     void UpdateRoboAttackSquad(NC_STACK_ypabact *unit, TRoboAttackSlot *rbt);
-    int SendSquadToPosition(NC_STACK_ypabact *bact, float x, float z);
-    int SendSquadToUnit(NC_STACK_ypabact *bact, NC_STACK_ypabact *bact2);
     
     void RotateGunsAroundAxis(const vec3d &vaxis, float angle);
     void TurnRoboAboutOwnUpAxis(float angle);

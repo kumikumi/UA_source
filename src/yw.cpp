@@ -514,13 +514,16 @@ bool NC_STACK_ypaworld::SimulationStep(TUpdateArgs *arg)
     uint32_t updateStart = profiler_begin();
     uint64_t simStart = System::PerfStats::Now();
     
-    // The players' orders, before any unit state can be changed
+    // The players' orders, before any unit state can be changed. They go to
+    // their host stations; without one, a player can only order squads.
     for ( std::unique_ptr<World::Player> &player : _players )
     {
         NC_STACK_ypabact *host = player->HostStation;
 
         if ( host && host->_bact_type == BACT_TYPES_ROBO )
             ((NC_STACK_yparobo *)host)->HandleUserCommands(&player->Order);
+        else if ( player->Owner && player->Order.selectBact && player->Order.selectBact->_owner == player->Owner )
+            OrderSquad(player->Owner, &player->Order);
     }
 
     for ( NC_STACK_ypabact *unit : _unitsList.safe_iter() )
@@ -2177,7 +2180,7 @@ void NC_STACK_ypaworld::DeleteLevel()
 
     if ( _levelInfo.State == TLevelInfo::STATE_COMPLETED )
         end = World::END_WON;
-    else if ( LocalOwner() > 0 && !(FactionsWithUnits() & (1u << LocalOwner())) )
+    else if ( LocalPlayerDefeated() )
         end = World::END_LOST;
 
     std::string recorded = _recorder.Stop(this, end);
@@ -5944,6 +5947,7 @@ size_t NC_STACK_ypaworld::CreateLevel(TLevelLoadRequest *arg)
                         {
                             yw_InitSquads(mapp.Squads);
                             InitBuddies();
+                            StartPlayerInSquad();
 
                             for (int yy = 0; yy < _mapSize.y; yy++)
                             {
@@ -6969,7 +6973,8 @@ size_t NC_STACK_ypaworld::AdvancedCreateLevel(TLevelLoadRequest *arg)
         {
             InitBuddies();
 
-            UserRobo()->_energy = UserRobo()->_energy_max;
+            if ( UserRobo() )
+                UserRobo()->_energy = UserRobo()->_energy_max;
 
             // A won training mission played again has nothing left to teach
             _tutorialHints.Stop();
@@ -7064,6 +7069,9 @@ void NC_STACK_ypaworld::JoinFaction(World::Player *player, uint8_t owner)
         LeaveFaction(player);
 
     player->Owner = owner;
+
+    if ( player == _localPlayer )
+        _playerOwner = owner;
 
     for ( NC_STACK_ypabact *unit : _unitsList )
     {
@@ -7162,6 +7170,11 @@ uint32_t NC_STACK_ypaworld::FactionsWithUnits()
     return factions;
 }
 
+bool NC_STACK_ypaworld::LocalPlayerDefeated()
+{
+    return LocalOwner() > 0 && !(FactionsWithUnits() & (1u << LocalOwner()));
+}
+
 bool NC_STACK_ypaworld::MakeSquad(uint8_t owner, NC_STACK_yparobo *host, const std::vector<int> &VhclIDS, vec3d pos, bool usable)
 {
     // Those of a host station collide as it does
@@ -7243,6 +7256,252 @@ bool NC_STACK_ypaworld::MakeSquad(uint8_t owner, NC_STACK_yparobo *host, const s
     AddCommander(squad_commander);
 
     return true;
+}
+
+void NC_STACK_ypaworld::OrderSquad(uint8_t owner, TUserOrder *arg)
+{
+    setTarget_msg targetMsg;
+    TReorgOrder reorg;
+    TRoboMessage roboMsg;
+    TPathRequest pathReq;
+
+    int sent;
+
+    switch ( arg->user_action )
+    {
+    case World::DOACTION_2: // Move or attack
+        arg->selectBact->_status_flg &= ~(BACT_STFLAG_WAYPOINT | BACT_STFLAG_WAYPOINTCCL);
+
+        if ( arg->target_Sect )
+        {
+            targetMsg.tgt_pos.x = arg->target_point.x;
+            targetMsg.tgt_pos.z = arg->target_point.z;
+            targetMsg.tgt_type = BACT_TGT_TYPE_CELL;
+        }
+        else
+        {
+            targetMsg.tgt_type = BACT_TGT_TYPE_UNIT;
+            targetMsg.tgt.pbact = arg->target_Bact;
+        }
+
+        targetMsg.priority = 0;
+        arg->selectBact->SetTarget(&targetMsg);
+
+        if ( !NC_STACK_yparobo::IsCommanderClosestToTarget(arg->selectBact) )
+        {
+            reorg.unit = NULL;
+            reorg.mode = 6;
+
+            arg->selectBact->ReorganizeGroup(&reorg);
+        }
+
+        if ( arg->selectBact->_host_station != arg->selectBact->_parent &&
+             arg->selectBact->_parent )
+            arg->selectBact = arg->selectBact->_parent;
+
+        if ( arg->target_Sect )
+            sent = NC_STACK_yparobo::SendSquadToPosition(arg->selectBact, arg->target_point.x, arg->target_point.z);
+        else
+            sent = NC_STACK_yparobo::SendSquadToUnit(arg->selectBact, arg->target_Bact);
+
+        if ( !sent )
+        {
+            if ( _GameShell )
+                SFXEngine::SFXe.startSound(&_GameShell->samples1_info, World::SOUND_ID_ERROR);
+        }
+        else
+        {
+
+            NC_STACK_ypabact *commander = arg->selectBact;
+
+            if ( commander->_parent != commander->_host_station &&
+                 commander->_parent )
+                commander = commander->_parent;
+
+            roboMsg.unit = commander;
+            roboMsg.param2 = 0;
+            roboMsg.param1 = 0;
+            roboMsg.param3 = 0;
+            roboMsg.priority = 38;
+
+            if ( commander->_primTtype == BACT_TGT_TYPE_CELL )
+            {
+                if ( commander->_primT.pcell->owner == owner )
+                {
+                    roboMsg.msgID = 15;
+                }
+                else
+                {
+                    roboMsg.msgID = 16;
+                }
+                
+                PlaceMessage(&roboMsg);
+            }
+            else if ( commander->_primTtype == BACT_TGT_TYPE_UNIT )
+            {
+                if ( commander->_primT.pbact->_owner == owner )
+                {
+                    roboMsg.msgID = 15;
+                }
+                else
+                {
+                    roboMsg.msgID = 16;
+                }
+
+                PlaceMessage(&roboMsg);
+            }
+        }
+        NC_STACK_yparobo::ClearSquadSecondaryTargets(arg->selectBact);
+        arg->selectBact->ChangeEscapeFlag(false);
+        break;
+
+    case World::DOACTION_WP_BEGIN:
+    {
+        arg->selectBact->_status_flg |= BACT_STFLAG_WAYPOINT;
+        arg->selectBact->_m_cmdID = 0;
+
+        int hasGroundUnits = 0;
+
+        if ( arg->selectBact->_bact_type != BACT_TYPES_TANK && arg->selectBact->_bact_type != BACT_TYPES_CAR )
+        {
+            for( NC_STACK_ypabact* &node : arg->selectBact->_kidList )
+            {
+                if ( node->_bact_type == BACT_TYPES_TANK || node->_bact_type == BACT_TYPES_CAR )
+                {
+                    hasGroundUnits = 1;
+                    break;
+                }
+            }
+        }
+        else
+            hasGroundUnits = 1;
+
+        if ( hasGroundUnits )
+        {
+            pathReq.from = arg->selectBact->_position.XZ();
+            pathReq.to = arg->target_point.XZ();
+            pathReq.steps_cnt = 32;
+            pathReq.tgt_type = 1;
+
+            int pathFound = arg->selectBact->PathFinder(&pathReq);
+
+            if ( pathFound && pathReq.steps_cnt > 0)
+            {
+                for (int i = 0; i < pathReq.steps_cnt; i++)
+                {
+                    arg->selectBact->_waypoints[i].x = pathReq.waypoints[i].x;
+                    arg->selectBact->_waypoints[i].z = pathReq.waypoints[i].z;
+                }
+                arg->selectBact->_waypoints_count = pathReq.steps_cnt;
+            }
+            else
+            {
+                arg->selectBact->_waypoints_count = 1;
+                arg->selectBact->_waypoints[0].x = arg->target_point.x;
+                arg->selectBact->_waypoints[0].z = arg->target_point.z;
+
+                if ( _GameShell )
+                    SFXEngine::SFXe.startSound(&_GameShell->samples1_info, World::SOUND_ID_ERROR);
+            }
+        }
+        else
+        {
+            arg->selectBact->_waypoints_count = 1;
+            arg->selectBact->_waypoints[0].x = arg->target_point.x;
+            arg->selectBact->_waypoints[0].z = arg->target_point.z;
+        }
+
+        arg->selectBact->_current_waypoint = 0;
+
+        targetMsg.tgt_pos.x = arg->selectBact->_waypoints[0].x;
+        targetMsg.tgt_pos.z = arg->selectBact->_waypoints[0].z;
+        targetMsg.priority = 0;
+        targetMsg.tgt_type = BACT_TGT_TYPE_CELL;
+        arg->selectBact->SetTarget(&targetMsg);
+
+        NC_STACK_yparobo::CopyWaypointsToSquad(arg->selectBact);
+        NC_STACK_yparobo::ClearSquadSecondaryTargets(arg->selectBact);
+        arg->selectBact->ChangeEscapeFlag(false);
+    }
+    break;
+
+    case World::DOACTION_WP_ADD:
+        if ( arg->selectBact->_waypoints_count < 32 && (arg->selectBact->_status_flg & BACT_STFLAG_WAYPOINT) )
+        {
+            int wpCount = arg->selectBact->_waypoints_count;
+            int hasGroundUnits = 0;
+
+            if ( arg->selectBact->_bact_type != BACT_TYPES_TANK && arg->selectBact->_bact_type != BACT_TYPES_CAR )
+            {
+                for(NC_STACK_ypabact* &nod : arg->selectBact->_kidList)
+                {
+                    if ( nod->_bact_type == BACT_TYPES_TANK || nod->_bact_type == BACT_TYPES_CAR )
+                    {
+                        hasGroundUnits = 1;
+                        break;
+                    }
+                }
+            }
+            else
+                hasGroundUnits = 1;
+
+            if ( hasGroundUnits )
+            {
+                pathReq.from = arg->selectBact->_waypoints[wpCount - 1].XZ();
+                pathReq.to = arg->target_point.XZ();
+                pathReq.steps_cnt = 32 - wpCount;
+                pathReq.tgt_type = 1;
+
+                if ( arg->selectBact->PathFinder(&pathReq) && pathReq.steps_cnt > 0 )
+                {
+                    for (int i = 0; i < pathReq.steps_cnt; i++)
+                    {
+                        arg->selectBact->_waypoints[i + wpCount].x = pathReq.waypoints[i].x;
+                        arg->selectBact->_waypoints[i + wpCount].z = pathReq.waypoints[i].z;
+                    }
+                    arg->selectBact->_waypoints_count += pathReq.steps_cnt;
+
+                }
+                else
+                {
+                    arg->selectBact->_waypoints[wpCount].x = arg->target_point.x;
+                    arg->selectBact->_waypoints[wpCount].z = arg->target_point.z;
+                    arg->selectBact->_waypoints_count++;
+
+                    if ( _GameShell )
+                        SFXEngine::SFXe.startSound(&_GameShell->samples1_info, World::SOUND_ID_ERROR);
+                }
+            }
+            else
+            {
+                arg->selectBact->_waypoints[wpCount].x = arg->target_point.x;
+                arg->selectBact->_waypoints[wpCount].z = arg->target_point.z;
+                arg->selectBact->_waypoints_count++;
+            }
+            // TODO(cleanup): Always false: this case only runs when BACT_STFLAG_WAYPOINT is already
+            // set (see the if at the top), so the block never runs.
+            if ( !(arg->selectBact->_status_flg & BACT_STFLAG_WAYPOINT) )
+            {
+                arg->selectBact->_status_flg |= BACT_STFLAG_WAYPOINT;
+
+                targetMsg.tgt_pos.x = arg->selectBact->_waypoints[wpCount].x;
+                targetMsg.tgt_pos.z = arg->selectBact->_waypoints[wpCount].z;
+                targetMsg.priority = 0;
+                targetMsg.tgt_type = BACT_TGT_TYPE_CELL;
+                arg->selectBact->SetTarget(&targetMsg);
+            }
+            NC_STACK_yparobo::CopyWaypointsToSquad(arg->selectBact);
+        }
+        break;
+
+    case World::DOACTION_WP_CYCLE:
+        arg->selectBact->_status_flg |= BACT_STFLAG_WAYPOINTCCL;
+        NC_STACK_yparobo::CopyWaypointsToSquad(arg->selectBact);
+        break;
+
+    default:
+        break;
+    }
 }
 
 static int ShouldPlaceMessage(NC_STACK_ypaworld *world, TRoboMessage *arg)

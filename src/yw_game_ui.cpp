@@ -201,7 +201,11 @@ void UpdateBottomBarModes(NC_STACK_ypaworld *yw)
             bzda.enabledModes = 41;
         }
 
-        if ( yw->UserRobo()->_status == BACT_STATUS_DEAD )
+        // Beaming takes a host station
+        if ( !yw->UserRobo() )
+            bzda.enabledModes &= ~0x20;
+
+        if ( yw->LocalPlayerDefeated() )
             bzda.enabledModes = 0;
     }
     else
@@ -1146,7 +1150,7 @@ public:
         return true;
     }
 
-    uint8_t PlayerOwner() const override { return World->UserRobo()->_owner; }
+    uint8_t PlayerOwner() const override { return World->LocalOwner(); }
     uint32_t UserRoboId() const override { return World->UserRobo() ? World->UserRobo()->_gid : 0; }
     uint32_t UserUnitId() const override { return World->UserUnit() ? World->UserUnit()->_gid : 0; }
 
@@ -1372,7 +1376,7 @@ void RoboMapDrawMarkers(NC_STACK_ypaworld *yw, CmdStream *cur)
             }
             else if ( yw->_guiActFlags & 0x10 && yw->_mouseGrabbed == false)
             {
-                if ( yw->_cellOnMouse->owner == yw->LocalOwner() && yw->_cellOnMouse->IsCanSee(yw->UserRobo()->_owner) )
+                if ( yw->_cellOnMouse->owner == yw->LocalOwner() && yw->_cellOnMouse->IsCanSee(yw->LocalOwner()) )
                 {
                     FontUA::select_tileset(cur, markerTileset);
 
@@ -1420,7 +1424,7 @@ void RoboMapDrawMarkers(NC_STACK_ypaworld *yw, CmdStream *cur)
 
     MapScene::Unit commander;
 
-    if ( scene.Interactive() && (bzda.activeMode & 0x20) )
+    if ( scene.Interactive() && (bzda.activeMode & 0x20) && yw->UserRobo() )
     {
         FontUA::select_tileset(cur, 1);
 
@@ -3210,7 +3214,7 @@ float NC_STACK_ypaworld::GetUnitLimitCostFactor()
     {
         if ( _levelUnitLimitType == 2 )
         {
-            int excess = _countUnitsPerOwner[UserRobo()->_owner] - _levelUnitLimit;
+            int excess = _countUnitsPerOwner[_playerOwner] - _levelUnitLimit;
             if ( excess > 0 )
                 factor = (_levelUnitLimitArg * excess) * 0.01 + 1.0;
         }
@@ -3433,7 +3437,11 @@ void gui_update_player_panel(NC_STACK_ypaworld *yw, CmdStream *cur)
             enabledBtns = 0xF0;
     }
 
-    if ( yw->UserRobo()->_status == BACT_STATUS_DEAD )
+    // Back to the host station takes one
+    if ( !yw->UserRobo() )
+        enabledBtns &= ~0x10;
+
+    if ( yw->LocalPlayerDefeated() )
         enabledBtns = 0;
 
     if ( bzda.enabledModes & 8 )
@@ -3549,7 +3557,8 @@ void gui_update_player_panel(NC_STACK_ypaworld *yw, CmdStream *cur)
 
 void gui_update_tools(NC_STACK_ypaworld *yw, CmdStream *cur)
 {
-    if ( yw->UserUnit()->_status == BACT_STATUS_DEAD )
+    // The analyzer goes by the host station
+    if ( yw->UserUnit()->_status == BACT_STATUS_DEAD || !yw->UserRobo() )
     {
         bzda.buttons[8] = ButtonBox(); // analyzer_btn
 
@@ -3626,7 +3635,7 @@ void BottomBarDrawRatingRow(NC_STACK_ypaworld *yw, CmdStream *cur, int x, int y,
     FontUA::set_ypos(cur, (heightDiff / 2) + y);
 
     for (int i = 0; i < rating; i++)
-        FontUA::store_u8(cur, yw->UserRobo()->_owner);
+        FontUA::store_u8(cur, yw->LocalOwner());
 }
 
 void BottomBarDrawVehicleRatings(NC_STACK_ypaworld *yw, CmdStream *cur)
@@ -3755,30 +3764,32 @@ NC_STACK_ypabact * FindPreviousUserUnit(NC_STACK_ypaworld *yw)
     if ( !yw->_prevUnitId )
         return NULL;
 
-    if ( yw->_prevUnitId == yw->UserRobo()->_gid )
+    if ( yw->UserRobo() && yw->_prevUnitId == yw->UserRobo()->_gid )
         return yw->UserRobo();
 
-    for( NC_STACK_ypabact* &comm : yw->UserRobo()->_kidList )
+    NC_STACK_ypabact *found = NULL;
+
+    yw->ForEachCommander(yw->LocalOwner(), [yw, &found](NC_STACK_ypabact *comm)
     {
-        if ( comm->_status != BACT_STATUS_DEAD && comm->_status != BACT_STATUS_CREATE && comm->_status != BACT_STATUS_BEAM )
+        if ( found || comm->_status == BACT_STATUS_DEAD || comm->_status == BACT_STATUS_CREATE || comm->_status == BACT_STATUS_BEAM )
+            return;
+
+        if ( yw->_prevUnitId == comm->_gid )
+            found = comm;
+
+        for( NC_STACK_ypabact* &unit : comm->_kidList )
         {
-            if ( yw->_prevUnitId == comm->_gid )
-                return comm;
-
-            for( NC_STACK_ypabact* &unit : comm->_kidList )
-            {
-                if ( unit->_status != BACT_STATUS_DEAD && unit->_status != BACT_STATUS_CREATE && unit->_status != BACT_STATUS_BEAM && yw->_prevUnitId == unit->_gid )
-                    return unit;
-            }
+            if ( !found && unit->_status != BACT_STATUS_DEAD && unit->_status != BACT_STATUS_CREATE && unit->_status != BACT_STATUS_BEAM && yw->_prevUnitId == unit->_gid )
+                found = unit;
         }
-    }
+    });
 
-    return NULL;
+    return found;
 }
 
 void MakeUserUnitCommander(NC_STACK_ypaworld *yw)
 {
-    if ( !yw->UserUnit()->_parent || yw->UserUnit()->_parent != yw->UserRobo() )
+    if ( !yw->UserUnit()->IsCommander() )
     {
         if ( yw->UserUnit()->_bact_type != BACT_TYPES_ROBO && yw->UserUnit()->_bact_type != BACT_TYPES_MISSLE && yw->UserUnit()->_bact_type != BACT_TYPES_GUN )
         {
@@ -3942,9 +3953,9 @@ int BottomBarHandleHotkeys(NC_STACK_ypaworld *yw, TInputState *inpt)
         break;
 
     case 24:
-        if ( yw->UserRobo()->_status == BACT_STATUS_DEAD || bzda.activeMode & 1 )
+        if ( yw->LocalPlayerDefeated() || bzda.activeMode & 1 )
         {
-            if ( yw->UserRobo() == yw->UserUnit() || yw->UserRobo()->_status == BACT_STATUS_DEAD )
+            if ( yw->UserRobo() == yw->UserUnit() || yw->LocalPlayerDefeated() )
             {
                 if ( bzda.buttons[10] ) //menu_btn
                 {
@@ -3955,7 +3966,8 @@ int BottomBarHandleHotkeys(NC_STACK_ypaworld *yw, TInputState *inpt)
             }
             else
             {
-                winpt->selected_btnID = 4;
+                // Back to the host station, or with none, on to a squad
+                winpt->selected_btnID = yw->UserRobo() ? 4 : 7;
                 winpt->selected_btn = &bzda;
                 winpt->flag |= TClickBoxInf::FLAG_BTN_UP;
                 inpt->HotKeyID = -1;
@@ -4302,6 +4314,10 @@ void OpenExitTrainingDialog(NC_STACK_ypaworld *yw)
 
 void NC_STACK_ypaworld::SituationAnalyzer()
 {
+    // It goes by the host station
+    if ( !UserRobo() )
+        return;
+
     TInfoMessage msg;
     msg.txt = World::GameAnalyzer::Analyze(this);
     msg.unit = 0;
@@ -5031,7 +5047,8 @@ void EnergyPanelUpdateLayout(NC_STACK_ypaworld *yw)
 {
     up_panel.cmdCommands.clear();
 
-    if ( yw->UserRobo()->_status != BACT_STATUS_DEAD )
+    // The host station's energy
+    if ( yw->UserRobo() && yw->UserRobo()->_status != BACT_STATUS_DEAD )
     {
         int panelX = up_panel.x - yw->_screenSize.x / 2;
         int y = up_panel.y - yw->_screenSize.y / 2;
@@ -5112,10 +5129,10 @@ void EnergyPanelHandleInput(NC_STACK_ypaworld *yw, TInputState *inpt)
             }
         }
 
-        if ( winpt->flag & TClickBoxInf::FLAG_BTN_UP )
-        {
-            NC_STACK_yparobo *robo = dynamic_cast<NC_STACK_yparobo *>(yw->UserRobo());
+        NC_STACK_yparobo *robo = dynamic_cast<NC_STACK_yparobo *>(yw->UserRobo());
 
+        if ( (winpt->flag & TClickBoxInf::FLAG_BTN_UP) && robo )
+        {
             int fillMode = robo->getROBO_fillMode();
 
             if ( winpt->selected_btnID == 1 )
@@ -7294,14 +7311,12 @@ void NC_STACK_ypaworld::UpdateCommanderList()
 {
     _cmdrsRemap.clear();
     _cmdrsRemap.reserve(128);
-    if ( UserRobo() )
+    // The squads of the player's faction, of all its host stations
+    ForEachCommander(LocalOwner(), [this](NC_STACK_ypabact *bact)
     {
-        for ( NC_STACK_ypabact * &bact : UserRobo()->GetKidList())
-        {
-            if (bact->_status != BACT_STATUS_DEAD && bact->_status != BACT_STATUS_BEAM && bact->_bact_type != BACT_TYPES_GUN)
-                _cmdrsRemap.push_back(bact);
-        }
-    }
+        if (bact->_status != BACT_STATUS_DEAD && bact->_status != BACT_STATUS_BEAM && bact->_bact_type != BACT_TYPES_GUN)
+            _cmdrsRemap.push_back(bact);
+    });
 
     std::sort(_cmdrsRemap.begin(), _cmdrsRemap.end(), CompareCommanderIds);
 
@@ -8077,7 +8092,10 @@ void NC_STACK_ypaworld::VoiceMessagePlayMsg(NC_STACK_ypabact *unit, int priority
         if ( msgvals.v1 )
         {
             if ( !unit )
-                unit = UserRobo();
+                unit = UserRobo() ? UserRobo() : UserUnit();
+
+            if ( !unit )
+                return;
             
             int vo_type = msgvals.type;
 
@@ -9314,9 +9332,9 @@ THudSubject HudSubjectOf(NC_STACK_ypaworld *yw)
     return subject;
 }
 
-void DrawHudDestroyed(NC_STACK_ypaworld *yw, CmdStream *buf, bool hostStation)
+void DrawHudDestroyed(NC_STACK_ypaworld *yw, CmdStream *buf, int textId)
 {
-    std::string msg = Locale::Text::Common(hostStation ? Locale::CMN_HSDESTR : Locale::CMN_UNITDESTR);
+    std::string msg = Locale::Text::Common(textId);
 
     if ( yw->_timeStamp / 500 & 1 )
     {
@@ -9359,8 +9377,17 @@ void DrawHud(NC_STACK_ypaworld *yw)
 
     if ( yw->UserUnit()->_status == BACT_STATUS_DEAD )
     {
-        if ( !(yw->UserRobo()->_status_flg & BACT_STFLAG_CLEAN) )
-            DrawHudDestroyed(yw, &buf, yw->UserRobo()->_status == BACT_STATUS_DEAD);
+        // Not while the level's units are cleaned away
+        NC_STACK_ypabact *home = yw->UserRobo() ? yw->UserRobo() : yw->UserUnit();
+
+        // The player's unit, or with it their faction
+        int textId = Locale::CMN_UNITDESTR;
+
+        if ( yw->LocalPlayerDefeated() )
+            textId = yw->UserRobo() ? Locale::CMN_HSDESTR : Locale::CMN_ALLDESTR;
+
+        if ( !(home->_status_flg & BACT_STFLAG_CLEAN) )
+            DrawHudDestroyed(yw, &buf, textId);
     }
     else if ( yw->UserUnit() != yw->UserRobo() && yw->_hud.visible )
     {
@@ -9977,7 +10004,7 @@ void DrawUnitLimit(NC_STACK_ypaworld *yw, CmdStream *cur, int width)
 {
     if ( yw->_isNetGame )
     {
-        if ( yw->_countUnitsPerOwner[ yw->UserRobo()->_owner ] <= yw->_levelUnitLimit )
+        if ( yw->_countUnitsPerOwner[ yw->GetPlayerOwner() ] <= yw->_levelUnitLimit )
             FontUA::set_txtColor(cur, yw->_iniColors[63].r, yw->_iniColors[63].g, yw->_iniColors[63].b);
         else
             FontUA::set_txtColor(cur, yw->_iniColors[6].r, yw->_iniColors[6].g, yw->_iniColors[6].b);
@@ -9992,7 +10019,7 @@ void DrawUnitLimit(NC_STACK_ypaworld *yw, CmdStream *cur, int width)
         columns[0].postfixChar = 0;
         columns[0].flags = 36;
 
-        columns[1].txt = fmt::sprintf("%d / %d", yw->_countUnitsPerOwner[ yw->UserRobo()->_owner ], yw->_levelUnitLimit);
+        columns[1].txt = fmt::sprintf("%d / %d", yw->_countUnitsPerOwner[ yw->GetPlayerOwner() ], yw->_levelUnitLimit);
         columns[1].width = width * 0.5;
         columns[1].fontID = 15;
         columns[1].postfixChar = 0;
@@ -10267,10 +10294,10 @@ int NC_STACK_ypaworld::yw_MouseFindCreationPoint(TClickBoxInf *winp)
 
 int NC_STACK_ypaworld::UserActCreateCheck(TClickBoxInf *winp)
 {
-    if ( _guiActFlags & 8 || bzda.selVhclIdx == -1 )
-        return 4;
-
     NC_STACK_yparobo *robo = dynamic_cast<NC_STACK_yparobo *>(UserRobo());
+
+    if ( _guiActFlags & 8 || bzda.selVhclIdx == -1 || !robo )
+        return 4;
 
     int availEnergy = robo->getROBO_battVehicle();
 
@@ -10281,7 +10308,7 @@ int NC_STACK_ypaworld::UserActCreateCheck(TClickBoxInf *winp)
     if ( !yw_MouseFindCreationPoint(winp) )
         return 1;
 
-    if ( _isNetGame && !_levelUnitLimitType && _levelUnitLimit <= _countUnitsPerOwner[UserRobo()->_owner] )
+    if ( _isNetGame && !_levelUnitLimitType && _levelUnitLimit <= _countUnitsPerOwner[robo->_owner] )
         return 3;
 
     return 0;
@@ -10289,10 +10316,10 @@ int NC_STACK_ypaworld::UserActCreateCheck(TClickBoxInf *winp)
 
 int NC_STACK_ypaworld::UserActBuildCheck()
 {
-    if ( !(_guiActFlags & 0x10) || bzda.selBuildIdx == -1 )
-        return 1; // NO with no tip
-
     NC_STACK_yparobo *robo = dynamic_cast<NC_STACK_yparobo *>(UserRobo());
+
+    if ( !(_guiActFlags & 0x10) || bzda.selBuildIdx == -1 || !robo )
+        return 1; // NO with no tip
 
     int availEnergy = robo->getROBO_battVehicle();
 
@@ -10327,7 +10354,7 @@ int NC_STACK_ypaworld::UserActBuildCheck()
 
 int NC_STACK_ypaworld::UserActBeamCheck()
 {
-    if ( !(_guiActFlags & 0x10) )
+    if ( !(_guiActFlags & 0x10) || !UserRobo() )
         return 6;
 
     if ( !_cellOnMouse->IsCanSee(UserRobo()->_owner) )
@@ -10782,10 +10809,7 @@ int SelectMouseUnitSquadLeader(NC_STACK_ypaworld *yw)
 
     NC_STACK_ypabact *leader = yw->_bactOnMouse;
 
-    if ( !yw->_bactOnMouse || !yw->_bactOnMouse->_parent )
-        return 0;
-
-    if ( yw->_bactOnMouse->_parent != yw->_bactOnMouse->_host_station )
+    if ( !yw->_bactOnMouse->IsCommander() )
         leader = yw->_bactOnMouse->_parent;
 
     if ( !leader )
@@ -10920,7 +10944,7 @@ void NC_STACK_ypaworld::ExecuteMouseAction(int arg)
 
 void NC_STACK_ypaworld::HandleWorldMouse(TInputState *arg)
 {
-    if ( UserRobo() && (arg->ClickInf.flag & TClickBoxInf::FLAG_OK) && UserUnit() )
+    if ( LocalOwner() > 0 && (arg->ClickInf.flag & TClickBoxInf::FLAG_OK) && UserUnit() )
     {
         yw_MouseSelect(arg);
         UpdateActionEnergyCost();
@@ -10969,7 +10993,7 @@ void NC_STACK_ypaworld::HandleWorldMouse(TInputState *arg)
                 }
                 else if ( _activeCmdrRemapIndex != -1 )
                 {
-                    if ( LocalOwner() == _cellOnMouse->owner && _cellOnMouse->IsCanSee(UserRobo()->_owner) )
+                    if ( LocalOwner() == _cellOnMouse->owner && _cellOnMouse->IsCanSee(LocalOwner()) )
                     {
                         doAction = World::DOACTION_2;
                         mousePointer = 4;
@@ -11040,7 +11064,7 @@ void NC_STACK_ypaworld::HandleWorldMouse(TInputState *arg)
                             }
                         }
                     }
-                    else if ( LocalOwner() == _cellOnMouse->owner && _cellOnMouse->IsCanSee(UserRobo()->_owner) )
+                    else if ( LocalOwner() == _cellOnMouse->owner && _cellOnMouse->IsCanSee(LocalOwner()) )
                     {
                         doAction = World::DOACTION_2;
                         mousePointer = 4;
@@ -11112,7 +11136,7 @@ void NC_STACK_ypaworld::HandleWorldMouse(TInputState *arg)
                             }
                         }
                     }
-                    else if ( LocalOwner() == _cellOnMouse->owner && _cellOnMouse->IsCanSee(UserRobo()->_owner) )
+                    else if ( LocalOwner() == _cellOnMouse->owner && _cellOnMouse->IsCanSee(LocalOwner()) )
                     {
                         doAction = World::DOACTION_2;
                         mousePointer = 4;

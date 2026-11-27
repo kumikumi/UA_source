@@ -571,6 +571,33 @@ void NC_STACK_ypaworld::yw_InitSquads(const std::vector<MapSquad> &squads)
     }
 }
 
+// With no host station to start in, the player plays faction 1, the
+// campaign's, from its first squad. A level without squads of it is played
+// by no one.
+void NC_STACK_ypaworld::StartPlayerInSquad()
+{
+    if ( _localPlayer->Owner )
+        return;
+
+    NC_STACK_ypabact *first = NULL;
+
+    ForEachCommander(1, [&first](NC_STACK_ypabact *commander)
+    {
+        if ( commander->_status != BACT_STATUS_DEAD && commander->_bact_type != BACT_TYPES_GUN &&
+             (!first || (commander->_commandID & 0xFFFFFF) < (first->_commandID & 0xFFFFFF)) )
+            first = commander;
+    });
+
+    if ( !first )
+        return;
+
+    _localPlayer->Name = _GameShell ? _GameShell->UserName : std::string();
+    JoinFaction(_localPlayer, 1);
+
+    first->setBACT_viewer(true, _localPlayer);
+    first->setBACT_inputting(true, _localPlayer);
+}
+
 // The squads that came along from the last level join the player's host
 // station; without one, they stay behind
 void NC_STACK_ypaworld::InitBuddies()
@@ -2555,7 +2582,7 @@ void UpdateReloadRatios(NC_STACK_ypaworld *yw)
             // TODO(bug): Every owner i is penalised by the local player's unit count, and
             // penalty is an int, so it stays 0 until it reaches 1 and then wipes
             // out the 0..1 reload ratio.
-            int unitsOverLimit = yw->_countUnitsPerOwner[yw->UserRobo()->_owner] - yw->_levelUnitLimit;
+            int unitsOverLimit = yw->_countUnitsPerOwner[yw->GetPlayerOwner()] - yw->_levelUnitLimit;
 
             if ( unitsOverLimit > 0 )
             {
@@ -3791,7 +3818,7 @@ void NC_STACK_ypaworld::debug_info_draw(TInputState *inpt)
             DebugInfoPrintf(this, &dbg_txt, buf_sprintf, "num wpn: %d,%d", _dbgTotalWeaponCount, _dbgTotalWeaponCountMax);
             FontUA::next_line(&dbg_txt);
 
-            DebugInfoPrintf(this, &dbg_txt, buf_sprintf, "reload const: %d", UserRobo()->_reload_const);
+            DebugInfoPrintf(this, &dbg_txt, buf_sprintf, "reload const: %d", UserRobo() ? UserRobo()->_reload_const : 0);
             FontUA::next_line(&dbg_txt);
 
             DebugInfoPrintf(
