@@ -81,6 +81,7 @@ static Benchmark benchmark; // --bench
 // level run as fast as the machine can. --time-limit in timer ticks, 0 for
 // none.
 static bool headless = false;
+static bool aiOnly = false; // --ai-only
 static int32_t headlessTimeLimit = 0;
 
 static std::string recordFile; // --record
@@ -1156,6 +1157,14 @@ static bool ReadDirectStart()
         return false;
     }
 
+    aiOnly = System::CmdLine::Has("ai-only");
+
+    if ( aiOnly && !headless )
+    {
+        System::CmdLine::PrintError("--ai-only needs --headless");
+        return false;
+    }
+
     if ( System::CmdLine::Get("time-limit", &value) )
     {
         char *end = NULL;
@@ -1358,6 +1367,9 @@ static bool StartDirectLevel()
         return false;
     }
 
+    if ( aiOnly )
+        ypaworld->LeaveFaction(ypaworld->LocalPlayer());
+
     // What the debriefing compares the end of the level with, as when the
     // level map starts a level. A recording's level has its start's.
     if ( !resumedFromRecording )
@@ -1399,18 +1411,37 @@ static std::string HeadlessOutcome(int32_t startTime)
         return "aborted";
 
     // Nobody is there to leave the level, so these end it
-    if ( ypaworld->UserRobo()->_status == BACT_STATUS_DEAD )
+    NC_STACK_ypabact *mine = ypaworld->UserRobo();
+
+    if ( mine && mine->_status == BACT_STATUS_DEAD )
         return "lost, the player's host station destroyed";
 
     bool enemyLeft = false;
+    uint32_t factionsLeft = 0; // Of host stations, as bits
     for ( NC_STACK_ypabact *unit : ypaworld->_unitsList )
     {
-        if ( unit != ypaworld->UserRobo() && unit->_bact_type == BACT_TYPES_ROBO && unit->_status != BACT_STATUS_DEAD )
-            enemyLeft = true;
+        if ( unit->_bact_type == BACT_TYPES_ROBO && unit->_status != BACT_STATUS_DEAD )
+        {
+            factionsLeft |= 1 << unit->_owner;
+
+            if ( unit != mine )
+                enemyLeft = true;
+        }
     }
 
-    if ( !enemyLeft )
+    if ( mine && !enemyLeft )
         return "won, no enemy host station left";
+
+    // With no one playing, it's over when one faction's host stations are
+    // all that's left
+    if ( !mine && !(factionsLeft & (factionsLeft - 1)) )
+    {
+        int faction = 0;
+        while ( factionsLeft > 1u << faction )
+            faction++;
+
+        return fmt::sprintf("over, only faction %d's host stations left", faction);
+    }
 
     if ( headlessTimeLimit && ypaworld->_timeStamp - startTime >= headlessTimeLimit )
         return "stopped at the time limit";

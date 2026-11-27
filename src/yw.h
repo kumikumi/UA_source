@@ -2112,6 +2112,13 @@ public:
     virtual int getYW_doEnergyRecalc();
     World::Player *LocalPlayer() const { return _localPlayer; }
 
+    // The sector the local player sees from: their unit's, or the camera's
+    // when they look from none
+    Common::Point ViewerCell() const;
+
+    // The faction the local player plays; -1, no faction's, when none
+    int LocalOwner() const { return _localPlayer->Owner ? _localPlayer->Owner : -1; }
+
     // The local player's host station, and the unit they look from
     NC_STACK_ypabact *UserRobo() const { return _localPlayer->HostStation; }
     NC_STACK_ypabact *UserUnit() const { return _localPlayer->Unit; }

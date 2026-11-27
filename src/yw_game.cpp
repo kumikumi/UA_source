@@ -805,7 +805,7 @@ void NC_STACK_ypaworld::CellSetNewOwner(cellArea *cell, NC_STACK_ypabact *attack
     {
         if ( cell->PurposeType == cellArea::PT_POWERSTATION )
         {
-            if ( UserRobo()->_owner == newOwner )
+            if ( LocalOwner() == newOwner )
             {
                 if ( attacker )
                 {
@@ -817,7 +817,7 @@ void NC_STACK_ypaworld::CellSetNewOwner(cellArea *cell, NC_STACK_ypabact *attack
                     ShowMessage(&capturedMsg);
                 }
             }
-            else if ( cell->owner == UserRobo()->_owner )
+            else if ( cell->owner == LocalOwner() )
             {
                 TInfoMessage lostMsg;
                 lostMsg.unit = NULL;
@@ -835,7 +835,7 @@ void NC_STACK_ypaworld::CellSetNewOwner(cellArea *cell, NC_STACK_ypabact *attack
                 {
                     if ( cell == ks.PCell )
                     {
-                        if ( UserRobo()->_owner == newOwner )
+                        if ( LocalOwner() == newOwner )
                         {
                             TInfoMessage keyCapturedMsg;
                             keyCapturedMsg.unit = NULL;
@@ -844,7 +844,7 @@ void NC_STACK_ypaworld::CellSetNewOwner(cellArea *cell, NC_STACK_ypabact *attack
 
                             ShowMessage(&keyCapturedMsg);
                         }
-                        else if ( UserRobo()->_owner == cell->owner )
+                        else if ( LocalOwner() == cell->owner )
                         {
                             TInfoMessage keyLostMsg;
                             keyLostMsg.unit = NULL;
@@ -2440,7 +2440,7 @@ void NC_STACK_ypaworld::BuildingConstructUpdate(int dtime)
 
             PlaceBuilding(bldProc.CellID, bldProc.Owner, bldProc.BuildID, 0);
 
-            if ( bldProc.Owner == UserRobo()->_owner )
+            if ( bldProc.Owner == LocalOwner() )
             {
                 if ( _buildProtos[ bldProc.BuildID ].ModelID )
                 {
@@ -2851,7 +2851,7 @@ void UpdatePlayerInRoboGun(NC_STACK_ypaworld *yw)
 {
     yw->_playerInHSGun = false;
 
-    if ( yw->UserRobo() != yw->UserUnit() )
+    if ( yw->UserRobo() && yw->UserRobo() != yw->UserUnit() )
     {
         NC_STACK_yparobo *robo = dynamic_cast<NC_STACK_yparobo *>(yw->UserRobo());
 
@@ -2871,13 +2871,14 @@ void UpdateGates(NC_STACK_ypaworld *yw)
         const TMapGate &gate = yw->_levelInfo.Gates[i];
         int gateState = cellArea::PT_GATEOPENED;
 
-        if ( gate.PCell->owner == yw->UserRobo()->_owner )
+        // Gates are the faction's the level is played as
+        if ( gate.PCell->owner == yw->_playerOwner )
         {
             for( const TMapKeySector &ks : gate.KeySectors )
             {
                 if (ks.PCell)
                 {
-                    if (ks.PCell->owner != yw->UserRobo()->_owner)
+                    if (ks.PCell->owner != yw->_playerOwner)
                     {
                         gateState = cellArea::PT_GATECLOSED;
                         break;
@@ -3276,6 +3277,10 @@ void NC_STACK_ypaworld::UpdateSuperItems()
 
 void NC_STACK_ypaworld::VoiceMessageCalcPositionToUnit()
 {
+    // Heard where the local player is, if anywhere
+    if ( !UserUnit() || !_voiceMessage.Unit )
+        return;
+
     if ( _voiceMessage.Unit == UserRobo() )
     {
         _voiceMessage.Carrier.Position = UserUnit()->_position;
@@ -3297,7 +3302,7 @@ void NC_STACK_ypaworld::VoiceMessageUpdate()
 {
     if ( _voiceMessage.Priority >= 0 )
     {
-        if ( _voiceMessage.Unit->_status != BACT_STATUS_DEAD )
+        if ( _voiceMessage.Unit && _voiceMessage.Unit->_status != BACT_STATUS_DEAD && UserUnit() )
         {
             VoiceMessageCalcPositionToUnit();
 
@@ -3315,11 +3320,14 @@ void NC_STACK_ypaworld::VoiceMessageUpdate()
 
 void CheckEnemySectorEntered(NC_STACK_ypaworld *yw)
 {
-    if ( yw->UserUnit()->_pSector->owner != yw->UserRobo()->_owner )
+    if ( !yw->UserUnit() || !yw->UserRobo() )
+        return;
+
+    if ( yw->UserUnit()->_pSector->owner != yw->LocalOwner() )
     {
         if ( yw->UserUnit()->_pSector->owner )
         {
-            if ( yw->_ownerOldCellUserUnit == yw->UserRobo()->_owner || !yw->_ownerOldCellUserUnit )
+            if ( yw->_ownerOldCellUserUnit == yw->LocalOwner() || !yw->_ownerOldCellUserUnit )
             {
                 if ( yw->_timeStamp - yw->_msgTimestampEnemySector > 10000 )
                 {

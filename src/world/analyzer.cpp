@@ -122,7 +122,7 @@ bool GameAnalyzer::IsHasBackupPS(NC_STACK_ypaworld *world)
     {
         if (it.second.pCell)
         {
-            if (it.second.pCell->owner == world->UserRobo()->_owner)
+            if (it.second.pCell->owner == world->LocalOwner())
             {
                 if ( Common::ABS(it.second.CellId.x - world->UserRobo()->_cellId.x) >= 4
                   || Common::ABS(it.second.CellId.y - world->UserRobo()->_cellId.y) >= 4)
@@ -149,7 +149,7 @@ bool GameAnalyzer::IsOwnPowerStation(NC_STACK_ypaworld *world)
     {
         if (it.second.pCell)
         {
-            if (it.second.pCell->owner == world->UserRobo()->_owner)
+            if (it.second.pCell->owner == world->LocalOwner())
                 return true;
         }
     }
@@ -163,7 +163,7 @@ bool GameAnalyzer::IsOnHighPowerStation(NC_STACK_ypaworld *world)
     {
         if (it.second.pCell)
         {
-            if (it.second.pCell->owner == world->UserRobo()->_owner
+            if (it.second.pCell->owner == world->LocalOwner()
              && (!maxPwr || maxPwr->EffectivePower < it.second.EffectivePower) )
                 maxPwr = &it.second;
         }
@@ -188,7 +188,7 @@ bool GameAnalyzer::IsSpottedEnemyPS(NC_STACK_ypaworld *world)
     {
         if (it.second.pCell)
         {
-            if (it.second.pCell->owner != world->UserRobo()->_owner &&
+            if (it.second.pCell->owner != world->LocalOwner() &&
                 it.second.pCell->IsCanSee(world->UserRobo()->_owner) )
                 return true;
         }
@@ -215,7 +215,7 @@ bool GameAnalyzer::IsSpottedTek(NC_STACK_ypaworld *world)
         cellArea *cell = world->GetSector(gem.CellId);
         if ( cell && cell->PurposeType == cellArea::PT_TECHUPGRADE )
         {
-            if ( world->UserRobo()->_owner != cell->owner 
+            if ( world->LocalOwner() != cell->owner 
               && cell->IsCanSee(world->UserRobo()->_owner) )
                 return true;
         }
@@ -229,7 +229,7 @@ bool GameAnalyzer::IsSpottedBeamGate(NC_STACK_ypaworld *world)
     {
         if ( gate.PCell->PurposeType == cellArea::PT_GATECLOSED )
         {
-            if ( world->UserRobo()->_owner != gate.PCell->owner 
+            if ( world->LocalOwner() != gate.PCell->owner 
               && gate.PCell->IsCanSee(world->UserRobo()->_owner) )
                 return true;
         }
@@ -243,7 +243,7 @@ bool GameAnalyzer::IsSpottedKeySector(NC_STACK_ypaworld *world)
     {
         for( const TMapKeySector &ks : gate.KeySectors )
         {
-            if ( world->UserRobo()->_owner != ks.PCell->owner 
+            if ( world->LocalOwner() != ks.PCell->owner 
               && ks.PCell->IsCanSee(world->UserRobo()->_owner) )
                 return true;
         }
@@ -257,7 +257,7 @@ bool GameAnalyzer::IsSpottedEnemyHS(NC_STACK_ypaworld *world)
     {
         if ( hs != world->UserRobo()
          &&  hs->_bact_type == BACT_TYPES_ROBO
-         &&  hs->_owner != world->UserRobo()->_owner
+         &&  hs->_owner != world->LocalOwner()
          &&  hs->_status != BACT_STATUS_DEAD
          &&  hs->_pSector->IsCanSee( world->UserRobo()->_owner) )
         {
@@ -273,7 +273,7 @@ bool GameAnalyzer::IsSpottedEnemyHSwithPS(NC_STACK_ypaworld *world)
     {
         if ( hs != world->UserRobo()
          &&  hs->_bact_type == BACT_TYPES_ROBO
-         &&  hs->_owner != world->UserRobo()->_owner
+         &&  hs->_owner != world->LocalOwner()
          &&  hs->_status != BACT_STATUS_DEAD
          &&  hs->_pSector->IsCanSee( world->UserRobo()->_owner ) )
         {

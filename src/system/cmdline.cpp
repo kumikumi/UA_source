@@ -45,6 +45,9 @@ static const Option Options[] = {
                                 "host station is left. Needs no display, GPU or sound device. How "
                                 "it ended goes to stdout"},
     {"time-limit",   "SECONDS", "With --headless, stop after this much game time"},
+    {"ai-only",      NULL,      "With --headless, no one plays: the player's faction's AI plays it, as "
+                                "the other factions' do, and the level ends when one faction's host "
+                                "stations are all that's left"},
     {"check-resume", "STEP",    "With --headless, check that the state the game keeps is complete: "
                                 "at step STEP, keep it, play 600 steps, start again from what was "
                                 "kept and play them again. Reports whether every step came out the "

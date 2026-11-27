@@ -254,6 +254,10 @@ size_t NC_STACK_ypaworld::Deinit()
 
 void UpdateViewerPosition(NC_STACK_ypaworld *yw)
 {
+    // Looking from nothing, the camera stays where it is
+    if ( !yw->UserUnit() )
+        return;
+
     if ( yw->UserUnit()->getBACT_extraViewer() )
     {
         NC_STACK_ypabact *viewer = yw->UserUnit();
@@ -344,7 +348,7 @@ bool NC_STACK_ypaworld::SimulationStep(TUpdateArgs *arg)
         SFXEngine::SFXe.BeginSoundFrame(arg->DTime, _viewerPosition, velocity, _viewerRotation);
     }
 
-    if ( _framesElapsed == 1 )
+    if ( _framesElapsed == 1 && UserRobo() )
     {
         TInfoMessage startMsg;
         startMsg.unit = UserRobo();
@@ -453,7 +457,8 @@ bool NC_STACK_ypaworld::SimulationStep(TUpdateArgs *arg)
     _guiVisor.weaponSight = 0;
     _guiVisor.target = NULL;
 
-    _ownerOldCellUserUnit = UserUnit()->_pSector->owner;
+    if ( UserUnit() )
+        _ownerOldCellUserUnit = UserUnit()->_pSector->owner;
 
     uint32_t updateStart = profiler_begin();
     uint64_t simStart = System::PerfStats::Now();
@@ -989,7 +994,7 @@ void NC_STACK_ypaworld::yw_ActivateWunderstein(cellArea *cell, int gemid)
 
 void SpawnBuildingExplosions(NC_STACK_ypaworld *yw, const cellArea &cell, int bldX, int bldY)
 {
-    Common::Point dist = yw->UserUnit()->_cellId.AbsDistance( cell.CellId );
+    Common::Point dist = yw->ViewerCell().AbsDistance( cell.CellId );
   
     if ( dist.x + dist.y <= (yw->_renderSectors - 1) / 2 )
     {
@@ -1052,11 +1057,11 @@ void WarnPowerStationAttacked(NC_STACK_ypaworld *yw, const cellArea &cell, TSect
 {
     if ( cell.PurposeType == cellArea::PT_POWERSTATION )
     {
-        if ( cell.owner == yw->UserRobo()->_owner )
+        if ( cell.owner == yw->LocalOwner() )
         {
             if ( arg->unit )
             {
-                if ( yw->UserRobo()->_owner != arg->unit->_owner && yw->_timeStamp - yw->_msgTimestampPSUnderAtk > 5000 )
+                if ( yw->LocalOwner() != arg->unit->_owner && yw->_timeStamp - yw->_msgTimestampPSUnderAtk > 5000 )
                 {
                     yw->_msgTimestampPSUnderAtk = yw->_timeStamp;
 
@@ -1158,7 +1163,7 @@ void NC_STACK_ypaworld::DamageSectorBuilding(TSectorDamage *arg)
 
             if ( cell.PurposeType == cellArea::PT_TECHUPGRADE )
             {
-                if ( UserRobo() && UserRobo()->_owner == cell.owner )
+                if ( UserRobo() && LocalOwner() == cell.owner )
                 {
                     if ( _isNetGame )
                         ActivateNetWunderstein(this, &cell, cell.PurposeIndex);
@@ -1204,6 +1209,14 @@ size_t NC_STACK_ypaworld::GetSectorInfo(TSectorInfo *arg)
     return 1;
 }
 
+
+Common::Point NC_STACK_ypaworld::ViewerCell() const
+{
+    if ( UserUnit() )
+        return UserUnit()->_cellId;
+
+    return World::PositionToSectorID(_viewerPosition);
+}
 
 World::Player *NC_STACK_ypaworld::ControllerOf(const NC_STACK_ypabact *unit) const
 {
@@ -6052,7 +6065,7 @@ size_t NC_STACK_ypaworld::BeamUnitThroughGate(NC_STACK_ypabact *bact)
     if ( bact->_bact_type == BACT_TYPES_GUN || bact->_bact_type == BACT_TYPES_MISSLE )
         return 1;
 
-    if ( bact->_owner == UserRobo()->_owner )
+    if ( bact->_owner == LocalOwner() )
     {
         if ( bact->_pSector->PurposeType == cellArea::PT_GATEOPENED )
         {
@@ -6785,7 +6798,7 @@ void NC_STACK_ypaworld::HandleRoboDestroyed(TRoboDestroyed *arg)
 
     if ( UserRobo() )
     {
-        if ( UserRobo()->_owner == arg->killerOwner )
+        if ( LocalOwner() == arg->killerOwner )
             _beamEnergyCapacity += _beamEnergyAdd;
     }
 
@@ -6809,7 +6822,7 @@ void NC_STACK_ypaworld::HandleRoboDestroyed(TRoboDestroyed *arg)
     if ( !UserRobo() )
         return;
 
-    if ( UserRobo()->_owner != arg->killerOwner )
+    if ( LocalOwner() != arg->killerOwner )
         return;
 
     for (int i = 0; i < _mapSize.y; i++)
@@ -6818,7 +6831,7 @@ void NC_STACK_ypaworld::HandleRoboDestroyed(TRoboDestroyed *arg)
         {
             cellArea &cell = _cells(j, i);
 
-            if ( cell.PurposeType == cellArea::PT_TECHUPGRADE && cell.owner == UserRobo()->_owner )
+            if ( cell.PurposeType == cellArea::PT_TECHUPGRADE && cell.owner == LocalOwner() )
             {
 
                 if ( _isNetGame )

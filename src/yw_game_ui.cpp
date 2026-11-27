@@ -1372,7 +1372,7 @@ void RoboMapDrawMarkers(NC_STACK_ypaworld *yw, CmdStream *cur)
             }
             else if ( yw->_guiActFlags & 0x10 && yw->_mouseGrabbed == false)
             {
-                if ( yw->_cellOnMouse->owner == yw->UserRobo()->_owner && yw->_cellOnMouse->IsCanSee(yw->UserRobo()->_owner) )
+                if ( yw->_cellOnMouse->owner == yw->LocalOwner() && yw->_cellOnMouse->IsCanSee(yw->UserRobo()->_owner) )
                 {
                     FontUA::select_tileset(cur, markerTileset);
 
@@ -6007,7 +6007,7 @@ void RoboMapMakeSquadFromBox(NC_STACK_ypaworld *yw)
             {
                 for ( NC_STACK_ypabact* &bct : cll.unitsList )
                 {
-                    if ( bct->_owner == yw->UserRobo()->_owner )
+                    if ( bct->_owner == yw->LocalOwner() )
                     {
                         if ( bct->_position.x > mapSelWorldMinX && bct->_position.z > mapSelWorldMinZ && bct->_position.x < mapSelWorldMaxX && bct->_position.z < mapSelWorldMaxZ )
                         {
@@ -7647,6 +7647,7 @@ void UpdateGunList(NC_STACK_ypaworld *yw)
     int count = 0;
     int i = 0;
 
+    if ( robo )
     for(World::TRoboGun &gun : robo->GetGuns())
     {
         if ( gun.gun_obj )
@@ -7722,7 +7723,9 @@ void NC_STACK_ypaworld::VoiceMessagePlayFile(const std::string &flname, NC_STACK
 
         VoiceMessageCalcPositionToUnit();
 
-        _voiceMessage.Carrier.Vector = UserUnit()->_fly_dir * UserUnit()->_fly_dir_length;
+        if ( UserUnit() )
+            _voiceMessage.Carrier.Vector = UserUnit()->_fly_dir * UserUnit()->_fly_dir_length;
+
         SFXEngine::SFXe.startSound(&_voiceMessage.Carrier, 0);
     }
 }
@@ -10296,7 +10299,7 @@ int NC_STACK_ypaworld::UserActBuildCheck()
     if ( _localPlayer->Order.energy > availEnergy )
         return 6; // TIP_NOENERGY
 
-    if ( _cellOnMouse->owner && _cellOnMouse->owner != UserRobo()->_owner )
+    if ( _cellOnMouse->owner && _cellOnMouse->owner != LocalOwner() )
         return 2; // TIP_NOTOWN
 
     Common::Point cellDist = _cellOnMouse->CellId.AbsDistance( UserRobo()->_cellId );
@@ -10344,7 +10347,7 @@ int NC_STACK_ypaworld::UserActBeamCheck()
 
     int beamCost = 0;
 
-    if ( _cellOnMouse->PurposeType != cellArea::PT_GATEOPENED && (_cellOnMouse->PurposeType != cellArea::PT_POWERSTATION || _cellOnMouse->owner != UserRobo()->_owner) )
+    if ( _cellOnMouse->PurposeType != cellArea::PT_GATEOPENED && (_cellOnMouse->PurposeType != cellArea::PT_POWERSTATION || _cellOnMouse->owner != LocalOwner()) )
     {
         beamCost = (POW2(dist) / 230.4);
     }
@@ -10360,7 +10363,7 @@ int NC_STACK_ypaworld::UserActBeamCheck()
 
     for ( NC_STACK_ypabact* &unit : _cellOnMouse->unitsList )
     {
-        if ( unit->_bact_type == BACT_TYPES_ROBO && unit->_status != BACT_STATUS_DEAD && unit->_owner != UserRobo()->_owner )
+        if ( unit->_bact_type == BACT_TYPES_ROBO && unit->_status != BACT_STATUS_DEAD && unit->_owner != LocalOwner() )
             return 5;
     }
 
@@ -10464,7 +10467,7 @@ bool NC_STACK_ypaworld::CheckUnitDoubleClick(TClickBoxInf *winp)
     }
     else
     {
-        if ( (winp->flag & TClickBoxInf::FLAG_LM_DOWN)   &&   _guiActFlags & 0x20   &&   UserRobo()->_owner == _bactOnMouse->_owner )
+        if ( (winp->flag & TClickBoxInf::FLAG_LM_DOWN)   &&   _guiActFlags & 0x20   &&   LocalOwner() == _bactOnMouse->_owner )
         {
             _bactPrevClicked = _bactOnMouse;
             _prevMousePos = winp->move.ScreenPos;
@@ -10950,7 +10953,7 @@ void NC_STACK_ypaworld::HandleWorldMouse(TInputState *arg)
                 {
                     if ( (_guiActFlags & 0x20) )
                     {
-                        if ( UserRobo()->_owner == _bactOnMouse->_owner )
+                        if ( LocalOwner() == _bactOnMouse->_owner )
                         {
                             doAction = World::DOACTION_8;
                             mousePointer = 2;
@@ -10966,7 +10969,7 @@ void NC_STACK_ypaworld::HandleWorldMouse(TInputState *arg)
                 }
                 else if ( _activeCmdrRemapIndex != -1 )
                 {
-                    if ( UserRobo()->_owner == _cellOnMouse->owner && _cellOnMouse->IsCanSee(UserRobo()->_owner) )
+                    if ( LocalOwner() == _cellOnMouse->owner && _cellOnMouse->IsCanSee(UserRobo()->_owner) )
                     {
                         doAction = World::DOACTION_2;
                         mousePointer = 4;
@@ -10984,7 +10987,7 @@ void NC_STACK_ypaworld::HandleWorldMouse(TInputState *arg)
             {
                 if ( !(_guiActFlags & 8) )
                 {
-                    if ( (_guiActFlags & 0x20) && UserRobo()->_owner == _bactOnMouse->_owner )
+                    if ( (_guiActFlags & 0x20) && LocalOwner() == _bactOnMouse->_owner )
                     {
                         doAction = World::DOACTION_8;
                         mousePointer = 2;
@@ -11023,7 +11026,7 @@ void NC_STACK_ypaworld::HandleWorldMouse(TInputState *arg)
                     {
                         if ( _guiActFlags & 0x20 )
                         {
-                            if ( UserRobo()->_owner == _bactOnMouse->_owner )
+                            if ( LocalOwner() == _bactOnMouse->_owner )
                             {
                                 doAction = World::DOACTION_8;
                                 mousePointer = 2;
@@ -11037,7 +11040,7 @@ void NC_STACK_ypaworld::HandleWorldMouse(TInputState *arg)
                             }
                         }
                     }
-                    else if ( UserRobo()->_owner == _cellOnMouse->owner && _cellOnMouse->IsCanSee(UserRobo()->_owner) )
+                    else if ( LocalOwner() == _cellOnMouse->owner && _cellOnMouse->IsCanSee(UserRobo()->_owner) )
                     {
                         doAction = World::DOACTION_2;
                         mousePointer = 4;
@@ -11055,7 +11058,7 @@ void NC_STACK_ypaworld::HandleWorldMouse(TInputState *arg)
             {
                 if ( !(_guiActFlags & 8) )
                 {
-                    if ( (_guiActFlags & 0x20) && UserRobo()->_owner == _bactOnMouse->_owner )
+                    if ( (_guiActFlags & 0x20) && LocalOwner() == _bactOnMouse->_owner )
                     {
                         doAction = World::DOACTION_8;
                         mousePointer = 2;
@@ -11095,7 +11098,7 @@ void NC_STACK_ypaworld::HandleWorldMouse(TInputState *arg)
                     {
                         if ( _guiActFlags & 0x20 )
                         {
-                            if ( UserRobo()->_owner == _bactOnMouse->_owner )
+                            if ( LocalOwner() == _bactOnMouse->_owner )
                             {
                                 doAction = World::DOACTION_8;
                                 mousePointer = 2;
@@ -11109,7 +11112,7 @@ void NC_STACK_ypaworld::HandleWorldMouse(TInputState *arg)
                             }
                         }
                     }
-                    else if ( UserRobo()->_owner == _cellOnMouse->owner && _cellOnMouse->IsCanSee(UserRobo()->_owner) )
+                    else if ( LocalOwner() == _cellOnMouse->owner && _cellOnMouse->IsCanSee(UserRobo()->_owner) )
                     {
                         doAction = World::DOACTION_2;
                         mousePointer = 4;
@@ -11132,7 +11135,7 @@ void NC_STACK_ypaworld::HandleWorldMouse(TInputState *arg)
                         doAction = World::DOACTION_19;
                         mousePointer = 8;
                     }
-                    else if ( UserRobo()->_owner == _bactOnMouse->_owner )
+                    else if ( LocalOwner() == _bactOnMouse->_owner )
                     {
                         doAction = World::DOACTION_5;
                         mousePointer = 8;
@@ -11144,7 +11147,7 @@ void NC_STACK_ypaworld::HandleWorldMouse(TInputState *arg)
             {
                 if ( _guiActFlags & 0x20 )
                 {
-                    if ( UserRobo()->_owner == _bactOnMouse->_owner )
+                    if ( LocalOwner() == _bactOnMouse->_owner )
                     {
                         doAction = World::DOACTION_8;
                         mousePointer = 2;
@@ -11196,7 +11199,7 @@ void NC_STACK_ypaworld::HandleWorldMouse(TInputState *arg)
             {
                 if ( _guiActFlags & 0x20 )
                 {
-                    if ( UserRobo()->_owner == _bactOnMouse->_owner )
+                    if ( LocalOwner() == _bactOnMouse->_owner )
                     {
                         doAction = World::DOACTION_8;
                         mousePointer = 2;

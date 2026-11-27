@@ -3512,7 +3512,7 @@ void NC_STACK_yparobo::checkCommander()
             {
                 for ( const TBactAttacker &ainf : commander->_attackersList )
                 {
-                    if (_world->UserRobo()->_owner == ainf.attacker->_owner)
+                    if (_world->LocalOwner() == ainf.attacker->_owner)
                     {                     
                         NC_STACK_ypabact *realbact = ainf.attacker;                  
                         if ( realbact->_bact_type == BACT_TYPES_MISSLE ) //If missile

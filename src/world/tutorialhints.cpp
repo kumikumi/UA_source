@@ -53,7 +53,7 @@ static bool OwnsPowerStation(NC_STACK_ypaworld *world)
 {
     for ( const auto &ps : world->_powerStations )
     {
-        if ( ps.second.pCell && ps.second.pCell->owner == world->UserRobo()->_owner )
+        if ( ps.second.pCell && ps.second.pCell->owner == world->LocalOwner() )
             return true;
     }
 

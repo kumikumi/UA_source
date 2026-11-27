@@ -1865,7 +1865,7 @@ size_t yw_handleNormMsg(NC_STACK_ypaworld *yw, windp_recvMsg *msg, std::string *
         
         yw->ScoreKill(bhost);
 
-        if ( hdMsg->killer && hdMsg->killerOwner == yw->UserRobo()->_owner )
+        if ( hdMsg->killer && hdMsg->killerOwner == yw->LocalOwner() )
         {
             NC_STACK_ypabact *nde = yw->yw_getHostByOwner(hdMsg->killerOwner);
 
@@ -2216,7 +2216,7 @@ size_t yw_handleNormMsg(NC_STACK_ypaworld *yw, windp_recvMsg *msg, std::string *
                     curUnit->_bact_type != BACT_TYPES_GUN &&
                     curUnit->_bact_type != BACT_TYPES_HOVER &&
                     !(curUnit->_status_flg & BACT_STFLAG_DEATH2) &&
-                    curUnit->_owner == yw->UserRobo()->_owner)
+                    curUnit->_owner == yw->LocalOwner())
                 curUnit->ApplyImpulse(&impls);
         }
     }
