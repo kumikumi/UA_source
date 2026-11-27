@@ -434,12 +434,11 @@ void NC_STACK_ypacar::User_layer(update_msg *arg)
         launch.tgType = BACT_TGT_TYPE_DRCT;
         launch.tgt_pos = _rotation.AxisZ();
 
-        float corW, corH;
-        GFX::Engine.getAspectCorrection(corW, corH, true);
-
+        // Where its gun points, the same on any screen: the sights are drawn
+        // there as each screen shows it
         TAimQuery aimQuery;
         aimQuery.flags = 5;
-        aimQuery.aim_dir = _rotation.AxisZ() - vec3d::OY(_gun_angle_user * corH);
+        aimQuery.aim_dir = _rotation.AxisZ() - vec3d::OY(_gun_angle_user);
 
         if ( UserTargeting(&aimQuery) )
         {
@@ -456,7 +455,7 @@ void NC_STACK_ypacar::User_layer(update_msg *arg)
             else
             {
                 launch.weapon = _weapon;
-                launch.direction = _rotation.AxisZ() - _rotation.AxisY() * _gun_angle_user * corH;
+                launch.direction = _rotation.AxisZ() - _rotation.AxisY() * _gun_angle_user;
                 launch.g_time = _clock;
 
                 if ( _clock % 2 )
@@ -501,7 +500,7 @@ void NC_STACK_ypacar::User_layer(update_msg *arg)
                 }
 
                 TMinigunShot mgShot;
-                mgShot.dir = _rotation.AxisZ() - _rotation.AxisY() * _gun_angle_user * corH;
+                mgShot.dir = _rotation.AxisZ() - _rotation.AxisY() * _gun_angle_user;
                 mgShot.period = dtime;
                 mgShot.gTime = _clock;
 

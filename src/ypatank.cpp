@@ -892,14 +892,13 @@ void NC_STACK_ypatank::User_layer(update_msg *arg)
         if ( _gun_leftright > 0.8 )
             _gun_leftright = 0.8;
 
+        // Where its gun points, the same on any screen: the sights are drawn
+        // there as each screen shows it
         vec3d aimDir;
         aimDir = _rotation.AxisZ();
 
-        float corW, corH;
-        GFX::Engine.getAspectCorrection(corW, corH, true);
-
-        aimDir -= _rotation.AxisY() * (_gun_angle_user * corH);
-        aimDir -= _rotation.AxisX() * (_gun_leftright * corW);
+        aimDir -= _rotation.AxisY() * _gun_angle_user;
+        aimDir -= _rotation.AxisX() * _gun_leftright;
 
         float aimLen = aimDir.length();
 

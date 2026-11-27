@@ -1098,7 +1098,7 @@ void NC_STACK_ypaworld::DrawReplayHud(const World::Frame &frame)
             subject.SectorOwner = under->Owner;
 
         int weaponFlags = vhcl.weapon != -1 && vhcl.weapon < (int)_weaponProtos.size() ? _weaponProtos.at(vhcl.weapon)._weaponFlags : 0;
-        subject.Visor = NC_STACK_ypabact::Sights(vhcl.mgun, vhcl.weapon, weaponFlags, -info->GunLeftRight, -info->GunAngle,
+        subject.Visor = NC_STACK_ypabact::Sights(vhcl.mgun, vhcl.weapon, weaponFlags, info->GunLeftRight, info->GunAngle,
                                                  NC_STACK_ypabact::NoWeaponSight(weaponFlags));
 
         // What they lock on to, for the player who controls it

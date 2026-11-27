@@ -540,8 +540,10 @@ public:
     void UpdateVisor(NC_STACK_ypabact *bact2, int noWeaponSight);
 
     // The sights of a unit with a machine gun and a weapon, either -1 for
-    // none, its guns pointing at gunX, gunY on the screen, and no target
-    static THudVisor Sights(int mgun, int weapon, int weaponFlags, float gunX, float gunY, bool noWeaponSight);
+    // none, its gun turned gunLeftRight and gunAngle away from straight
+    // ahead (as _gun_leftright and _gun_angle_user), and no target: where
+    // the gun points on this screen
+    static THudVisor Sights(int mgun, int weapon, int weaponFlags, float gunLeftRight, float gunAngle, bool noWeaponSight);
 
     // A guided weapon's sight goes to the target the sights lock on to, as
     // a unit at position turned by rotation sees it

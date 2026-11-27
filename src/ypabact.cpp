@@ -5733,7 +5733,7 @@ void NC_STACK_ypabact::UpdateVisor(NC_STACK_ypabact *bact2, int noWeaponSight)
     if ( controller != _world->LocalPlayer() )
         return;
 
-    THudVisor hudi = Sights(_mgun, _weapon, _weapon_flags, -_gun_leftright, -_gun_angle_user, noWeaponSight);
+    THudVisor hudi = Sights(_mgun, _weapon, _weapon_flags, _gun_leftright, _gun_angle_user, noWeaponSight);
 
     if ( bact2 )
     {
@@ -5767,9 +5767,16 @@ void NC_STACK_ypabact::LockSights(THudVisor &visor, const vec3d &position, const
     visor.weaponY = sightY;
 }
 
-THudVisor NC_STACK_ypabact::Sights(int mgun, int weapon, int weaponFlags, float gunX, float gunY, bool noWeaponSight)
+THudVisor NC_STACK_ypabact::Sights(int mgun, int weapon, int weaponFlags, float gunLeftRight, float gunAngle, bool noWeaponSight)
 {
     THudVisor hudi;
+
+    // Where the gun points on this screen, as the camera's turned for it
+    float corW, corH;
+    GFX::Engine.getAspectCorrection(corW, corH, false);
+
+    float gunX = -gunLeftRight * corW;
+    float gunY = -gunAngle * corH;
 
     if ( mgun == -1 )
     {
