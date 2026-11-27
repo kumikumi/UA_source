@@ -487,7 +487,7 @@ void NC_STACK_ypaflyer::AI_layer3(update_msg *arg)
         }
         else
         {
-            NC_STACK_ypabact *userVehicle = _world->getYW_userVehicle();
+            NC_STACK_ypabact *userVehicle = _world->UserUnit();
 
             if ( ( (_secndTtype != BACT_TGT_TYPE_UNIT || (_secndT.pbact->_bact_type != BACT_TYPES_ROBO && userVehicle != _secndT.pbact))
                     && (_primTtype != BACT_TGT_TYPE_UNIT || (_primT.pbact->_bact_type != BACT_TYPES_ROBO && userVehicle != _primT.pbact)) )

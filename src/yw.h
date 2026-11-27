@@ -34,6 +34,7 @@
 #include "world/tools.h"
 #include "world/parsers.h"
 #include "world/nparticle.h"
+#include "world/player.h"
 
 
 #include "world/tutorialhints.h"
@@ -2089,8 +2090,9 @@ public:
     virtual int getYW_skyHeight();
     virtual int getYW_skyRender();
     virtual int getYW_doEnergyRecalc();
-    virtual NC_STACK_ypabact *getYW_userHostStation();
-    virtual NC_STACK_ypabact *getYW_userVehicle();
+    // The local player's host station, and the unit they look from
+    NC_STACK_ypabact *UserRobo() const { return _localPlayer->HostStation; }
+    NC_STACK_ypabact *UserUnit() const { return _localPlayer->Unit; }
     virtual std::vector<World::TWeapProto> &GetWeaponsProtos() { return _weaponProtos; };
     virtual std::vector<World::TBuildingProto> &GetBuildProtos() { return _buildProtos; };
     virtual std::vector<World::TVhclProto> &GetVhclProtos() { return _vhclProtos; };
@@ -2526,7 +2528,6 @@ public:
     std::array<int16_t, 256> _buildHealthModelId = Common::ArrayInit<int16_t, 256>(0);
     Common::PlaneArray<uint8_t, 64, 64> _sqrtTable = Common::PlaneArray<uint8_t, 64, 64>::ArrayInit(0);
     
-    NC_STACK_ypabact *_viewerBact = NULL;
     vec3d _viewerPosition;
     mat3x3 _viewerRotation;
     
@@ -2696,8 +2697,9 @@ public:
     bool _playerInHSGun = false;
     uint8_t _ownerOldCellUserUnit = 0; // Used to check entering enemy sector
     
-    NC_STACK_ypabact *_userRobo = NULL;
-    NC_STACK_ypabact *_userUnit = NULL;
+    // Everyone playing, and the one at this machine among them
+    std::vector<std::unique_ptr<World::Player>> _players;
+    World::Player *_localPlayer = NULL;
     
     std::array<uint32_t, 8> _countSectorsPerOwner = Common::ArrayInit<uint32_t, 8>(0);
     std::array<uint32_t, 8>  _countUnitsPerOwner = Common::ArrayInit<uint32_t, 8>(0);

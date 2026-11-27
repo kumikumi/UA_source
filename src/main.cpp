@@ -1399,13 +1399,13 @@ static std::string HeadlessOutcome(int32_t startTime)
         return "aborted";
 
     // Nobody is there to leave the level, so these end it
-    if ( ypaworld->_userRobo->_status == BACT_STATUS_DEAD )
+    if ( ypaworld->UserRobo()->_status == BACT_STATUS_DEAD )
         return "lost, the player's host station destroyed";
 
     bool enemyLeft = false;
     for ( NC_STACK_ypabact *unit : ypaworld->_unitsList )
     {
-        if ( unit != ypaworld->_userRobo && unit->_bact_type == BACT_TYPES_ROBO && unit->_status != BACT_STATUS_DEAD )
+        if ( unit != ypaworld->UserRobo() && unit->_bact_type == BACT_TYPES_ROBO && unit->_status != BACT_STATUS_DEAD )
             enemyLeft = true;
     }
 

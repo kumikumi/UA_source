@@ -51,7 +51,7 @@ void yw_netReportError(NC_STACK_ypabact *host, uint32_t id)
 {
     NC_STACK_ypaworld *ywo = host->getBACT_pWorld();
 
-    if ( ywo->_userRobo != host )
+    if ( ywo->UserRobo() != host )
     {
         bool created = false;
         for (int i = 0; i < netDebug_CREATE_CNT; i++)
@@ -241,7 +241,7 @@ void yw_netSendVhclData(NC_STACK_ypaworld *yw)
 
     for( NC_STACK_ypabact* &bact : yw->_unitsList)
     {
-        if ( yw->_userRobo == bact )
+        if ( yw->UserRobo() == bact )
         {
             robo = bact;
             break;
@@ -1331,7 +1331,7 @@ size_t yw_handleNormMsg(NC_STACK_ypaworld *yw, windp_recvMsg *msg, std::string *
 
         if ( ddMsg->newParent == 0 && fndBact->_kidList.empty() )
         {
-            NC_STACK_ypabact *hst = yw->getYW_userHostStation();
+            NC_STACK_ypabact *hst = yw->UserRobo();
 
             int sft = 0;
             if ( fndBact->_bact_type == BACT_TYPES_GUN )
@@ -1445,7 +1445,7 @@ size_t yw_handleNormMsg(NC_STACK_ypaworld *yw, windp_recvMsg *msg, std::string *
             break;
         }
 
-        if ( host_node != yw->_userRobo )
+        if ( host_node != yw->UserRobo() )
             break;
 
         NC_STACK_ypabact *fbact = NetGetBactByID(host_node, veMsg->id);
@@ -1865,7 +1865,7 @@ size_t yw_handleNormMsg(NC_STACK_ypaworld *yw, windp_recvMsg *msg, std::string *
         
         yw->ScoreKill(bhost);
 
-        if ( hdMsg->killer && hdMsg->killerOwner == yw->_userRobo->_owner )
+        if ( hdMsg->killer && hdMsg->killerOwner == yw->UserRobo()->_owner )
         {
             NC_STACK_ypabact *nde = yw->yw_getHostByOwner(hdMsg->killerOwner);
 
@@ -2216,7 +2216,7 @@ size_t yw_handleNormMsg(NC_STACK_ypaworld *yw, windp_recvMsg *msg, std::string *
                     curUnit->_bact_type != BACT_TYPES_GUN &&
                     curUnit->_bact_type != BACT_TYPES_HOVER &&
                     !(curUnit->_status_flg & BACT_STFLAG_DEATH2) &&
-                    curUnit->_owner == yw->_userRobo->_owner)
+                    curUnit->_owner == yw->UserRobo()->_owner)
                 curUnit->ApplyImpulse(&impls);
         }
     }
@@ -2237,7 +2237,7 @@ size_t yw_handleNormMsg(NC_STACK_ypaworld *yw, windp_recvMsg *msg, std::string *
             break;
         }
 
-        if ( bhost != yw->_userRobo )
+        if ( bhost != yw->UserRobo() )
             break;
 
         TRoboMessage rarg134;
@@ -2561,7 +2561,7 @@ size_t yw_handleNormMsg(NC_STACK_ypaworld *yw, windp_recvMsg *msg, std::string *
             break;
         }
 
-        if ( bhost != yw->_userRobo )
+        if ( bhost != yw->UserRobo() )
             break;
 
         NC_STACK_ypabact *bbact = NetGetBactByID(bhost, endpMsg->id);

@@ -43,6 +43,8 @@ NC_STACK_ypaworld::NC_STACK_ypaworld()
 : _unitsList(this, NC_STACK_ypabact::GetKidRefNode, World::BLIST_UNITS)
 , _deadCacheList(this, NC_STACK_ypabact::GetKidRefNode, World::BLIST_CACHE)
 {
+    _players.emplace_back(new World::Player);
+    _localPlayer = _players.back().get();
 }
 
 namespace World
@@ -252,19 +254,19 @@ size_t NC_STACK_ypaworld::Deinit()
 
 void UpdateViewerPosition(NC_STACK_ypaworld *yw)
 {
-    if ( yw->_viewerBact->getBACT_extraViewer() )
+    if ( yw->UserUnit()->getBACT_extraViewer() )
     {
-        NC_STACK_ypabact *viewer = yw->_viewerBact;
+        NC_STACK_ypabact *viewer = yw->UserUnit();
 
         yw->_viewerPosition = viewer->_position + viewer->_rotation.Transpose().Transform(viewer->_viewer_position);
 
-        yw->_viewerRotation = yw->_viewerBact->_viewer_rotation;
+        yw->_viewerRotation = yw->UserUnit()->_viewer_rotation;
     }
     else
     {
-        yw->_viewerPosition = yw->_viewerBact->_position;
+        yw->_viewerPosition = yw->UserUnit()->_position;
 
-        yw->_viewerRotation = yw->_viewerBact->_rotation;
+        yw->_viewerRotation = yw->UserUnit()->_rotation;
     }
 }
 
@@ -329,15 +331,15 @@ bool NC_STACK_ypaworld::SimulationStep(TUpdateArgs *arg)
 
     _netChatSystem = false;
 
-    if ( _userUnit )
+    if ( UserUnit() )
     {
         if ( _framesElapsed == 1 )
         {
-            _viewerPosition = _userUnit->_position;
-            _viewerRotation = _userUnit->_rotation;
+            _viewerPosition = UserUnit()->_position;
+            _viewerRotation = UserUnit()->_rotation;
         }
 
-        vec3d velocity = _userUnit->_fly_dir * _userUnit->_fly_dir_length;
+        vec3d velocity = UserUnit()->_fly_dir * UserUnit()->_fly_dir_length;
 
         SFXEngine::SFXe.BeginSoundFrame(arg->DTime, _viewerPosition, velocity, _viewerRotation);
     }
@@ -345,7 +347,7 @@ bool NC_STACK_ypaworld::SimulationStep(TUpdateArgs *arg)
     if ( _framesElapsed == 1 )
     {
         TInfoMessage startMsg;
-        startMsg.unit = _userRobo;
+        startMsg.unit = UserRobo();
         startMsg.Priority = 128;
         startMsg.MsgID = 41;
 
@@ -448,21 +450,21 @@ bool NC_STACK_ypaworld::SimulationStep(TUpdateArgs *arg)
     _guiVisor.weaponSight = 0;
     _guiVisor.target = NULL;
 
-    _ownerOldCellUserUnit = _userUnit->_pSector->owner;
+    _ownerOldCellUserUnit = UserUnit()->_pSector->owner;
 
     uint32_t updateStart = profiler_begin();
     uint64_t simStart = System::PerfStats::Now();
     
     // Do user commands before any unit state can be changed
-    if (_userRobo)
+    if (UserRobo())
     {
-        if (_userRobo->_bact_type == BACT_TYPES_ROBO)
-            ((NC_STACK_yparobo *)_userRobo)->HandleUserCommands(&_updateMessage);
+        if (UserRobo()->_bact_type == BACT_TYPES_ROBO)
+            ((NC_STACK_yparobo *)UserRobo())->HandleUserCommands(&_updateMessage);
     }
 
     for ( NC_STACK_ypabact *unit : _unitsList.safe_iter() )
     {
-        if (_isNetGame && unit != _userRobo && unit->_bact_type == BACT_TYPES_ROBO)
+        if (_isNetGame && unit != UserRobo() && unit->_bact_type == BACT_TYPES_ROBO)
             unit->NetUpdate(&_updateMessage);
         else
             unit->Update(&_updateMessage);
@@ -513,11 +515,11 @@ bool NC_STACK_ypaworld::SimulationStep(TUpdateArgs *arg)
     }
     _profileVals[PFID_NETTIME] += profiler_end(flushStart);
 
-    if ( _userUnit )
+    if ( UserUnit() )
     {
         if ( _GameShell )
         {
-            _GameShell->samples1_info.Position = _userUnit->_position;
+            _GameShell->samples1_info.Position = UserUnit()->_position;
             SFXEngine::SFXe.UpdateSoundCarrier(&_GameShell->samples1_info);
         }
     }
@@ -982,7 +984,7 @@ void NC_STACK_ypaworld::yw_ActivateWunderstein(cellArea *cell, int gemid)
 
 void SpawnBuildingExplosions(NC_STACK_ypaworld *yw, const cellArea &cell, int bldX, int bldY)
 {
-    Common::Point dist = yw->_viewerBact->_cellId.AbsDistance( cell.CellId );
+    Common::Point dist = yw->UserUnit()->_cellId.AbsDistance( cell.CellId );
   
     if ( dist.x + dist.y <= (yw->_renderSectors - 1) / 2 )
     {
@@ -1045,11 +1047,11 @@ void WarnPowerStationAttacked(NC_STACK_ypaworld *yw, const cellArea &cell, TSect
 {
     if ( cell.PurposeType == cellArea::PT_POWERSTATION )
     {
-        if ( cell.owner == yw->_userRobo->_owner )
+        if ( cell.owner == yw->UserRobo()->_owner )
         {
             if ( arg->unit )
             {
-                if ( yw->_userRobo->_owner != arg->unit->_owner && yw->_timeStamp - yw->_msgTimestampPSUnderAtk > 5000 )
+                if ( yw->UserRobo()->_owner != arg->unit->_owner && yw->_timeStamp - yw->_msgTimestampPSUnderAtk > 5000 )
                 {
                     yw->_msgTimestampPSUnderAtk = yw->_timeStamp;
 
@@ -1151,7 +1153,7 @@ void NC_STACK_ypaworld::DamageSectorBuilding(TSectorDamage *arg)
 
             if ( cell.PurposeType == cellArea::PT_TECHUPGRADE )
             {
-                if ( _userRobo && _userRobo->_owner == cell.owner )
+                if ( UserRobo() && UserRobo()->_owner == cell.owner )
                 {
                     if ( _isNetGame )
                         ActivateNetWunderstein(this, &cell, cell.PurposeIndex);
@@ -1200,8 +1202,6 @@ size_t NC_STACK_ypaworld::GetSectorInfo(TSectorInfo *arg)
 
 void NC_STACK_ypaworld::SetViewerUnit(NC_STACK_ypabact *bact)
 {
-    _viewerBact = bact;
-
     setYW_userVehicle(bact);
 }
 
@@ -1424,9 +1424,9 @@ void NC_STACK_ypaworld::MoveToDeadCache(NC_STACK_ypabact *bacto)
 
 size_t NC_STACK_ypaworld::IsNearViewer(NC_STACK_ypabact *bact)
 {
-    if ( _viewerBact )
+    if ( UserUnit() )
     {
-        Common::Point dist = _viewerBact->_cellId.AbsDistance( bact->_cellId );
+        Common::Point dist = UserUnit()->_cellId.AbsDistance( bact->_cellId );
         if ( dist.x + dist.y <= (_renderSectors - 1) / 2 )
             return 1;
     }
@@ -1812,14 +1812,14 @@ size_t NC_STACK_ypaworld::CreateBuilding(TBuildingPlacement *arg)
     for ( NC_STACK_ypabact* &node : cell.unitsList )
     {
         
-        if ( _userUnit == node || node->_bact_type == BACT_TYPES_ROBO)
+        if ( UserUnit() == node || node->_bact_type == BACT_TYPES_ROBO)
         {
             UserInSec = true;
             break;
         }
     }
 
-    if ( _userUnit  &&  &cell == _userUnit->_pSector )
+    if ( UserUnit()  &&  &cell == UserUnit()->_pSector )
         UserInSec = true;
 
     if (cell.IsBorder())
@@ -2035,7 +2035,7 @@ void NC_STACK_ypaworld::FindUnitOnRay(TUnitRayQuery *arg)
             {
                 if ( sect_bacts != arg->unit && sect_bacts->_status != BACT_STATUS_DEAD )
                 {
-                    if ( !(arg->unit == _userUnit && _playerInHSGun) || sect_bacts != _userRobo )
+                    if ( !(arg->unit == UserUnit() && _playerInHSGun) || sect_bacts != UserRobo() )
                     {
                         vec3d toUnit = sect_bacts->_position - arg->pos;
                         vec3d cross = dir * toUnit;
@@ -2091,7 +2091,7 @@ void NC_STACK_ypaworld::DeleteLevel()
 
     if ( _levelInfo.State == TLevelInfo::STATE_COMPLETED )
         end = World::END_WON;
-    else if ( _userRobo && _userRobo->_status == BACT_STATUS_DEAD )
+    else if ( UserRobo() && UserRobo()->_status == BACT_STATUS_DEAD )
         end = World::END_LOST;
 
     std::string recorded = _recorder.Stop(this, end);
@@ -2141,8 +2141,8 @@ void NC_STACK_ypaworld::DeleteLevel()
         _prepareDebrief = true;
         _gameWasNetGame = true;
 
-        if ( _userUnit )
-            _userOwnerIdWasInNetGame = _userUnit->_owner;
+        if ( UserUnit() )
+            _userOwnerIdWasInNetGame = UserUnit()->_owner;
     }
     else
     {
@@ -2232,8 +2232,8 @@ void NC_STACK_ypaworld::FreeLevel()
 void NC_STACK_ypaworld::FreeUnits()
 {
     int plowner;
-    if ( _userRobo )
-        plowner = _userRobo->_owner;
+    if ( UserRobo() )
+        plowner = UserRobo()->_owner;
     else
         plowner = 0;
 
@@ -6030,11 +6030,11 @@ size_t NC_STACK_ypaworld::BeamUnitThroughGate(NC_STACK_ypabact *bact)
     if ( bact->_bact_type == BACT_TYPES_GUN || bact->_bact_type == BACT_TYPES_MISSLE )
         return 1;
 
-    if ( bact->_owner == _userRobo->_owner )
+    if ( bact->_owner == UserRobo()->_owner )
     {
         if ( bact->_pSector->PurposeType == cellArea::PT_GATEOPENED )
         {
-            if ( _userRobo == bact )
+            if ( UserRobo() == bact )
             {
                 _levelInfo.State = TLevelInfo::STATE_COMPLETED;
                 _levelInfo.GateCompleteID = bact->_pSector->PurposeIndex;
@@ -6236,8 +6236,8 @@ void NC_STACK_ypaworld::SaveWonState()
     if ( !_GameShell || _GameShell->DirectStart )
         return;
 
-    _maxRoboEnergy = _userRobo->_energy_max;
-    _maxReloadConst = _userRobo->_reload_const;
+    _maxRoboEnergy = UserRobo()->_energy_max;
+    _maxReloadConst = UserRobo()->_reload_const;
 
     std::string path = WonStatePath(_GameShell->UserName, _levelInfo.LevelID);
 
@@ -6248,9 +6248,9 @@ void NC_STACK_ypaworld::SaveWonState()
 void NC_STACK_ypaworld::VisitState(World::State::Visitor &v)
 {
     v.Field("time", _timeStamp, World::State::VIEW);
-    v.Unit("userRobo", _userRobo, World::State::VIEW);
-    v.Unit("userUnit", _userUnit, World::State::VIEW);
-    v.Unit("viewer", _viewerBact, World::State::VIEW);
+    v.Unit("userRobo", _localPlayer->HostStation, World::State::VIEW);
+    v.Unit("userUnit", _localPlayer->Unit, World::State::VIEW);
+    v.Unit("viewer", _localPlayer->Unit, World::State::VIEW);
 
     // Where the player looks from, as the viewer left it
     v.Field("cameraPosition", _viewerPosition, World::State::VIEW);
@@ -6375,7 +6375,7 @@ void NC_STACK_ypaworld::GiveUnitAssets(NC_STACK_ypabact *unit)
 void NC_STACK_ypaworld::FinishRestore(bool inPlace)
 {
     // As setYW_userHostStation sets it for a level started anew
-    _playerOwner = _userRobo ? _userRobo->_owner : 0;
+    _playerOwner = UserRobo() ? UserRobo()->_owner : 0;
 
     _countSectorsPerOwner.fill(0);
 
@@ -6735,12 +6735,12 @@ void NC_STACK_ypaworld::HandleRoboDestroyed(TRoboDestroyed *arg)
     if ( !arg->killerOwner ) //New owner
         return;
 
-    if ( arg->bact == _userRobo )
+    if ( arg->bact == UserRobo() )
         _playerHSDestroyed = true;
 
-    if ( _userRobo )
+    if ( UserRobo() )
     {
-        if ( _userRobo->_owner == arg->killerOwner )
+        if ( UserRobo()->_owner == arg->killerOwner )
             _beamEnergyCapacity += _beamEnergyAdd;
     }
 
@@ -6761,10 +6761,10 @@ void NC_STACK_ypaworld::HandleRoboDestroyed(TRoboDestroyed *arg)
         }
     }
 
-    if ( !_userRobo )
+    if ( !UserRobo() )
         return;
 
-    if ( _userRobo->_owner != arg->killerOwner )
+    if ( UserRobo()->_owner != arg->killerOwner )
         return;
 
     for (int i = 0; i < _mapSize.y; i++)
@@ -6773,7 +6773,7 @@ void NC_STACK_ypaworld::HandleRoboDestroyed(TRoboDestroyed *arg)
         {
             cellArea &cell = _cells(j, i);
 
-            if ( cell.PurposeType == cellArea::PT_TECHUPGRADE && cell.owner == _userRobo->_owner )
+            if ( cell.PurposeType == cellArea::PT_TECHUPGRADE && cell.owner == UserRobo()->_owner )
             {
 
                 if ( _isNetGame )
@@ -6823,7 +6823,7 @@ void NC_STACK_ypaworld::FFeedback_Play(TFFeedbackEffect *arg)
 
     case 5:
     {
-        NC_STACK_ypabact *bct = _userUnit;
+        NC_STACK_ypabact *bct = UserUnit();
         Input::Engine.ForceFeedback(Input::FF_STATE_START, Input::FF_TYPE_COLLISION,
             arg->strength, 0.0,
             (arg->pos_z - bct->_position.z) * bct->_rotation.m02 + (arg->pos_x - bct->_position.x) * bct->_rotation.m00,
@@ -6877,7 +6877,7 @@ size_t NC_STACK_ypaworld::AdvancedCreateLevel(TLevelLoadRequest *arg)
         {
             InitBuddies();
 
-            _userRobo->_energy = _userRobo->_energy_max;
+            UserRobo()->_energy = UserRobo()->_energy_max;
 
             // A won training mission played again has nothing left to teach
             _tutorialHints.Stop();
@@ -6954,26 +6954,26 @@ void NC_STACK_ypaworld::setYW_doEnergyRecalc(int doRecalc)
 
 void NC_STACK_ypaworld::setYW_userHostStation(NC_STACK_ypabact *host)
 {
-    _userRobo = host;
+    _localPlayer->HostStation = host;
     _playerOwner = host->_owner;
 }
 
 void NC_STACK_ypaworld::setYW_userVehicle(NC_STACK_ypabact *bact)
 {
-    if ( bact != _userUnit )
+    if ( bact != _localPlayer->Unit )
     {
-        NC_STACK_ypabact *oldpBact = _userUnit;
+        NC_STACK_ypabact *oldpBact = _localPlayer->Unit;
 
         if ( oldpBact )
             _prevUnitId = oldpBact->_gid;
 
-        _userUnit = bact;
+        _localPlayer->Unit = bact;
 
         _vehicleTakenControlTimestamp = _timeStamp;
-        _vehicleTakenCommandId = _userUnit->_commandID;
+        _vehicleTakenCommandId = UserUnit()->_commandID;
         _guiDragDefaultMouse = false;
 
-        if ( _userUnit->_bact_type == BACT_TYPES_ROBO )
+        if ( UserUnit()->_bact_type == BACT_TYPES_ROBO )
         {
             _joyIgnoreY = 1;
             _joyIgnoreX = 1;
@@ -6982,7 +6982,7 @@ void NC_STACK_ypaworld::setYW_userVehicle(NC_STACK_ypabact *bact)
         FFeedback_VehicleChanged();
 
         if ( oldpBact )
-            RestoreWinStatus(this, oldpBact, _userUnit);
+            RestoreWinStatus(this, oldpBact, UserUnit());
     }
 }
 
@@ -7031,17 +7031,6 @@ int NC_STACK_ypaworld::getYW_doEnergyRecalc()
 {
     return _doEnergyRecalc;
 }
-
-NC_STACK_ypabact *NC_STACK_ypaworld::getYW_userHostStation()
-{
-    return _userRobo;
-}
-
-NC_STACK_ypabact *NC_STACK_ypaworld::getYW_userVehicle()
-{
-    return _userUnit;
-}
-
 
 int NC_STACK_ypaworld::getYW_lvlFinished()
 {

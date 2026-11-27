@@ -1039,7 +1039,7 @@ void NC_STACK_yparobo::UpdateCollisionPointPositions()
 
 bool NC_STACK_yparobo::IsNotUserControlled()
 {
-    NC_STACK_ypabact *yw_1b7c = _world->getYW_userVehicle();
+    NC_STACK_ypabact *yw_1b7c = _world->UserUnit();
 
     if ( yw_1b7c == this )
         return false;
@@ -3332,7 +3332,7 @@ void NC_STACK_yparobo::usersRoboEnergyCheck()
 
 void NC_STACK_yparobo::checkCommander()
 {
-    bool userRobo =  (this == _world->getYW_userHostStation());
+    bool userRobo =  (this == _world->UserRobo());
 
     float energyRatio;
 
@@ -3518,7 +3518,7 @@ void NC_STACK_yparobo::checkCommander()
             {
                 for ( const TBactAttacker &ainf : commander->_attackersList )
                 {
-                    if (_world->_userRobo->_owner == ainf.attacker->_owner)
+                    if (_world->UserRobo()->_owner == ainf.attacker->_owner)
                     {                     
                         NC_STACK_ypabact *realbact = ainf.attacker;                  
                         if ( realbact->_bact_type == BACT_TYPES_MISSLE ) //If missile
@@ -4838,7 +4838,7 @@ void NC_STACK_yparobo::Die()
             node->setBACT_yourLastSeconds(lastSeconds);
         }
 
-        NC_STACK_ypabact *userHost = _world->getYW_userHostStation();
+        NC_STACK_ypabact *userHost = _world->UserRobo();
 
         // Only a host station destroyed is reported, not one cleaned away
         // with the rest of the level's units, as when it ends or goes back
@@ -4880,10 +4880,10 @@ void NC_STACK_yparobo::Die()
             {
                 _world->NetBroadcastMessage(&hdMsg, sizeof(hdMsg), true);
 
-                if ( this == _world->_userRobo )
+                if ( this == _world->UserRobo() )
                 {
-                    _world->_userUnit->setBACT_inputting(false);
-                    _world->_userUnit->setBACT_viewer(false);
+                    _world->UserUnit()->setBACT_inputting(false);
+                    _world->UserUnit()->setBACT_viewer(false);
 
                     setBACT_inputting(true);
                     setBACT_viewer(true);
@@ -5722,7 +5722,7 @@ int NC_STACK_yparobo::ShouldPlaceMessage(TRoboMessage *arg)
     {
     case 1:
     {
-        NC_STACK_ypabact *bacto = _world->getYW_userVehicle();
+        NC_STACK_ypabact *bacto = _world->UserUnit();
 
         if ( bacto->_bact_type != BACT_TYPES_MISSLE )
             shouldPlace = 1;

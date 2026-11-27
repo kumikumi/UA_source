@@ -86,7 +86,7 @@ std::string GameAnalyzer::Analyze(NC_STACK_ypaworld *world)
 
 bool GameAnalyzer::IsHSAttacked(NC_STACK_ypaworld *world)
 {
-    NC_STACK_ypabact *hs = world->_userRobo;
+    NC_STACK_ypabact *hs = world->UserRobo();
             
     for ( int sY = -1; sY <= 1; sY++ )
     {
@@ -111,7 +111,7 @@ bool GameAnalyzer::IsHSAttacked(NC_STACK_ypaworld *world)
     
 bool GameAnalyzer::IsHSLowHP(NC_STACK_ypaworld *world)
 {
-    if (world->_userRobo->_energy < world->_userRobo->_energy_max / 8)
+    if (world->UserRobo()->_energy < world->UserRobo()->_energy_max / 8)
         return true;
     return false;
 }
@@ -122,10 +122,10 @@ bool GameAnalyzer::IsHasBackupPS(NC_STACK_ypaworld *world)
     {
         if (it.second.pCell)
         {
-            if (it.second.pCell->owner == world->_userRobo->_owner)
+            if (it.second.pCell->owner == world->UserRobo()->_owner)
             {
-                if ( Common::ABS(it.second.CellId.x - world->_userRobo->_cellId.x) >= 4
-                  || Common::ABS(it.second.CellId.y - world->_userRobo->_cellId.y) >= 4)
+                if ( Common::ABS(it.second.CellId.x - world->UserRobo()->_cellId.x) >= 4
+                  || Common::ABS(it.second.CellId.y - world->UserRobo()->_cellId.y) >= 4)
                     return true;
             }
         }
@@ -149,7 +149,7 @@ bool GameAnalyzer::IsOwnPowerStation(NC_STACK_ypaworld *world)
     {
         if (it.second.pCell)
         {
-            if (it.second.pCell->owner == world->_userRobo->_owner)
+            if (it.second.pCell->owner == world->UserRobo()->_owner)
                 return true;
         }
     }
@@ -163,13 +163,13 @@ bool GameAnalyzer::IsOnHighPowerStation(NC_STACK_ypaworld *world)
     {
         if (it.second.pCell)
         {
-            if (it.second.pCell->owner == world->_userRobo->_owner
+            if (it.second.pCell->owner == world->UserRobo()->_owner
              && (!maxPwr || maxPwr->EffectivePower < it.second.EffectivePower) )
                 maxPwr = &it.second;
         }
     }
     
-    if (maxPwr && world->_userRobo->_pSector == maxPwr->pCell)
+    if (maxPwr && world->UserRobo()->_pSector == maxPwr->pCell)
         return true;
     
     return false;
@@ -177,7 +177,7 @@ bool GameAnalyzer::IsOnHighPowerStation(NC_STACK_ypaworld *world)
     
 bool GameAnalyzer::IsPowerEffLow(NC_STACK_ypaworld *world)
 {
-    if (world->_reloadRatioClamped[ world->_userRobo->_owner ] < 0.9)
+    if (world->_reloadRatioClamped[ world->UserRobo()->_owner ] < 0.9)
         return true;
     return false;
 }
@@ -188,8 +188,8 @@ bool GameAnalyzer::IsSpottedEnemyPS(NC_STACK_ypaworld *world)
     {
         if (it.second.pCell)
         {
-            if (it.second.pCell->owner != world->_userRobo->_owner &&
-                it.second.pCell->IsCanSee(world->_userRobo->_owner) )
+            if (it.second.pCell->owner != world->UserRobo()->_owner &&
+                it.second.pCell->IsCanSee(world->UserRobo()->_owner) )
                 return true;
         }
     }
@@ -198,7 +198,7 @@ bool GameAnalyzer::IsSpottedEnemyPS(NC_STACK_ypaworld *world)
 
 bool GameAnalyzer::IsCanBuildPowerStation(NC_STACK_ypaworld *world)
 {
-    int32_t enrg = ((NC_STACK_yparobo *)world->_userRobo)->getROBO_battVehicle();
+    int32_t enrg = ((NC_STACK_yparobo *)world->UserRobo())->getROBO_battVehicle();
     for(int i = 0; i < bzda.buildCount; i++)
     {
         TBuildingProto &proto = world->_buildProtos.at( bzda.buildProtoIds[i] );
@@ -215,8 +215,8 @@ bool GameAnalyzer::IsSpottedTek(NC_STACK_ypaworld *world)
         cellArea *cell = world->GetSector(gem.CellId);
         if ( cell && cell->PurposeType == cellArea::PT_TECHUPGRADE )
         {
-            if ( world->_userRobo->_owner != cell->owner 
-              && cell->IsCanSee(world->_userRobo->_owner) )
+            if ( world->UserRobo()->_owner != cell->owner 
+              && cell->IsCanSee(world->UserRobo()->_owner) )
                 return true;
         }
     }
@@ -229,8 +229,8 @@ bool GameAnalyzer::IsSpottedBeamGate(NC_STACK_ypaworld *world)
     {
         if ( gate.PCell->PurposeType == cellArea::PT_GATECLOSED )
         {
-            if ( world->_userRobo->_owner != gate.PCell->owner 
-              && gate.PCell->IsCanSee(world->_userRobo->_owner) )
+            if ( world->UserRobo()->_owner != gate.PCell->owner 
+              && gate.PCell->IsCanSee(world->UserRobo()->_owner) )
                 return true;
         }
     }
@@ -243,8 +243,8 @@ bool GameAnalyzer::IsSpottedKeySector(NC_STACK_ypaworld *world)
     {
         for( const TMapKeySector &ks : gate.KeySectors )
         {
-            if ( world->_userRobo->_owner != ks.PCell->owner 
-              && ks.PCell->IsCanSee(world->_userRobo->_owner) )
+            if ( world->UserRobo()->_owner != ks.PCell->owner 
+              && ks.PCell->IsCanSee(world->UserRobo()->_owner) )
                 return true;
         }
     }
@@ -255,11 +255,11 @@ bool GameAnalyzer::IsSpottedEnemyHS(NC_STACK_ypaworld *world)
 {
     for (const NC_STACK_ypabact *hs : world->_unitsList)
     {
-        if ( hs != world->_userRobo
+        if ( hs != world->UserRobo()
          &&  hs->_bact_type == BACT_TYPES_ROBO
-         &&  hs->_owner != world->_userRobo->_owner
+         &&  hs->_owner != world->UserRobo()->_owner
          &&  hs->_status != BACT_STATUS_DEAD
-         &&  hs->_pSector->IsCanSee( world->_userRobo->_owner) )
+         &&  hs->_pSector->IsCanSee( world->UserRobo()->_owner) )
         {
             return true;
         }
@@ -271,16 +271,16 @@ bool GameAnalyzer::IsSpottedEnemyHSwithPS(NC_STACK_ypaworld *world)
 {
     for (const NC_STACK_ypabact *hs : world->_unitsList)
     {
-        if ( hs != world->_userRobo
+        if ( hs != world->UserRobo()
          &&  hs->_bact_type == BACT_TYPES_ROBO
-         &&  hs->_owner != world->_userRobo->_owner
+         &&  hs->_owner != world->UserRobo()->_owner
          &&  hs->_status != BACT_STATUS_DEAD
-         &&  hs->_pSector->IsCanSee( world->_userRobo->_owner ) )
+         &&  hs->_pSector->IsCanSee( world->UserRobo()->_owner ) )
         {
             for(const auto it : world->_powerStations)
             {
                 if (it.second.pCell && it.second.pCell->owner == hs->_owner 
-                 && it.second.pCell->IsCanSee(world->_userRobo->_owner))
+                 && it.second.pCell->IsCanSee(world->UserRobo()->_owner))
                 {
                     if (Common::ABS(it.second.CellId.x - hs->_cellId.x) < 3
                      || Common::ABS(it.second.CellId.y - hs->_cellId.y) < 3)
@@ -297,7 +297,7 @@ bool GameAnalyzer::IsFewSeeSectors(NC_STACK_ypaworld *world)
     int32_t see = 0;
     for( const cellArea &cell : world->_cells )
     {
-        if (cell.IsCanSee(world->_userRobo->_owner))
+        if (cell.IsCanSee(world->UserRobo()->_owner))
             see++;
     }
     
@@ -309,17 +309,17 @@ bool GameAnalyzer::IsFewSeeSectors(NC_STACK_ypaworld *world)
 
 bool GameAnalyzer::IsFewOwnSectors(NC_STACK_ypaworld *world)
 {
-    if (world->_countSectorsPerOwner[world->_userRobo->_owner] <= 0)
+    if (world->_countSectorsPerOwner[world->UserRobo()->_owner] <= 0)
         return true;
     
     int32_t see = 0;
     for( const cellArea &cell : world->_cells )
     {
-        if (cell.IsCanSee(world->_userRobo->_owner))
+        if (cell.IsCanSee(world->UserRobo()->_owner))
             see++;
     }
 
-    float prc = ((float)see) / ((float)world->_countSectorsPerOwner[world->_userRobo->_owner]);
+    float prc = ((float)see) / ((float)world->_countSectorsPerOwner[world->UserRobo()->_owner]);
     if (prc < 0.75)
         return true;
     return false; 

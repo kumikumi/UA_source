@@ -544,7 +544,7 @@ void NC_STACK_ypabact::Update(update_msg *arg)
     if ( _pSector->height + 1000.0 < _position.y )
         FixSectorFall();
 
-    NC_STACK_ypabact *roboHost = _world->getYW_userHostStation();
+    NC_STACK_ypabact *roboHost = _world->UserRobo();
 
     if ( _pSector->PurposeType == cellArea::PT_GATEOPENED && _bact_type == BACT_TYPES_ROBO && this == roboHost )
         ((NC_STACK_yparobo *)roboHost)->UpdateGateBeamOut();
@@ -1007,7 +1007,7 @@ void NC_STACK_ypabact::AI_layer2(update_msg *arg)
         return;
     }
 
-    NC_STACK_ypabact *wee = _world->getYW_userHostStation();
+    NC_STACK_ypabact *wee = _world->UserRobo();
 
     if ( _status == BACT_STATUS_NORMAL || _status == BACT_STATUS_IDLE )
     {
@@ -1453,7 +1453,7 @@ void NC_STACK_ypabact::AI_layer3(update_msg *arg)
         }
         else
         {
-            NC_STACK_ypabact *userVehicle = _world->getYW_userVehicle();
+            NC_STACK_ypabact *userVehicle = _world->UserUnit();
 
             if ( ((_secndTtype != BACT_TGT_TYPE_UNIT || (userVehicle != _secndT.pbact && _secndT.pbact->_bact_type != BACT_TYPES_ROBO)) &&
                     (_primTtype != BACT_TGT_TYPE_UNIT || (userVehicle != _primT.pbact && _primT.pbact->_bact_type != BACT_TYPES_ROBO)))
@@ -2204,7 +2204,7 @@ void NC_STACK_ypabact::FightWithBact(TFightTarget *arg)
         isPrimTarget = true;
     }
 
-    NC_STACK_ypabact *userHost = _world->getYW_userHostStation();
+    NC_STACK_ypabact *userHost = _world->UserRobo();
 
     if ( _clock - _assess_time > 500 || _clock < 500 )
     {
@@ -2493,7 +2493,7 @@ void NC_STACK_ypabact::FightWithSect(TFightTarget *arg)
         assess.priority = 0;
     }
 
-    NC_STACK_ypabact *userHost = _world->getYW_userHostStation();
+    NC_STACK_ypabact *userHost = _world->UserRobo();
 
     int isUserLeader = IsParentMyRobo() && _host_station == userHost;
 
@@ -2931,7 +2931,7 @@ void NC_STACK_ypabact::Die()
         }
     }
 
-    NC_STACK_ypabact *userHost = _world->getYW_userHostStation();
+    NC_STACK_ypabact *userHost = _world->UserRobo();
 
     if ( !deputy && IsParentMyRobo()&& !(_status_flg & BACT_STFLAG_NOMSG) )
     {
@@ -5168,7 +5168,7 @@ void NC_STACK_ypabact::CreationTimeUpdate(update_msg *arg)
 
         SetPosition(&placement);
 
-        NC_STACK_ypabact *userRobo = _world->getYW_userHostStation();
+        NC_STACK_ypabact *userRobo = _world->UserRobo();
 
         if ( _host_station == userRobo )
         {
@@ -7853,9 +7853,9 @@ void NC_STACK_ypabact::setBACT_viewer(bool vwr)
 
     if ( vwr )
     {
-        if (_world->_viewerBact)
+        if (_world->UserUnit())
         {
-            if ( _world->_viewerBact->_bact_type != BACT_TYPES_MISSLE )
+            if ( _world->UserUnit()->_bact_type != BACT_TYPES_MISSLE )
                 _salve_counter = 0;
         }
 

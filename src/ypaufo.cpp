@@ -282,7 +282,7 @@ void NC_STACK_ypaufo::AI_layer3(update_msg *arg)
                     }
                     else
                     {
-                        NC_STACK_ypabact *userVehicle = _world->getYW_userVehicle();;
+                        NC_STACK_ypabact *userVehicle = _world->UserUnit();;
 
                         if ( ( (_secndTtype != BACT_TGT_TYPE_UNIT || userVehicle != _secndT.pbact) && ( _primTtype != BACT_TGT_TYPE_UNIT || userVehicle != _primT.pbact) ) || _target_dir.y >= 0.0 )
                         {

@@ -176,9 +176,9 @@ void create_squad_man(NC_STACK_ypaworld *yw)
 
 void UpdateBottomBarModes(NC_STACK_ypaworld *yw)
 {
-    if ( yw->_userUnit )
+    if ( yw->UserUnit() )
     {
-        if ( yw->_userUnit == yw->_userRobo || yw->_playerInHSGun )
+        if ( yw->UserUnit() == yw->UserRobo() || yw->_playerInHSGun )
         {
             bzda.enabledModes = 0x29;
 
@@ -201,7 +201,7 @@ void UpdateBottomBarModes(NC_STACK_ypaworld *yw)
             bzda.enabledModes = 41;
         }
 
-        if ( yw->_userRobo->_status == BACT_STATUS_DEAD )
+        if ( yw->UserRobo()->_status == BACT_STATUS_DEAD )
             bzda.enabledModes = 0;
     }
     else
@@ -404,7 +404,7 @@ void  RoboMapDrawRoboAIDebug(NC_STACK_ypaworld *yw)
 {
     for( NC_STACK_ypabact* &bact : yw->_unitsList )
     {
-        if ( bact->_bact_type == BACT_TYPES_ROBO && bact != yw->_userRobo )
+        if ( bact->_bact_type == BACT_TYPES_ROBO && bact != yw->UserRobo() )
         {
             NC_STACK_yparobo *robo = dynamic_cast<NC_STACK_yparobo *>(bact);
 
@@ -1146,32 +1146,32 @@ public:
         return true;
     }
 
-    uint8_t PlayerOwner() const override { return World->_userRobo->_owner; }
-    uint32_t UserRoboId() const override { return World->_userRobo ? World->_userRobo->_gid : 0; }
-    uint32_t UserUnitId() const override { return World->_userUnit ? World->_userUnit->_gid : 0; }
+    uint8_t PlayerOwner() const override { return World->UserRobo()->_owner; }
+    uint32_t UserRoboId() const override { return World->UserRobo() ? World->UserRobo()->_gid : 0; }
+    uint32_t UserUnitId() const override { return World->UserUnit() ? World->UserUnit()->_gid : 0; }
 
     bool UserRobo(Unit &out) const override
     {
-        if ( World->_userRobo )
-            out = LiveMapUnit(World, World->_userRobo);
+        if ( World->UserRobo() )
+            out = LiveMapUnit(World, World->UserRobo());
 
-        return World->_userRobo != NULL;
+        return World->UserRobo() != NULL;
     }
 
     bool UserUnit(Unit &out) const override
     {
-        if ( World->_userUnit )
-            out = LiveMapUnit(World, World->_userUnit);
+        if ( World->UserUnit() )
+            out = LiveMapUnit(World, World->UserUnit());
 
-        return World->_userUnit != NULL;
+        return World->UserUnit() != NULL;
     }
 
     bool ViewerPosition(vec3d &out) const override
     {
-        if ( World->_viewerBact )
-            out = World->_viewerBact->_position;
+        if ( World->UserUnit() )
+            out = World->UserUnit()->_position;
 
-        return World->_viewerBact != NULL;
+        return World->UserUnit() != NULL;
     }
 
     mat3x3 ViewerRotation() const override { return World->_viewerRotation; }
@@ -1372,7 +1372,7 @@ void RoboMapDrawMarkers(NC_STACK_ypaworld *yw, CmdStream *cur)
             }
             else if ( yw->_guiActFlags & 0x10 && yw->_mouseGrabbed == false)
             {
-                if ( yw->_cellOnMouse->owner == yw->_userRobo->_owner && yw->_cellOnMouse->IsCanSee(yw->_userRobo->_owner) )
+                if ( yw->_cellOnMouse->owner == yw->UserRobo()->_owner && yw->_cellOnMouse->IsCanSee(yw->UserRobo()->_owner) )
                 {
                     FontUA::select_tileset(cur, markerTileset);
 
@@ -1426,7 +1426,7 @@ void RoboMapDrawMarkers(NC_STACK_ypaworld *yw, CmdStream *cur)
 
         int roboIconSize = yw->_guiTiles[1]->h;
 
-        RoboMapDrawIcon(cur, yw->_userRobo->_position.x, yw->_userRobo->_position.z, roboSelectGlyph, roboIconSize, roboIconSize);
+        RoboMapDrawIcon(cur, yw->UserRobo()->_position.x, yw->UserRobo()->_position.z, roboSelectGlyph, roboIconSize, roboIconSize);
     }
     else if ( scene.SelectedCommander(commander) )
     {
@@ -3108,12 +3108,12 @@ void NC_STACK_ypaworld::DrawGuiWindows()
 
 void DrawGameInterface(NC_STACK_ypaworld *yw)
 {
-    if ( yw->_userUnit->_bact_type != BACT_TYPES_MISSLE )
+    if ( yw->UserUnit()->_bact_type != BACT_TYPES_MISSLE )
     {
         DrawHud(yw);
         yw->DrawGuiWindows();
 
-        if ( yw->_userUnit->_status != BACT_STATUS_DEAD )
+        if ( yw->UserUnit()->_status != BACT_STATUS_DEAD )
         {
             DrawGameMessages(yw);
             DrawGameStatus(yw);
@@ -3210,7 +3210,7 @@ float NC_STACK_ypaworld::GetUnitLimitCostFactor()
     {
         if ( _levelUnitLimitType == 2 )
         {
-            int excess = _countUnitsPerOwner[_userRobo->_owner] - _levelUnitLimit;
+            int excess = _countUnitsPerOwner[UserRobo()->_owner] - _levelUnitLimit;
             if ( excess > 0 )
                 factor = (_levelUnitLimitArg * excess) * 0.01 + 1.0;
         }
@@ -3291,7 +3291,7 @@ void BottomBarLayoutBuyList(NC_STACK_ypaworld *yw)
 
 void gui_update_create_btn(NC_STACK_ypaworld *yw, CmdStream *cur)
 {
-    if ( yw->_userUnit->_status == BACT_STATUS_DEAD )
+    if ( yw->UserUnit()->_status == BACT_STATUS_DEAD )
     {
         bzda.buttons[0] = ButtonBox(); //create_btn
 
@@ -3341,7 +3341,7 @@ void gui_update_create_btn(NC_STACK_ypaworld *yw, CmdStream *cur)
 
 void gui_update_map_squad_btn(NC_STACK_ypaworld *yw, CmdStream *cur)
 {
-    if ( yw->_userUnit->_status == BACT_STATUS_DEAD )
+    if ( yw->UserUnit()->_status == BACT_STATUS_DEAD )
     {
         FontUA::select_tileset(cur, 23);
 
@@ -3386,7 +3386,7 @@ void gui_update_player_panel(NC_STACK_ypaworld *yw, CmdStream *cur)
 {
     int enabledBtns = 0;
 
-    if ( yw->_userRobo == yw->_userUnit )
+    if ( yw->UserRobo() == yw->UserUnit() )
     {
         if ( !yw->_cmdrsRemap.empty() )
             enabledBtns = 0x80;
@@ -3394,7 +3394,7 @@ void gui_update_player_panel(NC_STACK_ypaworld *yw, CmdStream *cur)
         if ( bzda.gunCount )
             enabledBtns |= 0x40;
     }
-    else if ( yw->_userUnit->_status == BACT_STATUS_DEAD )
+    else if ( yw->UserUnit()->_status == BACT_STATUS_DEAD )
     {
         enabledBtns = 0x90;
     }
@@ -3405,11 +3405,11 @@ void gui_update_player_panel(NC_STACK_ypaworld *yw, CmdStream *cur)
         if ( bzda.gunCount > 1 )
             enabledBtns = 0xD0;
     }
-    else if ( yw->_userUnit->IsParentMyRobo() )
+    else if ( yw->UserUnit()->IsParentMyRobo() )
     {
         enabledBtns = 0x10;
 
-        if ( yw->_userUnit->_bact_type == BACT_TYPES_GUN )
+        if ( yw->UserUnit()->_bact_type == BACT_TYPES_GUN )
         {
             if ( !yw->_cmdrsRemap.empty() )
                 enabledBtns = 0x90;
@@ -3417,14 +3417,14 @@ void gui_update_player_panel(NC_STACK_ypaworld *yw, CmdStream *cur)
         else if ( yw->_cmdrsRemap.size() > 1 )
             enabledBtns = 0x90;
 
-        if ( !yw->_userUnit->_kidList.empty() )
+        if ( !yw->UserUnit()->_kidList.empty() )
             enabledBtns |= 0x40;
     }
     else
     {
         enabledBtns = 0x70;
 
-        if ( yw->_userUnit->_bact_type == BACT_TYPES_GUN )
+        if ( yw->UserUnit()->_bact_type == BACT_TYPES_GUN )
         {
             if ( !yw->_cmdrsRemap.empty() )
                 enabledBtns = 0xF0;
@@ -3433,7 +3433,7 @@ void gui_update_player_panel(NC_STACK_ypaworld *yw, CmdStream *cur)
             enabledBtns = 0xF0;
     }
 
-    if ( yw->_userRobo->_status == BACT_STATUS_DEAD )
+    if ( yw->UserRobo()->_status == BACT_STATUS_DEAD )
         enabledBtns = 0;
 
     if ( bzda.enabledModes & 8 )
@@ -3496,7 +3496,7 @@ void gui_update_player_panel(NC_STACK_ypaworld *yw, CmdStream *cur)
 
     if ( enabledBtns & 0x40 )
     {
-        if ( !bzda.gunCount || (yw->_userRobo != yw->_userUnit && !yw->_playerInHSGun) )
+        if ( !bzda.gunCount || (yw->UserRobo() != yw->UserUnit() && !yw->_playerInHSGun) )
         {
             bzda.buttons[6] = ButtonBox(bzda.unitGroupX + 3 * yw->_iconOrderW, bzda.buttonsY, yw->_iconOrderW, yw->_iconOrderH); //turrets_btn
 
@@ -3549,7 +3549,7 @@ void gui_update_player_panel(NC_STACK_ypaworld *yw, CmdStream *cur)
 
 void gui_update_tools(NC_STACK_ypaworld *yw, CmdStream *cur)
 {
-    if ( yw->_userUnit->_status == BACT_STATUS_DEAD )
+    if ( yw->UserUnit()->_status == BACT_STATUS_DEAD )
     {
         bzda.buttons[8] = ButtonBox(); // analyzer_btn
 
@@ -3626,7 +3626,7 @@ void BottomBarDrawRatingRow(NC_STACK_ypaworld *yw, CmdStream *cur, int x, int y,
     FontUA::set_ypos(cur, (heightDiff / 2) + y);
 
     for (int i = 0; i < rating; i++)
-        FontUA::store_u8(cur, yw->_userRobo->_owner);
+        FontUA::store_u8(cur, yw->UserRobo()->_owner);
 }
 
 void BottomBarDrawVehicleRatings(NC_STACK_ypaworld *yw, CmdStream *cur)
@@ -3755,10 +3755,10 @@ NC_STACK_ypabact * FindPreviousUserUnit(NC_STACK_ypaworld *yw)
     if ( !yw->_prevUnitId )
         return NULL;
 
-    if ( yw->_prevUnitId == yw->_userRobo->_gid )
-        return yw->_userRobo;
+    if ( yw->_prevUnitId == yw->UserRobo()->_gid )
+        return yw->UserRobo();
 
-    for( NC_STACK_ypabact* &comm : yw->_userRobo->_kidList )
+    for( NC_STACK_ypabact* &comm : yw->UserRobo()->_kidList )
     {
         if ( comm->_status != BACT_STATUS_DEAD && comm->_status != BACT_STATUS_CREATE && comm->_status != BACT_STATUS_BEAM )
         {
@@ -3778,15 +3778,15 @@ NC_STACK_ypabact * FindPreviousUserUnit(NC_STACK_ypaworld *yw)
 
 void MakeUserUnitCommander(NC_STACK_ypaworld *yw)
 {
-    if ( !yw->_userUnit->_parent || yw->_userUnit->_parent != yw->_userRobo )
+    if ( !yw->UserUnit()->_parent || yw->UserUnit()->_parent != yw->UserRobo() )
     {
-        if ( yw->_userUnit->_bact_type != BACT_TYPES_ROBO && yw->_userUnit->_bact_type != BACT_TYPES_MISSLE && yw->_userUnit->_bact_type != BACT_TYPES_GUN )
+        if ( yw->UserUnit()->_bact_type != BACT_TYPES_ROBO && yw->UserUnit()->_bact_type != BACT_TYPES_MISSLE && yw->UserUnit()->_bact_type != BACT_TYPES_GUN )
         {
             TReorgOrder order;
             order.mode = 2;
-            order.unit = yw->_userUnit->_parent;
+            order.unit = yw->UserUnit()->_parent;
 
-            yw->_userUnit->ReorganizeGroup(&order);
+            yw->UserUnit()->ReorganizeGroup(&order);
         }
     }
 }
@@ -3803,7 +3803,7 @@ int BottomBarHandleHotkeys(NC_STACK_ypaworld *yw, TInputState *inpt)
         break;
 
     case 1:
-        if ( yw->_userUnit == yw->_userRobo )
+        if ( yw->UserUnit() == yw->UserRobo() )
         {
             if ( bzda.buttons[6] ) //turrets_btn
             {
@@ -3888,7 +3888,7 @@ int BottomBarHandleHotkeys(NC_STACK_ypaworld *yw, TInputState *inpt)
         break;
 
     case 8:
-        if ( yw->_userUnit->_status != BACT_STATUS_DEAD )
+        if ( yw->UserUnit()->_status != BACT_STATUS_DEAD )
         {
             winpt->selected_btnID = 2;
             winpt->selected_btn = &bzda;
@@ -3897,7 +3897,7 @@ int BottomBarHandleHotkeys(NC_STACK_ypaworld *yw, TInputState *inpt)
         break;
 
     case 9:
-        if ( yw->_userUnit->_status != BACT_STATUS_DEAD )
+        if ( yw->UserUnit()->_status != BACT_STATUS_DEAD )
         {
             winpt->selected_btnID = 3;
             winpt->selected_btn = &bzda;
@@ -3942,9 +3942,9 @@ int BottomBarHandleHotkeys(NC_STACK_ypaworld *yw, TInputState *inpt)
         break;
 
     case 24:
-        if ( yw->_userRobo->_status == BACT_STATUS_DEAD || bzda.activeMode & 1 )
+        if ( yw->UserRobo()->_status == BACT_STATUS_DEAD || bzda.activeMode & 1 )
         {
-            if ( yw->_userRobo == yw->_userUnit || yw->_userRobo->_status == BACT_STATUS_DEAD )
+            if ( yw->UserRobo() == yw->UserUnit() || yw->UserRobo()->_status == BACT_STATUS_DEAD )
             {
                 if ( bzda.buttons[10] ) //menu_btn
                 {
@@ -3968,7 +3968,7 @@ int BottomBarHandleHotkeys(NC_STACK_ypaworld *yw, TInputState *inpt)
         break;
 
     case 25:
-        if ( yw->_userUnit != yw->_userRobo )
+        if ( yw->UserUnit() != yw->UserRobo() )
         {
             if ( yw->_hud.visible )
                 yw->_hud.visible = 0;
@@ -4080,7 +4080,7 @@ int BottomBarHandleHotkeys(NC_STACK_ypaworld *yw, TInputState *inpt)
         break;
 
     case 46:
-        if ( yw->_userUnit->_status != BACT_STATUS_DEAD )
+        if ( yw->UserUnit()->_status != BACT_STATUS_DEAD )
         {
             winpt->selected_btnID = 8;
             winpt->selected_btn = &bzda;
@@ -4103,7 +4103,7 @@ NC_STACK_ypabact * NC_STACK_ypaworld::GetDefaultCmdr() const
     if ( !_cmdrsRemap.empty() )
         return _cmdrsRemap.front(); 
     
-    return _userRobo;
+    return UserRobo();
 }
 
 NC_STACK_ypabact * NC_STACK_ypaworld::GetNextCmdrByCmdId(uint32_t cmdrId) const
@@ -4125,10 +4125,10 @@ NC_STACK_ypabact * NC_STACK_ypaworld::GetNextCmdrByCmdId(uint32_t cmdrId) const
 
 NC_STACK_ypabact * NC_STACK_ypaworld::GetNextSquad() const
 {
-    if ( _userUnit == _userRobo || _playerInHSGun )
+    if ( UserUnit() == UserRobo() || _playerInHSGun )
         return GetDefaultCmdr();
     
-    if ( _userUnit->_status == BACT_STATUS_DEAD )
+    if ( UserUnit()->_status == BACT_STATUS_DEAD )
     {
         for (NC_STACK_ypabact *comm : _cmdrsRemap)
         {
@@ -4139,7 +4139,7 @@ NC_STACK_ypabact * NC_STACK_ypaworld::GetNextSquad() const
         return GetDefaultCmdr();
     }
     
-    if ( _userUnit->_bact_type == BACT_TYPES_GUN )
+    if ( UserUnit()->_bact_type == BACT_TYPES_GUN )
         return GetDefaultCmdr();
 
     return GetNextCmdrByCmdId(_vehicleTakenCommandId);
@@ -4147,9 +4147,9 @@ NC_STACK_ypabact * NC_STACK_ypaworld::GetNextSquad() const
 
 void StoreWinStatus(NC_STACK_ypaworld *yw)
 {
-    if ( yw->_userUnit->_status != BACT_STATUS_DEAD )
+    if ( yw->UserUnit()->_status != BACT_STATUS_DEAD )
     {
-        if ( yw->_userUnit == yw->_userRobo )
+        if ( yw->UserUnit() == yw->UserRobo() )
         {
             yw->_roboMapStatus.Valid = true;
             yw->_roboMapStatus.IsOpen = robo_map.IsOpen();
@@ -4212,10 +4212,10 @@ NC_STACK_ypabact * GetNextHostStationGun(NC_STACK_ypaworld *yw)
             {
                 bzda.selGunIdx = 0;
                 yw->_playerInHSGun = false;
-                return yw->_userRobo;
+                return yw->UserRobo();
             }
 
-            NC_STACK_yparobo *robo = dynamic_cast<NC_STACK_yparobo *>(yw->_userRobo);
+            NC_STACK_yparobo *robo = dynamic_cast<NC_STACK_yparobo *>(yw->UserRobo());
 
             yw->_playerInHSGun = true;
 
@@ -4225,7 +4225,7 @@ NC_STACK_ypabact * GetNextHostStationGun(NC_STACK_ypaworld *yw)
         {
             bzda.selGunIdx = 0;
 
-            NC_STACK_yparobo *robo = dynamic_cast<NC_STACK_yparobo *>(yw->_userRobo);
+            NC_STACK_yparobo *robo = dynamic_cast<NC_STACK_yparobo *>(yw->UserRobo());
 
             yw->_playerInHSGun = true;
 
@@ -4237,9 +4237,9 @@ NC_STACK_ypabact * GetNextHostStationGun(NC_STACK_ypaworld *yw)
 
 NC_STACK_ypabact * GetNextSquadMember(NC_STACK_ypaworld *yw)
 {
-    if ( yw->_userUnit->IsParentMyRobo() )
+    if ( yw->UserUnit()->IsParentMyRobo() )
     {
-        for ( NC_STACK_ypabact* &unit : yw->_userUnit->_kidList )
+        for ( NC_STACK_ypabact* &unit : yw->UserUnit()->_kidList )
         {
             if ( unit->_status != BACT_STATUS_CREATE && unit->_status != BACT_STATUS_DEAD && unit->_status != BACT_STATUS_BEAM )
             return unit;
@@ -4247,10 +4247,10 @@ NC_STACK_ypabact * GetNextSquadMember(NC_STACK_ypaworld *yw)
     }
     else
     {
-        World::RefBactList *lst = yw->_userUnit->_kidRef.PList();
+        World::RefBactList *lst = yw->UserUnit()->_kidRef.PList();
         if (lst)
         {
-            for( World::RefBactList::iterator it = std::next(yw->_userUnit->_kidRef.iter(), 1); it != lst->end(); it++) // Start from current unit in this list
+            for( World::RefBactList::iterator it = std::next(yw->UserUnit()->_kidRef.iter(), 1); it != lst->end(); it++) // Start from current unit in this list
             {
                if ( (*it)->_status != BACT_STATUS_CREATE && (*it)->_status != BACT_STATUS_DEAD && (*it)->_status != BACT_STATUS_BEAM )
                     return *it;
@@ -4258,8 +4258,8 @@ NC_STACK_ypabact * GetNextSquadMember(NC_STACK_ypaworld *yw)
         }
     }
 
-    if ( yw->_userUnit->_parent != yw->_userUnit->_host_station && yw->_userUnit->_parent )
-        return yw->_userUnit->_parent;
+    if ( yw->UserUnit()->_parent != yw->UserUnit()->_host_station && yw->UserUnit()->_parent )
+        return yw->UserUnit()->_parent;
 
     return NULL;
 }
@@ -4356,7 +4356,7 @@ void NotifyReturnToHostStation(NC_STACK_ypaworld *yw)
     if ( yw->_timeStamp - yw->_msgTimestampHSReturn > 35000 )
     {
         TInfoMessage msg;
-        msg.unit = yw->_userRobo;
+        msg.unit = yw->UserRobo();
         msg.Priority = 10;
         msg.MsgID = 39;
 
@@ -4388,7 +4388,7 @@ void SwitchControlToUnit(NC_STACK_ypaworld *yw, NC_STACK_ypabact *bact1, NC_STAC
                     bzda.activeMode = 1;
             }
 
-            if ( bact1 == yw->_userRobo )
+            if ( bact1 == yw->UserRobo() )
             {
                 yw->_mouseGrabbed = false;
                 NotifyReturnToHostStation(yw);
@@ -4396,7 +4396,7 @@ void SwitchControlToUnit(NC_STACK_ypaworld *yw, NC_STACK_ypabact *bact1, NC_STAC
             else
             {
                 TInfoMessage msg;
-                msg.unit = yw->_userUnit;
+                msg.unit = yw->UserUnit();
                 msg.Priority = 33;
                 msg.MsgID = 17;
 
@@ -4415,7 +4415,7 @@ void  BottomBarHandleInput(NC_STACK_ypaworld *yw, TInputState *inpt)
     TClickBoxInf *winpt = &inpt->ClickInf;
 
     NC_STACK_ypabact *bact1 = NULL;
-    NC_STACK_ypabact *bact2 = yw->_viewerBact;
+    NC_STACK_ypabact *bact2 = yw->UserUnit();
 
     bzda.pressedBtns = 0;
 
@@ -4448,7 +4448,7 @@ void  BottomBarHandleInput(NC_STACK_ypaworld *yw, TInputState *inpt)
                 break;
         }
 
-        if ( yw->_userUnit->_status == BACT_STATUS_DEAD )
+        if ( yw->UserUnit()->_status == BACT_STATUS_DEAD )
         {
             if ( yw->_fireBtnDownHappen )
             {
@@ -4470,7 +4470,7 @@ void  BottomBarHandleInput(NC_STACK_ypaworld *yw, TInputState *inpt)
         }
 
         // TODO(cleanup): stateFlags bit 8 is set and cleared here but never read.
-        if ( yw->_userUnit == yw->_userRobo )
+        if ( yw->UserUnit() == yw->UserRobo() )
         {
             if ( robo_map.stateFlags & 8 )
                 robo_map.stateFlags &= 0xFFFFFFF7;
@@ -4605,7 +4605,7 @@ void  BottomBarHandleInput(NC_STACK_ypaworld *yw, TInputState *inpt)
 
                 if ( winpt->flag & TClickBoxInf::FLAG_BTN_UP )
                 {
-                    bact1 = yw->_userRobo;
+                    bact1 = yw->UserRobo();
 
                     if ( yw->_playerInHSGun )
                         bzda.activeMode = 1;
@@ -4619,7 +4619,7 @@ void  BottomBarHandleInput(NC_STACK_ypaworld *yw, TInputState *inpt)
                     bzda.pressedBtns |= 0x20;
 
                 if ( winpt->flag & TClickBoxInf::FLAG_BTN_UP )
-                    bact1 = yw->_userUnit->_parent;
+                    bact1 = yw->UserUnit()->_parent;
 
                 yw->SetShowingTooltipWithHotkey(Locale::TIP_GUI_GOTOCMDR, 23);
                 break;
@@ -4628,7 +4628,7 @@ void  BottomBarHandleInput(NC_STACK_ypaworld *yw, TInputState *inpt)
                 if ( winpt->flag & (TClickBoxInf::FLAG_BTN_DOWN | TClickBoxInf::FLAG_BTN_HOLD) )
                     bzda.pressedBtns |= 0x40;
 
-                if ( yw->_userRobo == yw->_userUnit || yw->_playerInHSGun )
+                if ( yw->UserRobo() == yw->UserUnit() || yw->_playerInHSGun )
                 {
                     if ( winpt->flag & TClickBoxInf::FLAG_BTN_UP )
                         bact1 = GetNextHostStationGun(yw);
@@ -4845,7 +4845,7 @@ void EnergyPanelDrawReloadGauge(NC_STACK_ypaworld *yw, CmdStream *cur, int x, in
         icon = 81;
 
     int ownerGlyph = 0;
-    switch ( yw->_userRobo->_pSector->owner )
+    switch ( yw->UserRobo()->_pSector->owner )
     {
     case 1:
         ownerGlyph = 49;
@@ -5029,13 +5029,13 @@ void EnergyPanelUpdateLayout(NC_STACK_ypaworld *yw)
 {
     up_panel.cmdCommands.clear();
 
-    if ( yw->_userRobo->_status != BACT_STATUS_DEAD )
+    if ( yw->UserRobo()->_status != BACT_STATUS_DEAD )
     {
         int panelX = up_panel.x - yw->_screenSize.x / 2;
         int y = up_panel.y - yw->_screenSize.y / 2;
         int gaugeStep = up_panel.gaugeSpacing + up_panel.gaugeWidth;
 
-        NC_STACK_yparobo *robo = dynamic_cast<NC_STACK_yparobo *>(yw->_userRobo);
+        NC_STACK_yparobo *robo = dynamic_cast<NC_STACK_yparobo *>(yw->UserRobo());
 
         int fillMode = robo->getROBO_fillMode();
         int vehicleBattery = robo->getROBO_battVehicle();
@@ -5043,14 +5043,14 @@ void EnergyPanelUpdateLayout(NC_STACK_ypaworld *yw)
         int loadFlags = robo->getROBO_loadFlags();
         int lossFlags = robo->getROBO_lossFlags();
 
-        int maxEnergy = yw->_userRobo->_energy_max;
+        int maxEnergy = yw->UserRobo()->_energy_max;
 
         TReloadRatios reloadRatios;
-        reloadRatios.owner = yw->_userRobo->_pSector->owner;
+        reloadRatios.owner = yw->UserRobo()->_pSector->owner;
 
         yw->GetReloadRatios(&reloadRatios);
 
-        TReloadGauge reload = ReloadGauge(yw->_userRobo->_owner, yw->_userRobo->_pSector->owner, yw->_userRobo->_pSector->energy_power,
+        TReloadGauge reload = ReloadGauge(yw->UserRobo()->_owner, yw->UserRobo()->_pSector->owner, yw->UserRobo()->_pSector->energy_power,
                                           reloadRatios.ratioClamped, robo->getROBO_absReload());
 
         int mainState, createState, beamState;
@@ -5085,7 +5085,7 @@ void EnergyPanelUpdateLayout(NC_STACK_ypaworld *yw)
         EnergyPanelDrawReloadGauge(yw, &up_panel.cmdCommands, x, y, reload);
 
         int mainX = gaugeStep + x;
-        EnergyPanelDrawMainGauge(yw, &up_panel.cmdCommands, mainX, y, fillMode, mainState, yw->_userRobo->_energy, maxEnergy);
+        EnergyPanelDrawMainGauge(yw, &up_panel.cmdCommands, mainX, y, fillMode, mainState, yw->UserRobo()->_energy, maxEnergy);
 
         int createX = gaugeStep + mainX;
         EnergyPanelDrawCreateGauge(yw, &up_panel.cmdCommands, createX, y, fillMode, createState, vehicleBattery, maxEnergy);
@@ -5112,7 +5112,7 @@ void EnergyPanelHandleInput(NC_STACK_ypaworld *yw, TInputState *inpt)
 
         if ( winpt->flag & TClickBoxInf::FLAG_BTN_UP )
         {
-            NC_STACK_yparobo *robo = dynamic_cast<NC_STACK_yparobo *>(yw->_userRobo);
+            NC_STACK_yparobo *robo = dynamic_cast<NC_STACK_yparobo *>(yw->UserRobo());
 
             int fillMode = robo->getROBO_fillMode();
 
@@ -5254,7 +5254,7 @@ void LayoutClippedTileString(TileMap *tyle, CmdStream *cur, const std::string &s
 void SquadManagerLayoutHostStation(NC_STACK_ypaworld *yw, NC_STACK_ypabact *bact, CmdStream *cur)
 {
     char iconStr[80];
-    if ( bact == yw->_userUnit && yw->_timeStamp / 300 & 1 )
+    if ( bact == yw->UserUnit() && yw->_timeStamp / 300 & 1 )
     {
         iconStr[0] = 33;
     }
@@ -5377,7 +5377,7 @@ void SquadManagerLayoutSquad(NC_STACK_ypaworld *yw, NC_STACK_ypabact *bact, CmdS
     // The one steered and the last to report blink
     auto icon = [yw, ttt](NC_STACK_ypabact *unit)
     {
-        if ( unit == yw->_userUnit && ttt )
+        if ( unit == yw->UserUnit() && ttt )
             return '!';
         else if ( unit == yw->_lastMsgSender && ttt )
             return '"';
@@ -5498,7 +5498,7 @@ void SquadManagerLayoutItems(NC_STACK_ypaworld *yw, TInputState *inpt)
 
         if ( squad )
         {
-            if ( squad == yw->_userRobo )
+            if ( squad == yw->UserRobo() )
             {
                 SquadManagerLayoutHostStation(yw, squad, &squadron_manager.itemBlock);
             }
@@ -5552,7 +5552,7 @@ void SquadManagerUpdateRows(NC_STACK_ypaworld *yw)
         if ( i )
             squad = yw->_cmdrsRemap.at(i - 1);
         else
-            squad = yw->_userRobo;
+            squad = yw->UserRobo();
 
         if ( i >= firstShown && i - firstShown < squadron_manager.shownEntries )
             squadron_manager.squads[i - firstShown] = squad;
@@ -5595,7 +5595,7 @@ void SquadManagerDropUnit(NC_STACK_ypaworld *yw, TClickBoxInf *winpt)
             || winpt->selected_btnID < 8
             || squadron_manager.numEntries <= (int32_t)(winpt->selected_btnID - 8 + squadron_manager.firstShownEntries)
             || squadron_manager.squads[ winpt->selected_btnID - 8 ] == 0
-            || squadron_manager.squads[ winpt->selected_btnID - 8 ] == yw->_userRobo )
+            || squadron_manager.squads[ winpt->selected_btnID - 8 ] == yw->UserRobo() )
     {
         if ( squadron_manager.dragFlags & 2 )
         {
@@ -5723,11 +5723,11 @@ NC_STACK_ypabact * NC_STACK_ypaworld::SquadManagerPickUnit(int sqid, int btnX)
         return NULL;
     }
 
-    if ( cmdr == _userRobo )
+    if ( cmdr == UserRobo() )
     {
         squadron_manager.pickKidIdx = -1;
         squadron_manager.pickCmdrIdx = -1;
-        return _userRobo;
+        return UserRobo();
     }
 
     squadron_manager.pickKidIdx = -1;
@@ -5791,7 +5791,7 @@ int NC_STACK_ypaworld::SquadManagerBeginDrag(TClickBoxInf *winpt)
         }
     }
 
-    if ( pickedUnit == _userRobo )
+    if ( pickedUnit == UserRobo() )
         return 0;
 
     squadron_manager.dragCmdrIdx = squadron_manager.pickCmdrIdx;
@@ -6005,7 +6005,7 @@ void RoboMapMakeSquadFromBox(NC_STACK_ypaworld *yw)
             {
                 for ( NC_STACK_ypabact* &bct : cll.unitsList )
                 {
-                    if ( bct->_owner == yw->_userRobo->_owner )
+                    if ( bct->_owner == yw->UserRobo()->_owner )
                     {
                         if ( bct->_position.x > mapSelWorldMinX && bct->_position.z > mapSelWorldMinZ && bct->_position.x < mapSelWorldMaxX && bct->_position.z < mapSelWorldMaxZ )
                         {
@@ -6031,7 +6031,7 @@ void RoboMapMakeSquadFromBox(NC_STACK_ypaworld *yw)
                                     {
                                         if ( bct->_bact_type == BACT_TYPES_ROBO )
                                         {
-                                            if ( bct == yw->_userRobo )
+                                            if ( bct == yw->UserRobo() )
                                                 hostSelected = 1;
                                         }
                                         else
@@ -6765,7 +6765,7 @@ void NC_STACK_ypaworld::ExitMenuHandleInput(TInputState *inpt)
         if ( !_canRestart )
             disabledFlags |= 0x800;
 
-        if ( _userUnit->_status == BACT_STATUS_DEAD || (_GameShell && _GameShell->DirectStart) )
+        if ( UserUnit()->_status == BACT_STATUS_DEAD || (_GameShell && _GameShell->DirectStart) )
             disabledFlags |= 0x200;
 
         if ( _isNetGame )
@@ -7212,7 +7212,7 @@ void NC_STACK_ypaworld::HandleGuiInput(TInputState *inpt)
 {
     TClickBoxInf *winpt = &inpt->ClickInf;
 
-    if ( _userUnit->_bact_type != BACT_TYPES_MISSLE )
+    if ( UserUnit()->_bact_type != BACT_TYPES_MISSLE )
     {
         if ( winpt->flag & TClickBoxInf::FLAG_OK )
         {
@@ -7292,9 +7292,9 @@ void NC_STACK_ypaworld::UpdateCommanderList()
 {
     _cmdrsRemap.clear();
     _cmdrsRemap.reserve(128);
-    if ( _userRobo )
+    if ( UserRobo() )
     {
-        for ( NC_STACK_ypabact * &bact : _userRobo->GetKidList())
+        for ( NC_STACK_ypabact * &bact : UserRobo()->GetKidList())
         {
             if (bact->_status != BACT_STATUS_DEAD && bact->_status != BACT_STATUS_BEAM && bact->_bact_type != BACT_TYPES_GUN)
                 _cmdrsRemap.push_back(bact);
@@ -7506,8 +7506,8 @@ void UpdateVehicleList(NC_STACK_ypaworld *yw)
 {
     int ownerMask = 0;
 
-    if ( yw->_userRobo )
-        ownerMask = 1 << yw->_userRobo->_owner;
+    if ( yw->UserRobo() )
+        ownerMask = 1 << yw->UserRobo()->_owner;
 
     int count = 0;
     int i = 0;
@@ -7599,8 +7599,8 @@ void UpdateBuildingList(NC_STACK_ypaworld *yw)
 {
     int ownerMask = 0;
 
-    if ( yw->_userRobo )
-        ownerMask = 1 << yw->_userRobo->_owner;
+    if ( yw->UserRobo() )
+        ownerMask = 1 << yw->UserRobo()->_owner;
 
     int count = 0;
 
@@ -7640,7 +7640,7 @@ void UpdateBuildingList(NC_STACK_ypaworld *yw)
 
 void UpdateGunList(NC_STACK_ypaworld *yw)
 {
-    NC_STACK_yparobo *robo = dynamic_cast<NC_STACK_yparobo *>(yw->_userRobo);
+    NC_STACK_yparobo *robo = dynamic_cast<NC_STACK_yparobo *>(yw->UserRobo());
 
     int count = 0;
     int i = 0;
@@ -7651,7 +7651,7 @@ void UpdateGunList(NC_STACK_ypaworld *yw)
         {
             bzda.gunIndices[count] = i;
 
-            if ( gun.gun_obj == yw->_userUnit )
+            if ( gun.gun_obj == yw->UserUnit() )
                 bzda.selGunIdx = count;
 
             count++;
@@ -7720,7 +7720,7 @@ void NC_STACK_ypaworld::VoiceMessagePlayFile(const std::string &flname, NC_STACK
 
         VoiceMessageCalcPositionToUnit();
 
-        _voiceMessage.Carrier.Vector = _userUnit->_fly_dir * _userUnit->_fly_dir_length;
+        _voiceMessage.Carrier.Vector = UserUnit()->_fly_dir * UserUnit()->_fly_dir_length;
         SFXEngine::SFXe.startSound(&_voiceMessage.Carrier, 0);
     }
 }
@@ -8072,7 +8072,7 @@ void NC_STACK_ypaworld::VoiceMessagePlayMsg(NC_STACK_ypabact *unit, int priority
         if ( msgvals.v1 )
         {
             if ( !unit )
-                unit = _userRobo;
+                unit = UserRobo();
             
             int vo_type = msgvals.type;
 
@@ -9267,7 +9267,7 @@ void yw_RenderOverlayCursors(NC_STACK_ypaworld *yw, CmdStream *cur)
 
 THudSubject HudSubjectOf(NC_STACK_ypaworld *yw)
 {
-    NC_STACK_ypabact *unit = yw->_userUnit;
+    NC_STACK_ypabact *unit = yw->UserUnit();
 
     THudSubject subject;
     subject.Vehicle = unit->_vehicleID;
@@ -9352,12 +9352,12 @@ void DrawHud(NC_STACK_ypaworld *yw)
     CmdStream buf;
     buf.reserve(1024);
 
-    if ( yw->_userUnit->_status == BACT_STATUS_DEAD )
+    if ( yw->UserUnit()->_status == BACT_STATUS_DEAD )
     {
-        if ( !(yw->_userRobo->_status_flg & BACT_STFLAG_CLEAN) )
-            DrawHudDestroyed(yw, &buf, yw->_userRobo->_status == BACT_STATUS_DEAD);
+        if ( !(yw->UserRobo()->_status_flg & BACT_STFLAG_CLEAN) )
+            DrawHudDestroyed(yw, &buf, yw->UserRobo()->_status == BACT_STATUS_DEAD);
     }
-    else if ( yw->_userUnit != yw->_userRobo && yw->_hud.visible )
+    else if ( yw->UserUnit() != yw->UserRobo() && yw->_hud.visible )
     {
         yw_RenderHUDRadare(yw);
         DrawHudOf(yw, &buf, HudSubjectOf(yw));
@@ -9972,7 +9972,7 @@ void DrawUnitLimit(NC_STACK_ypaworld *yw, CmdStream *cur, int width)
 {
     if ( yw->_isNetGame )
     {
-        if ( yw->_countUnitsPerOwner[ yw->_userRobo->_owner ] <= yw->_levelUnitLimit )
+        if ( yw->_countUnitsPerOwner[ yw->UserRobo()->_owner ] <= yw->_levelUnitLimit )
             FontUA::set_txtColor(cur, yw->_iniColors[63].r, yw->_iniColors[63].g, yw->_iniColors[63].b);
         else
             FontUA::set_txtColor(cur, yw->_iniColors[6].r, yw->_iniColors[6].g, yw->_iniColors[6].b);
@@ -9987,7 +9987,7 @@ void DrawUnitLimit(NC_STACK_ypaworld *yw, CmdStream *cur, int width)
         columns[0].postfixChar = 0;
         columns[0].flags = 36;
 
-        columns[1].txt = fmt::sprintf("%d / %d", yw->_countUnitsPerOwner[ yw->_userRobo->_owner ], yw->_levelUnitLimit);
+        columns[1].txt = fmt::sprintf("%d / %d", yw->_countUnitsPerOwner[ yw->UserRobo()->_owner ], yw->_levelUnitLimit);
         columns[1].width = width * 0.5;
         columns[1].fontID = 15;
         columns[1].postfixChar = 0;
@@ -10265,7 +10265,7 @@ int NC_STACK_ypaworld::UserActCreateCheck(TClickBoxInf *winp)
     if ( _guiActFlags & 8 || bzda.selVhclIdx == -1 )
         return 4;
 
-    NC_STACK_yparobo *robo = dynamic_cast<NC_STACK_yparobo *>(_userRobo);
+    NC_STACK_yparobo *robo = dynamic_cast<NC_STACK_yparobo *>(UserRobo());
 
     int availEnergy = robo->getROBO_battVehicle();
 
@@ -10276,7 +10276,7 @@ int NC_STACK_ypaworld::UserActCreateCheck(TClickBoxInf *winp)
     if ( !yw_MouseFindCreationPoint(winp) )
         return 1;
 
-    if ( _isNetGame && !_levelUnitLimitType && _levelUnitLimit <= _countUnitsPerOwner[_userRobo->_owner] )
+    if ( _isNetGame && !_levelUnitLimitType && _levelUnitLimit <= _countUnitsPerOwner[UserRobo()->_owner] )
         return 3;
 
     return 0;
@@ -10287,17 +10287,17 @@ int NC_STACK_ypaworld::UserActBuildCheck()
     if ( !(_guiActFlags & 0x10) || bzda.selBuildIdx == -1 )
         return 1; // NO with no tip
 
-    NC_STACK_yparobo *robo = dynamic_cast<NC_STACK_yparobo *>(_userRobo);
+    NC_STACK_yparobo *robo = dynamic_cast<NC_STACK_yparobo *>(UserRobo());
 
     int availEnergy = robo->getROBO_battVehicle();
 
     if ( _updateMessage.energy > availEnergy )
         return 6; // TIP_NOENERGY
 
-    if ( _cellOnMouse->owner && _cellOnMouse->owner != _userRobo->_owner )
+    if ( _cellOnMouse->owner && _cellOnMouse->owner != UserRobo()->_owner )
         return 2; // TIP_NOTOWN
 
-    Common::Point cellDist = _cellOnMouse->CellId.AbsDistance( _userRobo->_cellId );
+    Common::Point cellDist = _cellOnMouse->CellId.AbsDistance( UserRobo()->_cellId );
 
     if ( cellDist.IsNull() )
         return 3; // TIP_BUILD_TOOCLOSE
@@ -10325,15 +10325,15 @@ int NC_STACK_ypaworld::UserActBeamCheck()
     if ( !(_guiActFlags & 0x10) )
         return 6;
 
-    if ( !_cellOnMouse->IsCanSee(_userRobo->_owner) )
+    if ( !_cellOnMouse->IsCanSee(UserRobo()->_owner) )
         return 3;
 
     if ( _cellOnMouse->PurposeType == cellArea::PT_CONSTRUCTING )
         return 6;
 
-    float dx = _cellMouseIsectPos.x - _userRobo->_position.x;
-    float dy = _cellMouseIsectPos.y - _userRobo->_position.y;
-    float dz = _cellMouseIsectPos.z - _userRobo->_position.z;
+    float dx = _cellMouseIsectPos.x - UserRobo()->_position.x;
+    float dy = _cellMouseIsectPos.y - UserRobo()->_position.y;
+    float dz = _cellMouseIsectPos.z - UserRobo()->_position.z;
 
     float dist = sqrt(POW2(dx) + POW2(dy) + POW2(dz));
 
@@ -10342,12 +10342,12 @@ int NC_STACK_ypaworld::UserActBeamCheck()
 
     int beamCost = 0;
 
-    if ( _cellOnMouse->PurposeType != cellArea::PT_GATEOPENED && (_cellOnMouse->PurposeType != cellArea::PT_POWERSTATION || _cellOnMouse->owner != _userRobo->_owner) )
+    if ( _cellOnMouse->PurposeType != cellArea::PT_GATEOPENED && (_cellOnMouse->PurposeType != cellArea::PT_POWERSTATION || _cellOnMouse->owner != UserRobo()->_owner) )
     {
         beamCost = (POW2(dist) / 230.4);
     }
 
-    NC_STACK_yparobo *robo = dynamic_cast<NC_STACK_yparobo *>(_userRobo);
+    NC_STACK_yparobo *robo = dynamic_cast<NC_STACK_yparobo *>(UserRobo());
 
     int availEnergy = robo->getROBO_battBeam();
 
@@ -10358,7 +10358,7 @@ int NC_STACK_ypaworld::UserActBeamCheck()
 
     for ( NC_STACK_ypabact* &unit : _cellOnMouse->unitsList )
     {
-        if ( unit->_bact_type == BACT_TYPES_ROBO && unit->_status != BACT_STATUS_DEAD && unit->_owner != _userRobo->_owner )
+        if ( unit->_bact_type == BACT_TYPES_ROBO && unit->_status != BACT_STATUS_DEAD && unit->_owner != UserRobo()->_owner )
             return 5;
     }
 
@@ -10398,7 +10398,7 @@ int NC_STACK_ypaworld::UserActBeamCheck()
     if ( _cellMouseIsectPos.x < 1500.0 || _cellMouseIsectPos.z > -1500.0 || _cellMouseIsectPos.x > _mapLength.x - 1500.0 || _cellMouseIsectPos.z < 1500.0 - _mapLength.y )
         return 2;
 
-    _cellMouseIsectPos.y = minY - _userRobo->_height;
+    _cellMouseIsectPos.y = minY - UserRobo()->_height;
     return 0;
 }
 
@@ -10462,7 +10462,7 @@ bool NC_STACK_ypaworld::CheckUnitDoubleClick(TClickBoxInf *winp)
     }
     else
     {
-        if ( (winp->flag & TClickBoxInf::FLAG_LM_DOWN)   &&   _guiActFlags & 0x20   &&   _userRobo->_owner == _bactOnMouse->_owner )
+        if ( (winp->flag & TClickBoxInf::FLAG_LM_DOWN)   &&   _guiActFlags & 0x20   &&   UserRobo()->_owner == _bactOnMouse->_owner )
         {
             _bactPrevClicked = _bactOnMouse;
             _prevMousePos = winp->move.ScreenPos;
@@ -10661,7 +10661,7 @@ void NC_STACK_ypaworld::yw_3D_MouseSelect(TClickBoxInf *winp)
     unitRay.hitUnit = NULL;
     unitRay.pos = _viewerPosition;
     unitRay.vect = _mouseVector * _normalVizLimit;
-    unitRay.unit = _viewerBact;
+    unitRay.unit = UserUnit();
 
     TRayIntersection ray;
     ray.stPos = unitRay.pos;
@@ -10772,7 +10772,7 @@ int SelectMouseUnitSquadLeader(NC_STACK_ypaworld *yw)
     if ( !yw->_bactOnMouse )
         return 0;
 
-    if ( yw->_bactOnMouse == yw->_userRobo )
+    if ( yw->_bactOnMouse == yw->UserRobo() )
         return 0;
 
     NC_STACK_ypabact *leader = yw->_bactOnMouse;
@@ -10795,7 +10795,7 @@ void NC_STACK_ypaworld::ExecuteMouseAction(int arg)
     switch ( arg )
     {
     case World::DOACTION_8:
-        if ( _bactOnMouse->_bact_type != BACT_TYPES_GUN && _bactOnMouse != _userRobo )
+        if ( _bactOnMouse->_bact_type != BACT_TYPES_GUN && _bactOnMouse != UserRobo() )
         {
             if ( SelectMouseUnitSquadLeader(this) )
             {
@@ -10804,7 +10804,7 @@ void NC_STACK_ypaworld::ExecuteMouseAction(int arg)
             }
         }
 
-        if ( _userRobo != _bactOnMouse )
+        if ( UserRobo() != _bactOnMouse )
             bzda.activeMode = bzda.enabledModes & 1;
         else
             bzda.activeMode = bzda.enabledModes & 0x20;
@@ -10872,9 +10872,9 @@ void NC_STACK_ypaworld::ExecuteMouseAction(int arg)
         break;
 
     case World::DOACTION_5:
-        SwitchControlToUnit(this, _bactOnMouse, _viewerBact);
+        SwitchControlToUnit(this, _bactOnMouse, UserUnit());
 
-        if ( _bactOnMouse->_bact_type != BACT_TYPES_GUN && _bactOnMouse != _userRobo )
+        if ( _bactOnMouse->_bact_type != BACT_TYPES_GUN && _bactOnMouse != UserRobo() )
         {
             if ( SelectMouseUnitSquadLeader(this) )
             {
@@ -10902,8 +10902,8 @@ void NC_STACK_ypaworld::ExecuteMouseAction(int arg)
         break;
 
     case World::DOACTION_19:
-        _viewerBact->setBACT_viewer(false);
-        _viewerBact->setBACT_inputting(false);
+        UserUnit()->setBACT_viewer(false);
+        UserUnit()->setBACT_inputting(false);
         _bactOnMouse->setBACT_viewer(true);
         break;
 
@@ -10915,7 +10915,7 @@ void NC_STACK_ypaworld::ExecuteMouseAction(int arg)
 
 void NC_STACK_ypaworld::HandleWorldMouse(TInputState *arg)
 {
-    if ( _userRobo && (arg->ClickInf.flag & TClickBoxInf::FLAG_OK) && _viewerBact )
+    if ( UserRobo() && (arg->ClickInf.flag & TClickBoxInf::FLAG_OK) && UserUnit() )
     {
         yw_MouseSelect(arg);
         UpdateActionEnergyCost();
@@ -10948,7 +10948,7 @@ void NC_STACK_ypaworld::HandleWorldMouse(TInputState *arg)
                 {
                     if ( (_guiActFlags & 0x20) )
                     {
-                        if ( _userRobo->_owner == _bactOnMouse->_owner )
+                        if ( UserRobo()->_owner == _bactOnMouse->_owner )
                         {
                             doAction = World::DOACTION_8;
                             mousePointer = 2;
@@ -10964,7 +10964,7 @@ void NC_STACK_ypaworld::HandleWorldMouse(TInputState *arg)
                 }
                 else if ( _activeCmdrRemapIndex != -1 )
                 {
-                    if ( _userRobo->_owner == _cellOnMouse->owner && _cellOnMouse->IsCanSee(_userRobo->_owner) )
+                    if ( UserRobo()->_owner == _cellOnMouse->owner && _cellOnMouse->IsCanSee(UserRobo()->_owner) )
                     {
                         doAction = World::DOACTION_2;
                         mousePointer = 4;
@@ -10982,7 +10982,7 @@ void NC_STACK_ypaworld::HandleWorldMouse(TInputState *arg)
             {
                 if ( !(_guiActFlags & 8) )
                 {
-                    if ( (_guiActFlags & 0x20) && _userRobo->_owner == _bactOnMouse->_owner )
+                    if ( (_guiActFlags & 0x20) && UserRobo()->_owner == _bactOnMouse->_owner )
                     {
                         doAction = World::DOACTION_8;
                         mousePointer = 2;
@@ -11021,7 +11021,7 @@ void NC_STACK_ypaworld::HandleWorldMouse(TInputState *arg)
                     {
                         if ( _guiActFlags & 0x20 )
                         {
-                            if ( _userRobo->_owner == _bactOnMouse->_owner )
+                            if ( UserRobo()->_owner == _bactOnMouse->_owner )
                             {
                                 doAction = World::DOACTION_8;
                                 mousePointer = 2;
@@ -11035,7 +11035,7 @@ void NC_STACK_ypaworld::HandleWorldMouse(TInputState *arg)
                             }
                         }
                     }
-                    else if ( _userRobo->_owner == _cellOnMouse->owner && _cellOnMouse->IsCanSee(_userRobo->_owner) )
+                    else if ( UserRobo()->_owner == _cellOnMouse->owner && _cellOnMouse->IsCanSee(UserRobo()->_owner) )
                     {
                         doAction = World::DOACTION_2;
                         mousePointer = 4;
@@ -11053,7 +11053,7 @@ void NC_STACK_ypaworld::HandleWorldMouse(TInputState *arg)
             {
                 if ( !(_guiActFlags & 8) )
                 {
-                    if ( (_guiActFlags & 0x20) && _userRobo->_owner == _bactOnMouse->_owner )
+                    if ( (_guiActFlags & 0x20) && UserRobo()->_owner == _bactOnMouse->_owner )
                     {
                         doAction = World::DOACTION_8;
                         mousePointer = 2;
@@ -11093,7 +11093,7 @@ void NC_STACK_ypaworld::HandleWorldMouse(TInputState *arg)
                     {
                         if ( _guiActFlags & 0x20 )
                         {
-                            if ( _userRobo->_owner == _bactOnMouse->_owner )
+                            if ( UserRobo()->_owner == _bactOnMouse->_owner )
                             {
                                 doAction = World::DOACTION_8;
                                 mousePointer = 2;
@@ -11107,7 +11107,7 @@ void NC_STACK_ypaworld::HandleWorldMouse(TInputState *arg)
                             }
                         }
                     }
-                    else if ( _userRobo->_owner == _cellOnMouse->owner && _cellOnMouse->IsCanSee(_userRobo->_owner) )
+                    else if ( UserRobo()->_owner == _cellOnMouse->owner && _cellOnMouse->IsCanSee(UserRobo()->_owner) )
                     {
                         doAction = World::DOACTION_2;
                         mousePointer = 4;
@@ -11130,7 +11130,7 @@ void NC_STACK_ypaworld::HandleWorldMouse(TInputState *arg)
                         doAction = World::DOACTION_19;
                         mousePointer = 8;
                     }
-                    else if ( _userRobo->_owner == _bactOnMouse->_owner )
+                    else if ( UserRobo()->_owner == _bactOnMouse->_owner )
                     {
                         doAction = World::DOACTION_5;
                         mousePointer = 8;
@@ -11142,7 +11142,7 @@ void NC_STACK_ypaworld::HandleWorldMouse(TInputState *arg)
             {
                 if ( _guiActFlags & 0x20 )
                 {
-                    if ( _userRobo->_owner == _bactOnMouse->_owner )
+                    if ( UserRobo()->_owner == _bactOnMouse->_owner )
                     {
                         doAction = World::DOACTION_8;
                         mousePointer = 2;
@@ -11194,7 +11194,7 @@ void NC_STACK_ypaworld::HandleWorldMouse(TInputState *arg)
             {
                 if ( _guiActFlags & 0x20 )
                 {
-                    if ( _userRobo->_owner == _bactOnMouse->_owner )
+                    if ( UserRobo()->_owner == _bactOnMouse->_owner )
                     {
                         doAction = World::DOACTION_8;
                         mousePointer = 2;
@@ -11312,7 +11312,7 @@ void NC_STACK_ypaworld::PrepareUserInput(TInputState *inpt)
         _fireBtnIsDown = false;
     }
 
-    if ( _userUnit->_status == BACT_STATUS_DEAD )
+    if ( UserUnit()->_status == BACT_STATUS_DEAD )
     {
         _mouseGrabbed = false;
     }
@@ -11368,8 +11368,8 @@ void NC_STACK_ypaworld::PrepareUserInput(TInputState *inpt)
 
     if ( !joyDisabled )
     {
-        int isGroundVehicle = _userUnit->_bact_type == BACT_TYPES_TANK || _userUnit->_bact_type == BACT_TYPES_CAR;
-        int isRobo = _userUnit->_bact_type == BACT_TYPES_ROBO;
+        int isGroundVehicle = UserUnit()->_bact_type == BACT_TYPES_TANK || UserUnit()->_bact_type == BACT_TYPES_CAR;
+        int isRobo = UserUnit()->_bact_type == BACT_TYPES_ROBO;
 
         if ( !_framesElapsed )
         {

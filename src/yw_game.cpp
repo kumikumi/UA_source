@@ -164,9 +164,8 @@ int NC_STACK_ypaworld::LevelCommonLoader(TLevelDescription *mapp, int levelID, c
     _levelInfo.UserMask = 0;
 
     ResetControls();
-    _viewerBact = NULL;
-    _userRobo = NULL;
-    _userUnit = NULL;
+    _localPlayer->HostStation = NULL;
+    _localPlayer->Unit = NULL;
     _playerHSDestroyed = false;
     _vehicleSectorRatio = 0;
     _beamEnergyCurrent = 0;
@@ -608,7 +607,7 @@ void NC_STACK_ypaworld::InitBuddies()
             if ( wrkID == -1 )
                 break;
 
-            vec3d squadPos =    _userRobo->_position +  
+            vec3d squadPos =    UserRobo()->_position +  
                                 vec3d(  sin(squad_sn * 1.745) * 500.0,
                                         0.0,
                                         cos(squad_sn * 1.745) * 500.0 );
@@ -623,7 +622,7 @@ void NC_STACK_ypaworld::InitBuddies()
             if ( ray.isect )
                 squadPos.y = ray.isectPos.y + -100.0;
 
-            NC_STACK_yparobo *robo = dynamic_cast<NC_STACK_yparobo *>(_userRobo);
+            NC_STACK_yparobo *robo = dynamic_cast<NC_STACK_yparobo *>(UserRobo());
 
             robo->MakeSquad(VhclIDS, squadPos, true); //robo 133 method
 
@@ -804,7 +803,7 @@ void NC_STACK_ypaworld::CellSetNewOwner(cellArea *cell, NC_STACK_ypabact *attack
     {
         if ( cell->PurposeType == cellArea::PT_POWERSTATION )
         {
-            if ( _userRobo->_owner == newOwner )
+            if ( UserRobo()->_owner == newOwner )
             {
                 if ( attacker )
                 {
@@ -816,7 +815,7 @@ void NC_STACK_ypaworld::CellSetNewOwner(cellArea *cell, NC_STACK_ypabact *attack
                     ShowMessage(&capturedMsg);
                 }
             }
-            else if ( cell->owner == _userRobo->_owner )
+            else if ( cell->owner == UserRobo()->_owner )
             {
                 TInfoMessage lostMsg;
                 lostMsg.unit = NULL;
@@ -834,7 +833,7 @@ void NC_STACK_ypaworld::CellSetNewOwner(cellArea *cell, NC_STACK_ypabact *attack
                 {
                     if ( cell == ks.PCell )
                     {
-                        if ( _userRobo->_owner == newOwner )
+                        if ( UserRobo()->_owner == newOwner )
                         {
                             TInfoMessage keyCapturedMsg;
                             keyCapturedMsg.unit = NULL;
@@ -843,7 +842,7 @@ void NC_STACK_ypaworld::CellSetNewOwner(cellArea *cell, NC_STACK_ypabact *attack
 
                             ShowMessage(&keyCapturedMsg);
                         }
-                        else if ( _userRobo->_owner == cell->owner )
+                        else if ( UserRobo()->_owner == cell->owner )
                         {
                             TInfoMessage keyLostMsg;
                             keyLostMsg.unit = NULL;
@@ -1288,7 +1287,7 @@ void NC_STACK_ypaworld::FFeedback_VehicleChanged()
             return;
     }
 
-    if ( _userUnit )
+    if ( UserUnit() )
     {
         _ffTimeStamp = _timeStamp;
 
@@ -1307,7 +1306,7 @@ void NC_STACK_ypaworld::FFeedback_VehicleChanged()
         float damperMax;
 
 
-        switch ( _userUnit->_bact_type )
+        switch ( UserUnit()->_bact_type )
         {
         case BACT_TYPES_BACT:
             effectType = Input::FF_TYPE_HELIENGINE;
@@ -1359,8 +1358,8 @@ void NC_STACK_ypaworld::FFeedback_VehicleChanged()
 
         if ( effectType != -1 )
         {
-            float massFactor = (_userUnit->_mass - massMin) / (massMax - massMin);
-            float rotFactor = (_userUnit->_maxrot - rotMin) / (rotMax - rotMin);
+            float massFactor = (UserUnit()->_mass - massMin) / (massMax - massMin);
+            float rotFactor = (UserUnit()->_maxrot - rotMin) / (rotMax - rotMin);
 
             float magnitude = (magnitudeMax - magnitudeMin) * massFactor + magnitudeMin;
             float period = (periodMin - periodMax) * massFactor + periodMax;
@@ -2149,7 +2148,7 @@ void NC_STACK_ypaworld::PlaceBuilding(const Common::Point &cellId, int ownerid2,
 
         if ( _isNetGame )
         {
-            if ( robo != _userRobo )
+            if ( robo != UserRobo() )
                 isLocal = 0;
         }
 
@@ -2249,7 +2248,7 @@ void NC_STACK_ypaworld::DestroyAllGunsInSector(cellArea *cell)
         if ( _isNetGame )
         {
             // In netgame only destroy own units
-            if ( itUnit->_owner == _userUnit->_owner )
+            if ( itUnit->_owner == UserUnit()->_owner )
             {
                 if ( itUnit->_status != BACT_STATUS_DEAD && itUnit->_status != BACT_STATUS_BEAM && itUnit->_status != BACT_STATUS_CREATE )
                 {
@@ -2439,13 +2438,13 @@ void NC_STACK_ypaworld::BuildingConstructUpdate(int dtime)
 
             PlaceBuilding(bldProc.CellID, bldProc.Owner, bldProc.BuildID, 0);
 
-            if ( bldProc.Owner == _userRobo->_owner )
+            if ( bldProc.Owner == UserRobo()->_owner )
             {
                 if ( _buildProtos[ bldProc.BuildID ].ModelID )
                 {
                     TInfoMessage msg;
 
-                    msg.unit = _userRobo;
+                    msg.unit = UserRobo();
                     msg.Priority = 65;
 
                     switch( _buildProtos[ bldProc.BuildID ].ModelID )
@@ -2563,7 +2562,7 @@ void UpdateReloadRatios(NC_STACK_ypaworld *yw)
             // TODO(bug): Every owner i is penalised by the local player's unit count, and
             // penalty is an int, so it stays 0 until it reaches 1 and then wipes
             // out the 0..1 reload ratio.
-            int unitsOverLimit = yw->_countUnitsPerOwner[yw->_userRobo->_owner] - yw->_levelUnitLimit;
+            int unitsOverLimit = yw->_countUnitsPerOwner[yw->UserRobo()->_owner] - yw->_levelUnitLimit;
 
             if ( unitsOverLimit > 0 )
             {
@@ -2850,13 +2849,13 @@ void UpdatePlayerInRoboGun(NC_STACK_ypaworld *yw)
 {
     yw->_playerInHSGun = false;
 
-    if ( yw->_userRobo != yw->_userUnit )
+    if ( yw->UserRobo() != yw->UserUnit() )
     {
-        NC_STACK_yparobo *robo = dynamic_cast<NC_STACK_yparobo *>(yw->_userRobo);
+        NC_STACK_yparobo *robo = dynamic_cast<NC_STACK_yparobo *>(yw->UserRobo());
 
         for (World::TRoboGun &gun : robo->GetGuns())
         {
-            if ( yw->_userUnit == gun.gun_obj )
+            if ( yw->UserUnit() == gun.gun_obj )
                 yw->_playerInHSGun = true;
         }
     }
@@ -2870,13 +2869,13 @@ void UpdateGates(NC_STACK_ypaworld *yw)
         const TMapGate &gate = yw->_levelInfo.Gates[i];
         int gateState = cellArea::PT_GATEOPENED;
 
-        if ( gate.PCell->owner == yw->_userRobo->_owner )
+        if ( gate.PCell->owner == yw->UserRobo()->_owner )
         {
             for( const TMapKeySector &ks : gate.KeySectors )
             {
                 if (ks.PCell)
                 {
-                    if (ks.PCell->owner != yw->_userRobo->_owner)
+                    if (ks.PCell->owner != yw->UserRobo()->_owner)
                     {
                         gateState = cellArea::PT_GATECLOSED;
                         break;
@@ -3142,7 +3141,7 @@ void NC_STACK_ypaworld::KillUnitsInSuperBombRadius(uint8_t activate, float cente
 
             if ( _isNetGame )
             {
-                if ( bct->_owner != _userUnit->_owner || bct->_owner == activate || bct->_status == BACT_STATUS_DEAD )
+                if ( bct->_owner != UserUnit()->_owner || bct->_owner == activate || bct->_status == BACT_STATUS_DEAD )
                     affected = 0;
             }
             else if ( bct->_owner == activate || bct->_status == BACT_STATUS_DEAD )
@@ -3275,20 +3274,20 @@ void NC_STACK_ypaworld::UpdateSuperItems()
 
 void NC_STACK_ypaworld::VoiceMessageCalcPositionToUnit()
 {
-    if ( _voiceMessage.Unit == _userRobo )
+    if ( _voiceMessage.Unit == UserRobo() )
     {
-        _voiceMessage.Carrier.Position = _userUnit->_position;
+        _voiceMessage.Carrier.Position = UserUnit()->_position;
     }
     else
     {
-        vec3d tmp = _voiceMessage.Unit->_position - _userUnit->_position;
+        vec3d tmp = _voiceMessage.Unit->_position - UserUnit()->_position;
 
         float dist = tmp.length();
 
         if ( dist > 0.0 )
             tmp *= (100.0 / dist);
 
-        _voiceMessage.Carrier.Position = _userUnit->_position + tmp;
+        _voiceMessage.Carrier.Position = UserUnit()->_position + tmp;
     }
 }
 
@@ -3300,7 +3299,7 @@ void NC_STACK_ypaworld::VoiceMessageUpdate()
         {
             VoiceMessageCalcPositionToUnit();
 
-            _voiceMessage.Carrier.Vector = _userUnit->_fly_dir * _userUnit->_fly_dir_length;
+            _voiceMessage.Carrier.Vector = UserUnit()->_fly_dir * UserUnit()->_fly_dir_length;
         }
 
         if ( _voiceMessage.Carrier.Sounds[0].IsEnabled() )
@@ -3314,16 +3313,16 @@ void NC_STACK_ypaworld::VoiceMessageUpdate()
 
 void CheckEnemySectorEntered(NC_STACK_ypaworld *yw)
 {
-    if ( yw->_userUnit->_pSector->owner != yw->_userRobo->_owner )
+    if ( yw->UserUnit()->_pSector->owner != yw->UserRobo()->_owner )
     {
-        if ( yw->_userUnit->_pSector->owner )
+        if ( yw->UserUnit()->_pSector->owner )
         {
-            if ( yw->_ownerOldCellUserUnit == yw->_userRobo->_owner || !yw->_ownerOldCellUserUnit )
+            if ( yw->_ownerOldCellUserUnit == yw->UserRobo()->_owner || !yw->_ownerOldCellUserUnit )
             {
                 if ( yw->_timeStamp - yw->_msgTimestampEnemySector > 10000 )
                 {
                     TInfoMessage msg;
-                    msg.unit = yw->_userUnit;
+                    msg.unit = yw->UserUnit();
                     msg.Priority = 24;
                     msg.txt = Locale::Text::Feedback(Locale::FEEDBACK_ESECTENTER);
                     msg.MsgID = 22;
@@ -3495,13 +3494,13 @@ void NC_STACK_ypaworld::FFeedback_Update()
             return;
     }
 
-    if ( _userUnit )
+    if ( UserUnit() )
     {
         if ( _timeStamp - _ffTimeStamp > 250 )
         {
             _ffTimeStamp = _timeStamp;
 
-            if ( _userUnit->_status == BACT_STATUS_DEAD )
+            if ( UserUnit()->_status == BACT_STATUS_DEAD )
             {
                 Input::Engine.ForceFeedback(Input::FF_STATE_UPDATE, _ffEffectType);
             }
@@ -3509,12 +3508,12 @@ void NC_STACK_ypaworld::FFeedback_Update()
             {
                 if ( _ffEffectType != -1 )
                 {
-                    float thrustSq = POW2(_userUnit->_force) - POW2(_userUnit->_mass) * 100.0;
+                    float thrustSq = POW2(UserUnit()->_force) - POW2(UserUnit()->_mass) * 100.0;
 
                     if (thrustSq < 0.0)
                         thrustSq = 0.0;
 
-                    float speedRatio = fabs(_userUnit->_fly_dir_length) / ( sqrt(thrustSq) / _userUnit->_airconst_static );
+                    float speedRatio = fabs(UserUnit()->_fly_dir_length) / ( sqrt(thrustSq) / UserUnit()->_airconst_static );
                     if ( speedRatio >= 1.0 )
                         speedRatio = 1.0;
                     else if (speedRatio < 0.0)
@@ -3535,11 +3534,11 @@ void NC_STACK_ypaworld::FFeedback_Update()
                 if ( p1 > 1.0 )
                     p1 = 1.0;
 
-                vec3d tmp = top->PCarrier->Position - _userUnit->_position;
+                vec3d tmp = top->PCarrier->Position - UserUnit()->_position;
 
                 float p2 = top->PShkFx->time;
-                float p3 = _userUnit->_rotation.AxisX().dot( tmp );
-                float p4 = -_userUnit->_rotation.AxisZ().dot( tmp );
+                float p3 = UserUnit()->_rotation.AxisX().dot( tmp );
+                float p4 = -UserUnit()->_rotation.AxisZ().dot( tmp );
 
                 if ( p2 > 0.0 )
                 {
@@ -3770,7 +3769,7 @@ void NC_STACK_ypaworld::debug_info_draw(TInputState *inpt)
             DebugInfoPrintf(this, &dbg_txt, buf_sprintf, "prof net: %d", _profileVals[PFID_NETTIME]);
             FontUA::next_line(&dbg_txt);
 
-            DebugInfoPrintf(this, &dbg_txt, buf_sprintf, "sec type/wtype: %d/%d", _userUnit->_pSector->type_id, _userUnit->_pSector->PurposeType);
+            DebugInfoPrintf(this, &dbg_txt, buf_sprintf, "sec type/wtype: %d/%d", UserUnit()->_pSector->type_id, UserUnit()->_pSector->PurposeType);
             FontUA::next_line(&dbg_txt);
 
             DebugInfoPrintf(this, &dbg_txt, buf_sprintf, "beam energy: %d", _beamEnergyCapacity);
@@ -3791,7 +3790,7 @@ void NC_STACK_ypaworld::debug_info_draw(TInputState *inpt)
             DebugInfoPrintf(this, &dbg_txt, buf_sprintf, "num wpn: %d,%d", _dbgTotalWeaponCount, _dbgTotalWeaponCountMax);
             FontUA::next_line(&dbg_txt);
 
-            DebugInfoPrintf(this, &dbg_txt, buf_sprintf, "reload const: %d", _userRobo->_reload_const);
+            DebugInfoPrintf(this, &dbg_txt, buf_sprintf, "reload const: %d", UserRobo()->_reload_const);
             FontUA::next_line(&dbg_txt);
 
             DebugInfoPrintf(

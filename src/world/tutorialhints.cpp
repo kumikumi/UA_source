@@ -13,7 +13,7 @@ static bool EnemyHostStationStands(NC_STACK_ypaworld *world)
 {
     for ( NC_STACK_ypabact *unit : world->_unitsList )
     {
-        if ( unit != world->_userRobo && unit->_bact_type == BACT_TYPES_ROBO && unit->_status != BACT_STATUS_DEAD )
+        if ( unit != world->UserRobo() && unit->_bact_type == BACT_TYPES_ROBO && unit->_status != BACT_STATUS_DEAD )
             return true;
     }
 
@@ -23,7 +23,7 @@ static bool EnemyHostStationStands(NC_STACK_ypaworld *world)
 // The player sits in their host station, or in one of its guns
 static bool PlayerInHostStation(NC_STACK_ypaworld *world)
 {
-    return world->_userUnit == world->_userRobo || world->_playerInHSGun;
+    return world->UserUnit() == world->UserRobo() || world->_playerInHSGun;
 }
 
 static bool EnemiesDefeated(NC_STACK_ypaworld *world)
@@ -53,7 +53,7 @@ static bool OwnsPowerStation(NC_STACK_ypaworld *world)
 {
     for ( const auto &ps : world->_powerStations )
     {
-        if ( ps.second.pCell && ps.second.pCell->owner == world->_userRobo->_owner )
+        if ( ps.second.pCell && ps.second.pCell->owner == world->UserRobo()->_owner )
             return true;
     }
 
@@ -62,7 +62,7 @@ static bool OwnsPowerStation(NC_STACK_ypaworld *world)
 
 static bool StationOnPowerStation(NC_STACK_ypaworld *world)
 {
-    const cellArea *cell = world->_userRobo->_pSector;
+    const cellArea *cell = world->UserRobo()->_pSector;
     return cell && cell->PurposeType == cellArea::PT_POWERSTATION;
 }
 

@@ -344,7 +344,7 @@ bool NC_STACK_ypamissile::TubeCollisionTest()
                                     Will hit only when distance ~ wpn_radius */
                                 if ( sqrt( POW2(dist_vect_len) + POW2(vp_len) ) > fabs(to_enemy_len - wpn_radius) )
                                 {
-                                    NC_STACK_ypabact *userStation = _world->getYW_userHostStation();
+                                    NC_STACK_ypabact *userStation = _world->UserRobo();
 
                                     collisionSumRadius += radius;
                                     collisionCount++;
@@ -488,7 +488,7 @@ void NC_STACK_ypamissile::AI_layer3(update_msg *arg)
 
             if ( !(_mislFlags & FLAG_MISL_IGNOREBUILDS) || _pSector->PurposeType == cellArea::PT_NONE )
             {
-                if ( _world->_userRobo->_owner == _owner || !_world->_isNetGame )
+                if ( _world->UserRobo()->_owner == _owner || !_world->_isNetGame )
                 {
                     TSectorDamage sectorDamage;
 
@@ -590,7 +590,7 @@ void NC_STACK_ypamissile::AI_layer3(update_msg *arg)
 
                     if ( !(_mislFlags & FLAG_MISL_IGNOREBUILDS) || _pSector->PurposeType == cellArea::PT_NONE )
                     {
-                        if ( _world->_userRobo->_owner == _owner || !_world->_isNetGame )
+                        if ( _world->UserRobo()->_owner == _owner || !_world->_isNetGame )
                         {
                             TSectorDamage sectorDamage;
 
