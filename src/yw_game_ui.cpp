@@ -1071,7 +1071,7 @@ MapScene::Unit LiveMapUnit(NC_STACK_ypaworld *yw, NC_STACK_ypabact *bact)
     u.EnergyMax = bact->_energy_max;
     u.Hidden = bact->IsHiddenFor( yw->GetPlayerOwner() );
     u.RoboGun = bact->_bact_type == BACT_TYPES_GUN && static_cast<NC_STACK_ypagun *>(bact)->IsRoboGun();
-    u.Commander = bact->IsParentMyRobo();
+    u.Commander = bact->IsCommander();
 
     if ( bact->_parent )
     {
@@ -3405,7 +3405,7 @@ void gui_update_player_panel(NC_STACK_ypaworld *yw, CmdStream *cur)
         if ( bzda.gunCount > 1 )
             enabledBtns = 0xD0;
     }
-    else if ( yw->UserUnit()->IsParentMyRobo() )
+    else if ( yw->UserUnit()->IsCommander() )
     {
         enabledBtns = 0x10;
 
@@ -4237,7 +4237,7 @@ NC_STACK_ypabact * GetNextHostStationGun(NC_STACK_ypaworld *yw)
 
 NC_STACK_ypabact * GetNextSquadMember(NC_STACK_ypaworld *yw)
 {
-    if ( yw->UserUnit()->IsParentMyRobo() )
+    if ( yw->UserUnit()->IsCommander() )
     {
         for ( NC_STACK_ypabact* &unit : yw->UserUnit()->_kidList )
         {
@@ -5506,7 +5506,7 @@ void SquadManagerLayoutItems(NC_STACK_ypaworld *yw, TInputState *inpt)
             }
             else
             {
-                if ( squad->IsParentMyRobo() )
+                if ( squad->IsCommander() )
                     SquadManagerLayoutSquad(yw, squad, &squadron_manager.itemBlock);
                 else
                     SquadManagerLayoutEmptyLine(yw, &squadron_manager.itemBlock);
@@ -5650,7 +5650,7 @@ void SquadManagerDropUnit(NC_STACK_ypaworld *yw, TClickBoxInf *winpt)
     {
         NC_STACK_ypabact *targetSquad = squadron_manager.squads[ winpt->selected_btnID - 8 ];
         int sameSquad;
-        if ( squadron_manager.dragUnit->IsParentMyRobo() )
+        if ( squadron_manager.dragUnit->IsCommander() )
             sameSquad = targetSquad == squadron_manager.dragUnit;
         else
             sameSquad = targetSquad == squadron_manager.dragUnit->_parent;
@@ -5801,7 +5801,7 @@ int NC_STACK_ypaworld::SquadManagerBeginDrag(TClickBoxInf *winpt)
     squadron_manager.dragStartX = winpt->move.ScreenPos.x;
     squadron_manager.dragUnit = pickedUnit;
 
-    if ( pickedUnit->IsParentMyRobo() )
+    if ( pickedUnit->IsCommander() )
     {
         squadron_manager.dragOffsetX = -(winpt->move.BtnPos.x - squadron_manager.cmdrIconX);
     }
@@ -9292,7 +9292,7 @@ THudSubject HudSubjectOf(NC_STACK_ypaworld *yw)
         subject.ParentPos = unit->_parent->_position;
     }
 
-    if ( unit->IsParentMyRobo() )
+    if ( unit->IsCommander() )
     {
         if ( unit->_primTtype == BACT_TGT_TYPE_CELL )
         {

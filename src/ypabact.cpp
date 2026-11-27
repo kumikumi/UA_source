@@ -822,7 +822,7 @@ void NC_STACK_ypabact::AI_layer1(update_msg *arg)
         if ( _target_vec.length() > 2000.0 )
             _target_vec.y = 0;
 
-        if ( IsParentMyRobo() &&
+        if ( IsCommander() &&
              (_oflags & BACT_OFLAG_VIEWER) )
         {
             bool doFight = _target_vec.length() < 800.0;
@@ -946,8 +946,6 @@ void NC_STACK_ypabact::AI_layer2(update_msg *arg)
         return;
     }
 
-    NC_STACK_ypabact *wee = _world->UserRobo();
-
     if ( _status == BACT_STATUS_NORMAL || _status == BACT_STATUS_IDLE )
     {
         if ( _clock - _search_time1 > 500 )
@@ -957,7 +955,7 @@ void NC_STACK_ypabact::AI_layer2(update_msg *arg)
             NC_STACK_ypabact *enemy = GetSectorTarget(_cellId);
             if ( enemy )
             {
-                if ( enemy->_bact_type != BACT_TYPES_ROBO && IsParentMyRobo() && _host_station == wee && enemy->_commandID != _fe_cmdID && _clock - _fe_time > 45000 )
+                if ( enemy->_bact_type != BACT_TYPES_ROBO && IsCommander() && _owner == _world->LocalOwner() && enemy->_commandID != _fe_cmdID && _clock - _fe_time > 45000 )
                 {
                     bool isRoboGun = false;
                     if ( enemy->_bact_type == BACT_TYPES_GUN )
@@ -979,7 +977,7 @@ void NC_STACK_ypabact::AI_layer2(update_msg *arg)
                         roboMsg.unit = this;
                         roboMsg.priority = 46;
 
-                        _host_station->placeMessage(&roboMsg);
+                        _world->PlaceMessage(&roboMsg);
                     }
                 }
             }
@@ -1006,7 +1004,7 @@ void NC_STACK_ypabact::AI_layer2(update_msg *arg)
                 if ( (_clock - _search_time2) > 2000 && 
                      _aggr == 75 && 
                     !(_oflags & BACT_OFLAG_VIEWER) && 
-                     IsParentMyRobo() &&
+                     IsCommander() &&
                      (_secndTtype == BACT_TGT_TYPE_FRMT || 
                       _secndTtype == BACT_TGT_TYPE_NONE) )
                 {
@@ -1030,7 +1028,7 @@ void NC_STACK_ypabact::AI_layer2(update_msg *arg)
                     }
                 }
 
-                if ( IsParentMyRobo() && _secndTtype == BACT_TGT_TYPE_CELL )
+                if ( IsCommander() && _secndTtype == BACT_TGT_TYPE_CELL )
                 {
                     for(NC_STACK_ypabact* &nod : _kidList)
                     {
@@ -2143,8 +2141,6 @@ void NC_STACK_ypabact::FightWithBact(TFightTarget *arg)
         isPrimTarget = true;
     }
 
-    NC_STACK_ypabact *userHost = _world->UserRobo();
-
     if ( _clock - _assess_time > 500 || _clock < 500 )
     {
         _assess_time = _clock;
@@ -2376,7 +2372,7 @@ void NC_STACK_ypabact::FightWithBact(TFightTarget *arg)
             {
                 _status_flg &= ~BACT_STFLAG_FIGHT_P;
 
-                if ( (IsParentMyRobo() && _host_station == userHost) && _status != BACT_STATUS_IDLE && !(_status_flg & BACT_STFLAG_ESCAPE) )
+                if ( (IsCommander() && _owner == _world->LocalOwner()) && _status != BACT_STATUS_IDLE && !(_status_flg & BACT_STFLAG_ESCAPE) )
                 {
                     TRoboMessage roboMsg;
                     roboMsg.unit = this;
@@ -2386,7 +2382,7 @@ void NC_STACK_ypabact::FightWithBact(TFightTarget *arg)
                     roboMsg.param1 = 0;
                     roboMsg.priority = 32;
 
-                    _host_station->placeMessage(&roboMsg);
+                    _world->PlaceMessage(&roboMsg);
                 }
 
                 setState_msg stateMsg;
@@ -2432,9 +2428,7 @@ void NC_STACK_ypabact::FightWithSect(TFightTarget *arg)
         assess.priority = 0;
     }
 
-    NC_STACK_ypabact *userHost = _world->UserRobo();
-
-    int isUserLeader = IsParentMyRobo() && _host_station == userHost;
+    int isUserLeader = IsCommander() && _owner == _world->LocalOwner();
 
     float targetDist = (_position.XZ() - cellPos->XZ()).length();
 
@@ -2528,7 +2522,7 @@ void NC_STACK_ypabact::FightWithSect(TFightTarget *arg)
                     roboMsg.priority = 18;
                     roboMsg.param3 = 0;
 
-                    _host_station->placeMessage(&roboMsg);
+                    _world->PlaceMessage(&roboMsg);
                 }
 
                 _status_flg &= ~BACT_STFLAG_FIGHT_P;
@@ -2557,7 +2551,7 @@ void NC_STACK_ypabact::FightWithSect(TFightTarget *arg)
                     roboMsg.priority = 18;
                     roboMsg.param2 = tmp.y;
 
-                    _host_station->placeMessage(&roboMsg);
+                    _world->PlaceMessage(&roboMsg);
                 }
 
                 _status_flg &= ~BACT_STFLAG_FIGHT_S;
@@ -2594,7 +2588,7 @@ void NC_STACK_ypabact::FightWithSect(TFightTarget *arg)
                         roboMsg.param3 = 0;
                         roboMsg.priority = 20;
 
-                        _host_station->placeMessage(&roboMsg);
+                        _world->PlaceMessage(&roboMsg);
                     }
 
                     _status_flg |= BACT_STFLAG_FIGHT_P;
@@ -2622,7 +2616,7 @@ void NC_STACK_ypabact::FightWithSect(TFightTarget *arg)
                         roboMsg.param3 = 0;
                         roboMsg.priority = 20;
 
-                        _host_station->placeMessage(&roboMsg);
+                        _world->PlaceMessage(&roboMsg);
                     }
 
                     _status_flg |= BACT_STFLAG_FIGHT_S;
@@ -2699,7 +2693,7 @@ void NC_STACK_ypabact::FightWithSect(TFightTarget *arg)
                     roboMsg.priority = 22;
                     roboMsg.unit = this;
 
-                    _host_station->placeMessage(&roboMsg);
+                    _world->PlaceMessage(&roboMsg);
                 }
 
                 setTarget_msg targetMsg;
@@ -2725,7 +2719,7 @@ void NC_STACK_ypabact::FightWithSect(TFightTarget *arg)
                     roboMsg.msgID = 1;
                     roboMsg.priority = 32;
 
-                    _host_station->placeMessage(&roboMsg);
+                    _world->PlaceMessage(&roboMsg);
                 }
 
                 _status = BACT_STATUS_IDLE;
@@ -2870,13 +2864,11 @@ void NC_STACK_ypabact::Die()
         }
     }
 
-    NC_STACK_ypabact *userHost = _world->UserRobo();
-
-    if ( !deputy && IsParentMyRobo()&& !(_status_flg & BACT_STFLAG_NOMSG) )
+    if ( !deputy && IsCommander() && !(_status_flg & BACT_STFLAG_NOMSG) )
     {
         TRoboMessage roboMsg;
 
-        if ( userHost == _host_station )
+        if ( _owner == _world->LocalOwner() )
         {
             if ( _bact_type == BACT_TYPES_GUN )
             {
@@ -2896,7 +2888,7 @@ void NC_STACK_ypabact::Die()
                 roboMsg.param1 = 0;
                 roboMsg.unit = this;
 
-                _host_station->placeMessage(&roboMsg);
+                _world->PlaceMessage(&roboMsg);
             }
             else
             {
@@ -2909,13 +2901,13 @@ void NC_STACK_ypabact::Die()
                     roboMsg.param2 = 0;
                     roboMsg.msgID = 8;
 
-                    _host_station->placeMessage(&roboMsg);
+                    _world->PlaceMessage(&roboMsg);
                 }
             }
         }
         else
         {
-            if ( _killer && userHost == _killer->_host_station )
+            if ( _killer && _killer->_owner == _world->LocalOwner() && _killer->_bact_type != BACT_TYPES_ROBO )
             {
                 roboMsg.msgID = 5;
                 roboMsg.unit = _killer;
@@ -2924,7 +2916,7 @@ void NC_STACK_ypabact::Die()
                 roboMsg.param2 = 0;
                 roboMsg.priority = 36;
 
-                _host_station->placeMessage(&roboMsg);
+                _world->PlaceMessage(&roboMsg);
             }
         }
 
@@ -3928,29 +3920,33 @@ void AbsorbPlasmaEnergy(NC_STACK_ypabact *bact, NC_STACK_ypabact *plasmaUnit)
 
         bact->_energy = bact->_energy_max;
 
-        if ( robo->_energy + overflow > robo->_energy_max )
+        // What's left over goes to its host station; without one, it's lost
+        if ( robo )
         {
-            int stationOverflow = overflow - (robo->_energy_max - robo->_energy);
-
-            robo->_energy = robo->_energy_max;
-
-            if ( robo->_roboEnergyLife + stationOverflow >= robo->_energy_max )
+            if ( robo->_energy + overflow > robo->_energy_max )
             {
-                robo->_roboEnergyMove += stationOverflow - (robo->_energy_max - robo->_roboEnergyLife);
+                int stationOverflow = overflow - (robo->_energy_max - robo->_energy);
 
-                robo->_roboEnergyLife = robo->_energy_max;
+                robo->_energy = robo->_energy_max;
 
-                if ( robo->_roboEnergyMove > robo->_energy_max )
-                    robo->_roboEnergyMove = robo->_energy_max;
+                if ( robo->_roboEnergyLife + stationOverflow >= robo->_energy_max )
+                {
+                    robo->_roboEnergyMove += stationOverflow - (robo->_energy_max - robo->_roboEnergyLife);
+
+                    robo->_roboEnergyLife = robo->_energy_max;
+
+                    if ( robo->_roboEnergyMove > robo->_energy_max )
+                        robo->_roboEnergyMove = robo->_energy_max;
+                }
+                else
+                {
+                    robo->_roboEnergyLife += stationOverflow;
+                }
             }
             else
             {
-                robo->_roboEnergyLife += stationOverflow;
+                robo->_energy += overflow;
             }
-        }
-        else
-        {
-            robo->_energy += overflow;
         }
     }
     else
@@ -4214,7 +4210,7 @@ NC_STACK_ypabact * NC_STACK_ypabact::GetEnemyCandidateInSector(const cellArea &c
             vec3d ownTargetPos;
             bool isLeader;
 
-            if ( IsParentMyRobo() )
+            if ( IsCommander() )
             {
                 if ( _primTtype == BACT_TGT_TYPE_CELL )
                 {
@@ -5110,12 +5106,10 @@ void NC_STACK_ypabact::CreationTimeUpdate(update_msg *arg)
 
         SetPosition(&placement);
 
-        NC_STACK_ypabact *userRobo = _world->UserRobo();
-
-        if ( _host_station == userRobo )
+        if ( _owner == _world->LocalOwner() )
         {
 
-            if ( IsParentMyRobo() )
+            if ( IsCommander() )
             {
                 TRoboMessage roboMsg;
                 roboMsg.unit = this;
@@ -5125,7 +5119,7 @@ void NC_STACK_ypabact::CreationTimeUpdate(update_msg *arg)
                 roboMsg.param3 = 0;
                 roboMsg.priority = 26;
 
-                _host_station->placeMessage(&roboMsg);
+                _world->PlaceMessage(&roboMsg);
             }
         }
 
@@ -6068,7 +6062,7 @@ NC_STACK_ypabact *PassGroupToNewLeader(NC_STACK_ypabact *bact, int nearestToTarg
 
         if (new_leader->_bact_type != BACT_TYPES_UFO || bact->_bact_type == BACT_TYPES_UFO)
         {
-            bact->_host_station->AddSubject(new_leader);
+            bact->getBACT_pWorld()->AddCommander(new_leader);
 
             new_leader->CopyTargetOf(bact);
 
@@ -6154,7 +6148,7 @@ void NC_STACK_ypabact::ReorganizeGroup(TReorgOrder *arg)
         break;
 
     case 2:
-        if ( _host_station != _parent || arg->unit != this )
+        if ( !IsCommander() || arg->unit != this )
         {
             if ( _status == BACT_STATUS_DEAD )
             {
@@ -6162,8 +6156,8 @@ void NC_STACK_ypabact::ReorganizeGroup(TReorgOrder *arg)
             }
             else
             {
-                if ( _host_station != _parent && _host_station )
-                    _host_station->AddSubject(this);
+                if ( !IsCommander() )
+                    _world->AddCommander(this);
 
                 if ( arg->unit )
                 {
@@ -6189,7 +6183,8 @@ void NC_STACK_ypabact::ReorganizeGroup(TReorgOrder *arg)
                 }
                 else
                 {
-                    if ( _host_station != _parent && _host_station )
+                    // TODO(bug): Never, as it was just made a commander
+                    if ( !IsCommander() )
                     {
                         _commandID = _world->_nextCommandId;
                         _world->_nextCommandId++;
@@ -6205,10 +6200,9 @@ void NC_STACK_ypabact::ReorganizeGroup(TReorgOrder *arg)
         {
             ypa_log_out("ORG_NEWCOMMAND: dead vehicle\n");
         }
-        else if (_host_station)
+        else
         {
-
-            if ( _host_station == _parent )
+            if ( IsCommander() )
             {
                 NC_STACK_ypabact *newLeader = PassGroupToNewLeader(this, 0);
 
@@ -6217,7 +6211,7 @@ void NC_STACK_ypabact::ReorganizeGroup(TReorgOrder *arg)
             }
             else
             {
-                _host_station->AddSubject(this);
+                _world->AddCommander(this);
             }
 
             _commandID = _world->_nextCommandId;
@@ -6231,7 +6225,7 @@ void NC_STACK_ypabact::ReorganizeGroup(TReorgOrder *arg)
         break;
 
     case 4:
-        if ( arg->unit->IsParentMyRobo() )
+        if ( arg->unit->IsCommander() )
         {
             NC_STACK_ypabact *newLeader = PassGroupToNewLeader(arg->unit, 0);
 
@@ -6435,7 +6429,7 @@ size_t NC_STACK_ypabact::TargetAssess(TTargetAssess *arg)
 
             vec3d tgtPos;
 
-            if ( IsParentMyRobo() )
+            if ( IsCommander() )
             {
 
                 if ( _primTtype == BACT_TGT_TYPE_CELL )
@@ -8013,9 +8007,14 @@ void NC_STACK_ypabact::AddAttacker(NC_STACK_ypabact *bact, int tgtType)
     _attackersList.push_back(TBactAttacker(tgtType, bact));
 }
 
-bool NC_STACK_ypabact::IsParentMyRobo() const
+bool NC_STACK_ypabact::IsCommander() const
 {
-    return (_host_station) && (_parent) && (_host_station == _parent);
+    if ( _parent )
+        return _parent == _host_station;
+
+    // At the top level, with a faction's host stations and wrecks
+    return !_host_station && _bact_type != BACT_TYPES_ROBO && _bact_type != BACT_TYPES_MISSLE &&
+           _kidRef.IsListType(World::BLIST_UNITS);
 }
 
 void NC_STACK_ypabact::ChangeEscapeFlag(bool escape)

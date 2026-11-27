@@ -550,7 +550,9 @@ public:
     
     void CopyTargetOf(NC_STACK_ypabact *commander);
     
-    bool IsParentMyRobo() const;
+    // It leads a squad: one of its host station's, or one at the top level
+    // in a faction without host stations
+    bool IsCommander() const;
     
     void CopyWaypointsStuff(NC_STACK_ypabact *bact);
     

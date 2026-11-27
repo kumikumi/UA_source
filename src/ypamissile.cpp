@@ -600,7 +600,7 @@ void NC_STACK_ypamissile::AI_layer3(update_msg *arg)
 
                 if ( emitterIsUser )
                 {
-                    if ( _mislEmitter->IsParentMyRobo() )
+                    if ( _mislEmitter->IsCommander() )
                     {
                         setTarget_msg targetMsg;
                         targetMsg.tgt_type = BACT_TGT_TYPE_CELL;

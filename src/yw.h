@@ -1817,6 +1817,8 @@ struct TSectorDamage
     NC_STACK_ypabact *unit;
 };
 
+struct TRoboMessage;
+
 struct TInfoMessage
 {
     NC_STACK_ypabact *unit;
@@ -1943,6 +1945,27 @@ public:
     // players whose orders went to it go to that one, and those who were
     // in it get in that one
     void HostStationTakesOver(NC_STACK_ypabact *lost, NC_STACK_ypabact *heir);
+
+    // A faction has any number of host stations, none included. Its squads
+    // and guns are under them; a faction with none has them at the top
+    // level, where its host stations would be.
+
+    // The first of a faction's host stations still going; NULL when it has
+    // none
+    NC_STACK_yparobo *FirstHostStation(uint8_t owner);
+
+    // A new squad of a faction, under one of its host stations or, with
+    // none, at the top level. Its commander is the first vehicle.
+    bool MakeSquad(uint8_t owner, NC_STACK_yparobo *host, const std::vector<int> &vehicles, vec3d pos, bool usable);
+
+    // A unit leads a squad of its own now: under its host station, or at
+    // the top level when it has none
+    void AddCommander(NC_STACK_ypabact *unit);
+
+    // What a faction's units say to the player here (TRoboMessage ids), into
+    // the message log and out loud; some are left out when said just before.
+    // Returns whether it was said.
+    int PlaceMessage(TRoboMessage *msg);
 
     // A player looks from a unit now: their camera and HUD go there
     void SetPlayerUnit(World::Player *player, NC_STACK_ypabact *unit);
@@ -2682,9 +2705,8 @@ public:
     uint32_t _msgTimestampEnemySector = 0;
     uint32_t _msgTimestampPSUnderAtk = 0;
 
-    // What host stations last reported of each message, and when they last
-    // reported finding each owner's host station, to not repeat themselves.
-    // Shared by all host stations, timed by the clock of whichever reports.
+    // What the player was last told of each message, and when they were
+    // last told of finding each owner's host station, to not repeat them
     std::array<TLastRoboMessage, 100> _lastRoboMessages;
     std::array<int32_t, World::CVFractionsCount> _lastEnemyHostFoundMsgTime;
     

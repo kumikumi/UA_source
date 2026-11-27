@@ -1205,32 +1205,36 @@ void NC_STACK_ypatank::TankAbsorbPlasmaEnergy(NC_STACK_ypabact *bact2)
 
         int excess = (int)gain - (_energy_max - _energy);
 
-        if ( excess + robo->_energy > robo->_energy_max )
+        // Without a host station, it's lost
+        if ( robo )
         {
-            int oldRoboEnergy = robo->_energy;
-
-            robo->_energy = robo->_energy_max;
-            int roboExcess = excess - (robo->_energy_max - oldRoboEnergy);
-            int newLifeEnergy = roboExcess + robo->_roboEnergyLife;
-
-            if ( newLifeEnergy >= robo->_energy_max )
+            if ( excess + robo->_energy > robo->_energy_max )
             {
-                int oldLifeEnergy = robo->_roboEnergyLife;
-                robo->_roboEnergyLife = robo->_energy_max;
+                int oldRoboEnergy = robo->_energy;
 
-                robo->_roboEnergyMove += roboExcess - (robo->_energy_max - oldLifeEnergy);
+                robo->_energy = robo->_energy_max;
+                int roboExcess = excess - (robo->_energy_max - oldRoboEnergy);
+                int newLifeEnergy = roboExcess + robo->_roboEnergyLife;
 
-                if ( robo->_roboEnergyMove > robo->_energy_max )
-                    robo->_roboEnergyMove = robo->_energy_max;
+                if ( newLifeEnergy >= robo->_energy_max )
+                {
+                    int oldLifeEnergy = robo->_roboEnergyLife;
+                    robo->_roboEnergyLife = robo->_energy_max;
+
+                    robo->_roboEnergyMove += roboExcess - (robo->_energy_max - oldLifeEnergy);
+
+                    if ( robo->_roboEnergyMove > robo->_energy_max )
+                        robo->_roboEnergyMove = robo->_energy_max;
+                }
+                else
+                {
+                    robo->_roboEnergyLife = newLifeEnergy;
+                }
             }
             else
             {
-                robo->_roboEnergyLife = newLifeEnergy;
+                robo->_energy = excess + robo->_energy;
             }
-        }
-        else
-        {
-            robo->_energy = excess + robo->_energy;
         }
     }
     else

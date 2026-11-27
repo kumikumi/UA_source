@@ -532,54 +532,40 @@ void NC_STACK_ypaworld::yw_InitSquads(const std::vector<MapSquad> &squads)
     size_t i = 0;
     for ( const MapSquad &squad : squads )
     {
-        NC_STACK_yparobo *robo = NULL;
+        // Under the faction's first host station, or at the top level when it
+        // has none
+        NC_STACK_yparobo *robo = FirstHostStation(squad.Owner);
 
-        for( NC_STACK_ypabact *unit : _unitsList )
-        {
-            if ( unit->_bact_type == BACT_TYPES_ROBO && unit->_owner == squad.Owner)
-            {
-                robo = dynamic_cast<NC_STACK_yparobo *>(unit);
-                break;
-            }
-        }
+        vec3d squadPos;
 
-        if ( !robo )
-        {
-            ypa_log_out("WARNING: yw_InitSquads(): no host robo for squad[%d], owner %d!\n", i, squad.Owner);
-        }
+        TRayIntersection ray;
+        ray.stPos.x = squad.X;
+        ray.stPos.y = -50000.0;
+        ray.stPos.z = squad.Z;
+        ray.vect = vec3d::OY(100000.0);
+        ray.flags = 0;
+        IntersectRay(&ray);
+
+        if ( ray.isect )
+            squadPos = ray.isectPos - vec3d::OY(50.0);
         else
         {
-            vec3d squadPos;
+            TSectorInfo sect_info;
+            sect_info.pos_x = squad.X;
+            sect_info.pos_z = squad.Z;
 
-            TRayIntersection ray;
-            ray.stPos.x = squad.X;
-            ray.stPos.y = -50000.0;
-            ray.stPos.z = squad.Z;
-            ray.vect = vec3d::OY(100000.0);
-            ray.flags = 0;
-            IntersectRay(&ray);
-
-            if ( ray.isect )
-                squadPos = ray.isectPos - vec3d::OY(50.0);
-            else
+            if ( !GetSectorInfo(&sect_info) )
             {
-                TSectorInfo sect_info;
-                sect_info.pos_x = squad.X;
-                sect_info.pos_z = squad.Z;
-
-                if ( !GetSectorInfo(&sect_info) )
-                {
-                    ypa_log_out("yw_InitSquads(): no valid position for squad[%d]!\n", i);
-                    return;
-                }
-
-                squadPos.x = squad.X;
-                squadPos.y = sect_info.pcell->height;
-                squadPos.z = squad.Z;
+                ypa_log_out("yw_InitSquads(): no valid position for squad[%d]!\n", i);
+                return;
             }
-            // Create squad by robo method
-            robo->MakeSquad( std::vector<int>(squad.Count, squad.VhclID), squadPos, squad.Useable); // yparobo_func133
+
+            squadPos.x = squad.X;
+            squadPos.y = sect_info.pcell->height;
+            squadPos.z = squad.Z;
         }
+
+        MakeSquad(squad.Owner, robo, std::vector<int>(squad.Count, squad.VhclID), squadPos, squad.Useable);
         
         i++;
     }
@@ -628,7 +614,7 @@ void NC_STACK_ypaworld::InitBuddies()
 
             NC_STACK_yparobo *robo = dynamic_cast<NC_STACK_yparobo *>(UserRobo());
 
-            robo->MakeSquad(VhclIDS, squadPos, true); //robo 133 method
+            MakeSquad(robo->_owner, robo, VhclIDS, squadPos, true);
 
             squad_sn++;
         }
@@ -2141,14 +2127,10 @@ void NC_STACK_ypaworld::PlaceBuilding(const Common::Point &cellId, int ownerid2,
 
         CellSetOwner(&cell, ownerid2);
 
-        for( NC_STACK_ypabact * &unit: _unitsList )
-        {
-            if (unit->_bact_type == BACT_TYPES_ROBO && unit->_owner == ownerid2)
-            {
-                robo = dynamic_cast<NC_STACK_yparobo *>(unit);
-                break;
-            }
-        }
+        // The faction's first host station still going takes the guns; a
+        // faction without one gets none, as the campaign's levels expect of
+        // the sectors they give factions without host stations
+        robo = FirstHostStation(ownerid2);
 
         if ( _isNetGame )
         {
@@ -2158,7 +2140,7 @@ void NC_STACK_ypaworld::PlaceBuilding(const Common::Point &cellId, int ownerid2,
 
         if ( !skipGuns )
         {
-            if ( robo && robo->_status != BACT_STATUS_DEAD && isLocal )
+            if ( robo && isLocal )
             {
                 NC_STACK_ypagun *commander = NULL;
 
@@ -2398,6 +2380,11 @@ NC_STACK_ypabact * NC_STACK_ypaworld::FindBactByCmdOwn(uint32_t commandID, char 
 {
     for ( NC_STACK_ypabact * &robo : _unitsList )
     {
+        // A squad of a faction without host stations
+        if ( robo->IsCommander() && robo->_owner == owner && robo->_commandID == commandID &&
+             robo->_status != BACT_STATUS_DEAD )
+            return robo;
+
         if ( robo->_bact_type == BACT_TYPES_ROBO && robo->_owner == owner)
         {
             if ( robo->_commandID == commandID )
@@ -2495,34 +2482,34 @@ void NC_STACK_ypaworld::CountUnitsPerOwner()
     for(int i = 0; i < 8; i++)
         _countUnitsPerOwner[i] = 0;
 
+    // A squad's units, but not a host station's own guns
+    auto countSquad = [this](NC_STACK_ypabact *comnd)
+    {
+        if ( comnd->_status == BACT_STATUS_DEAD || comnd->_status == BACT_STATUS_BEAM )
+            return;
+
+        if ( comnd->_bact_type == BACT_TYPES_GUN && dynamic_cast<NC_STACK_ypagun *>( comnd )->IsRoboGun() )
+            return;
+
+        _countUnitsPerOwner[ comnd->_owner ]++;
+
+        for( NC_STACK_ypabact * &unit : comnd->_kidList )
+        {
+            if ( unit->_status != BACT_STATUS_DEAD && unit->_status != BACT_STATUS_BEAM )
+                _countUnitsPerOwner[ unit->_owner ]++;
+        }
+    };
+
     for ( NC_STACK_ypabact * &robo : _unitsList )
     {
         if ( robo->_bact_type == BACT_TYPES_ROBO && robo->_status != BACT_STATUS_DEAD && robo->_status != BACT_STATUS_BEAM )
         {
             for( NC_STACK_ypabact * &comnd : robo->_kidList )
-            {
-                if ( comnd->_status != BACT_STATUS_DEAD && comnd->_status != BACT_STATUS_BEAM )
-                {
-                    bool isRoboGun = false;
-
-                    if ( comnd->_bact_type == BACT_TYPES_GUN )
-                    {
-                        NC_STACK_ypagun *gun = dynamic_cast<NC_STACK_ypagun *>( comnd );
-                        isRoboGun = gun->IsRoboGun();
-                    }
-
-                    if ( !isRoboGun )
-                    {
-                        _countUnitsPerOwner[ comnd->_owner ]++;
-
-                        for( NC_STACK_ypabact * &unit : comnd->_kidList )
-                        {
-                            if ( unit->_status != BACT_STATUS_DEAD && unit->_status != BACT_STATUS_BEAM )
-                                _countUnitsPerOwner[ unit->_owner ]++;
-                        }
-                    }
-                }
-            }
+                countSquad(comnd);
+        }
+        else if ( robo->IsCommander() )
+        {
+            countSquad(robo);
         }
     }
 }

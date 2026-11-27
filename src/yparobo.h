@@ -73,8 +73,6 @@ public:
     virtual void DeadTimeUpdate(update_msg *arg);
     virtual void FindMatchingCommander(TCommanderSearch *arg);
     virtual size_t GetTargetByCommandID(setTarget_msg *arg);
-    virtual bool MakeSquad(const std::vector<int> &VhclIDS, vec3d pos, bool usable);
-    virtual int placeMessage(TRoboMessage *arg);
 
     NC_STACK_yparobo();
     virtual ~NC_STACK_yparobo() {};
@@ -272,8 +270,6 @@ protected:
     int CountUnseenSectors();
     int RateAreaControl(const Common::Point &cellId);
     float RateEnemyTarget(NC_STACK_ypabact *bctnd);
-    
-    int ShouldPlaceMessage(TRoboMessage *arg);
     
     void ClearSquadSecondaryTargets(NC_STACK_ypabact *bact);
     void CopyWaypointsToSquad(NC_STACK_ypabact *bact);

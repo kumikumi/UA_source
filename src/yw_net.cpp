@@ -1337,7 +1337,7 @@ size_t yw_handleNormMsg(NC_STACK_ypaworld *yw, windp_recvMsg *msg, std::string *
             if ( fndBact->_bact_type == BACT_TYPES_GUN )
                 sft = fndBact->_host_station->getROBO_epSafety();
 
-            if ( hst->_owner == ddMsg->killerOwner && fndBact->IsParentMyRobo() && !sft && !(fndBact->_status_flg & BACT_STFLAG_NOMSG) )
+            if ( hst->_owner == ddMsg->killerOwner && fndBact->IsCommander() && !sft && !(fndBact->_status_flg & BACT_STFLAG_NOMSG) )
             {
                 TRoboMessage rarg134;
                 rarg134.unit = fndBact->_killer;
@@ -1349,7 +1349,7 @@ size_t yw_handleNormMsg(NC_STACK_ypaworld *yw, windp_recvMsg *msg, std::string *
 
                 NC_STACK_yparobo *hstt = dynamic_cast<NC_STACK_yparobo *>(host_node);
                 if (hstt)
-                    hstt->placeMessage(&rarg134);
+                    yw->PlaceMessage(&rarg134);
             }
         }
         else
@@ -2261,7 +2261,7 @@ size_t yw_handleNormMsg(NC_STACK_ypaworld *yw, windp_recvMsg *msg, std::string *
 
         NC_STACK_yparobo *rbo = dynamic_cast<NC_STACK_yparobo *>(bhost);
         if (rbo)
-            rbo->placeMessage(&rarg134);
+            yw->PlaceMessage(&rarg134);
     }
     break;
 

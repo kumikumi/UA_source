@@ -604,7 +604,7 @@ void NC_STACK_yparobo::SendSquadAgainstEnemyRobo(NC_STACK_ypabact *unit1, NC_STA
 
                             if ( !gun->IsRoboGun() )
                             {
-                                if ( cellUnit->IsParentMyRobo() )
+                                if ( cellUnit->IsCommander() )
                                     SendSquadToUnit(unit2, cellUnit);
                                 else if (cellUnit->_parent)
                                     SendSquadToUnit(unit2, cellUnit->_parent);
@@ -1353,7 +1353,7 @@ void NC_STACK_yparobo::doUserCommands(TUserOrder *arg)
                     roboMsg.msgID = 16;
                 }
                 
-                placeMessage(&roboMsg);
+                _world->PlaceMessage(&roboMsg);
             }
             else if ( commander->_primTtype == BACT_TGT_TYPE_UNIT )
             {
@@ -1366,7 +1366,7 @@ void NC_STACK_yparobo::doUserCommands(TUserOrder *arg)
                     roboMsg.msgID = 16;
                 }
 
-                placeMessage(&roboMsg);
+                _world->PlaceMessage(&roboMsg);
             }
         }
         ClearSquadSecondaryTargets(arg->selectBact);
@@ -3296,7 +3296,7 @@ void NC_STACK_yparobo::searchEnemyRobo()
                     msg.param2 = 0;
                     msg.param3 = 0;
 
-                    placeMessage(&msg);
+                    _world->PlaceMessage(&msg);
                 }
             }
         }
@@ -3320,7 +3320,7 @@ void NC_STACK_yparobo::usersRoboEnergyCheck()
         msg.param1 = (energyRatio * 60000.0 * 5.0);
         msg.unit = this;
 
-        placeMessage(&msg);
+        _world->PlaceMessage(&msg);
     }
 }
 
@@ -3370,7 +3370,7 @@ void NC_STACK_yparobo::checkCommander()
                     msg.unit = commander;
                     msg.priority = 28;
 
-                    placeMessage(&msg);
+                    _world->PlaceMessage(&msg);
                 }
             }
             continue;
@@ -3402,7 +3402,7 @@ void NC_STACK_yparobo::checkCommander()
                     msg.unit = commander;
                     msg.priority = 42;
 
-                    placeMessage(&msg);
+                    _world->PlaceMessage(&msg);
                 }
             }
 
@@ -3486,7 +3486,7 @@ void NC_STACK_yparobo::checkCommander()
                 msg.unit = commander;
                 msg.priority = 40;
 
-                placeMessage(&msg);
+                _world->PlaceMessage(&msg);
 
                 if ( _world->_isNetGame  )
                 {
@@ -3532,7 +3532,7 @@ void NC_STACK_yparobo::checkCommander()
                         msg.msgID = 19;
                         msg.unit = realbact;
                         msg.priority = 34;
-                        placeMessage(&msg);
+                        _world->PlaceMessage(&msg);
                         break;
                     }
                 }
@@ -3583,7 +3583,7 @@ void NC_STACK_yparobo::checkDanger()
             msg.unit = this;
             msg.priority = 99;
 
-            placeMessage(&msg);
+            _world->PlaceMessage(&msg);
         }
 
         _roboState |= ROBOSTATE_DANGER;
@@ -4878,7 +4878,7 @@ void NC_STACK_yparobo::Die()
             msg.unit = this;
             msg.priority = 100;
 
-            placeMessage(&msg);
+            _world->PlaceMessage(&msg);
         }
         else
         {
@@ -4890,7 +4890,7 @@ void NC_STACK_yparobo::Die()
             msg.unit = _killer;
             msg.priority = 50;
 
-            placeMessage(&msg);
+            _world->PlaceMessage(&msg);
         }
 
         NC_STACK_ypabact::Die();
@@ -5657,252 +5657,6 @@ size_t NC_STACK_yparobo::GetTargetByCommandID(setTarget_msg *arg)
 }
 
 // Create squad for robo
-bool NC_STACK_yparobo::MakeSquad(const std::vector<int> &VhclIDS, vec3d pos, bool usable)
-{
-    size_t curid = 0;
-    int col = sqrt(VhclIDS.size()) + 2;
-
-    TUnitSpawn spawn;
-    spawn.pos.y = pos.y;
-    spawn.pos.x = 100.0 * (curid % col - col / 2.0) + pos.x;
-    spawn.pos.z = 100.0 * (curid / col) + pos.z;
-    
-    spawn.vehicle_id = VhclIDS[0];
-
-    NC_STACK_ypabact *squad_commander = _world->CreateVehicle(&spawn); //Create first bact
-
-    if ( !squad_commander )
-        return false;
-
-    squad_commander->setBACT_bactCollisions( getBACT_bactCollisions() );
-
-    if ( !usable )
-        squad_commander->_status_flg |= BACT_STFLAG_UNUSE;
-
-    squad_commander->_owner = _owner;
-    squad_commander->_commandID = _world->_nextCommandId;
-    squad_commander->_host_station = this;
-    squad_commander->_aggr = 60;
-
-    setState_msg stateMsg;
-    stateMsg.newStatus = BACT_STATUS_NORMAL;
-    stateMsg.setFlags = 0;
-    stateMsg.unsetFlags = 0;
-
-    squad_commander->SetState(&stateMsg);
-
-    setTarget_msg targetMsg;
-    targetMsg.tgt_type = BACT_TGT_TYPE_CELL;
-    targetMsg.priority = 0;
-    targetMsg.tgt_pos.x = spawn.pos.x;
-    targetMsg.tgt_pos.z = spawn.pos.z;
-
-    squad_commander->SetTarget(&targetMsg); //Set target
-
-    for ( curid = 1; curid < VhclIDS.size(); curid++)
-    {
-        spawn.vehicle_id = VhclIDS[VhclIDS.size() - curid]; // CHECK IT Why from end ?
-
-        spawn.pos.x = 100.0 * (curid % col - col / 2.0) + pos.x;
-        spawn.pos.z = 100.0 * (curid / col) + pos.z;
-
-        NC_STACK_ypabact *next_bact = (NC_STACK_ypabact *)_world->CreateVehicle(&spawn);
-
-        if ( !next_bact )
-            break;
-
-        squad_commander->AddSubject(next_bact); // Add to squad commander list
-
-        targetMsg.tgt_pos.x = spawn.pos.x;
-        targetMsg.tgt_pos.z = spawn.pos.z;
-        next_bact->SetTarget(&targetMsg); //Set target
-
-        next_bact->setBACT_bactCollisions( getBACT_bactCollisions() );
-
-        if ( !usable )
-            next_bact->_status_flg |= BACT_STFLAG_UNUSE;
-
-        next_bact->_owner = _owner;
-        next_bact->_commandID = _world->_nextCommandId;
-        next_bact->_host_station = this;
-        next_bact->_aggr = 60;
-
-        next_bact->SetState(&stateMsg);
-    }
-
-    _world->_nextCommandId++;
-
-    AddSubject(squad_commander);  //Add squad commander into robo list
-
-    return true;
-}
-
-
-
-int NC_STACK_yparobo::ShouldPlaceMessage(TRoboMessage *arg)
-{
-    int shouldPlace = 1;
-
-    switch(arg->msgID)
-    {
-    case 1:
-    {
-        NC_STACK_ypabact *bacto = _world->UserUnit();
-
-        if ( bacto->_bact_type != BACT_TYPES_MISSLE )
-            shouldPlace = 1;
-        else
-            shouldPlace = 0;
-    }
-    break;
-
-    case 2:
-    case 3:
-    case 4:
-        if ( arg->param1 == _world->_lastRoboMessages[ arg->msgID ].param1 && arg->param2 == _world->_lastRoboMessages[ arg->msgID ].param2 )
-            shouldPlace = 0;
-        else
-            shouldPlace = 1;
-        break;
-
-    case 6:
-        shouldPlace = (_clock - _world->_lastEnemyHostFoundMsgTime[ arg->param1 ] > 45000) || _world->_lastEnemyHostFoundMsgTime[ arg->param1 ] == 0;
-        _world->_lastEnemyHostFoundMsgTime[ arg->param1 ] = _clock;
-        break;
-
-    case 7:
-        shouldPlace = 1;
-        if ( arg->unit && arg->unit->_bact_type == BACT_TYPES_GUN )
-        {
-            NC_STACK_ypagun *gun = dynamic_cast<NC_STACK_ypagun *>( arg->unit );
-
-            if ( gun->IsRoboGun() )
-                shouldPlace = 0;
-        }
-
-        break;
-
-    case 9:
-    case 10:
-    case 13:
-        if ( arg->param1 == _world->_lastRoboMessages[arg->msgID].param1 )
-            shouldPlace = 0;
-        else
-            shouldPlace = 1;
-        break;
-
-    case 5:
-    case 8:
-    case 11:
-    case 12:
-    case 14:
-    case 31:
-    case 32:
-    case 33:
-    case 34:
-    case 35:
-        shouldPlace = 1;
-        break;
-
-    case 18:
-    case 40:
-        if ( (_clock - _world->_lastRoboMessages[ arg->msgID ].lastTime) > arg->param1 )
-        {
-            _world->_lastRoboMessages[ arg->msgID ].lastTime = _clock;
-            shouldPlace = 1;
-        }
-        else
-            shouldPlace = 0;
-
-        break;
-
-    default:
-        break;
-    }
-
-    if ( shouldPlace )
-    {
-        _world->_lastRoboMessages[arg->msgID].param1 = arg->param1;
-        _world->_lastRoboMessages[arg->msgID].param2 = arg->param2;
-        _world->_lastRoboMessages[arg->msgID].param3 = arg->param3;
-    }
-
-    return shouldPlace;
-}
-
-int NC_STACK_yparobo::placeMessage(TRoboMessage *arg)
-{
-    if ( arg->unit && arg->unit->_bact_type == BACT_TYPES_GUN && arg->msgID != 7 && arg->msgID != 19 && arg->msgID != 6 )
-        return 0;
-
-    if ( !ShouldPlaceMessage(arg) )
-        return 0;
-
-    TInfoMessage infoMsg;
-    infoMsg.Priority = arg->priority;
-    infoMsg.unit = arg->unit;
-    infoMsg.MsgID = arg->msgID;
-    
-    switch ( arg->msgID )
-    {
-    case 2:
-        infoMsg.txt = Locale::Text::Feedback(Locale::FEEDBACK_SECTCONQ);
-        break;
-
-    case 6:
-        infoMsg.txt =  Locale::Text::Feedback(Locale::FEEDBACK_FOUNDEHS);
-        break;
-
-    case 11:
-        infoMsg.txt = Locale::Text::Feedback(Locale::FEEDBACK_HSDESTR);
-        break;
-
-    case 12:
-        infoMsg.txt = Locale::Text::Feedback(Locale::FEEDBACK_OWNHSDESTR);
-        break;
-
-    case 13:
-        infoMsg.txt = Locale::Text::Feedback(Locale::FEEDBACK_ENMYNEARHS);
-        break;
-
-    case 18:
-        infoMsg.txt = Locale::Text::Feedback(Locale::FEEDBACK_REQSUP);
-        break;
-
-    case 31:
-        infoMsg.txt = Locale::Text::Feedback(Locale::FEEDBACK_FLAKDESTR);
-        break;
-
-    case 32:
-        infoMsg.txt = Locale::Text::Feedback(Locale::FEEDBACK_RADARDESTR);
-        break;
-
-    case 33:
-        infoMsg.txt = Locale::Text::Feedback(Locale::FEEDBACK_ATKPS);
-        break;
-
-    case 34:
-        infoMsg.txt = Locale::Text::Feedback(Locale::FEEDBACK_ATKFLAK);
-        break;
-
-    case 35:
-        infoMsg.txt = Locale::Text::Feedback(Locale::FEEDBACK_ATKRADAR);
-        break;
-
-    case 40:
-        infoMsg.txt = Locale::Text::Feedback(Locale::FEEDBACK_HSENERGY);
-        break;
-
-    default:
-        break;
-    }
-    
-    _world->ShowMessage(&infoMsg);
-
-    return 1;
-}
-
-
 void NC_STACK_yparobo::UpdateGateBeamOut()
 {
     if ( _beam_time )
