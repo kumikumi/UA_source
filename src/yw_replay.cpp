@@ -112,18 +112,34 @@ bool NC_STACK_ypaworld::StartReplay(const std::string &path, uint32_t startStep)
     if ( !replay->Open(path) )
         return false;
 
-    // Set first: failing to set the level up deletes it only as a replay's
-    _replay = std::move(replay);
+    int level = replay->GetRecording().Level();
+    std::string description = RecordedLevel(replay->GetRecording());
 
-    if ( !LoadLevelData(_replay->GetRecording().Level(), RecordedLevel(_replay->GetRecording())) )
+    return StartViewer(std::move(replay), level, description, startStep);
+}
+
+bool NC_STACK_ypaworld::StartWatching(std::unique_ptr<World::FrameSource> source, int level, const std::string &levelDescription)
+{
+    uint32_t newest = source->LastStep();
+    return StartViewer(std::move(source), level, levelDescription, newest);
+}
+
+bool NC_STACK_ypaworld::StartViewer(std::unique_ptr<World::FrameSource> source, int level, const std::string &levelDescription,
+                                    uint32_t startStep)
+{
+    // Set first: failing to set the level up deletes it only as a replay's
+    _replay = std::move(source);
+
+    if ( !LoadLevelData(level, levelDescription) )
     {
-        ypa_log_out("Could not set level %d up to watch %s\n", _replay->GetRecording().Level(), path.c_str());
+        ypa_log_out("Could not set level %d up to watch\n", level);
         _replay.reset();
         _levelInfo.State = TLevelInfo::STATE_MENU;
         return false;
     }
 
     _replayPosition = std::min(std::max(startStep, _replay->FirstStep()), _replay->LastStep());
+    _replayLiveEnded = false;
     _replayPaused = false;
     _replaySpeed = ReplayNormalSpeed;
     _replayDragging = false;
@@ -232,16 +248,26 @@ void NC_STACK_ypaworld::EndReplay()
 }
 
 // The step at a point of the track
-static double ReplayStepAt(const ReplayBar &bar, const World::Playback &replay, int x)
+// Live, steps are shown this many behind the latest that came; when as
+// many more behind, it plays twice as fast; this far behind, it jumps
+constexpr double LiveLagSteps = 3.0;
+constexpr double LiveCatchUpSteps = 30.0;
+constexpr double LiveJumpSteps = 5 * World::CVStepsPerSecond;
+
+static double ReplayStepAt(const ReplayBar &bar, const World::FrameSource &replay, int x)
 {
     double t = (double)(x - bar.TrackX0) / std::max(1, bar.TrackX1 - bar.TrackX0);
     t = std::max(0.0, std::min(1.0, t));
     return replay.FirstStep() + t * (replay.LastStep() - replay.FirstStep());
 }
 
-// At the end it waits there; played again, it starts over
+// At the end it waits there; played again, it starts over. A game watched
+// live goes on.
 void NC_STACK_ypaworld::ToggleReplayPause()
 {
+    if ( _replay->Live() )
+        return;
+
     if ( _replayPaused && _replayPosition >= _replay->LastStep() )
         _replayPosition = _replay->FirstStep();
 
@@ -649,17 +675,18 @@ void NC_STACK_ypaworld::HandleReplayInput(TInputState *inpt)
     // The windows tell anew what they're about
     ClearTooltip();
 
-    const World::Playback &replay = *_replay;
+    const World::FrameSource &replay = *_replay;
     ReplayBar bar = LayOutReplayBar(this);
     const Common::Point &mouse = inpt->ClickInf.move.ScreenPos;
     bool overWindow = inpt->ClickInf.selected_btn != NULL;
 
     HandleReplayWindows(inpt, _replayFrame);
 
-    // The track: clicked or held, it goes there
+    // The track: clicked or held, it goes there; a game watched live only
+    // goes on
     bool down = (inpt->ClickInf.flag & TClickBoxInf::FLAG_LM_DOWN) && !overWindow;
 
-    if ( down && mouse.y >= bar.TextY + _fontH && mouse.y < bar.KeysY )
+    if ( down && mouse.y >= bar.TextY + _fontH && mouse.y < bar.KeysY && !replay.Live() )
         _replayDragging = true;
 
     if ( _replayDragging )
@@ -692,7 +719,14 @@ void NC_STACK_ypaworld::HandleReplayInput(TInputState *inpt)
             ToggleReplayPause();
     }
 
-    switch ( inpt->KbdLastHit )
+    int key = inpt->KbdLastHit;
+
+    // Live, it can't be gone back in, sped up or paused
+    if ( replay.Live() && (key == Input::KC_PAUSE || key == Input::KC_LEFT || key == Input::KC_RIGHT || key == Input::KC_UP ||
+                           key == Input::KC_DOWN || key == Input::KC_HOME || key == Input::KC_END) )
+        key = Input::KC_NONE;
+
+    switch ( key )
     {
     case Input::KC_ESCAPE:
         _replayLeave = true;
@@ -795,7 +829,7 @@ static void ReplayText(NC_STACK_ypaworld *yw, CmdStream *cmds, int x, int y, int
 
 void NC_STACK_ypaworld::DrawReplayControls()
 {
-    const World::Playback &replay = *_replay;
+    const World::FrameSource &replay = *_replay;
     ReplayBar bar = LayOutReplayBar(this);
 
     // The panel
@@ -845,6 +879,10 @@ void NC_STACK_ypaworld::DrawReplayControls()
         state = fmt::sprintf("x%g", ReplaySpeeds[_replaySpeed]);
 
     std::string left = fmt::sprintf("%s / %s   %s", ReplayTime(now), ReplayTime(replay.Duration()), state);
+
+    // Live: how long it's been watched, and whether it still goes on
+    if ( replay.Live() )
+        left = fmt::sprintf("%s   %s", ReplayTime(replay.Duration()), _replayLiveEnded ? "ENDED" : "LIVE");
 
     const SDL_Color &txt = _iniColors[World::COLOR_TEXT_HUD];
 
@@ -1087,7 +1125,26 @@ void NC_STACK_ypaworld::ReplayFrame(TUpdateArgs *arg)
 
     bool playing = !_replayPaused && !_replayDragging;
 
-    if ( playing )
+    if ( _replay->Live() )
+    {
+        // What came, shown a few steps behind the latest so that steps
+        // coming unevenly still play evenly. Fallen behind, as after a
+        // stall, it plays faster up to there; far behind, it jumps.
+        if ( !_replayLiveEnded && !_replay->Update() )
+            _replayLiveEnded = true;
+
+        double newest = (double)_replay->LastStep() - LiveLagSteps;
+        double behind = newest - _replayPosition;
+
+        if ( behind > LiveJumpSteps )
+            _replayPosition = newest;
+        else
+            _replayPosition += (double)arg->DTime / World::CVStepTicks * (1.0 + std::max(0.0, behind / LiveCatchUpSteps));
+
+        _replayPosition = std::min(_replayPosition, newest);
+        _replayPosition = std::max(_replayPosition, (double)_replay->FirstStep());
+    }
+    else if ( playing )
     {
         _replayPosition += (double)arg->DTime / World::CVStepTicks * ReplaySpeeds[_replaySpeed];
 

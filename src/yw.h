@@ -2085,9 +2085,15 @@ public:
     // up from the recording's first keyframe, drawn from its frames and never
     // stepped (yw_replay.cpp)
     bool StartReplay(const std::string &path, uint32_t startStep = 0);
+
+    // Or a game as it's played elsewhere, live (Net::ViewClient), shown a
+    // little behind its latest step
+    bool StartWatching(std::unique_ptr<World::FrameSource> source, int level, const std::string &levelDescription);
     void ReplayFrame(TUpdateArgs *arg);
     bool LeavingReplay() const { return _replayLeave; }
     void EndReplay();
+    bool StartViewer(std::unique_ptr<World::FrameSource> source, int level, const std::string &levelDescription,
+                     uint32_t startStep);
 
     // The world's own state, field by field: see World::State
     void VisitState(World::State::Visitor &v);
@@ -2858,12 +2864,13 @@ public:
     // between two, whether it's paused, how fast it plays (an index of
     // ReplaySpeeds), whether the timeline is being dragged and whether it's
     // to be left
-    std::unique_ptr<World::Playback> _replay;
+    std::unique_ptr<World::FrameSource> _replay;
     double _replayPosition = 0.0;
     bool _replayPaused = false;
     int _replaySpeed = 0;
     bool _replayDragging = false;
     bool _replayLeave = false;
+    bool _replayLiveEnded = false; // Watched live, and nothing more will come
 
     // How it's looked at, the windows of its factions by owner and its
     // map, and whether they and the HUD are shown
