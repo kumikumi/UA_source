@@ -1389,14 +1389,20 @@ void NC_STACK_ypaworld::PlayFromFrame(const World::Frame &frame)
         _buildProtos[i].Energy = frame.Buildings[i].Energy;
     }
 
+    // Their buildings as well, which the unit here and its shots hit: the
+    // type, whether it's simple, and their health go together
     if ( frame.Sectors )
     {
         for ( size_t i = 0; i < frame.Sectors->size() && i < _cells.size(); i++ )
         {
-            int32_t type = (*frame.Sectors)[i].Type;
+            const World::Frame::Sector &sector = (*frame.Sectors)[i];
 
-            if ( type >= 0 && type < (int32_t)_secTypeArray.size() )
-                _cells[i].type_id = type;
+            if ( sector.Type < 0 || sector.Type >= (int32_t)_secTypeArray.size() )
+                continue;
+
+            _cells[i].type_id = sector.Type;
+            _cells[i].SectorType = _secTypeArray[sector.Type].SectorType;
+            memcpy(_cells[i].buildings_health.data(), sector.Health, sizeof(sector.Health));
         }
     }
 
