@@ -924,7 +924,7 @@ void NC_STACK_ypaworld::DrawReplayControls()
     FontUA::set_txtColor(&cmds, txt.r, txt.g, txt.b);
 
     // The replay's keys at the left, the way to look's at the right
-    std::string keys = Locale::Text::Advanced(Locale::ADV_REPLAYKEYS);
+    std::string keys = Locale::Text::Advanced(_replay->Live() ? Locale::ADV_LIVEKEYS : Locale::ADV_REPLAYKEYS);
     std::string modeKeys = Locale::Text::HUD(_replayCamera.CameraMode == ReplayCamera::FREE ? Locale::HUDSTR_REPLAYFREEKEYS
                                                                                               : Locale::HUDSTR_REPLAYVIEWKEYS);
     int half = (bar.TrackX1 - bar.TrackX0) / 2;

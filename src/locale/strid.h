@@ -775,12 +775,13 @@ enum ADV
     ADV_RLYDELETEREPLAY = 10,
     ADV_CANTOPENREPLAY = 18,
     ADV_REPLAYKEYS = 19,
+    ADV_LIVEKEYS = 113,     // The replay viewer's keys watching live
     ADV_CANTSAVEREPLAY = 49,
 
     // Network games
     ADV_CANTHOST = 88,
 
-    ADV_MAX = 89
+    ADV_MAX = 114
 };
 
 }
