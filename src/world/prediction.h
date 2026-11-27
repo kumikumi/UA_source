@@ -56,7 +56,8 @@ public:
     void Steer(const PlayerControls &controls, const Frame &drawn);
 
     // The unit driven, 0 for none: none when the game hasn't sent it for a
-    // while, as when the player rides along or looks from a missile
+    // while, as when the player rides along or looks from a missile, nor
+    // once a frame drawn has it destroyed
     uint32_t UnitId() const;
 
     // A frame drawn as the player drives the unit: the unit where it is
@@ -102,6 +103,7 @@ protected:
     Pose PoseOf(const NC_STACK_ypabact *unit) const;
     void Drop();
     void DeleteUnit(NC_STACK_ypabact *unit);
+    bool GoesOnIn(const Frame &frame) const;
 
     NC_STACK_ypaworld *_world;
     bool _possible = false;
@@ -111,6 +113,7 @@ protected:
     uint32_t _id = 0;
     int32_t _time = 0;             // The game's time of the unit's state
     uint32_t _sinceGame = 0;       // Steps since the game sent it
+    bool _overInGame = false;      // A frame drawn had it destroyed
     std::deque<Steered> _steered;  // The last controls made, the oldest first
     Pose _before, _now;            // After the step before the last, and the last
     vec3d _correction;             // From where it's driven to where it's drawn

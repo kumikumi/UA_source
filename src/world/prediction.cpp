@@ -79,7 +79,7 @@ void Prediction::Drop()
 
 uint32_t Prediction::UnitId() const
 {
-    if ( !_unit || _sinceGame > MaxStepsWithoutGame )
+    if ( !_unit || _overInGame || _sinceGame > MaxStepsWithoutGame )
         return 0;
 
     // Driven, as the controls drive a unit that goes on
@@ -132,6 +132,9 @@ void Prediction::FromGame(const ControlledUnit &unit)
         _possible = false;
         return;
     }
+
+    // Going on, as the game sends only those
+    _overInGame = false;
 
     // The units it refers to aren't here
     if ( _unit->_primTtype == BACT_TGT_TYPE_UNIT && !_unit->_primT.pbact )
@@ -189,6 +192,11 @@ void Prediction::Steer(const PlayerControls &controls, const Frame &drawn)
 
     _sinceGame++;
     _correction *= CorrectionKept;
+
+    // The game destroyed it, or it beams away: it's drawn as the game has
+    // it from then on, and no longer fires
+    if ( _unit && !GoesOnIn(drawn) )
+        _overInGame = true;
 
     if ( UnitId() )
     {
@@ -355,11 +363,19 @@ Prediction::Pose Prediction::PoseOf(const NC_STACK_ypabact *unit) const
     return pose;
 }
 
+// Whether the frame has the unit going on, to be driven, as the unit here
+// is (UnitId)
+bool Prediction::GoesOnIn(const Frame &frame) const
+{
+    const Frame::UnitInfo *info = frame.FindInfo(_id);
+    return !info || info->Status == BACT_STATUS_NORMAL || info->Status == BACT_STATUS_IDLE;
+}
+
 void Prediction::Apply(Frame &frame, uint32_t player, float fraction)
 {
     uint32_t id = UnitId();
 
-    if ( !id )
+    if ( !id || !GoesOnIn(frame) )
     {
         ApplyShots(frame, fraction);
         return;
