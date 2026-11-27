@@ -63,7 +63,7 @@ public:
     // A frame drawn as the player drives the unit: the unit where it is
     // fraction of the way from the step before the last to the last, the
     // player's camera on it, and its shots as they fly here instead of the
-    // game's
+    // game's, but while the player looks from a missile
     void Apply(Frame &frame, uint32_t player, float fraction);
 
 protected:
@@ -102,6 +102,7 @@ protected:
     void ApplyShots(Frame &frame, float fraction);
     Pose PoseOf(const NC_STACK_ypabact *unit) const;
     void Drop();
+    void DropShots();
     void DeleteUnit(NC_STACK_ypabact *unit);
     bool GoesOnIn(const Frame &frame) const;
 

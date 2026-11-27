@@ -61,13 +61,21 @@ void Prediction::DeleteUnit(NC_STACK_ypabact *unit)
     unit->Delete();
 }
 
-void Prediction::Drop()
+// The shots fired here, which the game's then show
+void Prediction::DropShots()
 {
-    // Its shots, which it fired
     for ( Shot &shot : _shots )
         DeleteUnit(shot.Missile);
 
     _shots.clear();
+    _gameShots.clear();
+    _gameShotsCame = _shotsShowing = 0;
+}
+
+void Prediction::Drop()
+{
+    // Its shots, which it fired
+    DropShots();
 
     if ( _unit )
         DeleteUnit(_unit);
@@ -373,6 +381,33 @@ bool Prediction::GoesOnIn(const Frame &frame) const
 
 void Prediction::Apply(Frame &frame, uint32_t player, float fraction)
 {
+    auto p = std::find_if(frame.Players.begin(), frame.Players.end(), [player](const Frame::Player &p) { return p.Id == player; });
+
+    // Looking from a missile, as fired with the camera along: the game's
+    // shots as they fly, the one looked from among them, none fired here
+    if ( p != frame.Players.end() && p->Unit && p->Unit != _id )
+    {
+        const Frame::Unit *viewed = frame.FindUnit(p->Unit);
+
+        if ( viewed && viewed->Type == BACT_TYPES_MISSLE )
+        {
+            DropShots();
+
+            // The unit's missiles flying then are drawn as they fly on, not
+            // as those of shots fired here later
+            if ( frame.Infos.size() == frame.Units.size() )
+            {
+                for ( size_t i = 0; i < frame.Units.size(); i++ )
+                {
+                    if ( frame.Units[i].Type == BACT_TYPES_MISSLE && frame.Infos[i].Emitter == _id )
+                        _gameShots[frame.Units[i].Id] = false;
+                }
+            }
+
+            return;
+        }
+    }
+
     uint32_t id = UnitId();
 
     if ( !id || !GoesOnIn(frame) )
@@ -382,8 +417,6 @@ void Prediction::Apply(Frame &frame, uint32_t player, float fraction)
     }
 
     // While the frame has the player in it, as they drive it
-    auto p = std::find_if(frame.Players.begin(), frame.Players.end(), [player](const Frame::Player &p) { return p.Id == player; });
-
     if ( p == frame.Players.end() || p->Controls != id || p->Unit != id )
         return;
 
