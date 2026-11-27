@@ -5270,22 +5270,28 @@ void LayoutClippedTileString(TileMap *tyle, CmdStream *cur, const std::string &s
     }
 }
 
-void SquadManagerLayoutHostStation(NC_STACK_ypaworld *yw, NC_STACK_ypabact *bact, CmdStream *cur)
+// The host stations' icons: the one the player is in, or the one last
+// heard from, blinks
+std::string SquadManagerHostStationIcons(NC_STACK_ypaworld *yw)
 {
-    char iconStr[80];
-    if ( bact == yw->UserUnit() && yw->_timeStamp / 300 & 1 )
+    std::string icons;
+
+    for ( NC_STACK_ypabact *bact : squadron_manager.hostStations )
     {
-        iconStr[0] = 33;
+        if ( bact == yw->UserUnit() && yw->_timeStamp / 300 & 1 )
+            icons += (char)33;
+        else if ( info_log.last_sender_gid == bact->_gid && yw->_timeStamp - info_log.msgs[info_log.last_msg_idx].timestamp < 10000 && yw->_timeStamp / 300 & 1 )
+            icons += (char)34;
+        else
+            icons += GetVehicleTypeIcon(yw, bact);
     }
-    else if ( info_log.last_sender_gid == bact->_gid && yw->_timeStamp - info_log.msgs[info_log.last_msg_idx].timestamp < 10000 && yw->_timeStamp / 300 & 1 )
-    {
-        iconStr[0] = 34;
-    }
-    else
-    {
-        iconStr[0] = GetVehicleTypeIcon(yw, bact);
-    }
-    iconStr[1] = 0;
+
+    return icons;
+}
+
+void SquadManagerLayoutHostStations(NC_STACK_ypaworld *yw, CmdStream *cur)
+{
+    std::string iconStr = SquadManagerHostStationIcons(yw);
 
     int bgTileset;
 
@@ -5517,9 +5523,9 @@ void SquadManagerLayoutItems(NC_STACK_ypaworld *yw, TInputState *inpt)
 
         if ( squad )
         {
-            if ( squad == yw->UserRobo() )
+            if ( squad->_bact_type == BACT_TYPES_ROBO )
             {
-                SquadManagerLayoutHostStation(yw, squad, &squadron_manager.itemBlock);
+                SquadManagerLayoutHostStations(yw, &squadron_manager.itemBlock);
             }
             else
             {
@@ -5555,29 +5561,47 @@ void SquadManagerUpdateRows(NC_STACK_ypaworld *yw)
 {
     squadron_manager.squads.fill(NULL);
 
-    if ( (size_t)(squadron_manager.firstShownEntries + squadron_manager.shownEntries) >= yw->_cmdrsRemap.size() + 1 )
+    // The player's faction's host stations still going, in the order they
+    // came
+    squadron_manager.hostStations.clear();
+
+    for ( NC_STACK_ypabact *unit : yw->_unitsList )
     {
-        squadron_manager.firstShownEntries = yw->_cmdrsRemap.size() + 1 - squadron_manager.shownEntries;
+        if ( unit->_bact_type == BACT_TYPES_ROBO && unit->_owner == yw->LocalOwner() && unit->_status != BACT_STATUS_DEAD &&
+             !(unit->_status_flg & BACT_STFLAG_DEATH1) )
+            squadron_manager.hostStations.push_back(unit);
+    }
+
+    std::sort(squadron_manager.hostStations.begin(), squadron_manager.hostStations.end(),
+              [](NC_STACK_ypabact *a, NC_STACK_ypabact *b) { return a->_gid < b->_gid; });
+
+    squadron_manager.hostRows = squadron_manager.hostStations.empty() ? 0 : 1;
+
+    int rows = yw->_cmdrsRemap.size() + squadron_manager.hostRows;
+
+    if ( squadron_manager.firstShownEntries + squadron_manager.shownEntries >= rows )
+    {
+        squadron_manager.firstShownEntries = rows - squadron_manager.shownEntries;
 
         if ( squadron_manager.firstShownEntries < 0 )
             squadron_manager.firstShownEntries = 0;
     }
 
     int firstShown = squadron_manager.firstShownEntries;
-    for (int i = 0; i < (int)yw->_cmdrsRemap.size() + 1; i++ )
+    for (int i = 0; i < rows; i++ )
     {
         NC_STACK_ypabact *squad;
 
-        if ( i )
-            squad = yw->_cmdrsRemap.at(i - 1);
+        if ( i >= squadron_manager.hostRows )
+            squad = yw->_cmdrsRemap.at(i - squadron_manager.hostRows);
         else
-            squad = yw->UserRobo();
+            squad = squadron_manager.hostStations.front();
 
         if ( i >= firstShown && i - firstShown < squadron_manager.shownEntries )
             squadron_manager.squads[i - firstShown] = squad;
     }
 
-    squadron_manager.numEntries = yw->_cmdrsRemap.size() + 1;
+    squadron_manager.numEntries = rows;
 }
 
 
@@ -5614,7 +5638,7 @@ void SquadManagerDropUnit(NC_STACK_ypaworld *yw, TClickBoxInf *winpt)
             || winpt->selected_btnID < 8
             || squadron_manager.numEntries <= (int32_t)(winpt->selected_btnID - 8 + squadron_manager.firstShownEntries)
             || squadron_manager.squads[ winpt->selected_btnID - 8 ] == 0
-            || squadron_manager.squads[ winpt->selected_btnID - 8 ] == yw->UserRobo() )
+            || squadron_manager.squads[ winpt->selected_btnID - 8 ]->_bact_type == BACT_TYPES_ROBO )
     {
         if ( squadron_manager.dragFlags & 2 )
         {
@@ -5742,15 +5766,28 @@ NC_STACK_ypabact * NC_STACK_ypaworld::SquadManagerPickUnit(int sqid, int btnX)
         return NULL;
     }
 
-    if ( cmdr == UserRobo() )
+    // The top row: the host station under the mouse
+    if ( cmdr->_bact_type == BACT_TYPES_ROBO )
     {
         squadron_manager.pickKidIdx = -1;
         squadron_manager.pickCmdrIdx = -1;
-        return UserRobo();
+
+        std::string icons = SquadManagerHostStationIcons(this);
+        int x = _fontBorderW;
+
+        for ( size_t i = 0; i < icons.size(); i++ )
+        {
+            x += _guiTiles[28]->map[(uint8_t)icons[i]].w;
+
+            if ( btnX < x )
+                return squadron_manager.hostStations[i];
+        }
+
+        return NULL;
     }
 
     squadron_manager.pickKidIdx = -1;
-    squadron_manager.pickCmdrIdx = squadron_manager.firstShownEntries + sqid - 1;
+    squadron_manager.pickCmdrIdx = squadron_manager.firstShownEntries + sqid - squadron_manager.hostRows;
 
     if ( btnX > squadron_manager.cmdrIconX && btnX < squadron_manager.cmdrIconX + squadron_manager.iconWidth )
         return cmdr;
@@ -5810,7 +5847,8 @@ int NC_STACK_ypaworld::SquadManagerBeginDrag(TClickBoxInf *winpt)
         }
     }
 
-    if ( pickedUnit == UserRobo() )
+    // Host stations stay where they are
+    if ( pickedUnit->_bact_type == BACT_TYPES_ROBO )
         return 0;
 
     squadron_manager.dragCmdrIdx = squadron_manager.pickCmdrIdx;
