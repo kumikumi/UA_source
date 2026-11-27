@@ -49,6 +49,13 @@ std::string ViewStream::Step(const Recorder &recorder)
     return msg;
 }
 
+std::string ViewStream::You(uint32_t player)
+{
+    std::string msg(1, (char)YOU);
+    Put32(msg, player);
+    return msg;
+}
+
 std::string ViewStream::End()
 {
     return std::string(1, (char)END);
@@ -194,6 +201,12 @@ uint8_t ViewStreamReader::Read(const uint8_t *data, size_t size)
         _step = step;
         return ViewStream::STEP;
     }
+
+    case ViewStream::YOU:
+        if ( !Take(p, end, &_player) )
+            return Fail("a player cut short");
+
+        return ViewStream::YOU;
 
     case ViewStream::END:
         _ended = true;

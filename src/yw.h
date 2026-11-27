@@ -1943,6 +1943,20 @@ public:
 
     bool FactionHasPlayers(uint8_t owner) const;
 
+    // Someone at another machine plays a faction from now on: a new player
+    // of it, named so, in its first host station (riding along when someone
+    // else controls it) or, with none, its first squad. NULL when the
+    // faction has no units to start in.
+    World::Player *AddFactionPlayer(const std::string &name, uint8_t owner);
+
+    // A player who isn't at this machine is gone; their faction's AI plays
+    // it again when no one else does
+    void RemovePlayer(World::Player *player);
+
+    // The commander of a faction's first squad still there, guns' aside;
+    // NULL for none
+    NC_STACK_ypabact *FirstSquad(uint8_t owner);
+
     // A host station is destroyed and another of its faction goes on: the
     // players whose orders went to it go to that one, and those who were
     // in it get in that one

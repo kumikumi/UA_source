@@ -7,6 +7,7 @@
 #include <vector>
 
 #include "session.h"
+#include "../world/playerorder.h"
 
 struct z_stream_s;
 
@@ -17,15 +18,43 @@ namespace Net
 
 // What those who watch a game and the game that's watched send each other,
 // to tell them from other sessions
-constexpr const char *VIEW_VERSION = "ua-view-1";
+constexpr const char *VIEW_VERSION = "ua-view-2";
+
+// What a watcher sends the game, each message beginning with its type, on
+// the reliable channel and unpacked:
+//
+//   'J'  join a faction: u8 its owner (1-7), or 0 to only watch again
+//   'O'  an order, as World::PlayerOrder writes it
+enum WatcherMessage : uint8_t
+{
+    WATCHER_JOIN = 'J',
+    WATCHER_ORDER = 'O',
+};
 
 // The game's side of others watching it as it's played (--stream): whoever
 // joins gets the level and the view, then every step (World::ViewStream),
 // each watcher through a zlib stream of their own, flushed at each message,
-// on the reliable channel.
+// on the reliable channel. Watchers can play too: what they ask for comes
+// as requests, which the game takes between steps.
 class ViewServer
 {
 public:
+    struct Request
+    {
+        enum Type
+        {
+            JOIN,  // Owner the faction, 0 for none
+            ORDER, // Order
+            LEFT,  // The watcher is gone
+        };
+
+        Type RequestType = JOIN;
+        uint32_t Watcher = 0;
+        std::string Name;
+        uint8_t Owner = 0;
+        World::PlayerOrder Order;
+    };
+
     ViewServer();
     ~ViewServer();
 
@@ -41,6 +70,12 @@ public:
 
     // The level was left: tells everyone, and closes
     void Close();
+
+    // What watchers asked for since the last time, in the order it came
+    std::vector<Request> TakeRequests();
+
+    // A watcher plays as a player from the next step on (0: only watches)
+    void SetPlayer(uint32_t watcher, uint32_t player);
 
     bool IsOpen() const { return _session.IsOpen(); }
     size_t Watchers() const { return _watchers.size(); }
@@ -58,14 +93,19 @@ protected:
         bool HasLevel = false;
         bool HasView = false;
         uint32_t ViewEpoch = 0; // Of the recorder's view they have
+        uint32_t Player = 0;    // Who they play as
+        bool PlayerToSend = false;
     };
 
     void Poll();
+    void Receive(const Event &event);
+    Watcher *Find(uint32_t id);
     void Send(Watcher &watcher, const std::string &msg);
     void Drop(uint32_t id);
 
     Session _session;
     std::vector<std::unique_ptr<Watcher>> _watchers;
+    std::vector<Request> _requests;
     uint64_t _unpacked = 0, _sent = 0;
 };
 

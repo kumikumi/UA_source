@@ -132,6 +132,10 @@ bool ViewClient::Take(const std::vector<uint8_t> &packed)
         break;
     }
 
+    case World::ViewStream::YOU:
+        ypa_log_out("Watching: playing as player %u\n", _reader.Player());
+        break;
+
     case World::ViewStream::END:
         ypa_log_out("Watching: the game was left\n");
         _ended = true;
@@ -165,6 +169,26 @@ bool ViewClient::Update()
     }
 
     return !_ended;
+}
+
+void ViewClient::SendToGame(const std::string &msg)
+{
+    if ( _ended || _session.Players().empty() )
+        return;
+
+    _session.Send(_session.Players().front().Id, msg.data(), msg.size(), RELIABLE);
+    _session.Flush();
+}
+
+void ViewClient::JoinFaction(uint8_t owner)
+{
+    std::string msg{(char)WATCHER_JOIN, (char)owner};
+    SendToGame(msg);
+}
+
+void ViewClient::SendOrder(const World::PlayerOrder &order)
+{
+    SendToGame(std::string(1, (char)WATCHER_ORDER) + order.Write());
 }
 
 uint32_t ViewClient::FirstStep() const

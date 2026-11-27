@@ -92,14 +92,91 @@ void ViewServer::Poll()
         }
 
         case Event::PLAYER_LEFT:
+        {
             ypa_log_out("Watching: %s left\n", event.Name.c_str());
+
+            Request left;
+            left.RequestType = Request::LEFT;
+            left.Watcher = event.From;
+            left.Name = event.Name;
+            _requests.push_back(left);
+
             Drop(event.From);
+            break;
+        }
+
+        case Event::DATA:
+            Receive(event);
             break;
 
         default:
-            // Watchers send nothing yet
             break;
         }
+    }
+}
+
+ViewServer::Watcher *ViewServer::Find(uint32_t id)
+{
+    for ( std::unique_ptr<Watcher> &watcher : _watchers )
+    {
+        if ( watcher->Id == id )
+            return watcher.get();
+    }
+
+    return NULL;
+}
+
+void ViewServer::Receive(const Event &event)
+{
+    if ( !Find(event.From) || event.Data.empty() )
+        return;
+
+    Request request;
+    request.Watcher = event.From;
+    request.Name = event.Name;
+
+    const uint8_t *data = event.Data.data();
+    size_t size = event.Data.size();
+
+    switch ( data[0] )
+    {
+    case WATCHER_JOIN:
+        if ( size != 2 || data[1] > 7 )
+            break;
+
+        request.RequestType = Request::JOIN;
+        request.Owner = data[1];
+        _requests.push_back(request);
+        return;
+
+    case WATCHER_ORDER:
+        if ( !request.Order.Read(data + 1, size - 1) )
+            break;
+
+        request.RequestType = Request::ORDER;
+        _requests.push_back(request);
+        return;
+
+    default:
+        break;
+    }
+
+    ypa_log_out("Watching: %s sent what can't be read (%d bytes)\n", event.Name.c_str(), (int)size);
+}
+
+std::vector<ViewServer::Request> ViewServer::TakeRequests()
+{
+    std::vector<Request> taken;
+    taken.swap(_requests);
+    return taken;
+}
+
+void ViewServer::SetPlayer(uint32_t watcher, uint32_t player)
+{
+    if ( Watcher *w = Find(watcher) )
+    {
+        w->Player = player;
+        w->PlayerToSend = true;
     }
 }
 
@@ -151,6 +228,13 @@ void ViewServer::Step(int level, const std::string &levelDescription, const Worl
         {
             Send(*watcher, World::ViewStream::Hello(level, levelDescription, recorder.ViewSchema()));
             watcher->HasLevel = true;
+        }
+
+        // Who they play as since this step
+        if ( watcher->PlayerToSend )
+        {
+            Send(*watcher, World::ViewStream::You(watcher->Player));
+            watcher->PlayerToSend = false;
         }
 
         // The view after this step, to read the next ones from: to those

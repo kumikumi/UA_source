@@ -72,6 +72,8 @@ static const Option Options[] = {
     {"watch",        "ADDRESS", "Watch the game streamed at ADDRESS (--stream) as it's played, in the "
                                 "replay viewer; ADDRESS:PORT if the port isn't 61234. With --headless "
                                 "nothing is shown: what came and how fast goes to stdout"},
+    {"faction",      "N",       "With --watch, play faction N (1-7) of the game watched, with anyone "
+                                "else playing it; the faction's AI stops while someone does"},
     {"bench",        NULL,      "Run the benchmark: level 21 drawn over and over from above, the frame "
                                 "times reported"},
     {"bench-level",  "N",       "The benchmark's level instead"},

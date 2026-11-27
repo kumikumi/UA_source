@@ -24,6 +24,8 @@ namespace World
 //   'S'  a step: u32 the step, u8 1 when the guesses start over before it
 //        (at a keyframe of the recording), then the recorder's step: what
 //        changed of the view, then the messages shown (Recorder)
+//   'Y'  you: u32 the player the watcher plays as from the next step on, 0
+//        when they only watch (Net::ViewServer)
 //   'E'  the end: the level was left
 //
 // The steps come one after the other from the image on.
@@ -34,14 +36,16 @@ namespace ViewStream
         HELLO = 'H',
         IMAGE = 'I',
         STEP = 'S',
+        YOU = 'Y',
         END = 'E',
     };
 
-    constexpr uint16_t Format = 1;
+    constexpr uint16_t Format = 2;
 
     std::string Hello(int level, const std::string &description, const State::Schema &schema);
     std::string Image(const Recorder &recorder);
     std::string Step(const Recorder &recorder);
+    std::string You(uint32_t player);
     std::string End();
 }
 
@@ -67,6 +71,9 @@ public:
     // What the last step changed; after an image, every object
     const ChangedObjects &Changed() const { return _changed; }
 
+    // The player the watcher plays as, 0 for none
+    uint32_t Player() const { return _player; }
+
     bool Ended() const { return _ended; }
     bool Failed() const { return _failed; }
 
@@ -84,6 +91,7 @@ protected:
     ObjectsVersions _view;
     ChangedObjects _changed;
 
+    uint32_t _player = 0;
     bool _ended = false;
     bool _failed = false;
 };

@@ -3,6 +3,7 @@
 #include <SDL3/SDL_main.h>
 #include <cstdio>
 #include <cstdlib>
+#include <map>
 #if defined(_WIN32)
 #include <process.h>
 #else
@@ -100,6 +101,83 @@ static uint32_t streamedStep = 0;
 // --headless, only read
 static std::string watchAddress;
 static std::string watchName = "watcher";
+static int watchFaction = 0; // --faction: played as well
+
+// Those watching who play (--stream): the player each watcher plays as, and
+// their controls, which stay empty until they can steer
+struct RemotePlayer
+{
+    uint32_t Player = 0;
+    TInputState Input;
+};
+
+static std::map<uint32_t, RemotePlayer> remotePlayers; // By watcher
+
+// Before a step: what those watching asked for since the last one. A
+// watcher who joins a faction becomes a new player of it, who goes when
+// they join another, only watch again or leave.
+static void TakeWatchersRequests()
+{
+    if ( !viewServer.IsOpen() )
+        return;
+
+    for ( const Net::ViewServer::Request &request : viewServer.TakeRequests() )
+    {
+        auto it = remotePlayers.find(request.Watcher);
+        World::Player *player = it != remotePlayers.end() ? ypaworld->FindPlayer(it->second.Player) : NULL;
+
+        switch ( request.RequestType )
+        {
+        case Net::ViewServer::Request::JOIN:
+        case Net::ViewServer::Request::LEFT:
+            if ( player )
+            {
+                ypa_log_out("Watching: %s no longer plays faction %d\n", request.Name.c_str(), (int)player->Owner);
+                ypaworld->RemovePlayer(player);
+                player = NULL;
+            }
+
+            if ( it != remotePlayers.end() )
+                remotePlayers.erase(it);
+
+            if ( request.RequestType == Net::ViewServer::Request::LEFT )
+                break;
+
+            if ( request.Owner )
+            {
+                player = ypaworld->AddFactionPlayer(request.Name, request.Owner);
+
+                if ( player )
+                {
+                    remotePlayers[request.Watcher].Player = player->Id;
+                    ypa_log_out("Watching: %s plays faction %d as player %u\n", request.Name.c_str(), (int)request.Owner, player->Id);
+                }
+                else
+                {
+                    ypa_log_out("Watching: %s can't play faction %d, which has no units\n", request.Name.c_str(), (int)request.Owner);
+                }
+            }
+
+            viewServer.SetPlayer(request.Watcher, player ? player->Id : 0);
+            break;
+
+        case Net::ViewServer::Request::ORDER:
+            if ( player )
+                player->Pending.push_back(request.Order);
+            break;
+        }
+    }
+
+    for ( auto &it : remotePlayers )
+    {
+        if ( World::Player *player = ypaworld->FindPlayer(it.second.Player) )
+        {
+            it.second.Input = TInputState();
+            it.second.Input.Period = World::CVStepTicks;
+            player->Input = &it.second.Input;
+        }
+    }
+}
 
 // After a step: what it changed to those watching (--stream)
 static void StreamStep()
@@ -296,6 +374,7 @@ int ProcessGameplayFrame(int32_t frameTicks, bool timeFrozen)
             world_update_arg.TimeStamp += stepTicks;
             world_update_arg.Input = &input_states;
 
+            TakeWatchersRequests();
             draw = ypaworld->SimulationStep(&world_update_arg);
             StreamStep();
 
@@ -558,6 +637,9 @@ static bool StartDirectWatch()
         ypa_log_out("Could not watch the game at %s\n", watchAddress.c_str());
         return false;
     }
+
+    if ( watchFaction )
+        client->JoinFaction(watchFaction);
 
     int level = client->Level();
     std::string description = client->LevelDescription();
@@ -1236,8 +1318,21 @@ static bool ReadDirectStart()
     if ( !watchAddress.empty() && (System::CmdLine::Has("record") || System::CmdLine::Has("check-resume") ||
                                    System::CmdLine::Has("ai-only") || System::CmdLine::Has("step")) )
     {
-        System::CmdLine::PrintError("--watch only goes with --headless, --time-limit and --callsign");
+        System::CmdLine::PrintError("--watch only goes with --headless, --time-limit, --callsign and --faction");
         return false;
+    }
+
+    if ( System::CmdLine::Has("faction") )
+    {
+        std::string faction;
+        System::CmdLine::Get("faction", &faction);
+        watchFaction = atoi(faction.c_str());
+
+        if ( watchAddress.empty() || watchFaction < 1 || watchFaction > 7 )
+        {
+            System::CmdLine::PrintError("--faction needs --watch and a faction from 1 to 7");
+            return false;
+        }
     }
 
     aiOnly = System::CmdLine::Has("ai-only");
@@ -1540,6 +1635,7 @@ static void HeadlessStep()
     world_update_arg.DTime = World::CVStepTicks;
     world_update_arg.TimeStamp += World::CVStepTicks;
 
+    TakeWatchersRequests();
     ypaworld->SimulationStep(&world_update_arg);
     StreamStep();
 }
@@ -1656,9 +1752,13 @@ static void RunHeadlessWatch()
         return;
     }
 
+    if ( watchFaction )
+        client.JoinFaction(watchFaction);
+
     const uint32_t firstStep = client.LastStep();
     const uint64_t startTicks = SDL_GetTicksNS();
     size_t hashesShown = 0;
+    uint32_t player = 0;
 
     // The longest wait for the next step, as when packets were lost
     uint32_t lastStep = firstStep;
@@ -1674,6 +1774,12 @@ static void RunHeadlessWatch()
             longestWait = std::max(longestWait, SDL_GetTicksNS() - lastStepTicks);
             lastStep = client.LastStep();
             lastStepTicks = SDL_GetTicksNS();
+        }
+
+        if ( client.Player() != player )
+        {
+            player = client.Player();
+            printf("Playing as player %u from step %u\n", player, client.LastStep());
         }
 
         for ( ; hashesShown < client.ViewHashes().size(); hashesShown++ )

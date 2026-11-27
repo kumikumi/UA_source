@@ -837,14 +837,7 @@ void NC_STACK_ypaworld::StartPlayerInSquad(int playerOwner)
     if ( _localPlayer->Owner )
         return;
 
-    NC_STACK_ypabact *first = NULL;
-
-    ForEachCommander(playerOwner, [&first](NC_STACK_ypabact *commander)
-    {
-        if ( commander->_status != BACT_STATUS_DEAD && commander->_bact_type != BACT_TYPES_GUN &&
-             (!first || (commander->_commandID & 0xFFFFFF) < (first->_commandID & 0xFFFFFF)) )
-            first = commander;
-    });
+    NC_STACK_ypabact *first = FirstSquad(playerOwner);
 
     if ( !first )
         return;
@@ -854,6 +847,57 @@ void NC_STACK_ypaworld::StartPlayerInSquad(int playerOwner)
 
     first->setBACT_viewer(true, _localPlayer);
     first->setBACT_inputting(true, _localPlayer);
+}
+
+NC_STACK_ypabact *NC_STACK_ypaworld::FirstSquad(uint8_t owner)
+{
+    NC_STACK_ypabact *first = NULL;
+
+    ForEachCommander(owner, [&first](NC_STACK_ypabact *commander)
+    {
+        if ( commander->_status != BACT_STATUS_DEAD && commander->_bact_type != BACT_TYPES_GUN &&
+             (!first || (commander->_commandID & 0xFFFFFF) < (first->_commandID & 0xFFFFFF)) )
+            first = commander;
+    });
+
+    return first;
+}
+
+World::Player *NC_STACK_ypaworld::AddFactionPlayer(const std::string &name, uint8_t owner)
+{
+    NC_STACK_ypabact *start = FirstHostStation(owner);
+
+    if ( !start )
+        start = FirstSquad(owner);
+
+    if ( !start )
+        return NULL;
+
+    World::Player *player = AddPlayer();
+    player->Name = name.substr(0, World::Player::NameLength);
+
+    JoinFaction(player, owner);
+
+    start->setBACT_viewer(true, player);
+    start->setBACT_inputting(true, player);
+    return player;
+}
+
+void NC_STACK_ypaworld::RemovePlayer(World::Player *player)
+{
+    if ( player == _localPlayer )
+        return;
+
+    LeaveFaction(player);
+
+    for ( auto it = _players.begin(); it != _players.end(); it++ )
+    {
+        if ( it->get() == player )
+        {
+            _players.erase(it);
+            return;
+        }
+    }
 }
 
 // The squads that came along from the last level join the player's host

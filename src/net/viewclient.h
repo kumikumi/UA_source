@@ -9,6 +9,7 @@
 #include "session.h"
 #include "../world/playback.h"
 #include "../world/viewstream.h"
+#include "../world/playerorder.h"
 
 struct z_stream_s;
 
@@ -48,6 +49,15 @@ public:
     // The game was left, or can't be reached
     bool Ended() const { return _ended; }
 
+    // Asks to play a faction (1-7) from now on, or only to watch again (0)
+    void JoinFaction(uint8_t owner);
+
+    // The player they play as, once the game says so; 0 for none
+    uint32_t Player() const { return _reader.Player(); }
+
+    // An order as that player
+    void SendOrder(const World::PlayerOrder &order);
+
     // What came so far, as it came and unpacked, and the steps
     uint64_t BytesReceived() const { return _received; }
     uint64_t BytesUnpacked() const { return _unpacked; }
@@ -68,6 +78,9 @@ protected:
 
     // Unpacks and reads what came; false when it doesn't read
     bool Take(const std::vector<uint8_t> &packed);
+
+    // To the game, which hosts the session
+    void SendToGame(const std::string &msg);
 
     Session _session;
     std::unique_ptr<z_stream_s> _unpacker;
