@@ -88,6 +88,7 @@ struct Frame
         uint8_t Owner = 0;
         uint8_t Status = 0;      // BACT_STATUS_*
         uint8_t Aggression = 0;
+        uint32_t CommandId = 0;  // Its squad's, by which the squad manager orders them
         int16_t Shield = -1;     // Armour, in percent; -1 when not recorded
         int32_t Energy = 0;
         int32_t EnergyMax = 0;
@@ -116,6 +117,15 @@ struct Frame
         uint8_t FillMode = 0;    // Which of its batteries it fills (1, 4, 8)
         uint8_t LoadFlags = 0;   // Which of them filled or drained last
         uint8_t LossFlags = 0;
+    };
+
+    // A vehicle's or a building's prototype as the interface offers it,
+    // tech upgrades included: to which factions (bits of their owners) and
+    // for how much; only with details
+    struct Prototype
+    {
+        uint8_t Enable = 0;
+        int32_t Energy = 0;
     };
 
     // Someone playing a faction
@@ -156,6 +166,9 @@ struct Frame
     // stations in the order of their ids
     std::vector<UnitInfo> Infos;
     std::vector<HostStation> HostStations;
+
+    // With details: the prototypes, by their indices
+    std::vector<Prototype> Vehicles, Buildings;
 
     // By index: shared with the frames before while no sector changes
     std::shared_ptr<const std::vector<Sector>> Sectors;
@@ -217,7 +230,7 @@ protected:
         Field ExtraScale[3], ExtraPos[3], ExtraRotation[3], ExtraFlags[3], ExtraModel[3];
 
         // Details
-        Field Owner, Status, Aggression, Shield, Energy, EnergyMax, Parent;
+        Field Owner, Status, Aggression, CommandId, Shield, Energy, EnergyMax, Parent;
         Field PrimaryType, Primary, PrimaryPos, SecondaryType, Secondary, GunFlags, ClockStart, WeaponTime, SalveCounter;
         Field Create, Beam, BuildSpare, VehicleSpare, ReloadPS, FillMode, LoadFlags, LossFlags;
     };
@@ -231,6 +244,7 @@ protected:
     Field _sectorType, _sectorHealth, _sectorOwner, _sectorPurpose, _sectorPower, _powerStation, _stationPower;
     Field _constructing, _constructBuilding, _constructTime, _constructEnd;
     Field _itemState, _itemRadius;
+    Field _vehicleEnable, _vehicleEnergy, _buildingEnable, _buildingEnergy;
     std::unordered_map<uint8_t, UnitFields> _units; // By kind
 };
 

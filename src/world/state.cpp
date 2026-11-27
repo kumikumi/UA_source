@@ -640,7 +640,9 @@ static void VisitCampaign(Visitor &v, NC_STACK_ypaworld *world)
 static void VisitVehicle(Visitor &v, World::TVhclProto &p)
 {
     v.Field("model", p.model_id);
-    v.Field("enable", p.disable_enable_bitmask);
+
+    // What the interface offers the player, and for how much
+    v.Field("enable", p.disable_enable_bitmask, VIEW);
     v.Field("weapon", p.weapon);
     v.Field("mgun", p.mgun);
     v.Field("icon", p.type_icon);
@@ -655,7 +657,7 @@ static void VisitVehicle(Visitor &v, World::TVhclProto &p)
     v.Field("maxSpeedShown", p.max_speed_disp);
     v.Field("maxSpeed", p.max_speed);
     v.Field("shield", p.shield);
-    v.Field("energy", p.energy);
+    v.Field("energy", p.energy, VIEW);
     v.Field("adistSector", p.adist_sector);
     v.Field("adistUnit", p.adist_bact);
     v.Field("sdistSector", p.sdist_sector);
@@ -739,11 +741,11 @@ static void VisitWeapon(Visitor &v, World::TWeapProto &p)
 static void VisitBuilding(Visitor &v, World::TBuildingProto &p)
 {
     v.Field("sectorType", p.SecType);
-    v.Field("enable", p.EnableMask);
+    v.Field("enable", p.EnableMask, VIEW);
     v.Field("model", p.ModelID);
     v.Field("power", p.Power);
     v.Field("icon", p.TypeIcon);
-    v.Field("energy", p.Energy);
+    v.Field("energy", p.Energy, VIEW);
 }
 
 // Someone playing: all of it the view, what replays follow

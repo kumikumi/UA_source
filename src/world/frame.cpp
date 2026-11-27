@@ -130,6 +130,8 @@ void Frame::Between(const Frame &a, const Frame &b, float t, Frame &out)
     out.SuperItems = nearer.SuperItems;
     out.Infos = nearer.Infos;
     out.HostStations = nearer.HostStations;
+    out.Vehicles = nearer.Vehicles;
+    out.Buildings = nearer.Buildings;
 
     out.CameraPosition = nearer.CameraPosition;
     out.CameraRotation = nearer.CameraRotation;
@@ -285,6 +287,11 @@ FrameMaker::FrameMaker(const State::Schema &viewSchema, bool details)
     _itemState = Find(_schema, State::KIND_SUPERITEM, "state");
     _itemRadius = Find(_schema, State::KIND_SUPERITEM, "radius");
 
+    _vehicleEnable = Find(_schema, State::KIND_VEHICLE, "enable");
+    _vehicleEnergy = Find(_schema, State::KIND_VEHICLE, "energy");
+    _buildingEnable = Find(_schema, State::KIND_BUILDING, "enable");
+    _buildingEnergy = Find(_schema, State::KIND_BUILDING, "energy");
+
     static const char *const extraNames[3][5] = {
         {"extra0Scale", "extra0Pos", "extra0Rotation", "extra0Flags", "extra0Model"},
         {"extra1Scale", "extra1Pos", "extra1Rotation", "extra1Flags", "extra1Model"},
@@ -317,6 +324,7 @@ FrameMaker::FrameMaker(const State::Schema &viewSchema, bool details)
         f.Owner = Find(_schema, kind, "owner");
         f.Status = Find(_schema, kind, "status");
         f.Aggression = Find(_schema, kind, "aggression");
+        f.CommandId = Find(_schema, kind, "command");
         f.Shield = Find(_schema, kind, "shield");
         f.Energy = Find(_schema, kind, "energy");
         f.EnergyMax = Find(_schema, kind, "energyMax");
@@ -431,6 +439,17 @@ void FrameMaker::Add(Frame &frame, std::vector<Frame::Sector> &sectors, uint8_t 
             frame.Constructions.push_back(c);
         }
     }
+    else if ( (kind == State::KIND_VEHICLE || kind == State::KIND_BUILDING) && _details )
+    {
+        std::vector<Frame::Prototype> &protos = kind == State::KIND_VEHICLE ? frame.Vehicles : frame.Buildings;
+
+        if ( id >= protos.size() )
+            protos.resize(id + 1);
+
+        Frame::Prototype &p = protos[id];
+        get(kind == State::KIND_VEHICLE ? _vehicleEnable : _buildingEnable, &p.Enable, sizeof(p.Enable));
+        get(kind == State::KIND_VEHICLE ? _vehicleEnergy : _buildingEnergy, &p.Energy, sizeof(p.Energy));
+    }
     else if ( kind == State::KIND_SUPERITEM )
     {
         if ( id >= frame.SuperItems.size() )
@@ -484,6 +503,7 @@ void FrameMaker::Add(Frame &frame, std::vector<Frame::Sector> &sectors, uint8_t 
         get(f.Owner, &info.Owner, sizeof(info.Owner));
         get(f.Status, &info.Status, sizeof(info.Status));
         get(f.Aggression, &info.Aggression, sizeof(info.Aggression));
+        get(f.CommandId, &info.CommandId, sizeof(info.CommandId));
 
         uint8_t shield = 0;
         if ( f.Shield.Found )

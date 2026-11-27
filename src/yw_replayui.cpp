@@ -628,6 +628,7 @@ MapScene::Unit ReplayMapScene::UnitAt(size_t index) const
     u.Owner = info->Owner;
     u.Status = info->Status;
     u.Aggression = info->Aggression;
+    u.CommandId = info->CommandId;
     u.Energy = info->Energy;
     u.EnergyMax = std::max(info->EnergyMax, 1);
     u.RoboGun = f.Type == BACT_TYPES_GUN && info->GunFlags >= 0 && (info->GunFlags & NC_STACK_ypagun::GUN_FLAGS_ROBO);

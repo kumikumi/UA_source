@@ -4861,6 +4861,7 @@ void NC_STACK_ypabact::VisitView(World::State::Visitor &v)
     v.Field("energy", _energy, World::State::VIEW);
     v.Field("energyMax", _energy_max, World::State::VIEW);
     v.Field("aggression", _aggr, World::State::VIEW);
+    v.Field("command", _commandID, World::State::VIEW); // Its squad, as the squad manager orders them
     v.Unit("parent", _parent, World::State::VIEW);
     v.Unit("killer", _killer, World::State::VIEW);
     v.Field("primaryType", _primTtype, World::State::VIEW);
@@ -4919,7 +4920,6 @@ void NC_STACK_ypabact::VisitView(World::State::Visitor &v)
 void NC_STACK_ypabact::VisitInternal(World::State::Visitor &v)
 {
     v.Field("bflags", _bflags);
-    v.Field("command", _commandID);
     v.Unit("hostStation", _host_station);
     v.Kids("kids", _kidList);
     v.Field("soundFlags", _soundFlags);
