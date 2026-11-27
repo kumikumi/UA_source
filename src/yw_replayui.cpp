@@ -777,6 +777,61 @@ void ReplayMapScene::ForEachHostStation(uint8_t owner, const UnitFunc &func) con
     }
 }
 
+void ReplayMapScene::ForEachRoboGun(const Unit &host, const UnitFunc &func) const
+{
+    ForEachKid(host, [&](const Unit &kid)
+    {
+        if ( kid.RoboGun )
+            func(kid);
+    });
+}
+
+bool ReplayMapScene::Defeated(uint8_t owner) const
+{
+    if ( !_frame )
+        return false;
+
+    for (size_t i = 0; i < _frame->Units.size(); i++)
+    {
+        const World::Frame::UnitInfo *info = _frame->InfoAt(i);
+
+        if ( info && info->Owner == owner && info->Status != BACT_STATUS_DEAD )
+            return false;
+    }
+
+    return true;
+}
+
+bool ReplayMapScene::HostStationBatteries(uint32_t id, Batteries &out) const
+{
+    const World::Frame::HostStation *host = _frame ? _frame->FindHostStation(id) : NULL;
+    const World::Frame::UnitInfo *info = _frame ? _frame->FindInfo(id) : NULL;
+    const World::Frame::Unit *unit = _frame ? _frame->FindUnit(id) : NULL;
+
+    if ( !host || !info || !unit )
+        return false;
+
+    out.FillMode = host->FillMode;
+    out.Main = info->Energy;
+    out.Max = std::max(info->EnergyMax, 1);
+    out.Create = host->Create;
+    out.Beam = host->Beam;
+    out.LoadFlags = host->LoadFlags;
+    out.LossFlags = host->LossFlags;
+    out.AbsReload = host->ReloadPS;
+
+    Common::Point sector = World::PositionToSectorID(unit->Position.x, unit->Position.z);
+
+    if ( const World::Frame::Sector *s = _yw->IsSector(sector) ? SectorOf(sector) : NULL )
+    {
+        out.SectorOwner = s->Owner;
+        out.SectorPower = s->Power;
+    }
+
+    out.ReloadRatio = ReloadRatios(*_frame)[out.SectorOwner & 7];
+    return true;
+}
+
 // The player's squads, as the squad manager has them
 void ReplayMapScene::ForEachCommander(const UnitFunc &func) const
 {

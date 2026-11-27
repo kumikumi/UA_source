@@ -96,6 +96,31 @@ public:
     virtual void ForEachSquad(uint8_t owner, const UnitFunc &func) const = 0;
     virtual void ForEachHostStation(uint8_t owner, const UnitFunc &func) const = 0;
 
+    // A host station's guns, in the order of their places on it
+    virtual void ForEachRoboGun(const Unit &host, const UnitFunc &func) const = 0;
+
+    // Whether a faction has no units left, host stations included
+    virtual bool Defeated(uint8_t owner) const = 0;
+
+    // A host station's batteries, as the energy panel shows them; false
+    // when there's no such host station
+    struct Batteries
+    {
+        int FillMode = 0;        // Which it fills: 1 its own, 4 creating, 8 beaming
+        int Main = 0;            // Its own energy
+        int Max = 1;
+        int Create = 0;
+        int Beam = 0;
+        int LoadFlags = 0;       // Which filled or drained last
+        int LossFlags = 0;
+        uint8_t SectorOwner = 0; // Of the sector it's in, and what it
+        int SectorPower = 0;     // takes in there
+        float ReloadRatio = 0.0; // The sector owner's share of the power
+        int AbsReload = 0;       // What it would take in a second, at full power
+    };
+
+    virtual bool HostStationBatteries(uint32_t id, Batteries &out) const = 0;
+
     // The player: whose sight the map shows, its host station and the unit
     // it steers (their ids 0 for none), and the unit it looks from, false
     // for none, and how the view is turned

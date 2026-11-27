@@ -7749,7 +7749,7 @@ bool NC_STACK_ypaworld::ApplyPlayerOrder(World::Player *player, const World::Pla
     {
         NC_STACK_yparobo *robo = dynamic_cast<NC_STACK_yparobo *>(unit);
 
-        if ( !robo || robo->_owner != owner || (order.Value & ~(1 | 4 | 8)) )
+        if ( !robo || robo->_owner != owner || (order.Value & ~15) )
             return false;
 
         robo->setROBO_fillMode(order.Value);

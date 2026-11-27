@@ -147,6 +147,9 @@ public:
 
     void ForEachSquad(uint8_t owner, const UnitFunc &func) const override;
     void ForEachHostStation(uint8_t owner, const UnitFunc &func) const override;
+    void ForEachRoboGun(const Unit &host, const UnitFunc &func) const override;
+    bool Defeated(uint8_t owner) const override;
+    bool HostStationBatteries(uint32_t id, Batteries &out) const override;
 
     void ForEachCommander(const UnitFunc &func) const override;
     bool SelectedCommander(Unit &out) const override;

@@ -170,7 +170,7 @@ public:
     int activeMode = 0;
     int barEnabled = 0;
     int inputAttached = 0;
-    uint8_t gunIndices[256] = {0};
+    uint32_t gunIds[256] = {0}; // The host station's guns
     uint8_t vhclProtoIds[256] = {0};
     uint8_t buildProtoIds[256] = {0};
     TBuyListEntry buyList[512];
@@ -338,6 +338,7 @@ uint8_t EnergyGlyph(int energy, int energyMax);
 struct TReloadGauge
 {
     int State = 0;
+    uint8_t SectorOwner = 0;
     int SectorPower = 0;
     float Ratio = 0.0;
     int Amount = 0;
