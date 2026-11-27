@@ -7932,8 +7932,20 @@ void NC_STACK_ypabact::UserUpdate(update_msg *arg)
     World::Player *controller = _world->ControllerOf(this);
     TInputState *stepInput = arg->inpt;
 
+    // A player at another machine whose controls didn't come doesn't move
+    // it by this machine's
+    static TInputState none;
+
     if ( controller && controller->Input )
+    {
         arg->inpt = controller->Input;
+    }
+    else if ( controller && controller != _world->LocalPlayer() )
+    {
+        none = TInputState();
+        none.Period = arg->frameTime;
+        arg->inpt = &none;
+    }
 
     User_layer(arg);
 

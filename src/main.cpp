@@ -117,11 +117,70 @@ struct RemotePlayer
 
 static std::map<uint32_t, RemotePlayer> remotePlayers; // By watcher
 
+// The level's players as those watching play them. After the level was
+// started again or restored (rewound, loaded), those it has whom no one
+// watching plays go, their factions back to the AI if no one else plays
+// them, and those watching who play and whom it doesn't have join their
+// faction anew as the same players: their machines play on as they did.
+static void MatchWatchersPlayers()
+{
+    std::vector<World::Player *> unplayed;
+
+    for ( const std::unique_ptr<World::Player> &player : ypaworld->_players )
+    {
+        if ( player.get() == ypaworld->LocalPlayer() )
+            continue;
+
+        bool played = false;
+
+        for ( const auto &it : remotePlayers )
+        {
+            if ( it.second.Player == player->Id && it.second.Owner == player->Owner )
+                played = true;
+        }
+
+        if ( !played )
+            unplayed.push_back(player.get());
+    }
+
+    for ( World::Player *player : unplayed )
+    {
+        ypa_log_out("Watching: no one plays player %u of faction %d any more\n", player->Id, (int)player->Owner);
+        ypaworld->RemovePlayer(player);
+    }
+
+    for ( auto it = remotePlayers.begin(); it != remotePlayers.end(); )
+    {
+        if ( ypaworld->FindPlayer(it->second.Player) )
+        {
+            it++;
+            continue;
+        }
+
+        World::Player *player = ypaworld->AddFactionPlayer(it->second.Name, it->second.Owner, it->second.Player);
+        viewServer.SetPlayer(it->first, player ? player->Id : 0);
+
+        if ( player )
+        {
+            ypa_log_out("Watching: %s plays faction %d again as player %u\n", it->second.Name.c_str(), (int)it->second.Owner, player->Id);
+            it->second.Player = player->Id;
+            it++;
+        }
+        else
+        {
+            ypa_log_out("Watching: %s can't play faction %d again, which has no units\n", it->second.Name.c_str(), (int)it->second.Owner);
+            it = remotePlayers.erase(it);
+        }
+    }
+}
+
 // Before a step: what those watching asked for since the last one. A
 // watcher who joins a faction becomes a new player of it, who goes when
 // they join another, only watch again or leave.
 static void TakeWatchersRequests()
 {
+    MatchWatchersPlayers();
+
     if ( !viewServer.IsOpen() )
         return;
 
@@ -227,30 +286,6 @@ static void StreamStep()
         unit.Fields = std::move(v.Out());
 
         viewServer.SendUnit(it.first, unit);
-    }
-}
-
-// The level started again: its players went with it (FreeLevel), so those
-// watching who played join their faction in it anew, as the same players:
-// their machines play on as they did
-static void RejoinWatchers()
-{
-    for ( auto it = remotePlayers.begin(); it != remotePlayers.end(); )
-    {
-        World::Player *player = ypaworld->AddFactionPlayer(it->second.Name, it->second.Owner, it->second.Player);
-        viewServer.SetPlayer(it->first, player ? player->Id : 0);
-
-        if ( player )
-        {
-            ypa_log_out("Watching: %s plays faction %d again as player %u\n", it->second.Name.c_str(), (int)it->second.Owner, player->Id);
-            it->second.Player = player->Id;
-            it++;
-        }
-        else
-        {
-            ypa_log_out("Watching: %s can't play faction %d again, which has no units\n", it->second.Name.c_str(), (int)it->second.Owner);
-            it = remotePlayers.erase(it);
-        }
     }
 }
 
@@ -558,8 +593,6 @@ int ProcessGameplayFrame(int32_t frameTicks, bool timeFrozen)
             ypa_log_out("Warning, could not start the level again\n");
             return BackToLevelMap(false);
         }
-
-        RejoinWatchers();
 
         Input::Engine.QueryInput(&input_states);
     }
