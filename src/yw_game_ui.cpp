@@ -6405,56 +6405,50 @@ void RoboMapMakeSquadFromBox(NC_STACK_ypaworld *yw)
     else if ( maxCellY < 1 )
         maxCellY = 1;
 
-    NC_STACK_ypabact *newChief = NULL;
+    const MapScene &scene = yw->UiScene();
+    uint8_t player = scene.PlayerOwner();
+    MapScene::Unit newChief;
 
+    // The first unit of the player's in the box leads a new squad of them
+    // all; the host station isn't one of them
     for (int i = minCellY; i <= maxCellY; i++)
     {
         for (int j = minCellX; j <= maxCellX; j++)
         {
-            cellArea &cll = yw->_cells(j, i);
-
-            if ( robo_map.MapViewMask & cll.view_mask )
+            if ( robo_map.MapViewMask & scene.ViewMask({j, i}) )
             {
-                for ( NC_STACK_ypabact* &bct : cll.unitsList )
+                scene.ForEachUnitIn({j, i}, [&](const MapScene::Unit &unit)
                 {
-                    if ( bct->_owner == yw->LocalOwner() )
+                    if ( unit.Owner == player )
                     {
-                        if ( bct->_position.x > mapSelWorldMinX && bct->_position.z > mapSelWorldMinZ && bct->_position.x < mapSelWorldMaxX && bct->_position.z < mapSelWorldMaxZ )
+                        if ( unit.Position.x > mapSelWorldMinX && unit.Position.z > mapSelWorldMinZ && unit.Position.x < mapSelWorldMaxX && unit.Position.z < mapSelWorldMaxZ )
                         {
-                            if ( bct->_bact_type != BACT_TYPES_MISSLE && bct->_bact_type != BACT_TYPES_GUN )
+                            if ( unit.Type != BACT_TYPES_MISSLE && unit.Type != BACT_TYPES_GUN )
                             {
-                                if ( bct->_status != BACT_STATUS_CREATE && bct->_status != BACT_STATUS_BEAM && bct->_status != BACT_STATUS_DEAD )
+                                if ( unit.Status != BACT_STATUS_CREATE && unit.Status != BACT_STATUS_BEAM && unit.Status != BACT_STATUS_DEAD )
                                 {
 
-                                    if ( newChief )
+                                    if ( newChief.Id )
                                     {
-                                        if ( bct->_bact_type != BACT_TYPES_ROBO )
+                                        if ( unit.Type != BACT_TYPES_ROBO )
                                         {
-                                            TReorgOrder order;
-                                            order.unit = bct;
-                                            order.mode = 4;
-
-                                            newChief->ReorganizeGroup(&order);
+                                            IssueReorganize(yw, newChief.Id, 4, unit.Id);
 
                                             hostSelected = 0;
                                         }
                                     }
                                     else
                                     {
-                                        if ( bct->_bact_type == BACT_TYPES_ROBO )
+                                        if ( unit.Type == BACT_TYPES_ROBO )
                                         {
-                                            if ( bct == yw->UserRobo() )
+                                            if ( unit.Id == scene.UserRoboId() )
                                                 hostSelected = 1;
                                         }
                                         else
                                         {
-                                            newChief = bct;
+                                            newChief = unit;
 
-                                            TReorgOrder order;
-                                            order.unit = NULL;
-                                            order.mode = 3;
-
-                                            newChief->ReorganizeGroup(&order);
+                                            IssueReorganize(yw, newChief.Id, 3, 0);
 
                                             hostSelected = 0;
                                         }
@@ -6465,7 +6459,7 @@ void RoboMapMakeSquadFromBox(NC_STACK_ypaworld *yw)
                             }
                         }
                     }
-                }
+                });
             }
 
         }
@@ -6474,8 +6468,8 @@ void RoboMapMakeSquadFromBox(NC_STACK_ypaworld *yw)
     if ( hostSelected )
         bzda.activeMode = bzda.enabledModes & 0x20;
 
-    if ( newChief )
-        yw->_activeCmdrID = newChief->_commandID;
+    if ( newChief.Id )
+        yw->_activeCmdrID = scene.Fresh(newChief).CommandId;
 
     yw->UpdateCommanderList();
 }
