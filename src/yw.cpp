@@ -536,6 +536,14 @@ bool NC_STACK_ypaworld::SimulationStep(TUpdateArgs *arg)
         _updateMessage.units_count++;
     }
 
+    // Host stations check whether their squads retreat as they update; the
+    // squads of factions without one, here
+    for ( NC_STACK_ypabact *unit : _unitsList.safe_iter() )
+    {
+        if ( unit->IsCommander() && unit->_status != BACT_STATUS_DEAD && unit->_bact_type != BACT_TYPES_GUN )
+            CheckSquadRetreat(unit);
+    }
+
     System::Perf.AddTime(System::PerfStats::SEC_SIM, System::PerfStats::Now() - simStart);
     _profileVals[PFID_UPDATETIME] = profiler_end(updateStart);
 

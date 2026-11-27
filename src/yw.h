@@ -2002,11 +2002,16 @@ public:
     void OrderSquad(uint8_t owner, TUserOrder *order);
 
     // A squad, by its commander: too weak to fight on, it retreats to its
-    // host station; recovered, it stops retreating, where it is if that's
-    // in its faction's power. Says how the squad does: fighting, retreating
-    // or found no path back.
-    enum { SQUAD_FIGHTING, SQUAD_RETREATING, SQUAD_PATHLESS };
-    int CheckSquadRetreat(NC_STACK_ypabact *commander, NC_STACK_yparobo *host);
+    // faction's nearest power station or host station it can get to, or
+    // with none, fights on; recovered, it stops retreating, where it is if
+    // that's in its faction's power. Says whether it fights or retreats.
+    enum { SQUAD_FIGHTING, SQUAD_RETREATING };
+    int CheckSquadRetreat(NC_STACK_ypabact *commander);
+
+    // Where a squad retreats to: its faction's nearest power station (its
+    // sector's middle) or host station (then also host) that it can get to,
+    // of the few nearest. False when there's none.
+    bool FindRetreat(NC_STACK_ypabact *commander, vec3d *pos, NC_STACK_ypabact **host);
 
     // What a faction's units say to the player here (TRoboMessage ids), into
     // the message log and out loud; some are left out when said just before.

@@ -3115,13 +3115,7 @@ void NC_STACK_yparobo::checkCommander()
         if ( commander->_bact_type == BACT_TYPES_GUN )
             continue;
 
-        int squad = _world->CheckSquadRetreat(commander, this);
-
-        if ( squad == NC_STACK_ypaworld::SQUAD_PATHLESS )
-            // TODO(bug): Leaves the commander loop, so one failed path skips every remaining
-            // commander this frame. Probably meant continue. The first decompile has
-            // the same.
-            break;
+        int squad = _world->CheckSquadRetreat(commander);
 
         if ( squad == NC_STACK_ypaworld::SQUAD_FIGHTING && !userRobo )
         {

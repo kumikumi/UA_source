@@ -575,9 +575,64 @@ void NC_STACK_ypaworld::yw_InitSquads(const std::vector<MapSquad> &squads)
     }
 }
 
-int NC_STACK_ypaworld::CheckSquadRetreat(NC_STACK_ypabact *commander, NC_STACK_yparobo *host)
+bool NC_STACK_ypaworld::FindRetreat(NC_STACK_ypabact *commander, vec3d *pos, NC_STACK_ypabact **host)
 {
-    bool user = host == UserRobo();
+    struct Place
+    {
+        double Distance;
+        vec3d Pos;
+        NC_STACK_ypabact *Host;
+    };
+
+    std::vector<Place> places;
+
+    for ( NC_STACK_ypabact *unit : _unitsList )
+    {
+        if ( unit->_bact_type == BACT_TYPES_ROBO && unit->_owner == commander->_owner && unit->_status != BACT_STATUS_DEAD &&
+             !(unit->_status_flg & BACT_STFLAG_DEATH1) )
+            places.push_back({(unit->_position.XZ() - commander->_position.XZ()).length(), unit->_position, unit});
+    }
+
+    for ( const auto &ps : _powerStations )
+    {
+        if ( ps.second.pCell && ps.second.pCell->owner == commander->_owner )
+        {
+            vec3d middle = World::SectorIDToCenterPos3(ps.second.CellId);
+            places.push_back({(middle.XZ() - commander->_position.XZ()).length(), middle, NULL});
+        }
+    }
+
+    // The nearest first; host stations before power stations as near
+    std::stable_sort(places.begin(), places.end(), [](const Place &a, const Place &b) { return a.Distance < b.Distance; });
+
+    // Squads with ground units go where they find a way to, trying a few
+    const size_t MaxTries = 4;
+
+    for ( size_t i = 0; i < places.size() && i < MaxTries; i++ )
+    {
+        if ( commander->IsNeedsWaypoints() )
+        {
+            TPathRequest pathRequest;
+            pathRequest.steps_cnt = 32;
+            pathRequest.from = commander->_position.XZ();
+            pathRequest.to = places[i].Pos.XZ();
+            pathRequest.tgt_type = 1;
+
+            if ( !commander->PathFinder(&pathRequest) )
+                continue;
+        }
+
+        *pos = places[i].Pos;
+        *host = places[i].Host;
+        return true;
+    }
+
+    return false;
+}
+
+int NC_STACK_ypaworld::CheckSquadRetreat(NC_STACK_ypabact *commander)
+{
+    bool user = commander->_owner == LocalOwner();
 
     float energyRatio;
 
@@ -613,7 +668,11 @@ int NC_STACK_ypaworld::CheckSquadRetreat(NC_STACK_ypabact *commander, NC_STACK_y
         return SQUAD_RETREATING;
     }
 
-    if ( commander->GetFightMotivation(&energyRatio) )
+    vec3d retreatPos;
+    NC_STACK_ypabact *host;
+
+    // With nowhere it can get to to retreat to, it fights on
+    if ( commander->GetFightMotivation(&energyRatio) || !FindRetreat(commander, &retreatPos, &host) )
     {
         if ( energyRatio < 0.5 && user )
         {
@@ -658,40 +717,50 @@ int NC_STACK_ypaworld::CheckSquadRetreat(NC_STACK_ypabact *commander, NC_STACK_y
         for (NC_STACK_ypabact* &nod : commander->_kidList)
             nod->_status_flg &= ~BACT_STFLAG_UNUSE;
 
+        bool onPath = false;
+
         if ( commander->IsNeedsWaypoints() )
         {
             TPathRequest pathRequest;
             pathRequest.steps_cnt = 32;
             pathRequest.from = commander->_position.XZ();
-            pathRequest.to = host->_position.XZ();
+            pathRequest.to = retreatPos.XZ();
             pathRequest.tgt_type = 1;
 
-            if ( ! commander->PathFinder(&pathRequest) )
-                return SQUAD_PATHLESS;
+            commander->PathFinder(&pathRequest);
 
             if ( pathRequest.steps_cnt > 1 )
             {
                 pathRequest.steps_cnt = 32;
                 commander->SetPath(&pathRequest);
 
-                commander->_m_cmdID = host->_commandID;
-                commander->_m_owner = host->_owner;
+                // At the end of the path, the host station, wherever it went
+                if ( host )
+                {
+                    commander->_m_cmdID = host->_commandID;
+                    commander->_m_owner = host->_owner;
+                }
+
+                onPath = true;
+            }
+        }
+
+        if ( !onPath )
+        {
+            setTarget_msg targetMsg;
+            targetMsg.priority = 0;
+
+            if ( host )
+            {
+                targetMsg.tgt.pbact = host;
+                targetMsg.tgt_type = BACT_TGT_TYPE_UNIT;
             }
             else
             {
-                setTarget_msg targetMsg;
-                targetMsg.tgt.pbact = host;
-                targetMsg.priority = 0;
-                targetMsg.tgt_type = BACT_TGT_TYPE_UNIT;
-                commander->SetTarget(&targetMsg);
+                targetMsg.tgt_pos = retreatPos;
+                targetMsg.tgt_type = BACT_TGT_TYPE_CELL;
             }
-        }
-        else
-        {
-            setTarget_msg targetMsg;
-            targetMsg.tgt.pbact = host;
-            targetMsg.tgt_type = BACT_TGT_TYPE_UNIT;
-            targetMsg.priority = 0;
+
             commander->SetTarget(&targetMsg);
         }
 
@@ -714,7 +783,7 @@ int NC_STACK_ypaworld::CheckSquadRetreat(NC_STACK_ypabact *commander, NC_STACK_y
                 {
                     uamessage_logmsg logMsg;
                     logMsg.msgID = UAMSG_LOGMSG;
-                    logMsg.owner = host->_owner;
+                    logMsg.owner = commander->_owner;
                     logMsg.sender = enemy->_gid;
                     logMsg.senderOwner = enemy->_owner;
                     logMsg.pr1 = 0;
