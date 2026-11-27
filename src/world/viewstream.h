@@ -54,8 +54,9 @@ struct ControlledUnit
 {
     uint32_t Step = 0;
     int32_t Time = 0;      // The game's time after the step
-    uint32_t Controls = 0; // The number of the controls it went by in the
-                           // step (World::PlayerControls), 0 for none
+    uint32_t Controls = 0; // The number of the last controls it went by, in
+                           // the step or before (World::PlayerControls), 0
+                           // for none yet
     uint8_t Kind = 0;      // State::KIND_UNIT and its type
     uint32_t Id = 0;
     std::string Fields;    // All of them, as State::Visitor writes them

@@ -104,8 +104,8 @@ static std::string watchName = "watcher";
 static int watchFaction = 0; // --faction: played as well
 
 // Those watching who play (--stream): the player each watcher plays as, as
-// whom and which faction, and their controls this step, and their number (0
-// for none)
+// whom and which faction, their controls this step, and the number of the
+// last of their controls the game went by (0 for none yet)
 struct RemotePlayer
 {
     uint32_t Player = 0;
@@ -241,8 +241,9 @@ static void TakeWatchersRequests()
             it.second.Input = TInputState();
             it.second.Input.Period = World::CVStepTicks;
 
+            // With none come, the last the game went by stays the last: the
+            // state has those up to it
             World::PlayerControls controls;
-            it.second.Controls = 0;
 
             if ( viewServer.TakeControls(it.first, controls) )
             {
