@@ -385,15 +385,21 @@ bool NC_STACK_ypaworld::LoadHightMap(const std::string &mapName)
     return true;
 }
 
-bool NC_STACK_ypaworld::yw_createRobos(const std::vector<MapRobo> &Robos)
+// The level's host stations; the player gets their faction's first one
+bool NC_STACK_ypaworld::yw_createRobos(const std::vector<MapRobo> &Robos, int playerOwner)
 {
     _levelInfo.OwnerMask = 0;
     _levelInfo.UserMask = 2;
     
-    bool first = true;
+    bool playersPlaced = false;
 
     for ( const MapRobo &roboInf : Robos)
     {
+        bool first = !playersPlaced && roboInf.Owner == playerOwner;
+
+        if ( first )
+            playersPlaced = true;
+
         TRayIntersection ray;
         ray.stPos = vec3d::X0Z(roboInf.Pos) - vec3d::OY(30000.0);
         ray.vect = vec3d::OY(50000.0);
@@ -481,8 +487,6 @@ bool NC_STACK_ypaworld::yw_createRobos(const std::vector<MapRobo> &Robos)
                 robo->setBACT_inputting(true, _localPlayer);
             }
         }
-        
-        first = false;
     }
     return true;
 }
@@ -571,17 +575,16 @@ void NC_STACK_ypaworld::yw_InitSquads(const std::vector<MapSquad> &squads)
     }
 }
 
-// With no host station to start in, the player plays faction 1, the
-// campaign's, from its first squad. A level without squads of it is played
-// by no one.
-void NC_STACK_ypaworld::StartPlayerInSquad()
+// With no host station of their faction to start in, the player starts in
+// its first squad. A level without squads of it is played by no one.
+void NC_STACK_ypaworld::StartPlayerInSquad(int playerOwner)
 {
     if ( _localPlayer->Owner )
         return;
 
     NC_STACK_ypabact *first = NULL;
 
-    ForEachCommander(1, [&first](NC_STACK_ypabact *commander)
+    ForEachCommander(playerOwner, [&first](NC_STACK_ypabact *commander)
     {
         if ( commander->_status != BACT_STATUS_DEAD && commander->_bact_type != BACT_TYPES_GUN &&
              (!first || (commander->_commandID & 0xFFFFFF) < (first->_commandID & 0xFFFFFF)) )
@@ -592,7 +595,7 @@ void NC_STACK_ypaworld::StartPlayerInSquad()
         return;
 
     _localPlayer->Name = _GameShell ? _GameShell->UserName : std::string();
-    JoinFaction(_localPlayer, 1);
+    JoinFaction(_localPlayer, playerOwner);
 
     first->setBACT_viewer(true, _localPlayer);
     first->setBACT_inputting(true, _localPlayer);

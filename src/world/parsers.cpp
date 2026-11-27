@@ -2309,6 +2309,10 @@ int LevelDataParser::Handle(ScriptParser::Parser &parser, const std::string &p1,
     {
         _m.EventLoopID = parser.stol(p2, NULL, 0);
     }
+    else if ( !StriCmp(p1, "player_owner") )
+    {
+        _m.PlayerOwner = parser.stol(p2, NULL, 0);
+    }
     else if ( !StriCmp(p1, "slow_connection") )
     {
         if ( StrGetBool(p2) )
@@ -2368,7 +2372,9 @@ int MapRobosParser::Handle(ScriptParser::Parser &parser, const std::string &p1, 
 {
     if ( !StriCmp(p1, "end") )
     {
-        if (_m.Robos.size() == 1) //If it's first host station - save owner for brief
+        // The player plays the first host station's faction, unless the
+        // level says otherwise
+        if ( _m.Robos.size() == 1 && !_m.PlayerOwner )
             _m.PlayerOwner = _r->Owner;
 
         return ScriptParser::RESULT_SCOPE_END;

@@ -1180,7 +1180,9 @@ struct TLevelDescription
     std::vector<TBkgPicInfo> Mbmaps;
     std::vector<TBkgPicInfo> Dbmaps;
 
-    int32_t PlayerOwner = 0; //Firsts host station owner, for correct XP brief
+    // The faction the player plays: begin_level's player_owner, or the
+    // first host station's; 0 when neither says
+    int32_t PlayerOwner = 0;
     
     bool IsOk() const { return (ReadedPartsBits & BIT_ALL) == BIT_ALL; }
 };
@@ -2351,7 +2353,7 @@ public:
     NC_STACK_ypabact * FindBactByCmdOwn(uint32_t commandID, char owner);
     
     
-    bool yw_createRobos(const std::vector<MapRobo> &Robos);
+    bool yw_createRobos(const std::vector<MapRobo> &Robos, int playerOwner);
     bool yw_NetSetHostStations(const std::vector<MapRobo> &Robos);
     void yw_InitSquads(const std::vector<MapSquad> &squads);
     
@@ -2486,7 +2488,7 @@ public:
     void CellSetNewOwner(cellArea *cell, NC_STACK_ypabact *attacker, int newOwner);
     void CellCheckHealth(cellArea *cell, int newOwner, NC_STACK_ypabact *attacker);
     void InitBuddies();
-    void StartPlayerInSquad();
+    void StartPlayerInSquad(int playerOwner);
     void InitSuperItems();
     bool LoadBlgMap(const std::string &mapName);
     bool LoadHightMap(const std::string &mapName);

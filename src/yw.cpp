@@ -5941,13 +5941,17 @@ size_t NC_STACK_ypaworld::CreateLevel(TLevelLoadRequest *arg)
             {
                 if ( LoadHightMap(mapp.HgtStr) )
                 {
-                    if ( yw_createRobos(mapp.Robos) )
+                    // Played as faction 1, the campaign's, unless the
+                    // level says or has host stations
+                    int playerOwner = mapp.PlayerOwner ? mapp.PlayerOwner : 1;
+
+                    if ( yw_createRobos(mapp.Robos, playerOwner) )
                     {
                         if ( LoadBlgMap(mapp.BlgStr) )
                         {
                             yw_InitSquads(mapp.Squads);
                             InitBuddies();
-                            StartPlayerInSquad();
+                            StartPlayerInSquad(playerOwner);
 
                             for (int yy = 0; yy < _mapSize.y; yy++)
                             {
