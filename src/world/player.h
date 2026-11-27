@@ -33,6 +33,8 @@ struct Player
     NC_STACK_ypabact *Controls = NULL;    // Moved by their controls
     TInputState *Input = NULL;            // Their controls this step
     TUserOrder Order;                     // To their host station, this step
+    uint32_t Aim = 0;                     // The unit the sights of the one they
+                                          // control lock on to this step, by id
 
     // Orders from another machine, carried out as steps go
     // (NC_STACK_ypaworld::ApplyPlayerOrder): those to a host station or a

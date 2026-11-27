@@ -535,6 +535,10 @@ public:
     // none, its guns pointing at gunX, gunY on the screen, and no target
     static THudVisor Sights(int mgun, int weapon, int weaponFlags, float gunX, float gunY, bool noWeaponSight);
 
+    // A guided weapon's sight goes to the target the sights lock on to, as
+    // a unit at position turned by rotation sees it
+    static void LockSights(THudVisor &visor, const vec3d &position, const mat3x3 &rotation, const vec3d &target);
+
     // Whether a weapon of these flags (TWeapProto::_weaponFlags) has no sight
     static bool NoWeaponSight(int weaponFlags);
     void NetBroadcastReorder(NC_STACK_ypabact *bact2, int mode);

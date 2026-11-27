@@ -4885,6 +4885,10 @@ void NC_STACK_ypabact::VisitView(World::State::Visitor &v)
     v.Field("weaponTime", _weapon_time, World::State::VIEW);
     v.Field("salveCounter", _salve_counter, World::State::VIEW);
 
+    // Where its driver aims its gun, which its sights follow
+    v.Field("gunAngleUser", _gun_angle_user, World::State::VIEW);
+    v.Field("gunLeftRight", _gun_leftright, World::State::VIEW);
+
     v.Field("position", _position, World::State::VIEW_POSITION);
     v.Field("rotation", _rotation, World::State::VIEW_ROTATION);
     v.Field("scale", _scale, World::State::VIEW_ROUNDED);
@@ -4996,8 +5000,6 @@ void NC_STACK_ypabact::VisitInternal(World::State::Visitor &v)
     v.Missiles("missiles", _missiles_list);
     v.Field("firePos", _fire_pos);
     v.Field("gunAngle", _gun_angle);
-    v.Field("gunAngleUser", _gun_angle_user);
-    v.Field("gunLeftRight", _gun_leftright);
     v.Field("gunRadius", _gun_radius);
     v.Field("gunPower", _gun_power);
     v.Field("mgunTime", _mgun_time);
@@ -5704,42 +5706,49 @@ size_t NC_STACK_ypabact::FireMinigun(TMinigunShot *arg)
 
 void NC_STACK_ypabact::UpdateVisor(NC_STACK_ypabact *bact2, int noWeaponSight)
 {
+    World::Player *controller = _world->ControllerOf(this);
+
+    // What its sights lock on to, for the player who controls it
+    if ( controller )
+        controller->Aim = bact2 ? bact2->_gid : 0;
+
     // The HUD here shows the sights of the unit the player here controls,
     // not those of the units other players control
-    if ( _world->ControllerOf(this) != _world->LocalPlayer() )
+    if ( controller != _world->LocalPlayer() )
         return;
 
     THudVisor hudi = Sights(_mgun, _weapon, _weapon_flags, -_gun_leftright, -_gun_angle_user, noWeaponSight);
 
     if ( bact2 )
     {
-        vec3d toTarget = bact2->_position - _position;
-
-        mat3x3 corrected = _rotation;
-        GFX::Engine.matrixAspectCorrection(corrected, false);
-
-        vec3d viewPos = corrected.Transform(toTarget);
-
-        float sightX = 0.0;
-        float sightY = 0.0;
-
-        if ( viewPos.z != 0.0 )
-        {
-            sightX = viewPos.x / viewPos.z;
-            sightY = viewPos.y / viewPos.z;
-        }
-
         hudi.target = bact2;
-
-        // A guided weapon's sight goes to its target
-        if ( hudi.weaponSight == 4 )
-        {
-            hudi.weaponX = sightX;
-            hudi.weaponY = sightY;
-        }
+        LockSights(hudi, _position, _rotation, bact2->_position);
     }
 
     _world->SetHudVisor(&hudi);
+}
+
+void NC_STACK_ypabact::LockSights(THudVisor &visor, const vec3d &position, const mat3x3 &rotation, const vec3d &target)
+{
+    if ( visor.weaponSight != 4 )
+        return;
+
+    mat3x3 corrected = rotation;
+    GFX::Engine.matrixAspectCorrection(corrected, false);
+
+    vec3d viewPos = corrected.Transform(target - position);
+
+    float sightX = 0.0;
+    float sightY = 0.0;
+
+    if ( viewPos.z != 0.0 )
+    {
+        sightX = viewPos.x / viewPos.z;
+        sightY = viewPos.y / viewPos.z;
+    }
+
+    visor.weaponX = sightX;
+    visor.weaponY = sightY;
 }
 
 THudVisor NC_STACK_ypabact::Sights(int mgun, int weapon, int weaponFlags, float gunX, float gunY, bool noWeaponSight)

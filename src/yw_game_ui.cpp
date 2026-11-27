@@ -9367,7 +9367,7 @@ void yw_RenderHUDCompass(NC_STACK_ypaworld *yw, THudState *wis, const THudSubjec
         }
     }
 
-    if ( unit.Visor.target )
+    if ( unit.VisorTarget )
     {
         SDL_Color visorColor = yw->GetColor(23);
         SDL_Color visorColor2 = yw->GetColor(32);
@@ -9744,7 +9744,10 @@ THudSubject HudSubjectOf(NC_STACK_ypaworld *yw)
     subject.Visor = yw->_guiVisor;
 
     if ( subject.Visor.target )
+    {
+        subject.VisorTarget = subject.Visor.target->_gid;
         subject.VisorTargetPos = subject.Visor.target->_position;
+    }
 
     return subject;
 }
@@ -9922,17 +9925,17 @@ void yw_RenderHUDTarget(NC_STACK_ypaworld *yw, THudState *wis, const THudSubject
         else if ( visor.weaponSight == 4 )
             wpn_wure2 = wis->sklts_intern[11];
 
-        if ( visor.target )
+        if ( unit.VisorTarget )
         {
-            if ( visor.target != wis->target )
+            if ( unit.VisorTarget != wis->target )
             {
-                wis->target = visor.target;
+                wis->target = unit.VisorTarget;
                 wis->target_time = yw->_timeStamp;
             }
         }
         else
         {
-            wis->target = NULL;
+            wis->target = 0;
         }
 
         if ( hud_wure )
@@ -9981,7 +9984,7 @@ void yw_RenderHUDTarget(NC_STACK_ypaworld *yw, THudState *wis, const THudSubject
             SDL_Color sightColor;
             SDL_Color sightColor2;
 
-            if ( visor.target )
+            if ( unit.VisorTarget )
             {
                 for (int i = 0; i < 2; i++)
                 {
@@ -10024,7 +10027,7 @@ void yw_RenderHUDTarget(NC_STACK_ypaworld *yw, THudState *wis, const THudSubject
             {
                 float sightX, sightY;
 
-                if ( visor.target )
+                if ( unit.VisorTarget )
                 {
                     sightX = (visor.weaponX - visor.mgunX) * lockProgress[i] + visor.mgunX;
                     sightY = (visor.weaponY - visor.mgunY) * lockProgress[i] + visor.mgunY;

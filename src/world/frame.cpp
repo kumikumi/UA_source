@@ -52,6 +52,17 @@ const Frame::Player *Frame::FindPlayer(uint32_t id) const
     return NULL;
 }
 
+const Frame::Player *Frame::ControllerOf(uint32_t unit) const
+{
+    for ( const Player &p : Players )
+    {
+        if ( unit && p.Controls == unit )
+            return &p;
+    }
+
+    return NULL;
+}
+
 void Frame::LookAs(uint32_t player)
 {
     const Player *p = FindPlayer(player);
@@ -269,6 +280,7 @@ FrameMaker::FrameMaker(const State::Schema &viewSchema, bool details)
     _playerHostStation = Find(_schema, State::KIND_PLAYER, "hostStation");
     _playerUnit = Find(_schema, State::KIND_PLAYER, "unit");
     _playerControls = Find(_schema, State::KIND_PLAYER, "controls");
+    _playerAim = Find(_schema, State::KIND_PLAYER, "aim");
     _playerCameraPosition = Find(_schema, State::KIND_PLAYER, "cameraPosition");
     _playerCameraRotation = Find(_schema, State::KIND_PLAYER, "cameraRotation");
     _playerName = Find(_schema, State::KIND_PLAYER, "name");
@@ -345,6 +357,8 @@ FrameMaker::FrameMaker(const State::Schema &viewSchema, bool details)
         f.ClockStart = Find(_schema, kind, "clockStart");
         f.WeaponTime = Find(_schema, kind, "weaponTime");
         f.SalveCounter = Find(_schema, kind, "salveCounter");
+        f.GunAngle = Find(_schema, kind, "gunAngleUser");
+        f.GunLeftRight = Find(_schema, kind, "gunLeftRight");
 
         f.Create = Find(_schema, kind, "energyLife");
         f.Beam = Find(_schema, kind, "energyMove");
@@ -413,6 +427,7 @@ void FrameMaker::Add(Frame &frame, std::vector<Frame::Sector> &sectors, uint8_t 
         get(_playerHostStation, &p.HostStation, sizeof(p.HostStation));
         get(_playerUnit, &p.Unit, sizeof(p.Unit));
         get(_playerControls, &p.Controls, sizeof(p.Controls));
+        get(_playerAim, &p.Aim, sizeof(p.Aim));
         get(_playerCameraPosition, &p.CameraPosition, sizeof(p.CameraPosition));
         get(_playerCameraRotation, &p.CameraRotation, sizeof(p.CameraRotation));
 
@@ -546,6 +561,8 @@ void FrameMaker::Add(Frame &frame, std::vector<Frame::Sector> &sectors, uint8_t 
         get(f.ClockStart, &info.ClockStart, sizeof(info.ClockStart));
         get(f.WeaponTime, &info.WeaponTime, sizeof(info.WeaponTime));
         get(f.SalveCounter, &info.SalveCounter, sizeof(info.SalveCounter));
+        get(f.GunAngle, &info.GunAngle, sizeof(info.GunAngle));
+        get(f.GunLeftRight, &info.GunLeftRight, sizeof(info.GunLeftRight));
 
         if ( f.Create.Found )
         {

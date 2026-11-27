@@ -1599,7 +1599,7 @@ struct THudState
     int color_fx = 0;
     int switch_time = 0;
     int target_time = 0;
-    const void *target = NULL;    // What the sight last locked on to
+    uint32_t target = 0;          // What the sight last locked on to, by id
     int pulse_period = 0;
     float pulse_phase = 0.0;
     float bar_width = 0.0;
@@ -1633,7 +1633,8 @@ struct THudSubject
     bool HasTarget = false;            // Its squad's target, when it leads one
     vec3d TargetPos;
     uint8_t SectorOwner = 0;           // Of the sector it's in
-    THudVisor Visor;                   // Its sights, and what they lock on to
+    THudVisor Visor;                   // Its sights
+    uint32_t VisorTarget = 0;          // What they lock on to, by id; 0 for none
     vec3d VisorTargetPos;
 };
 

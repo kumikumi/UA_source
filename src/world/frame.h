@@ -102,6 +102,8 @@ struct Frame
         int32_t ClockStart = 0;  // The game time its clock started at
         int32_t WeaponTime = 0;  // Its clock at its last shot
         int32_t SalveCounter = 0;
+        float GunAngle = 0.0;    // Where its driver aims its gun, up and down
+        float GunLeftRight = 0.0; // and to the sides
     };
 
     // A host station's batteries and what it takes in, as the energy panel
@@ -137,6 +139,7 @@ struct Frame
         uint32_t HostStation = 0;
         uint32_t Unit = 0;       // Looked from
         uint32_t Controls = 0;
+        uint32_t Aim = 0;        // The unit the sights of the one they control lock on to
         vec3f CameraPosition;
         mat3x3f CameraRotation;
     };
@@ -158,6 +161,7 @@ struct Frame
     // Drawn from what a player sees; with no such player, as before
     void LookAs(uint32_t player);
     const Player *FindPlayer(uint32_t id) const;
+    const Player *ControllerOf(uint32_t unit) const; // NULL when no one controls it
 
     std::vector<Unit> Units;     // In the order of their ids
     std::vector<Extra> Extras;
@@ -244,6 +248,7 @@ protected:
         // Details
         Field Owner, Status, Aggression, CommandId, Shield, Energy, EnergyMax, Parent;
         Field PrimaryType, Primary, PrimaryPos, SecondaryType, Secondary, GunFlags, ClockStart, WeaponTime, SalveCounter;
+        Field GunAngle, GunLeftRight;
         Field Create, Beam, BuildSpare, VehicleSpare, ReloadPS, FillMode, LoadFlags, LossFlags;
     };
 
@@ -252,7 +257,8 @@ protected:
     State::Schema _schema;
     bool _details;
     Field _time, _localPlayer;
-    Field _playerOwner, _playerHostStation, _playerUnit, _playerControls, _playerCameraPosition, _playerCameraRotation, _playerName;
+    Field _playerOwner, _playerHostStation, _playerUnit, _playerControls, _playerAim, _playerCameraPosition, _playerCameraRotation;
+    Field _playerName;
     Field _sectorType, _sectorHealth, _sectorOwner, _sectorPurpose, _sectorPower, _powerStation, _stationPower;
     Field _constructing, _constructBuilding, _constructTime, _constructEnd;
     Field _itemState, _itemRadius;

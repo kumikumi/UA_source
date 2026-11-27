@@ -757,6 +757,7 @@ static void VisitPlayer(Visitor &v, World::Player &p)
     v.Unit("controls", p.Controls, VIEW);
     v.Field("cameraPosition", p.CameraPosition, VIEW);
     v.Field("cameraRotation", p.CameraRotation, VIEW);
+    v.Field("aim", p.Aim, VIEW);
 
     uint8_t name[World::Player::NameLength] = {0};
     memcpy(name, p.Name.data(), std::min(p.Name.size(), sizeof(name)));

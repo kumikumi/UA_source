@@ -1035,6 +1035,7 @@ void NC_STACK_ypaworld::DrawReplayHud(const World::Frame &frame)
     // Flown freely, hidden, a missile as the game shows nothing of, or gone
     // back to before it was made: nothing to show of it
     bool shown = viewed && _replayHudShown && !(unit && unit->Type == BACT_TYPES_MISSLE);
+    uint32_t lockedOn = 0; // By its sights
 
     if ( !shown || (!unit && (frame.Units.empty() || viewed > frame.Units.back().Id)) )
         ;
@@ -1097,8 +1098,19 @@ void NC_STACK_ypaworld::DrawReplayHud(const World::Frame &frame)
             subject.SectorOwner = under->Owner;
 
         int weaponFlags = vhcl.weapon != -1 && vhcl.weapon < (int)_weaponProtos.size() ? _weaponProtos.at(vhcl.weapon)._weaponFlags : 0;
-        subject.Visor = NC_STACK_ypabact::Sights(vhcl.mgun, vhcl.weapon, weaponFlags, 0.0, 0.0,
+        subject.Visor = NC_STACK_ypabact::Sights(vhcl.mgun, vhcl.weapon, weaponFlags, -info->GunLeftRight, -info->GunAngle,
                                                  NC_STACK_ypabact::NoWeaponSight(weaponFlags));
+
+        // What they lock on to, for the player who controls it
+        if ( const World::Frame::Player *controller = frame.ControllerOf(viewed) )
+        {
+            if ( const World::Frame::Unit *target = frame.FindUnit(controller->Aim) )
+            {
+                subject.VisorTarget = lockedOn = target->Id;
+                subject.VisorTargetPos = vec3d(target->Position);
+                NC_STACK_ypabact::LockSights(subject.Visor, subject.Position, mat3x3(unit->Rotation), subject.VisorTargetPos);
+            }
+        }
 
         yw_RenderHUDRadare(this);
         DrawHudOf(this, &buf, subject);
@@ -1113,6 +1125,11 @@ void NC_STACK_ypaworld::DrawReplayHud(const World::Frame &frame)
         yw_RenderCursorOverUnit(this, hovered);
         yw_RenderUnitLifeBar(this, &buf, hovered);
     }
+
+    MapScene::Unit locked;
+
+    if ( lockedOn && _replayScene.Find(lockedOn, locked) )
+        yw_RenderUnitLifeBar(this, &buf, locked);
 
     if ( shown && unit )
         yw_RenderOverlayCursors(this, &buf);

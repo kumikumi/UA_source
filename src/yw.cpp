@@ -452,7 +452,10 @@ bool NC_STACK_ypaworld::SimulationStep(TUpdateArgs *arg)
     _framesElapsed++;
 
     for ( std::unique_ptr<World::Player> &player : _players )
+    {
         player->Order.user_action = World::DOACTION_0;
+        player->Aim = 0;
+    }
 
     _updateMessage.gTime = _timeStamp;
     _updateMessage.frameTime = arg->DTime;
