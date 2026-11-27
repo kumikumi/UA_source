@@ -5015,9 +5015,9 @@ void NC_STACK_yparobo::DeadTimeUpdate(update_msg *arg)
         if ( lastSeconds > 0 )
             return;
 
-        int isInputting = getBACT_inputting();
-
-        if ( isInputting )
+        // Kept, not drawn, while a player is in it or still looks from it,
+        // riding along, until they get in another unit
+        if ( getBACT_inputting() || getBACT_viewer() )
             _status_flg |= BACT_STFLAG_NORENDER;
         else
             Release();
@@ -5042,9 +5042,7 @@ void NC_STACK_yparobo::DeadTimeUpdate(update_msg *arg)
             if ( lastSeconds > 0 )
                 return;
 
-            int isInputting = getBACT_inputting();
-
-            if ( isInputting )
+            if ( getBACT_inputting() || getBACT_viewer() )
                 _status_flg |= BACT_STFLAG_NORENDER;
             else
                 Release();

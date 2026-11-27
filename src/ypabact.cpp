@@ -7422,12 +7422,13 @@ void NC_STACK_ypabact::DeadTimeUpdate(update_msg *arg)
 
                     if ( _yls_time <= 0 )
                     {
-
-                        if ( _oflags & BACT_OFLAG_USERINPT )
+                        // Kept, not drawn, while a player is in it or still
+                        // looks from it, riding along, until they get in
+                        // another unit
+                        if ( _oflags & (BACT_OFLAG_USERINPT | BACT_OFLAG_VIEWER) )
                             _status_flg |= BACT_STFLAG_NORENDER;
                         else
                             Release();
-
                     }
                 }
                 else
@@ -7464,7 +7465,7 @@ void NC_STACK_ypabact::DeadTimeUpdate(update_msg *arg)
         }
         else if ( _yls_time <= 0 )
         {
-            if ( _oflags & BACT_OFLAG_USERINPT )
+            if ( _oflags & (BACT_OFLAG_USERINPT | BACT_OFLAG_VIEWER) )
                 _status_flg |= BACT_STFLAG_NORENDER;
             else
                 Release();
