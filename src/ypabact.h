@@ -167,6 +167,13 @@ struct update_msg
     int frameTime = 0;
     TInputState *inpt = NULL;
     int units_count = 0;
+};
+
+// What a player tells their host station to do, as the interface makes it.
+// user_action is the order of the step (World::DOACTION_*); the rest stays
+// from step to step until changed.
+struct TUserOrder
+{
     int user_action = 0;
     int protoID = 0;
     NC_STACK_ypabact *selectBact = NULL;

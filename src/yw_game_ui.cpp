@@ -4967,7 +4967,7 @@ void EnergyPanelDrawCreateGauge(NC_STACK_ypaworld *yw, CmdStream *cur, int x, in
     if ( bzda.activeMode & 0x16 )
     {
         if ( bzda.selBuyListIdx != -1 )
-            costRatio = yw->_updateMessage.energy / capacity;
+            costRatio = yw->_localPlayer->Order.energy / capacity;
     }
 
     if ( costRatio <= fillRatio )
@@ -5009,7 +5009,7 @@ void EnergyPanelDrawBeamGauge(NC_STACK_ypaworld *yw, CmdStream *cur, int x, int 
     float fillRatio = (float)energy / capacity;
 
     if ( bzda.activeMode & 0x20 )
-        costRatio = yw->_updateMessage.energy / capacity;
+        costRatio = yw->_localPlayer->Order.energy / capacity;
 
     if ( costRatio <= fillRatio )
     {
@@ -10271,7 +10271,7 @@ int NC_STACK_ypaworld::UserActCreateCheck(TClickBoxInf *winp)
 
     int availEnergy = robo->getROBO_battVehicle();
 
-    if ( _updateMessage.energy > availEnergy )
+    if ( _localPlayer->Order.energy > availEnergy )
         return 2;
 
 
@@ -10293,7 +10293,7 @@ int NC_STACK_ypaworld::UserActBuildCheck()
 
     int availEnergy = robo->getROBO_battVehicle();
 
-    if ( _updateMessage.energy > availEnergy )
+    if ( _localPlayer->Order.energy > availEnergy )
         return 6; // TIP_NOENERGY
 
     if ( _cellOnMouse->owner && _cellOnMouse->owner != UserRobo()->_owner )
@@ -10353,7 +10353,7 @@ int NC_STACK_ypaworld::UserActBeamCheck()
 
     int availEnergy = robo->getROBO_battBeam();
 
-    _updateMessage.energy = beamCost;
+    _localPlayer->Order.energy = beamCost;
 
     if ( beamCost > availEnergy )
         return 1;
@@ -10754,18 +10754,18 @@ void NC_STACK_ypaworld::yw_MouseSelect(TInputState *arg)
 
 void NC_STACK_ypaworld::UpdateActionEnergyCost()
 {
-    _updateMessage.energy = 0;
+    _localPlayer->Order.energy = 0;
 
     if ( bzda.activeMode == 2 || bzda.activeMode == 4 )
     {
         if ( bzda.selVhclIdx != -1 )
         {
-            _updateMessage.energy = dround(GetUnitLimitCostFactor() * (2 * _vhclProtos[bzda.vhclProtoIds[bzda.selVhclIdx]].energy));
+            _localPlayer->Order.energy = dround(GetUnitLimitCostFactor() * (2 * _vhclProtos[bzda.vhclProtoIds[bzda.selVhclIdx]].energy));
         }
     }
     else if ( bzda.activeMode == 16 && bzda.selBuildIdx != -1 )
     {
-        _updateMessage.energy = dround(GetUnitLimitCostFactor() * _buildProtos[bzda.buildProtoIds[bzda.selBuildIdx]].Energy);
+        _localPlayer->Order.energy = dround(GetUnitLimitCostFactor() * _buildProtos[bzda.buildProtoIds[bzda.selBuildIdx]].Energy);
     }
 }
 
@@ -10815,19 +10815,19 @@ void NC_STACK_ypaworld::ExecuteMouseAction(int arg)
     case World::DOACTION_2:
         if (_activeCmdrRemapIndex >= 0)
         {
-            _updateMessage.user_action = World::DOACTION_2;
-            _updateMessage.selectBact = _cmdrsRemap[_activeCmdrRemapIndex];
+            _localPlayer->Order.user_action = World::DOACTION_2;
+            _localPlayer->Order.selectBact = _cmdrsRemap[_activeCmdrRemapIndex];
 
             if ( _guiActFlags & 0x10 )
             {
-                _updateMessage.target_Sect = _cellOnMouse;
-                _updateMessage.target_point = _cellMouseIsectPos;
-                _updateMessage.target_Bact = NULL;
+                _localPlayer->Order.target_Sect = _cellOnMouse;
+                _localPlayer->Order.target_point = _cellMouseIsectPos;
+                _localPlayer->Order.target_Bact = NULL;
             }
             else
             {
-                _updateMessage.target_Sect = 0;
-                _updateMessage.target_Bact = _bactOnMouse;
+                _localPlayer->Order.target_Sect = 0;
+                _localPlayer->Order.target_Bact = _bactOnMouse;
             }
 
             bzda.activeMode = bzda.enabledModes & 1;
@@ -10839,22 +10839,22 @@ void NC_STACK_ypaworld::ExecuteMouseAction(int arg)
     case World::DOACTION_WP_CYCLE:
         if (_activeCmdrRemapIndex >= 0)
         {
-            _updateMessage.user_action = arg;
-            _updateMessage.selectBact = _cmdrsRemap[_activeCmdrRemapIndex];
+            _localPlayer->Order.user_action = arg;
+            _localPlayer->Order.selectBact = _cmdrsRemap[_activeCmdrRemapIndex];
 
             if ( _guiActFlags & 0x30 )
             {
-                _updateMessage.target_Sect = _cellOnMouse;
-                _updateMessage.target_point = _cellMouseIsectPos;
-                _updateMessage.target_Bact = NULL;
+                _localPlayer->Order.target_Sect = _cellOnMouse;
+                _localPlayer->Order.target_point = _cellMouseIsectPos;
+                _localPlayer->Order.target_Bact = NULL;
             }
         }
         break;
 
     case World::DOACTION_ADD_UNIT1:
-        _updateMessage.user_action = World::DOACTION_ADD_UNIT1;
-        _updateMessage.protoID = bzda.vhclProtoIds[bzda.selVhclIdx];
-        _updateMessage.target_point = _mouseVector * _mouseSelDistance + _viewerPosition;
+        _localPlayer->Order.user_action = World::DOACTION_ADD_UNIT1;
+        _localPlayer->Order.protoID = bzda.vhclProtoIds[bzda.selVhclIdx];
+        _localPlayer->Order.target_point = _mouseVector * _mouseSelDistance + _viewerPosition;
 
         bzda.activeMode = 4;
 
@@ -10865,11 +10865,11 @@ void NC_STACK_ypaworld::ExecuteMouseAction(int arg)
     case World::DOACTION_ADD_UNIT2:
         if (_activeCmdrRemapIndex >= 0)
         {
-            _updateMessage.user_action = World::DOACTION_ADD_UNIT2;
-            _updateMessage.selectBact = _cmdrsRemap[_activeCmdrRemapIndex];
+            _localPlayer->Order.user_action = World::DOACTION_ADD_UNIT2;
+            _localPlayer->Order.selectBact = _cmdrsRemap[_activeCmdrRemapIndex];
 
-            _updateMessage.protoID = bzda.vhclProtoIds[bzda.selVhclIdx];
-            _updateMessage.target_point = _mouseVector * _mouseSelDistance + _viewerPosition;
+            _localPlayer->Order.protoID = bzda.vhclProtoIds[bzda.selVhclIdx];
+            _localPlayer->Order.target_point = _mouseVector * _mouseSelDistance + _viewerPosition;
         }
         break;
 
@@ -10887,19 +10887,19 @@ void NC_STACK_ypaworld::ExecuteMouseAction(int arg)
         break;
 
     case World::DOACTION_6:
-        _updateMessage.user_action = World::DOACTION_6;
-        _updateMessage.protoID = bzda.buildProtoIds[bzda.selBuildIdx];
-        _updateMessage.target_Sect = _cellOnMouse;
-        _updateMessage.target_point = _cellMouseIsectPos;
-        _updateMessage.target_Bact = NULL;
+        _localPlayer->Order.user_action = World::DOACTION_6;
+        _localPlayer->Order.protoID = bzda.buildProtoIds[bzda.selBuildIdx];
+        _localPlayer->Order.target_Sect = _cellOnMouse;
+        _localPlayer->Order.target_point = _cellMouseIsectPos;
+        _localPlayer->Order.target_Bact = NULL;
         bzda.activeMode = bzda.enabledModes & 1;
         break;
 
     case World::DOACTION_10:
-        _updateMessage.user_action = World::DOACTION_10;
-        _updateMessage.target_Sect = _cellOnMouse;
-        _updateMessage.target_point = _cellMouseIsectPos;
-        _updateMessage.target_Bact = NULL;
+        _localPlayer->Order.user_action = World::DOACTION_10;
+        _localPlayer->Order.target_Sect = _cellOnMouse;
+        _localPlayer->Order.target_point = _cellMouseIsectPos;
+        _localPlayer->Order.target_Bact = NULL;
         bzda.activeMode = 1;
         break;
 

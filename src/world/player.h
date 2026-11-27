@@ -1,8 +1,7 @@
 #ifndef WORLD_PLAYER_H_INCLUDED
 #define WORLD_PLAYER_H_INCLUDED
 
-class NC_STACK_ypabact;
-struct TInputState;
+#include "../ypabact.h"
 
 namespace World
 {
@@ -20,6 +19,7 @@ struct Player
     NC_STACK_ypabact *Unit = NULL;        // Looked from: the camera and the HUD
     NC_STACK_ypabact *Controls = NULL;    // Moved by their controls
     TInputState *Input = NULL;            // Their controls this step
+    TUserOrder Order;                     // To their host station, this step
 };
 
 }

@@ -208,7 +208,7 @@ public:
     bool IsPlayerRobo() const;
     
 public:
-    void HandleUserCommands(update_msg *arg);
+    void HandleUserCommands(TUserOrder *arg);
     
 protected:
 
@@ -237,7 +237,7 @@ protected:
     void AI_checkWorld(update_msg *arg);
 
     void doBeamUpdate(int frameTime);
-    void doUserCommands(update_msg *arg);
+    void doUserCommands(TUserOrder *arg);
     void wallow(update_msg *arg);
     void searchEnemyRobo();
     void usersRoboEnergyCheck();

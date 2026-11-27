@@ -1273,7 +1273,7 @@ int NC_STACK_yparobo::IsCommanderClosestToTarget(NC_STACK_ypabact *bact)
     return 1;
 }
 
-void NC_STACK_yparobo::doUserCommands(update_msg *arg)
+void NC_STACK_yparobo::doUserCommands(TUserOrder *arg)
 {
     setTarget_msg targetMsg;
     TUnitSpawn spawn;
@@ -1686,7 +1686,7 @@ void NC_STACK_yparobo::doUserCommands(update_msg *arg)
     }
 }
 
-void NC_STACK_yparobo::HandleUserCommands(update_msg *arg)
+void NC_STACK_yparobo::HandleUserCommands(TUserOrder *arg)
 {
     if ( _kidRef.IsListType(World::BLIST_CACHE) ) // Do not update units in dead list
         return;

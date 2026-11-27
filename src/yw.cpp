@@ -389,7 +389,9 @@ bool NC_STACK_ypaworld::SimulationStep(TUpdateArgs *arg)
     _frameTime = arg->DTime;
     _framesElapsed++;
 
-    _updateMessage.user_action = World::DOACTION_0;
+    for ( std::unique_ptr<World::Player> &player : _players )
+        player->Order.user_action = World::DOACTION_0;
+
     _updateMessage.gTime = _timeStamp;
     _updateMessage.frameTime = arg->DTime;
     _updateMessage.units_count = 0;
@@ -456,11 +458,13 @@ bool NC_STACK_ypaworld::SimulationStep(TUpdateArgs *arg)
     uint32_t updateStart = profiler_begin();
     uint64_t simStart = System::PerfStats::Now();
     
-    // Do user commands before any unit state can be changed
-    if (UserRobo())
+    // The players' orders, before any unit state can be changed
+    for ( std::unique_ptr<World::Player> &player : _players )
     {
-        if (UserRobo()->_bact_type == BACT_TYPES_ROBO)
-            ((NC_STACK_yparobo *)UserRobo())->HandleUserCommands(&_updateMessage);
+        NC_STACK_ypabact *host = player->HostStation;
+
+        if ( host && host->_bact_type == BACT_TYPES_ROBO )
+            ((NC_STACK_yparobo *)host)->HandleUserCommands(&player->Order);
     }
 
     for ( NC_STACK_ypabact *unit : _unitsList.safe_iter() )
