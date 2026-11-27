@@ -217,7 +217,8 @@ void NC_STACK_ypaworld::BriefingSetObject(const TBriefObject &obj, bool doAdd)
 
 void BriefUpdatePlayerHostStation(NC_STACK_ypaworld *yw, TInputState *inpt, TBriefengScreen *brf)
 {
-    if ( brf->CurrTime - brf->StartTime >= 2500 )
+    // A level without host stations shows none
+    if ( brf->CurrTime - brf->StartTime >= 2500 || brf->Desc.Robos.empty() )
     {
         brf->Stage = TBriefengScreen::STAGE_PLAYER_END;
     }

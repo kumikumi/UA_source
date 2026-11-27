@@ -2371,7 +2371,6 @@ int MapRobosParser::Handle(ScriptParser::Parser &parser, const std::string &p1, 
         if (_m.Robos.size() == 1) //If it's first host station - save owner for brief
             _m.PlayerOwner = _r->Owner;
 
-        _m.ReadedPartsBits |= TLevelDescription::BIT_END;
         return ScriptParser::RESULT_SCOPE_END;
     }
 

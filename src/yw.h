@@ -1159,9 +1159,9 @@ struct TLevelDescription
         BIT_OWN = (1 << 3),
         BIT_HGT = (1 << 4),
         BIT_BLG = (1 << 5),
-        BIT_END = (1 << 6),
-        
-        BIT_ALL = (BIT_SET | BIT_SKY | BIT_TYP | BIT_OWN | BIT_HGT | BIT_BLG | BIT_END),
+
+        // A level needs no host stations: factions can do without
+        BIT_ALL = (BIT_SET | BIT_SKY | BIT_TYP | BIT_OWN | BIT_HGT | BIT_BLG),
     };
     
     uint32_t ReadedPartsBits = 0;

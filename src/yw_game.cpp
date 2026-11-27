@@ -571,9 +571,11 @@ void NC_STACK_ypaworld::yw_InitSquads(const std::vector<MapSquad> &squads)
     }
 }
 
+// The squads that came along from the last level join the player's host
+// station; without one, they stay behind
 void NC_STACK_ypaworld::InitBuddies()
 {
-    if ( !_levelInfo.Buddies.empty() )
+    if ( !_levelInfo.Buddies.empty() && UserRobo() )
     {
         int squad_sn = 0;
         
