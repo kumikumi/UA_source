@@ -1218,6 +1218,12 @@ void NC_STACK_ypaworld::ReplayFrame(TUpdateArgs *arg)
 
     if ( drawn )
     {
+        // The unit the player drives where they drive it, ahead of the game,
+        // and its shots: before the drawings of units gone go, so that those
+        // of the shots stay
+        if ( _replayPlaying && _prediction )
+            _prediction->Apply(frame, _replay->Player(), _playStepFraction);
+
         for (auto it = _unitDrawings.begin(); it != _unitDrawings.end(); )
         {
             if ( !frame.FindUnit(it->first) )
@@ -1225,10 +1231,6 @@ void NC_STACK_ypaworld::ReplayFrame(TUpdateArgs *arg)
             else
                 it++;
         }
-
-        // The unit the player drives where they drive it, ahead of the game
-        if ( _replayPlaying && _prediction )
-            _prediction->Apply(frame, _replay->Player(), _playStepFraction);
 
         PlaceReplayCamera(frame);
         _replayFrame = std::move(frame);
