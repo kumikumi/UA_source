@@ -9,6 +9,7 @@
 #include "frame.h"
 #include "playerorder.h"
 #include "playercontrols.h"
+#include "viewstream.h"
 #include "recorder.h"
 
 namespace World
@@ -50,6 +51,11 @@ public:
     virtual uint32_t Player() const { return 0; }
     virtual void SendOrder(const PlayerOrder &order) {}
     virtual void SendControls(const PlayerControls &controls) {}
+
+    // The unit they control as the game last had it, once: false when no
+    // new one came since; and the fields of units' state in the game's build
+    virtual bool TakeControlledUnit(ControlledUnit &out) { return false; }
+    virtual const State::Schema *UnitSchema() const { return NULL; }
 };
 
 // A recording played back as it was drawn, from any step: the frames of the

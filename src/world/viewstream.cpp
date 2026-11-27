@@ -22,13 +22,15 @@ static void PutBytes(std::string &out, const std::string &bytes)
     out += bytes;
 }
 
-std::string ViewStream::Hello(int level, const std::string &description, const State::Schema &schema)
+std::string ViewStream::Hello(int level, const std::string &description, const State::Schema &schema,
+                              const State::Schema &unitSchema)
 {
     std::string msg(1, (char)HELLO);
     Put16(msg, Format);
     Put32(msg, (uint32_t)level);
     PutBytes(msg, description);
     PutBytes(msg, State::WriteSchema(schema));
+    PutBytes(msg, State::WriteSchema(unitSchema));
     return msg;
 }
 
@@ -53,6 +55,18 @@ std::string ViewStream::You(uint32_t player)
 {
     std::string msg(1, (char)YOU);
     Put32(msg, player);
+    return msg;
+}
+
+std::string ViewStream::Unit(const ControlledUnit &unit)
+{
+    std::string msg(1, (char)UNIT);
+    Put32(msg, unit.Step);
+    Put32(msg, (uint32_t)unit.Time);
+    Put32(msg, unit.Controls);
+    msg.push_back((char)unit.Kind);
+    Put32(msg, unit.Id);
+    PutBytes(msg, unit.Fields);
     return msg;
 }
 
@@ -112,7 +126,7 @@ uint8_t ViewStreamReader::Read(const uint8_t *data, size_t size)
     {
         uint16_t format;
         uint32_t level;
-        std::string schema;
+        std::string schema, unitSchema;
 
         if ( !Take(p, end, &format) || format != ViewStream::Format )
             return Fail("another format");
@@ -120,6 +134,9 @@ uint8_t ViewStreamReader::Read(const uint8_t *data, size_t size)
         if ( !Take(p, end, &level) || !TakeBytes(p, end, &_description) || !TakeBytes(p, end, &schema) ||
              !State::ReadSchema(schema, _schema) || _schema.empty() || !MakeLayouts(_schema, _layouts) )
             return Fail("a hello without a level or a view's fields");
+
+        if ( !TakeBytes(p, end, &unitSchema) || !State::ReadSchema(unitSchema, _unitSchema) )
+            return Fail("a hello without units' fields");
 
         _level = (int32_t)level;
         _hasLevel = true;
@@ -207,6 +224,20 @@ uint8_t ViewStreamReader::Read(const uint8_t *data, size_t size)
             return Fail("a player cut short");
 
         return ViewStream::YOU;
+
+    case ViewStream::UNIT:
+    {
+        ControlledUnit unit;
+        uint32_t time;
+
+        if ( !Take(p, end, &unit.Step) || !Take(p, end, &time) || !Take(p, end, &unit.Controls) ||
+             !Take(p, end, &unit.Kind) || !Take(p, end, &unit.Id) || !TakeBytes(p, end, &unit.Fields) )
+            return Fail("a unit cut short");
+
+        unit.Time = (int32_t)time;
+        _unit = std::move(unit);
+        return ViewStream::UNIT;
+    }
 
     case ViewStream::END:
         _ended = true;

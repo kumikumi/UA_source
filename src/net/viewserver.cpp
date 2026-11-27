@@ -12,6 +12,14 @@ namespace Net
 // Watchers at most: each gets the whole stream
 constexpr uint32_t MAX_WATCHERS = 16;
 
+// A watcher's controls wait no more than this many steps to be taken: more,
+// as after a stall, and the oldest go, so that they don't lag behind
+constexpr size_t MAX_CONTROLS_WAITING = 3;
+
+// The last a watcher sent hold this long after it came: over a few lost on
+// the way, but a watcher gone quiet doesn't drive on
+constexpr uint64_t CONTROLS_HOLD_MS = 250;
+
 ViewServer::ViewServer() {}
 
 ViewServer::~ViewServer()
@@ -127,11 +135,6 @@ ViewServer::Watcher *ViewServer::Find(uint32_t id)
     return NULL;
 }
 
-const ViewServer::Watcher *ViewServer::Find(uint32_t id) const
-{
-    return const_cast<ViewServer *>(this)->Find(id);
-}
-
 void ViewServer::Receive(const Event &event)
 {
     Watcher *watcher = Find(event.From);
@@ -167,17 +170,33 @@ void ViewServer::Receive(const Event &event)
 
     case WATCHER_CONTROLS:
     {
-        World::PlayerControls controls;
+        // The last few made, the newest last: those not taken in yet wait
+        // their turn
+        size_t count = size >= 2 ? data[1] : 0;
+        size_t each = (size - 2) / std::max(count, (size_t)1);
 
-        if ( !controls.Read(data + 1, size - 1) )
+        if ( !count || size != 2 + count * each )
             break;
 
-        // The newest only, should older ones come after it
-        if ( !watcher->ControlsTicks || controls.Number > watcher->Controls.Number )
+        std::vector<World::PlayerControls> controls(count);
+        bool read = true;
+
+        for (size_t i = 0; i < count && read; i++)
+            read = controls[i].Read(data + 2 + i * each, each);
+
+        if ( !read )
+            break;
+
+        for ( const World::PlayerControls &c : controls )
         {
-            watcher->Controls = controls;
-            watcher->ControlsTicks = SDL_GetTicks();
+            if ( watcher->ControlsTicks && c.Number <= watcher->ControlsNumber )
+                continue;
+
+            watcher->Controls.push_back(c);
+            watcher->ControlsNumber = c.Number;
         }
+
+        watcher->ControlsTicks = SDL_GetTicks();
         return;
     }
 
@@ -204,15 +223,36 @@ void ViewServer::SetPlayer(uint32_t watcher, uint32_t player)
     }
 }
 
-bool ViewServer::Controls(uint32_t watcher, uint32_t maxAgeMs, World::PlayerControls &out) const
+bool ViewServer::TakeControls(uint32_t watcher, World::PlayerControls &out)
 {
-    const Watcher *w = Find(watcher);
+    Watcher *w = Find(watcher);
 
-    if ( !w || !w->ControlsTicks || SDL_GetTicks() - w->ControlsTicks > maxAgeMs )
+    if ( !w || !w->ControlsTicks )
         return false;
 
-    out = w->Controls;
+    while ( w->Controls.size() > MAX_CONTROLS_WAITING )
+        w->Controls.pop_front();
+
+    if ( !w->Controls.empty() )
+    {
+        w->Taken = w->Controls.front();
+        w->Controls.pop_front();
+    }
+    else if ( SDL_GetTicks() - w->ControlsTicks > CONTROLS_HOLD_MS )
+    {
+        return false;
+    }
+
+    out = w->Taken;
     return true;
+}
+
+void ViewServer::SendUnit(uint32_t watcher, const World::ControlledUnit &unit)
+{
+    Watcher *w = Find(watcher);
+
+    if ( w && w->HasView )
+        Send(*w, World::ViewStream::Unit(unit));
 }
 
 void ViewServer::Service()
@@ -261,7 +301,7 @@ void ViewServer::Step(int level, const std::string &levelDescription, const Worl
     {
         if ( !watcher->HasLevel )
         {
-            Send(*watcher, World::ViewStream::Hello(level, levelDescription, recorder.ViewSchema()));
+            Send(*watcher, World::ViewStream::Hello(level, levelDescription, recorder.ViewSchema(), _unitSchema));
             watcher->HasLevel = true;
         }
 

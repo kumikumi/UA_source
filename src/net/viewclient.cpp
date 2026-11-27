@@ -13,6 +13,9 @@ namespace Net
 // The frames kept: the viewer shows the latest, a little behind
 constexpr size_t FRAMES_KEPT = 4 * World::CVStepsPerSecond;
 
+// The controls sent again with the next ones
+constexpr size_t CONTROLS_RESENT = 4;
+
 ViewClient::ViewClient() {}
 
 ViewClient::~ViewClient()
@@ -136,6 +139,10 @@ bool ViewClient::Take(const std::vector<uint8_t> &packed)
         ypa_log_out("Watching: playing as player %u\n", _reader.Player());
         break;
 
+    case World::ViewStream::UNIT:
+        _unitFresh = true;
+        break;
+
     case World::ViewStream::END:
         ypa_log_out("Watching: the game was left\n");
         _ended = true;
@@ -196,12 +203,29 @@ void ViewClient::SendControls(const World::PlayerControls &controls)
     if ( _ended || _session.Players().empty() )
         return;
 
-    World::PlayerControls numbered = controls;
-    numbered.Number = ++_controlsSent;
+    // With the few before, should those have been lost
+    _controlsSent.push_back(controls);
 
-    std::string msg = std::string(1, (char)WATCHER_CONTROLS) + numbered.Write();
+    while ( _controlsSent.size() > CONTROLS_RESENT )
+        _controlsSent.pop_front();
+
+    std::string msg{(char)WATCHER_CONTROLS, (char)_controlsSent.size()};
+
+    for ( const World::PlayerControls &c : _controlsSent )
+        msg += c.Write();
+
     _session.Send(_session.Players().front().Id, msg.data(), msg.size(), LATEST);
     _session.Flush();
+}
+
+bool ViewClient::TakeControlledUnit(World::ControlledUnit &out)
+{
+    if ( !_unitFresh )
+        return false;
+
+    out = _reader.Unit();
+    _unitFresh = false;
+    return true;
 }
 
 uint32_t ViewClient::FirstStep() const

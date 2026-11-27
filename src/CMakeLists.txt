@@ -72,6 +72,7 @@ set(SOURCES
 	world/playback.cpp
 	world/playercontrols.cpp
 	world/playerorder.cpp
+	world/prediction.cpp
 	world/protos.cpp
 	world/recorder.cpp
 	world/viewstream.cpp

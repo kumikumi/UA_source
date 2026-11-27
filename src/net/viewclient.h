@@ -58,9 +58,13 @@ public:
     // An order as that player
     void SendOrder(const World::PlayerOrder &order) override;
 
-    // Their controls this step, which go on the latest-only channel: the
-    // game goes by the last that came
+    // Their controls this step, numbered, which go on the latest-only
+    // channel with the few before
     void SendControls(const World::PlayerControls &controls) override;
+
+    // The unit they control as the game last told it, once
+    bool TakeControlledUnit(World::ControlledUnit &out) override;
+    const World::State::Schema *UnitSchema() const override { return &_reader.UnitSchema(); }
 
     // What came so far, as it came and unpacked, and the steps
     uint64_t BytesReceived() const { return _received; }
@@ -97,7 +101,8 @@ protected:
     bool _ended = false;
     uint64_t _received = 0, _unpacked = 0;
     uint32_t _steps = 0;
-    uint32_t _controlsSent = 0;
+    std::deque<World::PlayerControls> _controlsSent; // The last few
+    bool _unitFresh = false; // A unit came since it was taken
     uint32_t _hashEvery = 0;
     std::vector<std::pair<uint32_t, uint64_t>> _hashes;
 };

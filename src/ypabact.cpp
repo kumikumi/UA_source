@@ -445,11 +445,10 @@ void ReleaseExpiredMissiles(NC_STACK_ypabact *bact)
 }
 
 
-void NC_STACK_ypabact::Update(update_msg *arg)
+// The sector it's in, among whose units it then is, back over the map and
+// above the ground if it went off them
+void NC_STACK_ypabact::TrackSector()
 {
-    if ( _kidRef.IsListType(World::BLIST_CACHE) ) // Do not update units in dead list
-        return;
-        
     TSectorInfo sect_info;
     sect_info.pos_x = _position.x;
     sect_info.pos_z = _position.z;
@@ -482,6 +481,14 @@ void NC_STACK_ypabact::Update(update_msg *arg)
     // Test if bact fall through sector
     if ( _pSector->height + 1000.0 < _position.y )
         FixSectorFall();
+}
+
+void NC_STACK_ypabact::Update(update_msg *arg)
+{
+    if ( _kidRef.IsListType(World::BLIST_CACHE) ) // Do not update units in dead list
+        return;
+
+    TrackSector();
 
     NC_STACK_ypabact *roboHost = _world->UserRobo();
 
@@ -542,6 +549,15 @@ void NC_STACK_ypabact::Update(update_msg *arg)
     _soundcarrier.Vector = _fly_dir * _fly_dir_length;
 
     SFXEngine::SFXe.UpdateSoundCarrier(&_soundcarrier);
+}
+
+void NC_STACK_ypabact::PredictStep(update_msg *arg)
+{
+    TrackSector();
+
+    _clock += arg->frameTime;
+
+    User_layer(arg);
 }
 
 void NC_STACK_ypabact::SetTarget(setTarget_msg *arg)

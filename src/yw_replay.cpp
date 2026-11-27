@@ -1226,6 +1226,10 @@ void NC_STACK_ypaworld::ReplayFrame(TUpdateArgs *arg)
                 it++;
         }
 
+        // The unit the player drives where they drive it, ahead of the game
+        if ( _replayPlaying && _prediction )
+            _prediction->Apply(frame, _replay->Player(), _playStepFraction);
+
         PlaceReplayCamera(frame);
         _replayFrame = std::move(frame);
 
@@ -1309,7 +1313,12 @@ void NC_STACK_ypaworld::StartPlaying()
     _mouseGrabbed = false;
     _joyKnown = false;
     _playStepped = false;
+    _playControls = 0;
     _levelInfo.State = TLevelInfo::STATE_PLAYING;
+
+    // The unit the player controls, driven here as they steer it
+    if ( const World::State::Schema *unitSchema = _replay->UnitSchema() )
+        _prediction.reset(new World::Prediction(this, *unitSchema));
 
     _playScene.SetPlayer(this, &_replayFrame, _replay->Player(), _replayCamera.Position, _replayCamera.Rotation);
     _uiScene = &_playScene;
@@ -1332,6 +1341,7 @@ void NC_STACK_ypaworld::StartPlaying()
 
 void NC_STACK_ypaworld::StopPlaying()
 {
+    _prediction.reset();
     GUI_Close();
 
     _uiScene = NULL;
@@ -1410,7 +1420,23 @@ void NC_STACK_ypaworld::PlayStep(TInputState *inpt)
     _timeStamp = _replayClock;
 
     PlayInterfaceStep(inpt);
-    _replay->SendControls(World::PlayerControls::Of(*inpt));
+
+    // The controls it left, to the game and to drive the unit here as the
+    // game will
+    World::PlayerControls controls = World::PlayerControls::Of(*inpt);
+    controls.Number = ++_playControls;
+    _replay->SendControls(controls);
+
+    if ( _prediction )
+    {
+        World::ControlledUnit unit;
+
+        if ( _replay->TakeControlledUnit(unit) )
+            _prediction->FromGame(unit);
+
+        _prediction->Steer(controls);
+    }
+
     _playStepped = true;
 
     _timeStamp = gameTime;

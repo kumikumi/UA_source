@@ -366,6 +366,14 @@ public:
     virtual size_t Deinit();
     virtual size_t SetParameters(IDVList &stak);
     virtual void Update(update_msg *arg);
+
+    // A step of a unit that a player at this machine drives in a game run
+    // elsewhere, as far as their controls move it: what Update does for a
+    // unit a player controls, without its AI, its kids and its missiles
+    // (World::Prediction)
+    void PredictStep(update_msg *arg);
+    void TrackSector();
+
     virtual void SetTarget(setTarget_msg *arg);
     virtual void AI_layer1(update_msg *arg);
     virtual void AI_layer2(update_msg *arg);

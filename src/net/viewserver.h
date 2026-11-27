@@ -2,6 +2,7 @@
 #define NET_VIEWSERVER_H_INCLUDED
 
 #include <cstdint>
+#include <deque>
 #include <memory>
 #include <string>
 #include <vector>
@@ -9,6 +10,7 @@
 #include "session.h"
 #include "../world/playerorder.h"
 #include "../world/playercontrols.h"
+#include "../world/viewstream.h"
 
 struct z_stream_s;
 
@@ -19,7 +21,7 @@ namespace Net
 
 // What those who watch a game and the game that's watched send each other,
 // to tell them from other sessions
-constexpr const char *VIEW_VERSION = "ua-view-3";
+constexpr const char *VIEW_VERSION = "ua-view-4";
 
 // What a watcher sends the game, each message beginning with its type,
 // unpacked; on the reliable channel:
@@ -29,7 +31,9 @@ constexpr const char *VIEW_VERSION = "ua-view-3";
 //
 // and every step, on the latest-only channel:
 //
-//   'C'  their controls, as World::PlayerControls writes them
+//   'C'  their controls: u8 how many, then that many as
+//        World::PlayerControls writes them, the newest last: the last few
+//        they made, so that those lost on the way come with the next
 enum WatcherMessage : uint8_t
 {
     WATCHER_JOIN = 'J',
@@ -67,9 +71,16 @@ public:
     // Lets others watch on the port. False when it can't be opened there.
     bool Open(uint16_t port, const std::string &name);
 
+    // The fields of units' whole state, which those who play need to read
+    // the unit they control (SendUnit): before the first step
+    void SetUnitSchema(const World::State::Schema &schema) { _unitSchema = schema; }
+
     // After a step the recorder recorded: the step to those watching, and
     // the level and the view to those who came since
     void Step(int level, const std::string &levelDescription, const World::Recorder &recorder);
+
+    // After the step: to a watcher who plays, the unit they control
+    void SendUnit(uint32_t watcher, const World::ControlledUnit &unit);
 
     // Between steps: takes in those who come and go, and keeps in touch
     void Service();
@@ -83,9 +94,11 @@ public:
     // A watcher plays as a player from the next step on (0: only watches)
     void SetPlayer(uint32_t watcher, uint32_t player);
 
-    // The controls a watcher sent last, false when none came in the last
-    // maxAgeMs
-    bool Controls(uint32_t watcher, uint32_t maxAgeMs, World::PlayerControls &out) const;
+    // Before a step: a watcher's controls for it. They're taken one a step
+    // in the order they were made, the last again until the next comes, so
+    // that the game goes by the same controls step by step as the
+    // watcher's machine did. False when none came lately.
+    bool TakeControls(uint32_t watcher, World::PlayerControls &out);
 
     bool IsOpen() const { return _session.IsOpen(); }
     size_t Watchers() const { return _watchers.size(); }
@@ -105,20 +118,22 @@ protected:
         uint32_t ViewEpoch = 0; // Of the recorder's view they have
         uint32_t Player = 0;    // Who they play as
         bool PlayerToSend = false;
-        World::PlayerControls Controls; // The last they sent, and when it came
-        uint64_t ControlsTicks = 0;     // (SDL_GetTicks); 0 for none yet
+        std::deque<World::PlayerControls> Controls; // Waiting to be taken
+        World::PlayerControls Taken;                 // The last taken
+        uint32_t ControlsNumber = 0; // The newest that came
+        uint64_t ControlsTicks = 0;  // When (SDL_GetTicks); 0 for none yet
     };
 
     void Poll();
     void Receive(const Event &event);
     Watcher *Find(uint32_t id);
-    const Watcher *Find(uint32_t id) const;
     void Send(Watcher &watcher, const std::string &msg);
     void Drop(uint32_t id);
 
     Session _session;
     std::vector<std::unique_ptr<Watcher>> _watchers;
     std::vector<Request> _requests;
+    World::State::Schema _unitSchema;
     uint64_t _unpacked = 0, _sent = 0;
 };
 

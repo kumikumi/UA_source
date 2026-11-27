@@ -104,16 +104,13 @@ static std::string watchName = "watcher";
 static int watchFaction = 0; // --faction: played as well
 
 // Those watching who play (--stream): the player each watcher plays as, and
-// their controls this step, as they last sent them
+// their controls this step, and their number (0 for none)
 struct RemotePlayer
 {
     uint32_t Player = 0;
     TInputState Input;
+    uint32_t Controls = 0;
 };
-
-// A watcher's controls hold this long after the last that came: over a few
-// lost on the way, but a watcher gone quiet doesn't drive on
-static const uint32_t RemoteControlsHoldMs = 250;
 
 static std::map<uint32_t, RemotePlayer> remotePlayers; // By watcher
 
@@ -180,9 +177,13 @@ static void TakeWatchersRequests()
             it.second.Input.Period = World::CVStepTicks;
 
             World::PlayerControls controls;
+            it.second.Controls = 0;
 
-            if ( viewServer.Controls(it.first, RemoteControlsHoldMs, controls) )
+            if ( viewServer.TakeControls(it.first, controls) )
+            {
                 controls.To(it.second.Input);
+                it.second.Controls = controls.Number;
+            }
 
             player->Input = &it.second.Input;
         }
@@ -197,6 +198,30 @@ static void StreamStep()
 
     streamedStep = ypaworld->_recorder.Step();
     viewServer.Step(ypaworld->_levelInfo.LevelID, ypaworld->_levelDescription, ypaworld->_recorder);
+
+    // To each watcher who plays, the unit they control and look from as the
+    // step left it, all of it, and the controls it went by: their machine
+    // drives it on from there
+    for ( const auto &it : remotePlayers )
+    {
+        World::Player *player = ypaworld->FindPlayer(it.second.Player);
+
+        if ( !player || !player->Controls || player->Controls != player->Unit || player->Controls->_status == BACT_STATUS_DEAD )
+            continue;
+
+        World::State::Visitor v(World::State::Visitor::WRITE, ypaworld, World::State::PART_ALL);
+        player->Controls->VisitState(v);
+
+        World::ControlledUnit unit;
+        unit.Step = streamedStep;
+        unit.Time = ypaworld->_timeStamp;
+        unit.Controls = it.second.Controls;
+        unit.Kind = World::State::KIND_UNIT + player->Controls->_bact_type;
+        unit.Id = player->Controls->_gid;
+        unit.Fields = std::move(v.Out());
+
+        viewServer.SendUnit(it.first, unit);
+    }
 }
 
 static bool StartDirectLevel();
@@ -644,6 +669,8 @@ static int ProcessReplayFrame(int32_t frameTicks)
             renderInput = lastStepInput;
             ClearInputEvents(&renderInput);
         }
+
+        ypaworld->SetPlayStepFraction((float)playPendingTicks / World::CVStepTicks);
 
         world_update_arg.Input = &renderInput;
         ypaworld->ReplayFrame(&world_update_arg);
@@ -1967,6 +1994,11 @@ int main(int argc, char *argv[])
                 System::Deinit();
                 return 1;
             }
+
+            // What those who play read the units they control with
+            World::State::Schema unitSchema = World::State::MakeSchema(ypaworld, World::State::PART_ALL);
+            unitSchema.erase(unitSchema.begin(), unitSchema.lower_bound(World::State::KIND_UNIT));
+            viewServer.SetUnitSchema(unitSchema);
 
             if ( headless )
             {

@@ -42,6 +42,7 @@
 #include "world/recorder.h"
 #include "world/state.h"
 #include "world/frame.h"
+#include "world/prediction.h"
 #include "world/playback.h"
 #include "locale/locale.h"
 
@@ -2133,9 +2134,12 @@ public:
     bool LeavingReplay() const { return _replayLeave; }
 
     // Playing the game watched live with the game's interface, which then
-    // takes the input a step at a time (PlayStep), as in a level
+    // takes the input a step at a time (PlayStep), as in a level; frames
+    // drawn are fraction of the way from the step before the last to the
+    // last, as the unit the player drives is
     bool PlayingLive() const { return _replay && _replayPlaying; }
     void PlayStep(TInputState *inpt);
+    void SetPlayStepFraction(float fraction) { _playStepFraction = fraction; }
     void EndReplay();
     bool StartViewer(std::unique_ptr<World::FrameSource> source, int level, const std::string &levelDescription,
                      uint32_t startStep);
@@ -2983,6 +2987,9 @@ public:
     // interface, on the frames shown, its orders sent to the game
     bool _replayPlaying = false;
     bool _playStepped = false;     // Its interface stepped since it began
+    uint32_t _playControls = 0;    // The number of the last controls made
+    float _playStepFraction = 0.0;
+    std::unique_ptr<World::Prediction> _prediction; // Of the unit driven
     PlayMapScene _playScene;
     uint32_t _playUnit = 0;        // The player's unit in the frame before
     bool _playSelectNewSquad = false; // A squad was ordered: select it once it comes
