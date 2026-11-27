@@ -1119,8 +1119,23 @@ void NC_STACK_ypaworld::DrawReplayHud(const World::Frame &frame)
     // The marks over units, as the game's: what's under the pointer, and
     // with the enemy indicator what's around
     MapScene::Unit hovered;
+    bool hovering;
 
-    if ( _replayScene.Hovered(hovered) )
+    // Playing, the unit the game's interface has under the pointer, as the
+    // game marks it
+    if ( _replayPlaying )
+    {
+        hovering = (_guiActFlags & 0x20) && _bactOnMouse.Id;
+
+        if ( hovering )
+            hovered = UiScene().Fresh(_bactOnMouse);
+    }
+    else
+    {
+        hovering = _replayScene.Hovered(hovered);
+    }
+
+    if ( hovering )
     {
         yw_RenderCursorOverUnit(this, hovered);
         yw_RenderUnitLifeBar(this, &buf, hovered);
