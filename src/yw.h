@@ -2808,6 +2808,7 @@ public:
     void DrawReplayControls();
 
     void SetReplayCameraMode(ReplayCamera::Mode mode, const World::Frame *frame);
+    void FollowReplayPlayer(uint32_t player);
     void LookFromUnit(uint32_t unit);
     bool LookFromNextUnit(const World::Frame &frame);
     void HandleReplayWindows(TInputState *inpt, const World::Frame &frame);

@@ -78,7 +78,6 @@ std::array<std::string, TITLE_MAX> DefaultStrings::Titles = Common::ArrayInit<st
     {TITLE_VIEW, "View"},
     {TITLE_NOREPLAYS, "No replays saved yet. Save one from a debriefing."},
     {TITLE_REPLAYPAUSED, "PAUSED"},
-    {TITLE_REPLAYORIGINAL, "ORIGINAL"},
     {TITLE_REPLAYMANUAL, "MANUAL"},
     {TITLE_REPLAYFREE, "FREE LOOK"}
 });

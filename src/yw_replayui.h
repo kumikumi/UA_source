@@ -26,16 +26,17 @@ struct ReplayCamera
 {
     enum Mode
     {
-        ORIGINAL, // From where the player looked
+        PLAYER,   // From where a player looked, and once they're gone from
+                  // where they last did
         MANUAL,   // From a unit, and once it's gone from where it was last
         FREE,     // Flown about with the keys and the mouse
     };
 
-    Mode CameraMode = ORIGINAL;
-    uint32_t Unit = 0;     // Manual: the unit looked from, and its owner
+    Mode CameraMode = PLAYER;
+    uint32_t Player = 0;     // The player followed; 0 until one is
+    uint32_t PlayerUnit = 0; // The unit they saw from in the frame drawn last
+    uint32_t Unit = 0;       // Manual: the unit looked from, and its owner
     uint8_t UnitOwner = 0;
-    uint32_t Player = 0;   // The unit the player saw from in the frame
-                           // drawn last
     vec3d Position;        // Where it was drawn from last
     mat3x3 Rotation = mat3x3::Ident();
     vec3d Velocity;        // Free: in world units a second

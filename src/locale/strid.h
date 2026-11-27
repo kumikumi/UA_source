@@ -111,7 +111,6 @@ enum TITLE
     TITLE_VIEW     = 14,     // The replays page's
     TITLE_NOREPLAYS = 15,
     TITLE_REPLAYPAUSED = 16, // The replay viewer's, and its ways to look
-    TITLE_REPLAYORIGINAL = 17,
     TITLE_REPLAYMANUAL = 18,
     TITLE_REPLAYFREE = 19,
     

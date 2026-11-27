@@ -43,11 +43,18 @@ struct ReplayBar
     int TrackX0 = 0, TrackX1 = 0, TrackY = 0;
     int KeysY = 0;
     int Pad = 0;
-    std::array<int, 3> ModeX {}, ModeW {}; // The ways to look's buttons
-};
 
-static const std::array<Locale::TITLE, 3> ReplayModeTitles = {
-    Locale::TITLE_REPLAYORIGINAL, Locale::TITLE_REPLAYMANUAL, Locale::TITLE_REPLAYFREE
+    // The ways to look: from each player in the frame shown, by name, then
+    // manual and free
+    struct Button
+    {
+        int X = 0, W = 0;
+        ReplayCamera::Mode Mode = ReplayCamera::FREE;
+        uint32_t Player = 0;
+        std::string Title;
+    };
+
+    std::vector<Button> Buttons;
 };
 
 static ReplayBar LayOutReplayBar(NC_STACK_ypaworld *yw)
@@ -61,14 +68,33 @@ static ReplayBar LayOutReplayBar(NC_STACK_ypaworld *yw)
     bar.TrackX0 = 2 * bar.Pad;
     bar.TrackX1 = yw->_screenSize.x - 2 * bar.Pad;
 
+    for ( const World::Frame::Player &p : yw->_replayFrame.Players )
+    {
+        ReplayBar::Button b;
+        b.Mode = ReplayCamera::PLAYER;
+        b.Player = p.Id;
+        // In capitals, as the panel's font has them and the other buttons are
+        b.Title = p.Name.empty() ? fmt::sprintf("#%u", p.Id) : p.Name;
+        std::transform(b.Title.begin(), b.Title.end(), b.Title.begin(), [](unsigned char c) { return std::toupper(c); });
+        bar.Buttons.push_back(b);
+    }
+
+    ReplayBar::Button manual, free;
+    manual.Mode = ReplayCamera::MANUAL;
+    manual.Title = Locale::Text::Title(Locale::TITLE_REPLAYMANUAL);
+    free.Mode = ReplayCamera::FREE;
+    free.Title = Locale::Text::Title(Locale::TITLE_REPLAYFREE);
+    bar.Buttons.push_back(manual);
+    bar.Buttons.push_back(free);
+
     TileMap *font = yw->_guiTiles[15];
     int right = bar.TrackX1;
 
-    for (int i = 2; i >= 0; i--)
+    for (auto b = bar.Buttons.rbegin(); b != bar.Buttons.rend(); b++)
     {
-        bar.ModeW[i] = font->GetWidth(Locale::Text::Title(ReplayModeTitles[i])) + 2 * bar.Pad;
-        bar.ModeX[i] = right - bar.ModeW[i];
-        right = bar.ModeX[i] - bar.Pad;
+        b->W = font->GetWidth(b->Title) + 2 * bar.Pad;
+        b->X = right - b->W;
+        right = b->X - bar.Pad;
     }
 
     return bar;
@@ -222,13 +248,13 @@ void NC_STACK_ypaworld::ToggleReplayPause()
     _replayPaused = !_replayPaused;
 }
 
-// The unit the HUD is of and the windows blink: the player's in the
-// original view, the one looked from, or none flying freely
+// The unit the HUD is of and the windows blink: the one the player followed
+// saw from, the one looked from, or none flying freely
 uint32_t NC_STACK_ypaworld::ReplayViewedUnit(const World::Frame &frame) const
 {
     switch ( _replayCamera.CameraMode )
     {
-    case ReplayCamera::ORIGINAL:
+    case ReplayCamera::PLAYER:
         return frame.Viewer;
 
     case ReplayCamera::MANUAL:
@@ -237,6 +263,17 @@ uint32_t NC_STACK_ypaworld::ReplayViewedUnit(const World::Frame &frame) const
     default:
         return 0;
     }
+}
+
+// What a player saw, as long as they play; then from where they last looked
+void NC_STACK_ypaworld::FollowReplayPlayer(uint32_t player)
+{
+    SDL_SetWindowRelativeMouseMode(System::GetWindow(), false);
+
+    _replayCamera.CameraMode = ReplayCamera::PLAYER;
+    _replayCamera.Player = player;
+    _replayCamera.Looking = false;
+    _hud.switch_time = _replayClock;
 }
 
 // From a unit on, wherever it goes; once it's gone, from where it was
@@ -294,11 +331,44 @@ void NC_STACK_ypaworld::SetReplayCameraMode(ReplayCamera::Mode mode, const World
 {
     ReplayCamera &cam = _replayCamera;
 
+    if ( mode == ReplayCamera::PLAYER )
+    {
+        // Following a player already: the next one along. Else the one
+        // followed before, or the one at the machine that recorded it.
+        if ( !frame || frame->Players.empty() )
+            return;
+
+        uint32_t next = 0;
+
+        if ( cam.CameraMode == ReplayCamera::PLAYER )
+        {
+            for ( const World::Frame::Player &p : frame->Players )
+            {
+                if ( p.Id > cam.Player )
+                {
+                    next = p.Id;
+                    break;
+                }
+            }
+        }
+        else if ( frame->FindPlayer(cam.Player) )
+        {
+            next = cam.Player;
+        }
+        else if ( frame->FindPlayer(frame->LocalPlayer) )
+        {
+            next = frame->LocalPlayer;
+        }
+
+        FollowReplayPlayer(next ? next : frame->Players.front().Id);
+        return;
+    }
+
     if ( mode == ReplayCamera::MANUAL )
     {
-        // The unit last looked from, or the player's
+        // The unit last looked from, or the one the player followed saw from
         if ( !frame || !frame->FindUnit(cam.Unit) )
-            cam.Unit = cam.Player;
+            cam.Unit = cam.PlayerUnit;
 
         LookFromUnit(cam.Unit);
         return;
@@ -394,15 +464,42 @@ void NC_STACK_ypaworld::FlyReplayCamera(TInputState *inpt)
 void NC_STACK_ypaworld::PlaceReplayCamera(World::Frame &frame)
 {
     ReplayCamera &cam = _replayCamera;
-    cam.Player = frame.Viewer;
+
+    // At the start: the player at the machine that recorded it, or else the
+    // first; with no players at all, the first host station
+    if ( cam.CameraMode == ReplayCamera::PLAYER && !cam.Player )
+    {
+        if ( !frame.Players.empty() )
+            SetReplayCameraMode(ReplayCamera::PLAYER, &frame);
+        else
+        {
+            for ( const World::Frame::Unit &u : frame.Units )
+            {
+                if ( u.Type == BACT_TYPES_ROBO )
+                {
+                    LookFromUnit(u.Id);
+                    break;
+                }
+            }
+        }
+    }
 
     switch ( cam.CameraMode )
     {
-    case ReplayCamera::ORIGINAL:
-        cam.Position = vec3d(frame.CameraPosition);
-        cam.Rotation = mat3x3(frame.CameraRotation);
-        _cameraOverridden = false;
-        return;
+    case ReplayCamera::PLAYER:
+        if ( frame.FindPlayer(cam.Player) )
+        {
+            frame.LookAs(cam.Player);
+            cam.PlayerUnit = frame.Viewer;
+            cam.Position = vec3d(frame.CameraPosition);
+            cam.Rotation = mat3x3(frame.CameraRotation);
+            _cameraOverridden = false;
+            return;
+        }
+
+        // Gone, or not there yet: from where they last looked
+        frame.Viewer = 0;
+        break;
 
     case ReplayCamera::MANUAL:
         if ( const World::Frame::Unit *unit = frame.FindUnit(cam.Unit) )
@@ -569,11 +666,15 @@ void NC_STACK_ypaworld::HandleReplayInput(TInputState *inpt)
         // pause and play
         bool onButton = false;
 
-        for (int i = 0; i < 3; i++)
+        for ( const ReplayBar::Button &b : bar.Buttons )
         {
-            if ( mouse.y < bar.TextY + _fontH && mouse.x >= bar.ModeX[i] && mouse.x < bar.ModeX[i] + bar.ModeW[i] )
+            if ( mouse.y < bar.TextY + _fontH && mouse.x >= b.X && mouse.x < b.X + b.W )
             {
-                SetReplayCameraMode((ReplayCamera::Mode)i, &_replayFrame);
+                if ( b.Mode == ReplayCamera::PLAYER )
+                    FollowReplayPlayer(b.Player);
+                else
+                    SetReplayCameraMode(b.Mode, &_replayFrame);
+
                 onButton = true;
             }
         }
@@ -626,7 +727,7 @@ void NC_STACK_ypaworld::HandleReplayInput(TInputState *inpt)
         break;
 
     case Input::KC_1:
-        SetReplayCameraMode(ReplayCamera::ORIGINAL, &_replayFrame);
+        SetReplayCameraMode(ReplayCamera::PLAYER, &_replayFrame);
         break;
 
     case Input::KC_2:
@@ -709,14 +810,19 @@ void NC_STACK_ypaworld::DrawReplayControls()
     FillScreenBox(this, at - knobW / 2, bar.TrackY - knobH / 2, knobW, knobH);
 
     // The ways to look, the one looked with lit
-    for (int i = 0; i < 3; i++)
+    auto lit = [this](const ReplayBar::Button &b)
     {
-        if ( i == _replayCamera.CameraMode )
+        return b.Mode == _replayCamera.CameraMode && (b.Mode != ReplayCamera::PLAYER || b.Player == _replayCamera.Player);
+    };
+
+    for ( const ReplayBar::Button &b : bar.Buttons )
+    {
+        if ( lit(b) )
             GFX::Engine.SetPen( SDL_Color{230, 160, 40, 255} );
         else
             GFX::Engine.SetPen( SDL_Color{48, 48, 64, 255} );
 
-        FillScreenBox(this, bar.ModeX[i], bar.TextY - bar.Pad / 2, bar.ModeW[i], _fontH + bar.Pad);
+        FillScreenBox(this, b.X, bar.TextY - bar.Pad / 2, b.W, _fontH + bar.Pad);
     }
 
     // Where it's at of how long it is and how fast it plays, the ways to
@@ -739,16 +845,16 @@ void NC_STACK_ypaworld::DrawReplayControls()
     FontUA::select_tileset(&cmds, 15);
     FontUA::set_txtColor(&cmds, txt.r, txt.g, txt.b);
 
-    ReplayText(this, &cmds, bar.TrackX0, bar.TextY, bar.ModeX[0] - bar.TrackX0, 1, left);
+    ReplayText(this, &cmds, bar.TrackX0, bar.TextY, bar.Buttons.front().X - bar.TrackX0, 1, left);
 
-    for (int i = 0; i < 3; i++)
+    for ( const ReplayBar::Button &b : bar.Buttons )
     {
-        if ( i == _replayCamera.CameraMode )
+        if ( lit(b) )
             FontUA::set_txtColor(&cmds, 16, 16, 24);
         else
             FontUA::set_txtColor(&cmds, txt.r, txt.g, txt.b);
 
-        ReplayText(this, &cmds, bar.ModeX[i], bar.TextY, bar.ModeW[i], 1 | 2, Locale::Text::Title(ReplayModeTitles[i]));
+        ReplayText(this, &cmds, b.X, bar.TextY, b.W, 1 | 2, b.Title);
     }
 
     FontUA::set_txtColor(&cmds, txt.r, txt.g, txt.b);
@@ -872,7 +978,7 @@ void NC_STACK_ypaworld::DrawReplayHud(const World::Frame &frame)
     {
         const World::Frame::UnitInfo *robo = frame.FindInfo(frame.UserRobo);
         DrawHudDestroyed(this, &buf, (unit && unit->Type == BACT_TYPES_ROBO) || (robo && robo->Status == BACT_STATUS_DEAD &&
-                                     _replayCamera.CameraMode == ReplayCamera::ORIGINAL));
+                                     _replayCamera.CameraMode == ReplayCamera::PLAYER));
     }
     else if ( unit->Type != BACT_TYPES_ROBO && unit->Vehicle < _vhclProtos.size() )
     {
