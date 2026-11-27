@@ -457,9 +457,11 @@ bool NC_STACK_ypaworld::SimulationStep(TUpdateArgs *arg)
     _frameTime = arg->DTime;
     _framesElapsed++;
 
+    // What they order is for the step only: none of it, nor the units it
+    // names, is left for the next
     for ( std::unique_ptr<World::Player> &player : _players )
     {
-        player->Order.user_action = World::DOACTION_0;
+        player->Order = TUserOrder();
         player->Aim = 0;
     }
 
