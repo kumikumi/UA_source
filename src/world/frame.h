@@ -170,6 +170,18 @@ struct Frame
     // With details: the prototypes, by their indices
     std::vector<Prototype> Vehicles, Buildings;
 
+    // With details: the last tech upgrade, as the HUD shows it
+    struct TechUpgrade
+    {
+        int32_t Id = -1;         // -1 for none
+        uint32_t Time = 0;       // Game time it came at
+        int32_t Vehicle = 0;
+        int32_t Weapon = 0;
+        int32_t Building = 0;
+    };
+
+    TechUpgrade Upgrade;
+
     // By index: shared with the frames before while no sector changes
     std::shared_ptr<const std::vector<Sector>> Sectors;
 
@@ -245,6 +257,7 @@ protected:
     Field _constructing, _constructBuilding, _constructTime, _constructEnd;
     Field _itemState, _itemRadius;
     Field _vehicleEnable, _vehicleEnergy, _buildingEnable, _buildingEnergy;
+    Field _upgrade, _upgradeTime, _upgradeVehicle, _upgradeWeapon, _upgradeBuilding;
     std::unordered_map<uint8_t, UnitFields> _units; // By kind
 };
 

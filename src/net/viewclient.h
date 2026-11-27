@@ -53,10 +53,10 @@ public:
     void JoinFaction(uint8_t owner);
 
     // The player they play as, once the game says so; 0 for none
-    uint32_t Player() const { return _reader.Player(); }
+    uint32_t Player() const override { return _reader.Player(); }
 
     // An order as that player
-    void SendOrder(const World::PlayerOrder &order);
+    void SendOrder(const World::PlayerOrder &order) override;
 
     // What came so far, as it came and unpacked, and the steps
     uint64_t BytesReceived() const { return _received; }

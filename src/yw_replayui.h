@@ -178,4 +178,32 @@ protected:
     std::vector<int32_t> _firstKid, _nextKid;           // And by parent
 };
 
+// A frame of a game played elsewhere as the game's own interface shows it
+// to one of its players, here: their faction, host station and unit, the
+// squads the interface lists and has selected, and what a click would do
+// marked as the game marks it
+class PlayMapScene : public ReplayMapScene
+{
+public:
+    // As of a frame, which outlives it, for a player of it, seen from the
+    // camera there
+    void SetPlayer(NC_STACK_ypaworld *yw, const World::Frame *frame, uint32_t player, const vec3d &camera,
+                   const mat3x3 &rotation);
+
+    // What the player's faction sees: the sectors it owns and those its
+    // units' radars reach, as the world marks them
+    int32_t ViewMask(const Common::Point &sector) const override;
+
+    Unit Fresh(const Unit &unit) const override;
+    bool Hovered(Unit &out) const override { return false; }
+    void ForEachCommander(const UnitFunc &func) const override;
+    bool SelectedCommander(Unit &out) const override;
+    bool Interactive() const override { return true; }
+
+protected:
+    void MarkSeen(const Common::Point &sector, int radar);
+
+    std::vector<uint8_t> _seen; // By sector, by the player's faction
+};
+
 #endif

@@ -2514,6 +2514,8 @@ public:
     }
     
     void PrepareUserInput(TInputState *inpt);
+    void TrackFireButton(TInputState *inpt);
+    void TakeDialogKeys(TInputState *inpt);
     void ExecuteMouseAction(int arg);
     
     
@@ -2961,7 +2963,21 @@ public:
     void DrawReplayWindows();
     void DrawReplayHud(const World::Frame &frame);
     void CloseReplayWindows();
+    void OpenReplayWindows();
     World::Frame _replayFrame; // The last drawn, for the input of the next
+
+    // Playing a game watched live (FrameSource::Player): the game's own
+    // interface, on the frames shown, its orders sent to the game
+    bool _replayPlaying = false;
+    PlayMapScene _playScene;
+    uint32_t _playUnit = 0;        // The player's unit in the frame before
+    bool _playSelectNewSquad = false; // A squad was ordered: select it once it comes
+    std::vector<uint32_t> _playSquadsBefore;
+
+    void StartPlaying();
+    void StopPlaying();
+    void PlayInterfaceStep(TInputState *inpt);
+    void PlayFromFrame(const World::Frame &frame);
 
     // Whether the level has stepped since it was set up: the interface shows
     // it as a step leaves it

@@ -902,6 +902,116 @@ void ReplayMapScene::ForEachPowerStation(const std::function<void(const Common::
     }
 }
 
+void PlayMapScene::SetPlayer(NC_STACK_ypaworld *yw, const World::Frame *frame, uint32_t player, const vec3d &camera,
+                             const mat3x3 &rotation)
+{
+    const World::Frame::Player *p = frame->FindPlayer(player);
+
+    Set(yw, frame, p ? p->Unit : 0, camera, rotation, 0);
+
+    if ( p )
+    {
+        _player = p->Owner;
+        _userRobo = p->HostStation;
+    }
+
+    // What the faction sees: its sectors, and around its units
+    _seen.assign(yw->_cells.size(), 0);
+
+    if ( frame->Sectors )
+    {
+        for (size_t i = 0; i < frame->Sectors->size() && i < _seen.size(); i++)
+            _seen[i] = (*frame->Sectors)[i].Owner == _player;
+    }
+
+    for (size_t i = 0; i < frame->Units.size(); i++)
+    {
+        const World::Frame::Unit &unit = frame->Units[i];
+        const World::Frame::UnitInfo *info = frame->InfoAt(i);
+
+        if ( !info || info->Owner != _player || unit.Type == BACT_TYPES_MISSLE || info->Status == BACT_STATUS_DEAD ||
+             info->Status == BACT_STATUS_CREATE || unit.Vehicle >= yw->_vhclProtos.size() )
+            continue;
+
+        MarkSeen(World::PositionToSectorID(unit.Position.x, unit.Position.z), yw->_vhclProtos[unit.Vehicle].radar);
+    }
+}
+
+// The sectors a unit in a sector sees with its radar, as
+// NC_STACK_ypabact::MarkSectorsForView marks them
+void PlayMapScene::MarkSeen(const Common::Point &at, int radar)
+{
+    auto mark = [this](const Common::Point &sector)
+    {
+        _seen[sector.y * _yw->_mapSize.x + sector.x] = 1;
+    };
+
+    for (int i = -radar; i <= radar; i++)
+    {
+        int yy = at.y + i;
+
+        if ( radar == 1 )
+        {
+            if ( yy > 0 && yy < _yw->_mapSize.y - 1 )
+            {
+                if ( at.x > 1 )
+                    mark({at.x - 1, yy});
+
+                if ( _yw->IsSector({at.x, yy}) )
+                    mark({at.x, yy});
+
+                if ( at.x + 1 < _yw->_mapSize.x - 1 )
+                    mark({at.x + 1, yy});
+            }
+        }
+        else
+        {
+            float squared = POW2((float)radar) - POW2((float)i);
+            int width = dround( sqrt(std::max(squared, 0.0f)) );
+
+            for (int j = -width; j <= width; j++)
+            {
+                Common::Point sector(at.x + j, yy);
+
+                if ( _yw->IsGamePlaySector(sector) )
+                    mark(sector);
+            }
+        }
+    }
+}
+
+int32_t PlayMapScene::ViewMask(const Common::Point &sector) const
+{
+    size_t index = sector.y * _yw->_mapSize.x + sector.x;
+
+    if ( index >= _seen.size() )
+        return 0;
+
+    return _seen[index] ? cellArea::ViewMask(_player) : 0;
+}
+
+// Kept from an earlier frame: as it is in this one, if it's still there
+MapScene::Unit PlayMapScene::Fresh(const Unit &unit) const
+{
+    Unit now;
+    return Find(unit.Id, now) ? now : unit;
+}
+
+void PlayMapScene::ForEachCommander(const UnitFunc &func) const
+{
+    for ( const Unit &commander : _yw->_cmdrsRemap )
+        func(Fresh(commander));
+}
+
+bool PlayMapScene::SelectedCommander(Unit &out) const
+{
+    if ( _yw->_activeCmdrRemapIndex < 0 || (size_t)_yw->_activeCmdrRemapIndex >= _yw->_cmdrsRemap.size() )
+        return false;
+
+    out = Fresh(_yw->_cmdrsRemap[_yw->_activeCmdrRemapIndex]);
+    return true;
+}
+
 int ReplayMapScene::SuperItemState(size_t index) const
 {
     if ( _frame && index < _frame->SuperItems.size() )

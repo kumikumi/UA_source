@@ -10,6 +10,8 @@
 #include "world/playback.h"
 #include "ypagun.h"
 
+extern yw_infolog info_log; // In yw_game_ui.cpp
+
 // The replay viewer: a recording played back in its level as it was drawn,
 // with a timeline at the bottom to go to any moment of it. It's looked at
 // from where the player looked, from any unit, or from a camera flown
@@ -153,8 +155,19 @@ bool NC_STACK_ypaworld::StartViewer(std::unique_ptr<World::FrameSource> source, 
     _cameraOverridden = false;
     _particles.Clear();
 
-    // Windows stay clear of the timeline
+    _replayPlaying = false;
     _replayBorders = Common::Point(_upScreenBorder, _downScreenBorder);
+
+    OpenReplayWindows();
+
+    GFX::Engine.SetCursor(1, 0);
+    return true;
+}
+
+// The viewer's own windows and HUD
+void NC_STACK_ypaworld::OpenReplayWindows()
+{
+    // Windows stay clear of the timeline
     _upScreenBorder = 0;
     _downScreenBorder = _screenSize.y - LayOutReplayBar(this).Top;
 
@@ -183,15 +196,16 @@ bool NC_STACK_ypaworld::StartViewer(std::unique_ptr<World::FrameSource> source, 
     // How far the world is drawn, with F10 as in a level
     _viewDistanceWindow.Create(this);
     GuiWinAttach(&_viewDistanceWindow);
-
-    GFX::Engine.SetCursor(1, 0);
-    return true;
 }
 
 // Lays the viewer out for a new screen size, its windows where they were
 // as far as they fit, as RelayoutGameGui does the game's
 void NC_STACK_ypaworld::RelayoutReplay()
 {
+    // Playing, the game's interface is laid out as the game's
+    if ( _replayPlaying )
+        return;
+
     _downScreenBorder = _screenSize.y - LayOutReplayBar(this).Top;
 
     SetHudLayout(this);
@@ -232,6 +246,9 @@ void NC_STACK_ypaworld::CloseReplayWindows()
 void NC_STACK_ypaworld::EndReplay()
 {
     SDL_SetWindowRelativeMouseMode(System::GetWindow(), false);
+
+    if ( _replayPlaying )
+        StopPlaying();
 
     CloseReplayWindows();
     FreeHud(this);
@@ -1121,7 +1138,17 @@ void NC_STACK_ypaworld::ReplayFrame(TUpdateArgs *arg)
     SFXEngine::SFXe.BeginSoundFrame(1, vec3d(0.0, 50000.0, 0.0), vec3d(0.0), mat3x3::Ident());
     SFXEngine::SFXe.EndSoundFrame();
 
-    HandleReplayInput(arg->Input);
+    // Playing it, the game's interface takes the controls
+    if ( (_replay->Player() != 0) != _replayPlaying )
+    {
+        if ( _replayPlaying )
+            StopPlaying();
+        else if ( _replayFrame.FindPlayer(_replay->Player()) )
+            StartPlaying();
+    }
+
+    if ( !_replayPlaying )
+        HandleReplayInput(arg->Input);
 
     bool playing = !_replayPaused && !_replayDragging;
 
@@ -1195,11 +1222,22 @@ void NC_STACK_ypaworld::ReplayFrame(TUpdateArgs *arg)
         int32_t gameTime = _timeStamp;
         _timeStamp = _replayClock;
 
-        // The HUD over the windows: they'd hide its bars
-        UpdateReplayWindows(_replayFrame);
-        DrawReplayWindows();
-        DrawReplayHud(_replayFrame);
-        draw_tooltip(this);
+        if ( _replayPlaying )
+        {
+            // The game's interface, the HUD under its windows as in the game
+            PlayFromFrame(_replayFrame);
+            PlayInterfaceStep(arg->Input);
+            DrawReplayHud(_replayFrame);
+            DrawGameWindows(this);
+        }
+        else
+        {
+            // The HUD over the windows: they'd hide its bars
+            UpdateReplayWindows(_replayFrame);
+            DrawReplayWindows();
+            DrawReplayHud(_replayFrame);
+            draw_tooltip(this);
+        }
 
         _timeStamp = gameTime;
     }
@@ -1209,10 +1247,164 @@ void NC_STACK_ypaworld::ReplayFrame(TUpdateArgs *arg)
         _replayLeave = true;
     }
 
-    DrawReplayControls();
+    if ( !_replayPlaying )
+        DrawReplayControls();
+
     DrawPerfOverlay(arg->Input);
 
     GFX::Engine.EndFrame();
 
     HandleSnapshotKeys(this, arg->Input);
+}
+
+
+// Playing a game watched live: the game's own interface instead of the
+// viewer's, following the player played as, its orders sent to the game
+void NC_STACK_ypaworld::StartPlaying()
+{
+    CloseReplayWindows();
+    FreeHud(this);
+
+    // The game's layout, between the energy panel and the bottom bar
+    _upScreenBorder = _replayBorders.x;
+    _downScreenBorder = _replayBorders.y;
+
+    _cmdrsRemap.clear();
+    _activeCmdrID = 0;
+    _activeCmdrRemapIndex = -1;
+    _cmdrIdToSelect = -1;
+    _bactOnMouse = MapScene::Unit();
+    _cellOnMouse = Common::Point(-1, -1);
+    _playUnit = 0;
+    _playSelectNewSquad = false;
+    _playerInHSGun = false;
+    _levelInfo.State = TLevelInfo::STATE_PLAYING;
+
+    _playScene.SetPlayer(this, &_replayFrame, _replay->Player(), _replayCamera.Position, _replayCamera.Rotation);
+    _uiScene = &_playScene;
+    _orderSink = [this](const World::PlayerOrder &order) { _replay->SendOrder(order); };
+
+    // Its message log begins at the game's time, shown by the interface's
+    // own clock
+    int32_t gameTime = _timeStamp;
+    _timeStamp = _replayFrame.Time;
+    GUI_Open(this, &_playScene);
+    _timeStamp = gameTime;
+
+    info_log.msgs[0].timestamp = _replayClock + 1;
+    info_log.last_msg_time = _replayClock;
+
+    _replayPlaying = true;
+    FollowReplayPlayer(_replay->Player());
+    GFX::Engine.SetCursor(1, 0);
+}
+
+void NC_STACK_ypaworld::StopPlaying()
+{
+    GUI_Close();
+
+    _uiScene = NULL;
+    _orderSink = nullptr;
+    _cmdrsRemap.clear();
+    _activeCmdrRemapIndex = -1;
+    _replayPlaying = false;
+
+    OpenReplayWindows();
+    GFX::Engine.SetCursor(1, 0);
+}
+
+// What of the game the interface goes by, as a frame has it: the
+// prototypes it offers, the sectors the mouse picks on, and the unit the
+// player is in
+void NC_STACK_ypaworld::PlayFromFrame(const World::Frame &frame)
+{
+    for ( size_t i = 0; i < frame.Vehicles.size() && i < _vhclProtos.size(); i++ )
+    {
+        _vhclProtos[i].disable_enable_bitmask = frame.Vehicles[i].Enable;
+        _vhclProtos[i].energy = frame.Vehicles[i].Energy;
+    }
+
+    for ( size_t i = 0; i < frame.Buildings.size() && i < _buildProtos.size(); i++ )
+    {
+        _buildProtos[i].EnableMask = frame.Buildings[i].Enable;
+        _buildProtos[i].Energy = frame.Buildings[i].Energy;
+    }
+
+    if ( frame.Sectors )
+    {
+        for ( size_t i = 0; i < frame.Sectors->size() && i < _cells.size(); i++ )
+        {
+            int32_t type = (*frame.Sectors)[i].Type;
+
+            if ( type >= 0 && type < (int32_t)_secTypeArray.size() )
+                _cells[i].type_id = type;
+        }
+    }
+
+    // The last tech upgrade, timed by the interface's own clock
+    _upgradeId = frame.Upgrade.Id;
+    _upgradeTimeStamp = _replayClock - (frame.Time - (int32_t)frame.Upgrade.Time);
+    _upgradeVehicleId = frame.Upgrade.Vehicle;
+    _upgradeWeaponId = frame.Upgrade.Weapon;
+    _upgradeBuildId = frame.Upgrade.Building;
+
+    _playScene.SetPlayer(this, &frame, _replay->Player(), _replayCamera.Position, _replayCamera.Rotation);
+
+    // Got in another unit: what the game does for the player then
+    MapScene::Unit unit;
+
+    if ( _playScene.UserUnit(unit) && unit.Id && unit.Id != _playUnit )
+    {
+        if ( _playUnit )
+            _prevUnitId = _playUnit;
+
+        _playUnit = unit.Id;
+        _vehicleTakenControlTimestamp = _timeStamp;
+        _vehicleTakenCommandId = unit.CommandId;
+        _guiDragDefaultMouse = false;
+    }
+}
+
+// A step of the game's interface, as SimulationStep runs it, on the frame
+// shown: what it lists, then the windows' and the mouse's input
+void NC_STACK_ypaworld::PlayInterfaceStep(TInputState *inpt)
+{
+    // The windows tell anew what they're about
+    ClearTooltip();
+
+    // What the game takes of the input before its interface does
+    TakeDialogKeys(inpt);
+    TrackFireButton(inpt);
+    UpdatePlayerInRoboGun(this);
+
+    // A squad just ordered is selected once it's there, as the game selects
+    // the one its host station makes
+    if ( _playSelectNewSquad )
+    {
+        uint8_t owner = _playScene.PlayerOwner();
+
+        _playScene.ForEachSquad(owner, [this](const MapScene::Unit &commander)
+        {
+            if ( _playSelectNewSquad && commander.Type != BACT_TYPES_GUN &&
+                 std::find(_playSquadsBefore.begin(), _playSquadsBefore.end(), commander.Id) == _playSquadsBefore.end() )
+            {
+                _cmdrIdToSelect = commander.CommandId;
+                _playSelectNewSquad = false;
+            }
+        });
+    }
+
+    UpdateGunList(this);
+    UpdateVehicleList(this);
+    UpdateBuildingList(this);
+    UpdateCommanderList();
+
+    RoboMapFollowViewer(this);
+    HandleGuiInput(inpt);
+    RoboMapUpdateLayout(this);
+    HandleWorldMouse(inpt);
+
+    // Left from the game's menu
+    if ( _levelInfo.State == TLevelInfo::STATE_ABORTED )
+        _replayLeave = true;
 }

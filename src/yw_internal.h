@@ -97,7 +97,9 @@ void FreeSetData(NC_STACK_ypaworld *yw);
 
 
 
-int GUI_Open(NC_STACK_ypaworld *yw);
+// The game's interface: the HUD, the energy panel, the map (of the scene,
+// the world's without one), the squadron manager, the bottom bar...
+int GUI_Open(NC_STACK_ypaworld *yw, const MapScene *scene = NULL);
 void splashScreen_OutText(NC_STACK_ypaworld *yw, const std::string &txt, int x, int y);
 
 
@@ -111,6 +113,7 @@ void RestoreWinStatus(NC_STACK_ypaworld *yw, NC_STACK_ypabact *bact1, NC_STACK_y
 
 void create_squad_man(NC_STACK_ypaworld *yw);
 void DrawGameInterface(NC_STACK_ypaworld *yw);
+void DrawGameWindows(NC_STACK_ypaworld *yw);
 
 void draw_tooltip(NC_STACK_ypaworld *yw);
 

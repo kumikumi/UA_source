@@ -351,24 +351,31 @@ static const double FramesBackWaitMs = 12.0;
 // One step of the game: input, interface commands, network and units,
 // arg->DTime timer ticks long. Returns false when the frame should not be
 // drawn: while paused, or after a network game was aborted.
-bool NC_STACK_ypaworld::SimulationStep(TUpdateArgs *arg)
+// Enter and Esc go to the buy list or the dialog open, and to nothing else
+void NC_STACK_ypaworld::TakeDialogKeys(TInputState *inpt)
 {
     extern GuiList gui_lstvw; //In yw_game_ui.cpp
     extern GuiList lstvw2; //In yw_game_ui.cpp
-    extern bool SPEED_DOWN_NET; //In yw_net.cpp
 
     if ( (gui_lstvw.IsClosed() && lstvw2.IsClosed())
-            || (arg->Input->KbdLastHit != Input::KC_RETURN && arg->Input->KbdLastHit != Input::KC_ESCAPE) )
+            || (inpt->KbdLastHit != Input::KC_RETURN && inpt->KbdLastHit != Input::KC_ESCAPE) )
     {
         _kbdLastKeyHit = Input::KC_NONE;
     }
     else
     {
-        _kbdLastKeyHit = arg->Input->KbdLastHit;
-        arg->Input->KbdLastHit = Input::KC_NONE;
-        arg->Input->KbdLastDown = Input::KC_NONE;
-        arg->Input->HotKeyID = -1;
+        _kbdLastKeyHit = inpt->KbdLastHit;
+        inpt->KbdLastHit = Input::KC_NONE;
+        inpt->KbdLastDown = Input::KC_NONE;
+        inpt->HotKeyID = -1;
     }
+}
+
+bool NC_STACK_ypaworld::SimulationStep(TUpdateArgs *arg)
+{
+    extern bool SPEED_DOWN_NET; //In yw_net.cpp
+
+    TakeDialogKeys(arg->Input);
 
     if ( HandlePause(this, arg) )
         return false;

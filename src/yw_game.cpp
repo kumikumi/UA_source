@@ -3169,17 +3169,20 @@ int HandlePause(NC_STACK_ypaworld *yw, TUpdateArgs *arg)
 
 void UpdatePlayerInRoboGun(NC_STACK_ypaworld *yw)
 {
+    const MapScene &scene = yw->UiScene();
+    MapScene::Unit robo;
+
     yw->_playerInHSGun = false;
 
-    if ( yw->UserRobo() && yw->UserRobo() != yw->UserUnit() )
+    if ( scene.UserRobo(robo) && robo.Id != scene.UserUnitId() )
     {
-        NC_STACK_yparobo *robo = dynamic_cast<NC_STACK_yparobo *>(yw->UserRobo());
+        uint32_t user = scene.UserUnitId();
 
-        for (World::TRoboGun &gun : robo->GetGuns())
+        scene.ForEachRoboGun(robo, [yw, user](const MapScene::Unit &gun)
         {
-            if ( yw->UserUnit() == gun.gun_obj )
+            if ( gun.Id == user )
                 yw->_playerInHSGun = true;
-        }
+        });
     }
 }
 

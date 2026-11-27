@@ -1452,6 +1452,21 @@ void NC_STACK_ypaworld::IssueOrder(const World::PlayerOrder &order)
 {
     if ( _orderSink )
     {
+        // The squad a host station makes comes with a later frame: the
+        // interface selects it then
+        if ( order.Type == World::PlayerOrder::COMMAND && order.Action == World::DOACTION_ADD_UNIT1 )
+        {
+            const MapScene &scene = UiScene();
+
+            _playSelectNewSquad = true;
+            _playSquadsBefore.clear();
+
+            scene.ForEachSquad(scene.PlayerOwner(), [this](const MapScene::Unit &commander)
+            {
+                _playSquadsBefore.push_back(commander.Id);
+            });
+        }
+
         _orderSink(order);
         return;
     }
@@ -3283,7 +3298,7 @@ void NC_STACK_ypaworld::FFeedback_StopAll()
     Input::Engine.ForceFeedback(Input::FF_STATE_STOP, Input::FF_TYPE_ALL);
 }
 
-int GUI_Open(NC_STACK_ypaworld *yw)
+int GUI_Open(NC_STACK_ypaworld *yw, const MapScene *scene)
 {
     if ( yw->_guiLoaded )
         return yw->_guiLoaded;
@@ -3297,7 +3312,7 @@ int GUI_Open(NC_STACK_ypaworld *yw)
 
     LoadHud(yw);
     CreateEnergyPanel(yw);
-    CreateRoboMap(yw);
+    CreateRoboMap(yw, scene);
     create_squad_man(yw);
     create_info_log(yw);
     create_exit_menu(yw);
@@ -3379,11 +3394,19 @@ void NC_STACK_ypaworld::DrawGuiWindows()
 
 void DrawGameInterface(NC_STACK_ypaworld *yw)
 {
+    if ( UserUnitOf(yw).Type != BACT_TYPES_MISSLE )
+        DrawHud(yw);
+
+    DrawGameWindows(yw);
+}
+
+// The interface but the HUD: the windows, the messages and the bars
+void DrawGameWindows(NC_STACK_ypaworld *yw)
+{
     MapScene::Unit user = UserUnitOf(yw);
 
     if ( user.Type != BACT_TYPES_MISSLE )
     {
-        DrawHud(yw);
         yw->DrawGuiWindows();
 
         if ( user.Status != BACT_STATUS_DEAD )
@@ -11737,6 +11760,25 @@ void NC_STACK_ypaworld::HandleWorldMouse(TInputState *arg)
 
 
 
+// Whether the fire button went down in this step, as a dead unit's
+// player's goes on to the next squad
+void NC_STACK_ypaworld::TrackFireButton(TInputState *inpt)
+{
+    _fireBtnDownHappen = false;
+
+    if ( inpt->Buttons.Is(0) )
+    {
+        if ( !_fireBtnIsDown )
+            _fireBtnDownHappen = true;
+
+        _fireBtnIsDown = true;
+    }
+    else
+    {
+        _fireBtnIsDown = false;
+    }
+}
+
 void NC_STACK_ypaworld::PrepareUserInput(TInputState *inpt)
 {
     //Precompute input
@@ -11758,19 +11800,7 @@ void NC_STACK_ypaworld::PrepareUserInput(TInputState *inpt)
             joyDisabled = 1;
     }
 
-    _fireBtnDownHappen = false;
-
-    if ( inpt->Buttons.Is(0) )
-    {
-        if ( !_fireBtnIsDown )
-            _fireBtnDownHappen = true;
-
-        _fireBtnIsDown = true;
-    }
-    else
-    {
-        _fireBtnIsDown = false;
-    }
+    TrackFireButton(inpt);
 
     if ( UserUnit()->_status == BACT_STATUS_DEAD )
     {

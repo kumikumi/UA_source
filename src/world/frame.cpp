@@ -132,6 +132,7 @@ void Frame::Between(const Frame &a, const Frame &b, float t, Frame &out)
     out.HostStations = nearer.HostStations;
     out.Vehicles = nearer.Vehicles;
     out.Buildings = nearer.Buildings;
+    out.Upgrade = nearer.Upgrade;
 
     out.CameraPosition = nearer.CameraPosition;
     out.CameraRotation = nearer.CameraRotation;
@@ -287,6 +288,12 @@ FrameMaker::FrameMaker(const State::Schema &viewSchema, bool details)
     _itemState = Find(_schema, State::KIND_SUPERITEM, "state");
     _itemRadius = Find(_schema, State::KIND_SUPERITEM, "radius");
 
+    _upgrade = Find(_schema, State::KIND_WORLD, "upgrade");
+    _upgradeTime = Find(_schema, State::KIND_WORLD, "upgradeTime");
+    _upgradeVehicle = Find(_schema, State::KIND_WORLD, "upgradeVehicle");
+    _upgradeWeapon = Find(_schema, State::KIND_WORLD, "upgradeWeapon");
+    _upgradeBuilding = Find(_schema, State::KIND_WORLD, "upgradeBuilding");
+
     _vehicleEnable = Find(_schema, State::KIND_VEHICLE, "enable");
     _vehicleEnergy = Find(_schema, State::KIND_VEHICLE, "energy");
     _buildingEnable = Find(_schema, State::KIND_BUILDING, "enable");
@@ -388,6 +395,15 @@ void FrameMaker::Add(Frame &frame, std::vector<Frame::Sector> &sectors, uint8_t 
     {
         get(_time, &frame.Time, sizeof(frame.Time));
         get(_localPlayer, &frame.LocalPlayer, sizeof(frame.LocalPlayer));
+
+        if ( _details )
+        {
+            get(_upgrade, &frame.Upgrade.Id, sizeof(frame.Upgrade.Id));
+            get(_upgradeTime, &frame.Upgrade.Time, sizeof(frame.Upgrade.Time));
+            get(_upgradeVehicle, &frame.Upgrade.Vehicle, sizeof(frame.Upgrade.Vehicle));
+            get(_upgradeWeapon, &frame.Upgrade.Weapon, sizeof(frame.Upgrade.Weapon));
+            get(_upgradeBuilding, &frame.Upgrade.Building, sizeof(frame.Upgrade.Building));
+        }
     }
     else if ( kind == State::KIND_PLAYER )
     {
