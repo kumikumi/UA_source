@@ -189,6 +189,21 @@ public:
     uint32_t Step() const { return _step; } // The last step recorded, as the world counts them
     const std::string &Path() const { return _path; }
 
+    // For those who watch the game as it's played (ViewStream): the last
+    // step as recorded, what changed of the view and the messages shown, and
+    // whether the guesses started over before it, at a keyframe
+    const std::string &LastStepData() const { return _lastStepData; }
+    bool GuessesStartedOver() const { return _lastStepStartedOver; }
+
+    // The view as the steps wrote it, each object's last bytes and those
+    // before, for a watcher to read the steps that come from (ViewStream)
+    void WriteViewImage(std::string &out) const;
+
+    // Goes up whenever the view is taken anew, as when the recording goes
+    // back: what watchers have can't be read on from
+    uint32_t ViewEpoch() const { return _viewEpoch; }
+    const State::Schema &ViewSchema() const { return _viewSchema; }
+
 protected:
     // Each object of the view as it was last written, to write only what
     // changed
@@ -264,7 +279,17 @@ protected:
 
     std::string _messages; // Shown in the step under way
     uint16_t _messageCount = 0;
+
+    std::string _lastStepData;
+    bool _lastStepStartedOver = false;
+    bool _guessesStartOver = false; // Before the next step
+    uint32_t _viewEpoch = 0;
 };
+
+// Applies a step's changes, as recordings have them, to a view. Returns
+// where they end, or NULL when they don't read.
+const char *ApplyViewChanges(ObjectsVersions &view, const KindLayouts &layouts, const char *p, const char *end,
+                             ChangedObjects *changed);
 
 // A recording read back. Only where its chunks are is read at first; the
 // rest when it's asked for.

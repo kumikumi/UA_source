@@ -267,8 +267,8 @@ static void PutChangedFields(std::string &out, const KindLayout &layout, const O
 
 // Applies what changed, as the format says, to objects by key. Returns where
 // it ended, or NULL when it doesn't read.
-static const char *ApplyChanges(std::map<uint64_t, ObjectVersions> &objects, const KindLayouts &layouts,
-                                const char *p, const char *end, ChangedObjects *changed = NULL)
+const char *ApplyViewChanges(ObjectsVersions &objects, const KindLayouts &layouts, const char *p, const char *end,
+                             ChangedObjects *changed)
 {
     std::string scratch;
     char guess[MaxField];
@@ -659,6 +659,7 @@ bool Recorder::Open(NC_STACK_ypaworld *world, const std::string &path, const std
 void Recorder::Remember(NC_STACK_ypaworld *world)
 {
     _lastView.clear();
+    _viewEpoch++;
 
     State::ForEachObject(world, State::PART_VIEW, [this](uint8_t kind, uint32_t id, const std::string &data)
     {
@@ -669,6 +670,7 @@ void Recorder::Remember(NC_STACK_ypaworld *world)
 void Recorder::RememberImage(const State::Image &view)
 {
     _lastView.clear();
+    _viewEpoch++;
 
     for ( const State::Object &obj : view.Objects )
         _lastView[ObjectKey(obj.Kind, obj.Id)] = LastObject{{obj.Data, obj.Data}, _step};
@@ -867,11 +869,16 @@ void Recorder::Step(NC_STACK_ypaworld *world)
     Cut();
     _step++;
 
+    _lastStepStartedOver = _guessesStartOver;
+    _guessesStartOver = false;
+
     std::string step = Changes(world);
     Put16(step, _messageCount);
     step += _messages;
     _messages.clear();
     _messageCount = 0;
+
+    _lastStepData = step;
 
     uint32_t size = step.size();
     _steps.Add(&size, 4);
@@ -968,6 +975,29 @@ void Recorder::MakeKeyframe(NC_STACK_ypaworld *world)
     _keyStep = _step;
     _keyPending = true;
     _blockStart = _step + 1;
+    _guessesStartOver = true;
+}
+
+void Recorder::WriteViewImage(std::string &out) const
+{
+    std::vector<uint64_t> keys;
+    keys.reserve(_lastView.size());
+
+    for ( const auto &it : _lastView )
+        keys.push_back(it.first);
+
+    std::sort(keys.begin(), keys.end());
+
+    Put32(out, keys.size());
+
+    for ( uint64_t key : keys )
+    {
+        const ObjectVersions &obj = _lastView.at(key).Versions;
+        Put8(out, key >> 32);
+        Put32(out, key & 0xFFFFFFFF);
+        out += obj.Data;
+        out += obj.Before;
+    }
 }
 
 // Packs on up to that many bytes of the keyframe made last; once it's
@@ -1432,7 +1462,7 @@ bool ViewReader::Next()
     const char *end = p + stepSize;
 
     _changed.clear();
-    if ( !ApplyChanges(_view, _recording._viewLayouts, p, end, &_changed) )
+    if ( !ApplyViewChanges(_view, _recording._viewLayouts, p, end, &_changed) )
         return false;
 
     _at += 4 + stepSize;

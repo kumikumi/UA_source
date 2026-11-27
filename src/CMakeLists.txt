@@ -70,6 +70,7 @@ set(SOURCES
 	world/playback.cpp
 	world/protos.cpp
 	world/recorder.cpp
+	world/viewstream.cpp
 	world/state.cpp
 	world/tools.cpp
 	world/tutorialhints.cpp
