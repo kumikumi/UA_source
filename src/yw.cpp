@@ -6840,9 +6840,12 @@ void NC_STACK_ypaworld::HandleRoboDestroyed(TRoboDestroyed *arg)
             _beamEnergyCapacity += _beamEnergyAdd;
     }
 
+    // Only the faction's last host station gives its sectors away; the
+    // wrecks of others don't count
     for ( NC_STACK_ypabact* &unit : _unitsList )
     {
-        if ( unit->_bact_type == BACT_TYPES_ROBO && unit != arg->bact && arg->bact->_owner == unit->_owner )
+        if ( unit->_bact_type == BACT_TYPES_ROBO && unit != arg->bact && arg->bact->_owner == unit->_owner &&
+             unit->_status != BACT_STATUS_DEAD && !(unit->_status_flg & BACT_STFLAG_DEATH1) )
             return;
     }
 
@@ -6855,6 +6858,13 @@ void NC_STACK_ypaworld::HandleRoboDestroyed(TRoboDestroyed *arg)
             if ( cell.owner == arg->bact->_owner )
                 CellSetOwner(&cell, arg->killerOwner);
         }
+    }
+
+    // And what it was building there: it would make the sector its again
+    for ( auto &construct : _inBuildProcess )
+    {
+        if ( construct.second.Owner == arg->bact->_owner )
+            construct.second.Owner = arg->killerOwner;
     }
 
     if ( !UserRobo() )
