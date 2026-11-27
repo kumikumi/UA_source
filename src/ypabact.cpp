@@ -3286,9 +3286,15 @@ size_t NC_STACK_ypabact::LaunchMissile(TMissileLaunch *arg)
     {
         if ( _oflags & BACT_OFLAG_USERINPT )
         {
+            // None for the unit a client drives ahead of the game: the
+            // game hands its player over
             World::Player *firer = _world->ControllerOf(this);
-            setBACT_viewer(false, firer);
-            wobj->setBACT_viewer(true, firer);
+
+            if ( firer )
+            {
+                setBACT_viewer(false, firer);
+                wobj->setBACT_viewer(true, firer);
+            }
         }
 
         TEnergyChange energyChange;
