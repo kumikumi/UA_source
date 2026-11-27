@@ -168,7 +168,15 @@ bool ViewClient::Update()
             return false;
         }
 
-        if ( event.type == Event::DATA && !Take(event.Data) )
+        if ( event.type != Event::DATA )
+            continue;
+
+        // Only what the game sends: what another watcher sends isn't part
+        // of its stream
+        if ( _session.Players().empty() || event.From != _session.Players().front().Id )
+            continue;
+
+        if ( !Take(event.Data) )
         {
             _ended = true;
             return false;

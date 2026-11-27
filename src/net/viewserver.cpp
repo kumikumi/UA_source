@@ -35,6 +35,9 @@ bool ViewServer::Open(uint16_t port, const std::string &name)
         return false;
     }
 
+    // Watchers only talk to the game
+    _session.SetRelaying(false);
+
     ypa_log_out("Watching: open on port %d\n", (int)port);
     return true;
 }

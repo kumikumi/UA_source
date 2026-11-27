@@ -193,6 +193,7 @@ void Session::Reset()
     _hosting = false;
     _open = false;
     _joinable = true;
+    _relaying = true;
     _maxPlayers = 0;
     _nextId = 1;
     _myId = 0;
@@ -593,7 +594,7 @@ void Session::HostEvent(ENetEvent &event)
                 _events.push_back(e);
             }
 
-            if ( to != _myId )
+            if ( to != _myId && _relaying )
             {
                 Writer msg(MSG_DATA);
                 msg.U32(r->Id);

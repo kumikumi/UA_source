@@ -92,6 +92,10 @@ public:
     // Whether the host lets new players in
     void SetJoinable(bool joinable) { _joinable = joinable; }
 
+    // Whether the host passes on what players send to each other or to
+    // everyone; if not, only the host gets what they send
+    void SetRelaying(bool relaying) { _relaying = relaying; }
+
     void Send(uint32_t to, const void *data, size_t size, Delivery delivery);
     void Broadcast(const void *data, size_t size, Delivery delivery);
 
@@ -141,6 +145,7 @@ protected:
     bool _hosting = false;
     bool _open = false;
     bool _joinable = true;
+    bool _relaying = true;
     bool _checkVersion = true;
     uint32_t _maxPlayers = 0;
     uint32_t _nextId = 1;
