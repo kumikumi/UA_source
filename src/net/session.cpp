@@ -1,4 +1,5 @@
 #include <stdlib.h>
+#include <algorithm>
 #include <string.h>
 #include <SDL3/SDL_timer.h>
 #include "enet/enet.h"
@@ -715,6 +716,23 @@ void Session::ClientEvent(ENetEvent &event)
     {
         _server = nullptr;
         _open = false;
+
+        // Everyone else was reached through the host
+        for ( const Player &p : _players )
+        {
+            if ( p.Id == _myId )
+                continue;
+
+            Event e;
+            e.type = Event::PLAYER_LEFT;
+            e.From = p.Id;
+            e.Name = p.Name;
+            _events.push_back(e);
+        }
+
+        _players.erase(std::remove_if(_players.begin(), _players.end(),
+                                      [this](const Player &p) { return p.Id != _myId; }),
+                       _players.end());
 
         Event e;
         e.type = Event::CLOSED;

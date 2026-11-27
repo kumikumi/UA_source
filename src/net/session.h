@@ -40,7 +40,8 @@ struct Event
         PLAYER_JOINED,
         PLAYER_LEFT,
         DATA,
-        CLOSED, // The host ended the session, or can't be reached
+        CLOSED, // The host ended the session, or can't be reached; everyone
+                // else has left before
     };
 
     Type type = DATA;
