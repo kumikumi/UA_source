@@ -823,7 +823,7 @@ void NC_STACK_ypaufo::User_layer(update_msg *arg)
                         ffEffect.pos_x = normalSum.x * 10.0 + _position.x;
                         ffEffect.pos_z = normalSum.z * 10.0 + _position.z;
 
-                        _world->FFeedback_Play(&ffEffect);
+                        _world->FFeedback_Play(this, &ffEffect);
                     }
                 }
             }

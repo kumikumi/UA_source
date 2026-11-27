@@ -2177,7 +2177,9 @@ public:
     static float ReloadRatio(int sectors, int stationPower);
     virtual void HandleRoboDestroyed(TRoboDestroyed *arg);
     virtual size_t CreateNetLevel(TLevelLoadRequest *arg);
-    virtual void FFeedback_Play(TFFeedbackEffect *arg);
+    // A force feedback effect of a unit, played for the player here only
+    // when it's the unit they control
+    virtual void FFeedback_Play(NC_STACK_ypabact *unit, TFFeedbackEffect *arg);
     virtual bool NetSendMessage(uamessage_base *data, size_t dataSize, const std::string &recvID, bool garantee);
     virtual bool NetBroadcastMessage(uamessage_base *data, size_t dataSize, bool garantee);
 

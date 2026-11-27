@@ -784,7 +784,7 @@ int NC_STACK_ypacar::AlignVehicleUser(float dtime, const vec3d &oldDir)
                         ffEffect.effects_type = 5;
                         ffEffect.strength = 1.0;
 
-                        _world->FFeedback_Play(&ffEffect);
+                        _world->FFeedback_Play(this, &ffEffect);
                     }
                 }
             }
@@ -841,7 +841,7 @@ int NC_STACK_ypacar::AlignVehicleUser(float dtime, const vec3d &oldDir)
                         ffEffect.pos_z = trailRay.isectPos.z;
                         ffEffect.effects_type = 5;
 
-                        _world->FFeedback_Play(&ffEffect);
+                        _world->FFeedback_Play(this, &ffEffect);
                     }
                 }
             }
@@ -883,7 +883,7 @@ int NC_STACK_ypacar::AlignVehicleUser(float dtime, const vec3d &oldDir)
                     ffEffect.pos_z = leftRay.isectPos.z;
                     ffEffect.effects_type = 5;
 
-                    _world->FFeedback_Play(&ffEffect);
+                    _world->FFeedback_Play(this, &ffEffect);
                 }
             }
             return 3;
@@ -925,7 +925,7 @@ int NC_STACK_ypacar::AlignVehicleUser(float dtime, const vec3d &oldDir)
                             ffEffect.pos_z = frontRay.isectPos.z;
                             ffEffect.effects_type = 5;
 
-                            _world->FFeedback_Play(&ffEffect);
+                            _world->FFeedback_Play(this, &ffEffect);
                         }
                     }
 

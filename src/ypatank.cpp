@@ -1536,7 +1536,7 @@ size_t NC_STACK_ypatank::CollisionWithBact(int arg)
                 feedback.pos_z = avgDir.z;
                 feedback.effects_type = 5;
 
-                _world->FFeedback_Play(&feedback);
+                _world->FFeedback_Play(this, &feedback);
             }
             else
             {
@@ -2029,7 +2029,7 @@ int NC_STACK_ypatank::AlignVehicleUser(float dtime, const vec3d &oldDir)
                         feedback.pos_z = leftRay.isectPos.z;
                         feedback.effects_type = 5;
 
-                        _world->FFeedback_Play(&feedback);
+                        _world->FFeedback_Play(this, &feedback);
                     }
                 }
 
@@ -2085,7 +2085,7 @@ int NC_STACK_ypatank::AlignVehicleUser(float dtime, const vec3d &oldDir)
                         feedback.effects_type = 5;
                         feedback.strength = 1.0;
 
-                        _world->FFeedback_Play(&feedback);
+                        _world->FFeedback_Play(this, &feedback);
                     }
                 }
                 if ( wallCos >= 0.82 )
@@ -2132,7 +2132,7 @@ int NC_STACK_ypatank::AlignVehicleUser(float dtime, const vec3d &oldDir)
                     feedback.pos_z = rearRay.isectPos.z;
                     feedback.effects_type = 5;
 
-                    _world->FFeedback_Play(&feedback);
+                    _world->FFeedback_Play(this, &feedback);
                 }
             }
 
@@ -2175,7 +2175,7 @@ int NC_STACK_ypatank::AlignVehicleUser(float dtime, const vec3d &oldDir)
                             feedback.pos_x = frontRay.isectPos.x;
                             feedback.pos_z = frontRay.isectPos.z;
 
-                            _world->FFeedback_Play(&feedback);
+                            _world->FFeedback_Play(this, &feedback);
                         }
                     }
 

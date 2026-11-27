@@ -1999,7 +1999,7 @@ void NC_STACK_ypabact::User_layer(update_msg *arg)
                         ffEffect.pos_x = contactNormal.x * 10.0 + _position.x;
                         ffEffect.pos_z = contactNormal.z * 10.0 + _position.z;
 
-                        _world->FFeedback_Play(&ffEffect);
+                        _world->FFeedback_Play(this, &ffEffect);
                     }
                 }
             }
@@ -3097,7 +3097,7 @@ size_t NC_STACK_ypabact::LaunchMissile(TMissileLaunch *arg)
         else
             ffEffect.effects_type = 2;
 
-        _world->FFeedback_Play(&ffEffect);
+        _world->FFeedback_Play(this, &ffEffect);
     }
 
     int shotCount;
@@ -3752,7 +3752,7 @@ size_t NC_STACK_ypabact::CrashOrLand(TCrashLandStep *arg)
                                 ffEffect.pos_x = normalSum.x * 10.0 + _position.x;
                                 ffEffect.pos_z = normalSum.z * 10.0 + _position.z;
 
-                                _world->FFeedback_Play(&ffEffect);
+                                _world->FFeedback_Play(this, &ffEffect);
                             }
 
                             if ( normalSum.y >= 0.6 && groundHit )
@@ -3841,7 +3841,7 @@ size_t NC_STACK_ypabact::CrashOrLand(TCrashLandStep *arg)
                                 ffEffect.pos_x = normal.x * 10.0 + _position.x;
                                 ffEffect.pos_z = normal.z * 10.0 + _position.z;
 
-                                _world->FFeedback_Play(&ffEffect);
+                                _world->FFeedback_Play(this, &ffEffect);
                             }
 
                             if ( ray.skel->polygons[ray.polyID].B < 0.6 )
@@ -4102,7 +4102,7 @@ size_t NC_STACK_ypabact::CollisionWithBact(int arg)
             ffEffect.pos_z = collisionCenter.z;
             ffEffect.effects_type = 5;
 
-            _world->FFeedback_Play(&ffEffect);
+            _world->FFeedback_Play(this, &ffEffect);
         }
     }
 
@@ -7015,7 +7015,7 @@ size_t NC_STACK_ypabact::SetStateInternal(setState_msg *arg)
                 TFFeedbackEffect ffEffect;
                 ffEffect.effects_type = 4;
 
-                _world->FFeedback_Play(&ffEffect);
+                _world->FFeedback_Play(this, &ffEffect);
             }
 
             SFXEngine::SFXe.stopSound(&_soundcarrier, 1);
@@ -7163,7 +7163,7 @@ size_t NC_STACK_ypabact::SetStateInternal(setState_msg *arg)
                 TFFeedbackEffect ffEffect;
                 ffEffect.effects_type = 4;
 
-                _world->FFeedback_Play(&ffEffect);
+                _world->FFeedback_Play(this, &ffEffect);
             }
 
             SFXEngine::SFXe.stopSound(&_soundcarrier, 1);
@@ -7205,7 +7205,7 @@ size_t NC_STACK_ypabact::SetStateInternal(setState_msg *arg)
         {
             TFFeedbackEffect ffEffect;
             ffEffect.effects_type = 4;
-            _world->FFeedback_Play(&ffEffect);
+            _world->FFeedback_Play(this, &ffEffect);
         }
 
         SetVP(_vp_normal);
@@ -7237,7 +7237,7 @@ size_t NC_STACK_ypabact::SetStateInternal(setState_msg *arg)
             {
                 TFFeedbackEffect ffEffect;
                 ffEffect.effects_type = 3;
-                _world->FFeedback_Play(&ffEffect);
+                _world->FFeedback_Play(this, &ffEffect);
             }
 
             _soundFlags |= 2;
@@ -7261,7 +7261,7 @@ size_t NC_STACK_ypabact::SetStateInternal(setState_msg *arg)
                 {
                     TFFeedbackEffect ffEffect;
                     ffEffect.effects_type = 4;
-                    _world->FFeedback_Play(&ffEffect);
+                    _world->FFeedback_Play(this, &ffEffect);
                 }
 
                 SFXEngine::SFXe.stopSound(&_soundcarrier, 1);

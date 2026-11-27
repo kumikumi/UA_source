@@ -6839,8 +6839,11 @@ void NC_STACK_ypaworld::HandleRoboDestroyed(TRoboDestroyed *arg)
 //179 method in yw_net
 
 
-void NC_STACK_ypaworld::FFeedback_Play(TFFeedbackEffect *arg)
+void NC_STACK_ypaworld::FFeedback_Play(NC_STACK_ypabact *unit, TFFeedbackEffect *arg)
 {
+    if ( ControllerOf(unit) != _localPlayer )
+        return;
+
     if ( _shellConfIsParsed )
     {
         if ( _preferences & (World::PREF_JOYDISABLE | World::PREF_FFDISABLE) )
@@ -6870,15 +6873,12 @@ void NC_STACK_ypaworld::FFeedback_Play(TFFeedbackEffect *arg)
         break;
 
     case 5:
-    {
-        NC_STACK_ypabact *bct = UserUnit();
+        // From where it hit, as the unit is turned
         Input::Engine.ForceFeedback(Input::FF_STATE_START, Input::FF_TYPE_COLLISION,
             arg->strength, 0.0,
-            (arg->pos_z - bct->_position.z) * bct->_rotation.m02 + (arg->pos_x - bct->_position.x) * bct->_rotation.m00,
-            -((arg->pos_x - bct->_position.x) * bct->_rotation.m20 + (arg->pos_z - bct->_position.z) * bct->_rotation.m22));
-
-    }
-    break;
+            (arg->pos_z - unit->_position.z) * unit->_rotation.m02 + (arg->pos_x - unit->_position.x) * unit->_rotation.m00,
+            -((arg->pos_x - unit->_position.x) * unit->_rotation.m20 + (arg->pos_z - unit->_position.z) * unit->_rotation.m22));
+        break;
 
     default:
         break;

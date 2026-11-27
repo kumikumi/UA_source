@@ -1016,7 +1016,7 @@ void NC_STACK_ypaflyer::User_layer(update_msg *arg)
                         ffEffect.pos_x = 10.0 * tmp.x + _position.x;
                         ffEffect.pos_z = 10.0 * tmp.z + _position.z;
 
-                        _world->FFeedback_Play(&ffEffect);
+                        _world->FFeedback_Play(this, &ffEffect);
                     }
                 }
 
