@@ -466,21 +466,30 @@ void NC_STACK_ypaworld::PlaceReplayCamera(World::Frame &frame)
     ReplayCamera &cam = _replayCamera;
 
     // At the start: the player at the machine that recorded it, or else the
-    // first; with no players at all, the first host station
+    // first; with no players at all, the first host station, or with none,
+    // the first unit that isn't a missile or a gun
     if ( cam.CameraMode == ReplayCamera::PLAYER && !cam.Player )
     {
         if ( !frame.Players.empty() )
             SetReplayCameraMode(ReplayCamera::PLAYER, &frame);
         else
         {
+            const World::Frame::Unit *first = NULL;
+
             for ( const World::Frame::Unit &u : frame.Units )
             {
                 if ( u.Type == BACT_TYPES_ROBO )
                 {
-                    LookFromUnit(u.Id);
+                    first = &u;
                     break;
                 }
+
+                if ( !first && u.Type != BACT_TYPES_MISSLE && u.Type != BACT_TYPES_GUN )
+                    first = &u;
             }
+
+            if ( first )
+                LookFromUnit(first->Id);
         }
     }
 
