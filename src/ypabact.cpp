@@ -7542,6 +7542,10 @@ size_t NC_STACK_ypabact::PathFinder(TPathRequest *arg)
     cellArea *target_pcell = _world->GetSector( World::PositionToSectorID( arg->to ) );
     cellArea *start_pcell = _world->GetSector( World::PositionToSectorID( arg->from ) );
 
+    // No way off the map
+    if ( !target_pcell || !start_pcell )
+        return 0;
+
     if ( target_pcell == start_pcell )
     {
         arg->steps_cnt = 1;
