@@ -1,6 +1,7 @@
 #include <inttypes.h>
 #include <string.h>
 #include <math.h>
+#include <cmath>
 #include <string>
 #include "includes.h"
 #include "yw.h"
@@ -7534,6 +7535,19 @@ static bool CreationPointNear(NC_STACK_yparobo *robo, const World::TVhclProto &v
     return (point - robo->_position).length() <= camera + search * 4.0 + 300.0;
 }
 
+// Where on the map an order to go to a sector, or beam there, was given,
+// as the interface has it: on the sector it names (the 3D view and the map
+// take both from the same point), at a height the level could have. Not
+// off the map's west or north edge either, which the sector the point is
+// in wouldn't tell, as a sector's number is rounded towards 0.
+static bool PointOnSector(const vec3d &point, const cellArea *sector)
+{
+    if ( !sector || !std::isfinite(point.x) || !std::isfinite(point.y) || !std::isfinite(point.z) || fabs(point.y) > 100000.0 )
+        return false;
+
+    return point.x >= 0.0 && point.z <= 0.0 && World::PositionToSectorID(point) == sector->CellId;
+}
+
 // A unit that can change squads
 static bool SquadVehicle(const NC_STACK_ypabact *unit, uint8_t owner)
 {
@@ -7573,6 +7587,9 @@ bool NC_STACK_ypaworld::ApplyPlayerOrder(World::Player *player, const World::Pla
 
             if ( sector )
             {
+                if ( !PointOnSector(order.Point, sector) )
+                    return false;
+
                 command.target_Sect = sector;
             }
             else
@@ -7587,7 +7604,7 @@ bool NC_STACK_ypaworld::ApplyPlayerOrder(World::Player *player, const World::Pla
         case World::DOACTION_WP_BEGIN:
         case World::DOACTION_WP_ADD:
         case World::DOACTION_WP_CYCLE:
-            if ( !OrderableSquad(unit, owner) )
+            if ( !OrderableSquad(unit, owner) || !PointOnSector(order.Point, sector) )
                 return false;
 
             command.selectBact = unit;
@@ -7631,7 +7648,7 @@ bool NC_STACK_ypaworld::ApplyPlayerOrder(World::Player *player, const World::Pla
         {
             int cost = 0;
 
-            if ( !robo || !sector || !WorldScene().Find(robo->_gid, host) ||
+            if ( !robo || !PointOnSector(order.Point, sector) || !WorldScene().Find(robo->_gid, host) ||
                  CheckBeam(WorldScene(), host, sector->CellId, &command.target_point, &cost) )
                 return false;
 
