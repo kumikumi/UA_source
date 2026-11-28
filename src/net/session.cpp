@@ -49,6 +49,10 @@ constexpr uint32_t SPARE_PEERS = 4;
 constexpr uint32_t PEER_TIMEOUT_MIN = 10000;
 constexpr uint32_t PEER_TIMEOUT_MAX = 30000;
 
+// A peer that connected but hasn't said who it is by then is let go, so
+// that one that never does doesn't keep a place others could join in
+constexpr uint64_t HELLO_TIMEOUT = 10000;
+
 // How long leaving waits for the others to hear of it
 constexpr uint32_t CLOSE_WAIT = 300;
 
@@ -161,6 +165,7 @@ struct Session::Remote
 {
     uint32_t Id = 0; // 0 until welcomed
     std::string Name;
+    uint64_t Connected = 0; // When (SDL_GetTicks)
 };
 
 Session::Session()
@@ -550,6 +555,7 @@ void Session::HostEvent(ENetEvent &event)
         }
 
         peer->data = new Remote;
+        ((Remote *)peer->data)->Connected = SDL_GetTicks();
         enet_peer_timeout(peer, 0, PEER_TIMEOUT_MIN, PEER_TIMEOUT_MAX);
         break;
 
@@ -761,6 +767,20 @@ void Session::Service()
             HostEvent(event);
         else
             ClientEvent(event);
+    }
+
+    // Those who connected and haven't said who they are in time
+    for ( size_t i = 0; _hosting && _host && i < _host->peerCount; i++ )
+    {
+        ENetPeer *peer = &_host->peers[i];
+        Remote *r = (Remote *)peer->data;
+
+        if ( r && !r->Id && SDL_GetTicks() - r->Connected > HELLO_TIMEOUT )
+        {
+            delete r;
+            peer->data = nullptr;
+            enet_peer_disconnect_now(peer, 0);
+        }
     }
 }
 
