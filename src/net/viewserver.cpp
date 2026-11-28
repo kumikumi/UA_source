@@ -221,6 +221,15 @@ void ViewServer::SetPlayer(uint32_t watcher, uint32_t player)
 {
     if ( Watcher *w = Find(watcher) )
     {
+        // Playing as another, or no longer, the controls they made for
+        // the unit they controlled are done with. They're numbered on, for
+        // as long as the watcher is connected (ViewClient).
+        if ( w->Player != player )
+        {
+            w->Controls.clear();
+            w->Taken = World::PlayerControls();
+        }
+
         w->Player = player;
         w->PlayerToSend = true;
     }

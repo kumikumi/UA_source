@@ -2989,7 +2989,9 @@ public:
     // interface, on the frames shown, its orders sent to the game
     bool _replayPlaying = false;
     bool _playStepped = false;     // Its interface stepped since it began
-    uint32_t _playControls = 0;    // The number of the last controls made
+    uint32_t _playControls = 0;    // The number of the last controls made;
+                                   // numbered on when playing again, as the
+                                   // game drops those it has had
     float _playStepFraction = 0.0;
     std::unique_ptr<World::Prediction> _prediction; // Of the unit driven
     PlayMapScene _playScene;

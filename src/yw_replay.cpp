@@ -1333,7 +1333,6 @@ void NC_STACK_ypaworld::StartPlaying()
     _mouseGrabbed = false;
     _joyKnown = false;
     _playStepped = false;
-    _playControls = 0;
     _levelInfo.State = TLevelInfo::STATE_PLAYING;
 
     // The unit the player controls, driven here as they steer it
