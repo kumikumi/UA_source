@@ -7517,6 +7517,23 @@ static bool OrderableSquad(const NC_STACK_ypabact *commander, uint8_t owner)
            commander->_bact_type != BACT_TYPES_ROBO;
 }
 
+// Where the interface lets a host station make a squad of the vehicle: by
+// the mouse, as far as the vehicle's size has it look for room from the
+// player's camera (yw_MouseFindCreationPoint, its look made longer by a
+// wide screen's correction), the camera in the host station or one of its
+// guns. A little further for the host station moving on before the order
+// comes from another machine.
+static bool CreationPointNear(NC_STACK_yparobo *robo, const World::TVhclProto &vhcl, const vec3d &point)
+{
+    double camera = robo->_viewer_position.length();
+
+    for ( const World::TRoboGun &gun : robo->GetGuns() )
+        camera = std::max(camera, gun.pos.length());
+
+    double search = vhcl.radius * 4.0 + 200.0;
+    return (point - robo->_position).length() <= camera + search * 4.0 + 300.0;
+}
+
 // A unit that can change squads
 static bool SquadVehicle(const NC_STACK_ypabact *unit, uint8_t owner)
 {
@@ -7580,7 +7597,8 @@ bool NC_STACK_ypaworld::ApplyPlayerOrder(World::Player *player, const World::Pla
         case World::DOACTION_ADD_UNIT1:
         case World::DOACTION_ADD_UNIT2:
             if ( !robo || order.Proto < 0 || (size_t)order.Proto >= _vhclProtos.size() ||
-                 !(_vhclProtos[order.Proto].disable_enable_bitmask & (1 << owner)) )
+                 !(_vhclProtos[order.Proto].disable_enable_bitmask & (1 << owner)) ||
+                 !CreationPointNear(robo, _vhclProtos[order.Proto], order.Point) )
                 return false;
 
             if ( order.Action == World::DOACTION_ADD_UNIT2 )
